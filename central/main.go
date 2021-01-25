@@ -32,6 +32,8 @@ type Message struct {
 	// The Unique ID of the message
 	ID int
 	// The actual data in the message
+	// TODO: Change this to a slice instead...or maybe use an
+	// interface type here to handle several data types ?
 	Data string
 	// The type of the message being sent
 	MessageType messageType
@@ -54,7 +56,7 @@ func main() {
 		for {
 			m := Message{
 				ID:   counter,
-				Data: "just some data",
+				Data: "ls",
 			}
 
 			var buf bytes.Buffer

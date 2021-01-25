@@ -5,6 +5,8 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
+	"os"
+	"os/exec"
 
 	"github.com/nats-io/nats.go"
 )
@@ -72,6 +74,17 @@ func main() {
 	// Do some further processing of the actual data we received in the
 	// subscriber callback function.
 	for {
-		fmt.Printf("subcriber: received data = %#v\n", <-reqMsgCh)
+		msg := <-reqMsgCh
+
+		switch msg.MessageType {
+		case shellCommand:
+			cmd := exec.Command(msg.Data, "-l")
+			cmd.Stdout = os.Stdout
+			err := cmd.Start()
+			if err != nil {
+				fmt.Printf("error: execution of command failed: %v\n", err)
+			}
+		}
+
 	}
 }
