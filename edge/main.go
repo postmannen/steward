@@ -9,9 +9,28 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+type messageType int
+
+const (
+	// shellCommand, wait for and return the output
+	// of the command in the ACK message. This means
+	// that the command should be executed immediately
+	// and that we should get the confirmation that it
+	// was successful or not.
+	shellCommand messageType = iota
+	// eventCommand, just wait for the ACK that the
+	// message is received. What action happens on the
+	// receiving side is up to the received to decide.
+	eventCommand messageType = iota
+)
+
 type Message struct {
-	ID   int    // The Unique ID of the message
-	Data string // The actual data in the message
+	// The Unique ID of the message
+	ID int
+	// The actual data in the message
+	Data string
+	// The type of the message being sent
+	MessageType messageType
 }
 
 func main() {
