@@ -14,12 +14,18 @@ import (
 type messageType int
 
 const (
+	// shellCommand, command that will just wait for an
+	// ack, and nothing of the output of the command are
+	// delivered back in the reply ack message.
+	// The message should contain the unique ID of the
+	// command.
+	shellCommandReturnOutput messageType = iota
 	// shellCommand, wait for and return the output
 	// of the command in the ACK message. This means
 	// that the command should be executed immediately
 	// and that we should get the confirmation that it
 	// was successful or not.
-	shellCommand messageType = iota
+	shellCommandReturnAck messageType = iota
 	// eventCommand, just wait for the ACK that the
 	// message is received. What action happens on the
 	// receiving side is up to the received to decide.
@@ -30,26 +36,53 @@ type Message struct {
 	// The Unique ID of the message
 	ID int
 	// The actual data in the message
-	Data string
+	Data []string
 	// The type of the message being sent
 	MessageType messageType
 }
 
 func main() {
+	edgeID := "btship1"
 	// Create a connection to nats server, and publish a message.
-	nc, err := nats.Connect("localhost", nil)
+	natsConn, err := nats.Connect("localhost", nil)
 	if err != nil {
 		log.Printf("error: nats.Connect failed: %v\n", err)
 	}
-	defer nc.Close()
+	defer natsConn.Close()
 
 	// Create a channel to put the data received in the subscriber callback
 	// function
 	reqMsgCh := make(chan Message)
 
-	// Subscribe will start up a Go routine calling the callback function
-	// specified when a new message is received.
-	_, err = nc.Subscribe("subject1", func(req *nats.Msg) {
+	// Subscribe will start up a Go routine under the hood calling the
+	// callback function specified when a new message is received.
+	_, err = natsConn.Subscribe(edgeID, messageHandler(natsConn, reqMsgCh))
+	if err != nil {
+		fmt.Printf("error: Subscribe failed: %v\n", err)
+	}
+
+	// Do some further processing of the actual data we received in the
+	// subscriber callback function.
+	for {
+		msg := <-reqMsgCh
+		fmt.Printf("%v\n", msg)
+		switch msg.MessageType {
+		case shellCommandReturnAck:
+			c := msg.Data[0]
+			a := msg.Data[1:]
+			cmd := exec.Command(c, a...)
+			cmd.Stdout = os.Stdout
+			err := cmd.Start()
+			if err != nil {
+				fmt.Printf("error: execution of command failed: %v\n", err)
+			}
+		}
+
+	}
+}
+
+func messageHandler(natsConn *nats.Conn, reqMsgCh chan Message) func(req *nats.Msg) {
+	return func(req *nats.Msg) {
 		message := Message{}
 
 		// Create a buffer to decode the gob encoded binary data back
@@ -65,26 +98,6 @@ func main() {
 		reqMsgCh <- message
 
 		// Send a confirmation message back to the publisher
-		nc.Publish(req.Reply, []byte("confirmed: "+fmt.Sprint(message.ID)))
-	})
-	if err != nil {
-		fmt.Printf("error: Subscribe failed: %v\n", err)
-	}
-
-	// Do some further processing of the actual data we received in the
-	// subscriber callback function.
-	for {
-		msg := <-reqMsgCh
-
-		switch msg.MessageType {
-		case shellCommand:
-			cmd := exec.Command(msg.Data, "-l")
-			cmd.Stdout = os.Stdout
-			err := cmd.Start()
-			if err != nil {
-				fmt.Printf("error: execution of command failed: %v\n", err)
-			}
-		}
-
+		natsConn.Publish(req.Reply, []byte("confirmed: "+fmt.Sprint(message.ID)))
 	}
 }
