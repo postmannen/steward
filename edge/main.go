@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -19,17 +20,16 @@ const (
 	// delivered back in the reply ack message.
 	// The message should contain the unique ID of the
 	// command.
-	shellCommandReturnOutput messageType = iota
+	commandReturnOutput messageType = iota
 	// shellCommand, wait for and return the output
 	// of the command in the ACK message. This means
 	// that the command should be executed immediately
 	// and that we should get the confirmation that it
 	// was successful or not.
-	shellCommandReturnAck messageType = iota
+	eventReturnAck messageType = iota
 	// eventCommand, just wait for the ACK that the
 	// message is received. What action happens on the
 	// receiving side is up to the received to decide.
-	eventCommand messageType = iota
 )
 
 type Message struct {
@@ -42,7 +42,9 @@ type Message struct {
 }
 
 func main() {
-	edgeID := "btship1"
+	edgeID := flag.String("edgeID", "0", "some unique string to identify this Edge unit")
+	flag.Parse()
+
 	// Create a connection to nats server, and publish a message.
 	natsConn, err := nats.Connect("localhost", nil)
 	if err != nil {
@@ -56,7 +58,7 @@ func main() {
 
 	// Subscribe will start up a Go routine under the hood calling the
 	// callback function specified when a new message is received.
-	_, err = natsConn.Subscribe(edgeID, messageHandler(natsConn, reqMsgCh))
+	_, err = natsConn.Subscribe(*edgeID, listenForMessage(natsConn, reqMsgCh))
 	if err != nil {
 		fmt.Printf("error: Subscribe failed: %v\n", err)
 	}
@@ -67,7 +69,7 @@ func main() {
 		msg := <-reqMsgCh
 		fmt.Printf("%v\n", msg)
 		switch msg.MessageType {
-		case shellCommandReturnAck:
+		case eventReturnAck:
 			c := msg.Data[0]
 			a := msg.Data[1:]
 			cmd := exec.Command(c, a...)
@@ -81,7 +83,10 @@ func main() {
 	}
 }
 
-func messageHandler(natsConn *nats.Conn, reqMsgCh chan Message) func(req *nats.Msg) {
+// Listen for message will send an ACK message back to the sender,
+// and put the received incomming message on the reqMsg channel
+// for further processing.
+func listenForMessage(natsConn *nats.Conn, reqMsgCh chan Message) func(req *nats.Msg) {
 	return func(req *nats.Msg) {
 		message := Message{}
 

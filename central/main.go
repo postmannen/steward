@@ -8,6 +8,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -21,17 +22,16 @@ const (
 	// delivered back in the reply ack message.
 	// The message should contain the unique ID of the
 	// command.
-	shellCommandReturnOutput messageType = iota
+	commandReturnOutput messageType = iota
 	// shellCommand, wait for and return the output
 	// of the command in the ACK message. This means
 	// that the command should be executed immediately
 	// and that we should get the confirmation that it
 	// was successful or not.
-	shellCommandReturnAck messageType = iota
+	eventReturnAck messageType = iota
 	// eventCommand, just wait for the ACK that the
 	// message is received. What action happens on the
 	// receiving side is up to the received to decide.
-	eventCommand messageType = iota
 )
 
 type Message struct {
@@ -45,38 +45,61 @@ type Message struct {
 	MessageType messageType
 }
 
-func main() {
-	edgeID := "btship1"
-	// Create a connection to nats server, and publish a message.
-	natsConn, err := nats.Connect("localhost", nil)
-	if err != nil {
-		log.Printf("error: nats.Connect failed: %v\n", err)
+// session are represent the communication to one individual host
+type session struct {
+	messageID int
+	subject   string
+	hostID    hostID
+}
+
+type hostID string
+
+type server struct {
+	natsConn *nats.Conn
+	sessions map[hostID]session
+}
+
+func newServer(brokerAddress string) (*server, error) {
+	return &server{
+		sessions: make(map[hostID]session),
+	}, nil
+}
+
+func (s *server) Run() error {
+	// create the initial configuration for a sessions communicating with 1 host.
+	session := session{
+		messageID: 0,
+		hostID:    "btship1",
 	}
-	defer natsConn.Close()
+	s.sessions["btship1"] = session
 
-	// There should be on IDCounter per Subject later on.
-	IDCounter := 0
-
+	// Loop creating one new message every second to simulate getting new
+	// messages to deliver.
 	for {
-		m := Message{
-			ID:          IDCounter,
-			Data:        []string{"uname", "-a"},
-			MessageType: shellCommandReturnAck,
-		}
-
-		// TODO: Have a channel here to return
-		messageDeliver(edgeID, m, natsConn)
+		m := getMessageToDeliver()
+		m.ID = s.sessions["btship1"].messageID
+		messageDeliver("btship1", m, s.natsConn)
 
 		// Increment the counter for the next message to be sent.
-		IDCounter++
+		session.messageID++
+		s.sessions["btship1"] = session
 		time.Sleep(time.Second * 1)
 	}
 
 }
 
+// get MessageToDeliver will pick up the next message to be created.
+// TODO: read this from local file or rest or....?
+func getMessageToDeliver() Message {
+	return Message{
+		Data:        []string{"uname", "-a"},
+		MessageType: eventReturnAck,
+	}
+}
+
 func messageDeliver(edgeID string, message Message, natsConn *nats.Conn) {
 	for {
-		dataPayload, err := createDataPayload(message)
+		dataPayload, err := gobEncodePayload(message)
 		if err != nil {
 			log.Printf("error: createDataPayload: %v\n", err)
 		}
@@ -118,7 +141,9 @@ func messageDeliver(edgeID string, message Message, natsConn *nats.Conn) {
 	}
 }
 
-func createDataPayload(m Message) ([]byte, error) {
+// gobEncodePayload will encode the message structure along with its
+// valued in gob binary format.
+func gobEncodePayload(m Message) ([]byte, error) {
 	var buf bytes.Buffer
 	gobEnc := gob.NewEncoder(&buf)
 	err := gobEnc.Encode(m)
@@ -127,4 +152,20 @@ func createDataPayload(m Message) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+func main() {
+	s, err := newServer("localhost")
+	if err != nil {
+		log.Printf("error: failed to connect to broker: %v\n", err)
+		os.Exit(1)
+	}
+	// Create a connection to nats server, and publish a message.
+	s.natsConn, err = nats.Connect("localhost", nil)
+	if err != nil {
+		log.Printf("error: nats.Connect failed: %v\n", err)
+	}
+	defer s.natsConn.Close()
+
+	s.Run()
 }
