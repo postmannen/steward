@@ -1,6 +1,4 @@
-// Same as 02 example, but using PublishMsg method instead of Request method
-// for publishing.
-
+// Notes:
 package main
 
 import (
@@ -16,6 +14,9 @@ import (
 
 type messageType int
 
+// TODO: Figure it makes sense to have these types at all.
+//  It might make more sense to implement these as two
+//  individual subjects.
 const (
 	// shellCommand, command that will just wait for an
 	// ack, and nothing of the output of the command are
@@ -45,47 +46,72 @@ type Message struct {
 	MessageType messageType
 }
 
-// session are represent the communication to one individual host
-type session struct {
+type node string
+
+// process are represent the communication to one individual host
+type process struct {
 	messageID int
 	subject   string
-	hostID    hostID
+	// Put a node here to be able know the node a process is at.
+	// NB: Might not be needed later on.
+	node node
+	// The processID for the current process
+	processID int
 }
 
-type hostID string
+// server is the structure that will hold the state about spawned
+// processes on a local instance.
 
 type server struct {
 	natsConn *nats.Conn
-	sessions map[hostID]session
+	// TODO: sessions should probably hold a slice/map of processes ?
+	processes map[node]process
+	// The last processID created
+	lastProcessID int
 }
 
+// newServer will prepare and return a server type
 func newServer(brokerAddress string) (*server, error) {
 	return &server{
-		sessions: make(map[hostID]session),
+		processes: make(map[node]process),
 	}, nil
 }
 
-func (s *server) Run() error {
+func (s *server) Run() {
+	proc := s.prepareNewProcess("btship1")
+	go s.spawnProcess(proc)
+
+	select {}
+}
+
+func (s *server) prepareNewProcess(nodeName string) process {
 	// create the initial configuration for a sessions communicating with 1 host.
-	session := session{
+	s.lastProcessID++
+	proc := process{
 		messageID: 0,
-		hostID:    "btship1",
+		node:      node(nodeName),
+		processID: s.lastProcessID,
 	}
-	s.sessions["btship1"] = session
+
+	return proc
+}
+
+// spawnProcess will spawn a new process
+func (s *server) spawnProcess(proc process) {
+	s.processes[proc.node] = proc
 
 	// Loop creating one new message every second to simulate getting new
 	// messages to deliver.
 	for {
 		m := getMessageToDeliver()
-		m.ID = s.sessions["btship1"].messageID
+		m.ID = s.processes["btship1"].messageID
 		messageDeliver("btship1", m, s.natsConn)
 
 		// Increment the counter for the next message to be sent.
-		session.messageID++
-		s.sessions["btship1"] = session
+		proc.messageID++
+		s.processes["btship1"] = proc
 		time.Sleep(time.Second * 1)
 	}
-
 }
 
 // get MessageToDeliver will pick up the next message to be created.
@@ -143,6 +169,7 @@ func messageDeliver(edgeID string, message Message, natsConn *nats.Conn) {
 
 // gobEncodePayload will encode the message structure along with its
 // valued in gob binary format.
+// TODO: Check if it adds value to compress with gzip.
 func gobEncodePayload(m Message) ([]byte, error) {
 	var buf bytes.Buffer
 	gobEnc := gob.NewEncoder(&buf)
@@ -160,7 +187,7 @@ func main() {
 		log.Printf("error: failed to connect to broker: %v\n", err)
 		os.Exit(1)
 	}
-	// Create a connection to nats server, and publish a message.
+	// Create a connection to nats server
 	s.natsConn, err = nats.Connect("localhost", nil)
 	if err != nil {
 		log.Printf("error: nats.Connect failed: %v\n", err)
