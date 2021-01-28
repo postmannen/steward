@@ -42,7 +42,7 @@ type Message struct {
 }
 
 func main() {
-	edgeID := flag.String("edgeID", "0", "some unique string to identify this Edge unit")
+	node := flag.String("node", "0", "some unique string to identify this Edge unit")
 	flag.Parse()
 
 	// Create a connection to nats server, and publish a message.
@@ -58,7 +58,7 @@ func main() {
 
 	// Subscribe will start up a Go routine under the hood calling the
 	// callback function specified when a new message is received.
-	_, err = natsConn.Subscribe(*edgeID, listenForMessage(natsConn, reqMsgCh))
+	_, err = natsConn.Subscribe(*node, listenForMessage(natsConn, reqMsgCh, *node))
 	if err != nil {
 		fmt.Printf("error: Subscribe failed: %v\n", err)
 	}
@@ -86,7 +86,7 @@ func main() {
 // Listen for message will send an ACK message back to the sender,
 // and put the received incomming message on the reqMsg channel
 // for further processing.
-func listenForMessage(natsConn *nats.Conn, reqMsgCh chan Message) func(req *nats.Msg) {
+func listenForMessage(natsConn *nats.Conn, reqMsgCh chan Message, node string) func(req *nats.Msg) {
 	return func(req *nats.Msg) {
 		message := Message{}
 
@@ -103,6 +103,6 @@ func listenForMessage(natsConn *nats.Conn, reqMsgCh chan Message) func(req *nats
 		reqMsgCh <- message
 
 		// Send a confirmation message back to the publisher
-		natsConn.Publish(req.Reply, []byte("confirmed: "+fmt.Sprint(message.ID)))
+		natsConn.Publish(req.Reply, []byte("confirmed from: "+node+": "+fmt.Sprint(message.ID)))
 	}
 }
