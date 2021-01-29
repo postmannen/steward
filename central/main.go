@@ -4,6 +4,7 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -57,6 +58,7 @@ type server struct {
 	processes map[node]process
 	// The last processID created
 	lastProcessID int
+	thisNodeName  string
 }
 
 // newServer will prepare and return a server type
@@ -66,7 +68,7 @@ func newServer(brokerAddress string) (*server, error) {
 	}, nil
 }
 
-func (s *server) Run() {
+func (s *server) RunPublisher() {
 	proc := s.prepareNewProcess("btship1")
 	// fmt.Printf("*** %#v\n", proc)
 	go s.spawnProcess(proc)
@@ -167,10 +169,10 @@ func messageDeliver(proc process, message Message, natsConn *nats.Conn) {
 		}
 
 		msg := &nats.Msg{
-			Subject: string(proc.node),
+			Subject: fmt.Sprintf("%s.%s.%s", proc.node, "command", "shellcommand"),
 			// Structure of the reply message are:
-			// reply-<node name>-pid<pid nr>
-			Reply: "reply-" + string(proc.node) + "-pid" + fmt.Sprint(proc.processID),
+			// reply.<nodename>.<message type>.<method>
+			Reply: "reply." + string(proc.node) + "command.shellcommand",
 			Data:  dataPayload,
 		}
 
@@ -220,11 +222,19 @@ func gobEncodePayload(m Message) ([]byte, error) {
 }
 
 func main() {
+	node := flag.String("node", "0", "some unique string to identify this Edge unit")
+	modePublisher := flag.Bool("modePublisher", false, "set to true if it should be able to publish")
+	modeSubscriber := flag.Bool("modeSubscriber", false, "set to true if it should be able to subscribe")
+	flag.Parse()
+
 	s, err := newServer("localhost")
 	if err != nil {
 		log.Printf("error: failed to connect to broker: %v\n", err)
 		os.Exit(1)
 	}
+
+	s.thisNodeName = *node
+
 	// Create a connection to nats server
 	s.natsConn, err = nats.Connect("localhost", nil)
 	if err != nil {
@@ -232,5 +242,13 @@ func main() {
 	}
 	defer s.natsConn.Close()
 
-	s.Run()
+	if *modePublisher {
+		go s.RunPublisher()
+	}
+
+	if *modeSubscriber {
+		go s.RunSubscriber()
+	}
+
+	select {}
 }
