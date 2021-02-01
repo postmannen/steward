@@ -1,13 +1,11 @@
 // Notes:
-package main
+package steward
 
 import (
 	"bytes"
 	"encoding/gob"
-	"flag"
 	"fmt"
 	"log"
-	"os"
 	"sync"
 	"time"
 
@@ -62,9 +60,16 @@ type server struct {
 }
 
 // newServer will prepare and return a server type
-func newServer(brokerAddress string) (*server, error) {
+func NewServer(brokerAddress string, nodeName string) (*server, error) {
+	conn, err := nats.Connect(brokerAddress, nil)
+	if err != nil {
+		log.Printf("error: nats.Connect failed: %v\n", err)
+	}
+
 	return &server{
-		processes: make(map[node]process),
+		thisNodeName: nodeName,
+		natsConn:     conn,
+		processes:    make(map[node]process),
 	}, nil
 }
 
@@ -219,36 +224,4 @@ func gobEncodePayload(m Message) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
-}
-
-func main() {
-	node := flag.String("node", "0", "some unique string to identify this Edge unit")
-	modePublisher := flag.Bool("modePublisher", false, "set to true if it should be able to publish")
-	modeSubscriber := flag.Bool("modeSubscriber", false, "set to true if it should be able to subscribe")
-	flag.Parse()
-
-	s, err := newServer("localhost")
-	if err != nil {
-		log.Printf("error: failed to connect to broker: %v\n", err)
-		os.Exit(1)
-	}
-
-	s.thisNodeName = *node
-
-	// Create a connection to nats server
-	s.natsConn, err = nats.Connect("localhost", nil)
-	if err != nil {
-		log.Printf("error: nats.Connect failed: %v\n", err)
-	}
-	defer s.natsConn.Close()
-
-	if *modePublisher {
-		go s.RunPublisher()
-	}
-
-	if *modeSubscriber {
-		go s.RunSubscriber()
-	}
-
-	select {}
 }
