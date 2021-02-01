@@ -56,7 +56,7 @@ type server struct {
 	processes map[node]process
 	// The last processID created
 	lastProcessID int
-	thisNodeName  string
+	nodeName      string
 }
 
 // newServer will prepare and return a server type
@@ -66,23 +66,12 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 		log.Printf("error: nats.Connect failed: %v\n", err)
 	}
 
-	return &server{
-		thisNodeName: nodeName,
-		natsConn:     conn,
-		processes:    make(map[node]process),
-	}, nil
-}
+	s := &server{
+		nodeName:  nodeName,
+		natsConn:  conn,
+		processes: make(map[node]process),
+	}
 
-func (s *server) RunPublisher() {
-	proc := s.prepareNewProcess("btship1")
-	// fmt.Printf("*** %#v\n", proc)
-	go s.spawnProcess(proc)
-
-	proc = s.prepareNewProcess("btship2")
-	// fmt.Printf("*** %#v\n", proc)
-	go s.spawnProcess(proc)
-
-	// start the error handling
 	go func() {
 
 		for {
@@ -97,6 +86,19 @@ func (s *server) RunPublisher() {
 			}
 		}
 	}()
+
+	return s, nil
+
+}
+
+func (s *server) RunPublisher() {
+	proc := s.prepareNewProcess("btship1")
+	// fmt.Printf("*** %#v\n", proc)
+	go s.spawnProcess(proc)
+
+	proc = s.prepareNewProcess("btship2")
+	// fmt.Printf("*** %#v\n", proc)
+	go s.spawnProcess(proc)
 
 	select {}
 
@@ -118,6 +120,8 @@ type process struct {
 	errorCh chan string
 }
 
+// prepareNewProcess will set the the provided values and the default
+// values for a process.
 func (s *server) prepareNewProcess(nodeName string) process {
 	// create the initial configuration for a sessions communicating with 1 host.
 	s.lastProcessID++
@@ -131,7 +135,9 @@ func (s *server) prepareNewProcess(nodeName string) process {
 	return proc
 }
 
-// spawnProcess will spawn a new process
+// spawnProcess will spawn a new process. It will give the process
+// the next available ID, and also add the process to the processes
+// map.
 func (s *server) spawnProcess(proc process) {
 	mu.Lock()
 	s.processes[proc.node] = proc
@@ -151,7 +157,7 @@ func (s *server) spawnProcess(proc process) {
 
 		// simulate that we get an error, and that we can send that
 		// out of the process and receive it in another thread.
-		// s.processes[proc.node].errorCh <- "received an error from process: " + fmt.Sprintf("%v\n", proc.processID)
+		s.processes[proc.node].errorCh <- "received an error from process: " + fmt.Sprintf("%v\n", proc.processID)
 
 		//fmt.Printf("%#v\n", s.processes[proc.node])
 	}
