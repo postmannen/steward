@@ -107,13 +107,29 @@ func (s *server) RunPublisher() {
 		}
 	}()
 
-	proc := s.prepareNewProcess("btship1")
-	// fmt.Printf("*** %#v\n", proc)
-	go s.spawnProcess(proc)
+	{
+		sub := subject{
+			node:        "btship1",
+			messageType: "command",
+			method:      "shellcommand",
+			domain:      "shell",
+		}
+		proc := s.prepareNewProcess(sub)
+		// fmt.Printf("*** %#v\n", proc)
+		go s.spawnProcess(proc)
+	}
 
-	proc = s.prepareNewProcess("btship2")
-	// fmt.Printf("*** %#v\n", proc)
-	go s.spawnProcess(proc)
+	{
+		sub := subject{
+			node:        "btship2",
+			messageType: "command",
+			method:      "shellcommand",
+			domain:      "shell",
+		}
+		proc := s.prepareNewProcess(sub)
+		// fmt.Printf("*** %#v\n", proc)
+		go s.spawnProcess(proc)
+	}
 
 	select {}
 
@@ -121,10 +137,27 @@ func (s *server) RunPublisher() {
 
 type node string
 
+// subject contains the representation of a subject to be used with one
+// specific process
+type subject struct {
+	// node, the name of the node
+	node string
+	// messageType, command/event
+	messageType string
+	// method, what is this message doing, etc. shellcommand, syslog, etc.
+	method string
+	// domain is used to differentiate services. Like there can be more
+	// logging services, but rarely more logging services for the same
+	// thing. Domain is here used to differentiate the the services and
+	// tell with one word what it is for.
+	domain string
+}
+
 // process are represent the communication to one individual host
 type process struct {
 	messageID int
-	subject   string
+	// the subject used for the specific process
+	subjects subject
 	// Put a node here to be able know the node a process is at.
 	// NB: Might not be needed later on.
 	node node
@@ -133,28 +166,16 @@ type process struct {
 	// errorCh is used to report errors from a process
 	// NB: Implementing this as an int to report for testing
 	errorCh chan string
-	// subject
-}
-
-type subject struct {
-	// node, the name of the node
-	node string
-	// messageType, command/event
-	messageType string
-	// method, what is this message doing, etc. shellcommand, syslog, etc.
-	method string
-	// description, usefu
-	description string
 }
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func (s *server) prepareNewProcess(nodeName string) process {
+func (s *server) prepareNewProcess(subject subject) process {
 	// create the initial configuration for a sessions communicating with 1 host.
 	s.lastProcessID++
 	proc := process{
 		messageID: 0,
-		node:      node(nodeName),
+		node:      node(subject.node),
 		processID: s.lastProcessID,
 		errorCh:   make(chan string),
 	}
