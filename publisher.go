@@ -92,6 +92,21 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 }
 
 func (s *server) RunPublisher() {
+	// start the checking of files for input messages
+	fileReadCh := make((chan []byte))
+	go getMessagesFromFile("./", "inmsg.txt", fileReadCh)
+
+	// TODO: For now we just print content of the files read.
+	// Replace this whit a broker function that will know how
+	// send it on to the correct publisher.
+	go func() {
+		for b := range fileReadCh {
+			// Check if there are new content read from file input
+			fmt.Printf("received: %s\n", b)
+
+		}
+	}()
+
 	proc := s.prepareNewProcess("btship1")
 	// fmt.Printf("*** %#v\n", proc)
 	go s.spawnProcess(proc)
@@ -118,6 +133,18 @@ type process struct {
 	// errorCh is used to report errors from a process
 	// NB: Implementing this as an int to report for testing
 	errorCh chan string
+	// subject
+}
+
+type subject struct {
+	// node, the name of the node
+	node string
+	// messageType, command/event
+	messageType string
+	// method, what is this message doing, etc. shellcommand, syslog, etc.
+	method string
+	// description, usefu
+	description string
 }
 
 // prepareNewProcess will set the the provided values and the default
@@ -145,6 +172,12 @@ func (s *server) spawnProcess(proc process) {
 
 	// Loop creating one new message every second to simulate getting new
 	// messages to deliver.
+	//
+	// TODO: I think it makes most sense that the messages would come to
+	// here from some other message-pickup-process, and that process will
+	// give the message to the correct publisher process. A channel that
+	// is listened on in the for loop below could be used to receive the
+	// messages from the message-pickup-process.
 	for {
 		m := getMessageToDeliver()
 		m.ID = s.processes[proc.node].messageID
