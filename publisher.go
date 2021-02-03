@@ -156,7 +156,9 @@ type subject struct {
 // process are represent the communication to one individual host
 type process struct {
 	messageID int
-	// the subject used for the specific process
+	// the subject used for the specific process. One process
+	// can contain only one sender on a message bus, hence
+	// also one subject
 	subjects subject
 	// Put a node here to be able know the node a process is at.
 	// NB: Might not be needed later on.
