@@ -22,7 +22,7 @@ func main() {
 	}
 
 	if *modePublisher {
-		go s.RunPublisher()
+		go s.PublisherStart()
 	}
 
 	if *modeSubscriber {
