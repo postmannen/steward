@@ -159,7 +159,7 @@ type process struct {
 	// the subject used for the specific process. One process
 	// can contain only one sender on a message bus, hence
 	// also one subject
-	subjects subject
+	subject subject
 	// Put a node here to be able know the node a process is at.
 	// NB: Might not be needed later on.
 	node node
@@ -177,6 +177,7 @@ func (s *server) prepareNewProcess(subject subject) process {
 	s.lastProcessID++
 	proc := process{
 		messageID: 0,
+		subject:   subject,
 		node:      node(subject.node),
 		processID: s.lastProcessID,
 		errorCh:   make(chan string),
@@ -211,7 +212,7 @@ func (s *server) spawnProcess(proc process) {
 		s.processes[proc.node] = proc
 		time.Sleep(time.Second * 1)
 
-		// simulate that we get an error, and that we can send that
+		// NB: simulate that we get an error, and that we can send that
 		// out of the process and receive it in another thread.
 		s.processes[proc.node].errorCh <- "received an error from process: " + fmt.Sprintf("%v\n", proc.processID)
 
@@ -223,7 +224,7 @@ func (s *server) spawnProcess(proc process) {
 // TODO: read this from local file or rest or....?
 func getMessageToDeliver() Message {
 	return Message{
-		Data:        []string{"uname", "-a"},
+		Data:        []string{"bash", "-c", "uname -a"},
 		MessageType: eventReturnAck,
 	}
 }
@@ -236,10 +237,11 @@ func messageDeliver(proc process, message Message, natsConn *nats.Conn) {
 		}
 
 		msg := &nats.Msg{
-			Subject: fmt.Sprintf("%s.%s.%s", proc.node, "command", "shellcommand"),
+			Subject: fmt.Sprintf("%s.%s.%s.%s", proc.node, proc.subject.messageType, proc.subject.method, proc.subject.domain),
+			// Subject: fmt.Sprintf("%s.%s.%s", proc.node, "command", "shellcommand"),
 			// Structure of the reply message are:
 			// reply.<nodename>.<message type>.<method>
-			Reply: "reply." + string(proc.node) + "command.shellcommand",
+			Reply: fmt.Sprintf("repply.%s.%s.%s.%s", proc.node, proc.subject.messageType, proc.subject.method, proc.subject.domain),
 			Data:  dataPayload,
 		}
 

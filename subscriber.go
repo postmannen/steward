@@ -21,7 +21,7 @@ func (s *server) RunSubscriber() {
 
 	// Subscribe will start up a Go routine under the hood calling the
 	// callback function specified when a new message is received.
-	subject := fmt.Sprintf("%s.%s.%s", s.nodeName, "command", "shellcommand")
+	subject := fmt.Sprintf("%s.%s.%s.%s", s.nodeName, "command", "shellcommand", "shell")
 	_, err := s.natsConn.Subscribe(subject, listenForMessage(s.natsConn, reqMsgCh, s.nodeName))
 	if err != nil {
 		fmt.Printf("error: Subscribe failed: %v\n", err)
@@ -34,6 +34,9 @@ func (s *server) RunSubscriber() {
 		fmt.Printf("%v\n", msg)
 		switch msg.MessageType {
 		case eventReturnAck:
+			// Since the command to execute is at the first position in the
+			// slice we need to slice it out. The arguments are at the
+			// remaining positions.
 			c := msg.Data[0]
 			a := msg.Data[1:]
 			cmd := exec.Command(c, a...)
