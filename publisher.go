@@ -228,7 +228,7 @@ func (s *server) processSpawn(proc process) {
 
 		// NB: simulate that we get an error, and that we can send that
 		// out of the process and receive it in another thread.
-		s.processes[proc.subject.name()].errorCh <- "received an error from process: " + fmt.Sprintf("%v\n", proc.processID)
+		s.processes[proc.subject.name()].errorCh <- "received an error from process: " + fmt.Sprintf("ID=%v, subjectName=%v\n", proc.processID, proc.subject.name())
 
 		//fmt.Printf("%#v\n", s.processes[proc.node])
 	}
