@@ -1,6 +1,7 @@
 # steward
 
 Async management of Edge Cloud units.
+
 The idea is to build and use a pure message passing architecture for the control traffic back and forth from the Edge cloud units. The message passing backend used is <https://nats.io>
 
 ```text
@@ -23,6 +24,15 @@ The idea is to build and use a pure message passing architecture for the control
                                                                              │                 │
                                                                              └─────────────────┘
 ```
+Why ?
+
+With existing solutions there is often either a push or a pull kind of setup. 
+
+In a push setup the commands to execute is pushed to the receiver, but if a command fails because for example a broken network link it is up to you as an administrator to detect those failures and retry them at a later time until it is executed successfully.
+
+In a pull setup an agent is installed at the Edge unit, and the configuration or commands to execute locally are pulled from a central repository. With this kind of setup you can be pretty certain that sometime in the future the Edge unit will reach it's desired state, but you don't know when. And if you want to know the current state you will need to have some second service which gives you that.
+
+In it's simplest form the idea about using an event driven system as the core for management of Edge units is that the sender/publisher are fully decoupled from the receiver/subscriber. We can get an acknowledge if a message is received or not, and with this functionality we will at all times know the current state of the receiving end. We can also add information in the ACK message if the command sent to the receiver was successful or not by appending the actual output of the command.
 
 ## Disclaimer
 

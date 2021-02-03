@@ -173,7 +173,7 @@ type process struct {
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
 func (s *server) prepareNewProcess(subject subject) process {
-	// create the initial configuration for a sessions communicating with 1 host.
+	// create the initial configuration for a sessions communicating with 1 host process.
 	s.lastProcessID++
 	proc := process{
 		messageID: 0,

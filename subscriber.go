@@ -10,6 +10,9 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+// RunSubscriber will start a subscribing process.
+// TODO: Right now the only thing a subscriber can do is ro receive commands,
+// check if there are more things a subscriber should be able to do.
 func (s *server) RunSubscriber() {
 
 	// Create a channel to put the data received in the subscriber callback
