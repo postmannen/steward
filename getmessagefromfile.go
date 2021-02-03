@@ -2,6 +2,7 @@ package steward
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -13,7 +14,7 @@ import (
 // getMessagesFromFile will start a file watcher for the given directory
 // and filename. It will take a channel of []byte as input, and it is
 // in this channel the content of a file that has changed is returned.
-func getMessagesFromFile(directoryToCheck string, fileName string, fileContentCh chan []byte) {
+func getMessagesFromFile(directoryToCheck string, fileName string, fileContentCh chan []jsonFromFile) {
 	fileUpdated := make(chan bool)
 	go fileWatcherStart(directoryToCheck, fileUpdated)
 
@@ -26,11 +27,34 @@ func getMessagesFromFile(directoryToCheck string, fileName string, fileContentCh
 				log.Printf("error: reading file: %v", err)
 			}
 
-			fileContentCh <- b
-			fmt.Printf("File content read: %s\n", b)
+			// unmarshal the JSON into a struct
+			js, err := jsonFromFileData(b)
+			if err != nil {
+				log.Printf("%v\n", err)
+			}
+
+			// Send the data back to be consumed
+			fileContentCh <- js
 		}
 	}
 
+}
+
+type jsonFromFile struct {
+	Subject `json:"subject"`
+	Message `json:"message"`
+}
+
+func jsonFromFileData(b []byte) ([]jsonFromFile, error) {
+	JS := []jsonFromFile{}
+
+	//err := yaml.Unmarshal(b, &JS)
+	err := json.Unmarshal(b, &JS)
+	if err != nil {
+		return nil, fmt.Errorf("error: json unmarshal of file failed: %v", err)
+	}
+
+	return JS, nil
 }
 
 // readTruncateMessageFile, will read all the messages in the given
@@ -53,20 +77,14 @@ func readTruncateMessageFile(fileName string) ([]byte, error) {
 		lines = append(lines, scanner.Bytes()...)
 	}
 
-	fmt.Printf("*** DEBUG : %s\n", lines)
-
-	fmt.Printf("read: %s\n", lines)
-
 	// empty the file after all is read
-	ret, err := f.Seek(0, io.SeekStart)
+	_, err = f.Seek(0, io.SeekStart)
 	if err != nil {
 		return nil, fmt.Errorf("f.Seek failed: %v", err)
 	}
-	fmt.Printf("** ret=%v\n", ret)
 
 	err = f.Truncate(0)
 	if err != nil {
-		fmt.Printf("******* %#v\n", err)
 		return nil, fmt.Errorf("f.Truncate failed: %v", err)
 	}
 

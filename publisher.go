@@ -12,9 +12,7 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-var mu sync.Mutex
-
-type messageType int
+type MessageType string
 
 // TODO: Figure it makes sense to have these types at all.
 //  It might make more sense to implement these as two
@@ -25,13 +23,13 @@ const (
 	// delivered back in the reply ack message.
 	// The message should contain the unique ID of the
 	// command.
-	commandReturnOutput messageType = iota
+	CommandReturnOutput MessageType = "commandReturnOutput"
 	// shellCommand, wait for and return the output
 	// of the command in the ACK message. This means
 	// that the command should be executed immediately
 	// and that we should get the confirmation that it
 	// was successful or not.
-	eventReturnAck messageType = iota
+	EventReturnAck MessageType = "eventReturnAck"
 	// eventCommand, just wait for the ACK that the
 	// message is received. What action happens on the
 	// receiving side is up to the received to decide.
@@ -39,13 +37,13 @@ const (
 
 type Message struct {
 	// The Unique ID of the message
-	ID int
+	ID int `json:"id"`
 	// The actual data in the message
 	// TODO: Change this to a slice instead...or maybe use an
 	// interface type here to handle several data types ?
-	Data []string
+	Data []string `json:"data"`
 	// The type of the message being sent
-	MessageType messageType
+	MessageType MessageType `json:"messageType"`
 }
 
 // server is the structure that will hold the state about spawned
@@ -57,6 +55,7 @@ type server struct {
 	// The last processID created
 	lastProcessID int
 	nodeName      string
+	mu            sync.Mutex
 }
 
 // newServer will prepare and return a server type
@@ -72,6 +71,9 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 		processes: make(map[subjectName]process),
 	}
 
+	// Start the error handler
+	// TODO: For now it will just print the error messages to the
+	// console.
 	go func() {
 
 		for {
@@ -93,29 +95,23 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 
 func (s *server) PublisherStart() {
 	// start the checking of files for input messages
-	fileReadCh := make((chan []byte))
+	fileReadCh := make((chan []jsonFromFile))
 	go getMessagesFromFile("./", "inmsg.txt", fileReadCh)
 
 	// TODO: For now we just print content of the files read.
-	// Replace this whit a broker function that will know how
+	// Replace this with a broker function that will know how
 	// send it on to the correct publisher.
 	go func() {
-		for b := range fileReadCh {
+		for v := range fileReadCh {
 			// Check if there are new content read from file input
-			fmt.Printf("received: %s\n", b)
+			fmt.Printf("received: %#v\n", v)
 
 		}
 	}()
 
 	// Prepare and start a single process
 	{
-		sub := subject{
-			node:        "btship1",
-			messageType: "command",
-			method:      "shellcommand",
-			domain:      "shell",
-			messageCh:   make(chan Message),
-		}
+		sub := newSubject("btship1", "command", "shellcommand", "shell")
 		proc := s.processPrepareNew(sub)
 		// fmt.Printf("*** %#v\n", proc)
 		go s.processSpawn(proc)
@@ -123,13 +119,7 @@ func (s *server) PublisherStart() {
 
 	// Prepare and start a single process
 	{
-		sub := subject{
-			node:        "btship2",
-			messageType: "command",
-			method:      "shellcommand",
-			domain:      "shell",
-			messageCh:   make(chan Message),
-		}
+		sub := newSubject("btship2", "command", "shellcommand", "shell")
 		proc := s.processPrepareNew(sub)
 		// fmt.Printf("*** %#v\n", proc)
 		go s.processSpawn(proc)
@@ -140,7 +130,7 @@ func (s *server) PublisherStart() {
 		for {
 			m := Message{
 				Data:        []string{"bash", "-c", "uname -a"},
-				MessageType: eventReturnAck,
+				MessageType: EventReturnAck,
 			}
 			subjName := subjectName("btship1.command.shellcommand.shell")
 			_, ok := s.processes[subjName]
@@ -179,26 +169,39 @@ type node string
 
 // subject contains the representation of a subject to be used with one
 // specific process
-type subject struct {
+type Subject struct {
 	// node, the name of the node
-	node string
+	Node string `json:"node"`
 	// messageType, command/event
-	messageType string
+	MessageType string `json:"messageType"`
 	// method, what is this message doing, etc. shellcommand, syslog, etc.
-	method string
+	Method string `json:"method"`
 	// domain is used to differentiate services. Like there can be more
 	// logging services, but rarely more logging services for the same
 	// thing. Domain is here used to differentiate the the services and
 	// tell with one word what it is for.
-	domain string
+	Domain string `json:"domain"`
 	// messageCh is the channel for receiving new content to be sent
 	messageCh chan Message
 }
 
+// newSubject will return a new variable of the type subject, and insert
+// all the values given as arguments. It will also create the channel
+// to receive new messages on the specific subject.
+func newSubject(node string, messageType string, method string, domain string) Subject {
+	return Subject{
+		Node:        node,
+		MessageType: messageType,
+		Method:      method,
+		Domain:      domain,
+		messageCh:   make(chan Message),
+	}
+}
+
 type subjectName string
 
-func (s subject) name() subjectName {
-	return subjectName(fmt.Sprintf("%s.%s.%s.%s", s.node, s.messageType, s.method, s.domain))
+func (s Subject) name() subjectName {
+	return subjectName(fmt.Sprintf("%s.%s.%s.%s", s.Node, s.MessageType, s.Method, s.Domain))
 }
 
 // process are represent the communication to one individual host
@@ -207,7 +210,7 @@ type process struct {
 	// the subject used for the specific process. One process
 	// can contain only one sender on a message bus, hence
 	// also one subject
-	subject subject
+	subject Subject
 	// Put a node here to be able know the node a process is at.
 	// NB: Might not be needed later on.
 	node node
@@ -223,13 +226,13 @@ type process struct {
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func (s *server) processPrepareNew(subject subject) process {
+func (s *server) processPrepareNew(subject Subject) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
 	s.lastProcessID++
 	proc := process{
 		messageID: 0,
 		subject:   subject,
-		node:      node(subject.node),
+		node:      node(subject.Node),
 		processID: s.lastProcessID,
 		errorCh:   make(chan string),
 		//messageCh: make(chan Message),
@@ -242,12 +245,12 @@ func (s *server) processPrepareNew(subject subject) process {
 // the next available ID, and also add the process to the processes
 // map.
 func (s *server) processSpawn(proc process) {
-	mu.Lock()
+	s.mu.Lock()
 	// We use the full name of the subject to identify a unique
 	// process. We can do that since a process can only handle
 	// one message queue.
 	s.processes[proc.subject.name()] = proc
-	mu.Unlock()
+	s.mu.Unlock()
 
 	// Loop creating one new message every second to simulate getting new
 	// messages to deliver.
@@ -258,7 +261,6 @@ func (s *server) processSpawn(proc process) {
 	// is listened on in the for loop below could be used to receive the
 	// messages from the message-pickup-process.
 	for {
-		// m := getMessageToDeliver()
 		// Wait and read the next message on the message channel
 		m := <-proc.subject.messageCh
 		m.ID = s.processes[proc.subject.name()].messageID
@@ -274,15 +276,6 @@ func (s *server) processSpawn(proc process) {
 		s.processes[proc.subject.name()].errorCh <- "received an error from process: " + fmt.Sprintf("ID=%v, subjectName=%v\n", proc.processID, proc.subject.name())
 
 		//fmt.Printf("%#v\n", s.processes[proc.node])
-	}
-}
-
-// get MessageToDeliver will pick up the next message to be created.
-// TODO: read this from local file or rest or....?
-func getMessageToDeliver() Message {
-	return Message{
-		Data:        []string{"bash", "-c", "uname -a"},
-		MessageType: eventReturnAck,
 	}
 }
 

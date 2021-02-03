@@ -33,7 +33,7 @@ func (s *server) RunSubscriber() {
 		msg := <-reqMsgCh
 		fmt.Printf("%v\n", msg)
 		switch msg.MessageType {
-		case eventReturnAck:
+		case EventReturnAck:
 			// Since the command to execute is at the first position in the
 			// slice we need to slice it out. The arguments are at the
 			// remaining positions.
