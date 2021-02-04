@@ -37,13 +37,13 @@ const (
 
 type Message struct {
 	// The Unique ID of the message
-	ID int `json:"id"`
+	ID int `json:"id" yaml:"id"`
 	// The actual data in the message
 	// TODO: Change this to a slice instead...or maybe use an
 	// interface type here to handle several data types ?
-	Data []string `json:"data"`
+	Data []string `json:"data" yaml:"data"`
 	// The type of the message being sent
-	MessageType MessageType `json:"messageType"`
+	MessageType MessageType `json:"messageType" yaml:"messageType"`
 }
 
 // server is the structure that will hold the state about spawned
@@ -171,16 +171,16 @@ type node string
 // specific process
 type Subject struct {
 	// node, the name of the node
-	Node string `json:"node"`
+	Node string `json:"node" yaml:"node"`
 	// messageType, command/event
-	MessageType string `json:"messageType"`
+	MessageType string `json:"messageType" yaml:"messageType"`
 	// method, what is this message doing, etc. shellcommand, syslog, etc.
-	Method string `json:"method"`
+	Method string `json:"method" yaml:"method"`
 	// domain is used to differentiate services. Like there can be more
 	// logging services, but rarely more logging services for the same
 	// thing. Domain is here used to differentiate the the services and
 	// tell with one word what it is for.
-	Domain string `json:"domain"`
+	Domain string `json:"domain" yaml:"domain"`
 	// messageCh is the channel for receiving new content to be sent
 	messageCh chan Message
 }

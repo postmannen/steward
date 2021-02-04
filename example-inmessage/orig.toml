@@ -1,0 +1,21 @@
+[[jsonFromFile]]
+[jsonFromFile.subject]
+node = "ship1"
+messageType = "command"
+method = "shellcommand"
+domain = "shell"
+
+[jsonFromFile.message]
+data = [ "bash", "-c", "uname -a" ]
+messageType = "eventReturnAck"
+
+[[jsonFromFile]]
+[jsonFromFile.subject]
+node = "ship2"
+messageType = "command"
+method = "shellcommand"
+domain = "shell"
+
+[jsonFromFile.message]
+data = [ "bash", "-c", "uname -a" ]
+messageType = "eventReturnAck"

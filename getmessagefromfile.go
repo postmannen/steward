@@ -41,17 +41,20 @@ func getMessagesFromFile(directoryToCheck string, fileName string, fileContentCh
 }
 
 type jsonFromFile struct {
-	Subject `json:"subject"`
-	Message `json:"message"`
+	Subject `json:"subject" yaml:"subject"`
+	Message `json:"message" yaml:"message"`
 }
 
 func jsonFromFileData(b []byte) ([]jsonFromFile, error) {
 	JS := []jsonFromFile{}
 
-	//err := yaml.Unmarshal(b, &JS)
 	err := json.Unmarshal(b, &JS)
+	// TODO: Look into also marshaling from yaml and toml later
+	//err := yaml.Unmarshal(b, &JS)
+	//err := toml.Unmarshal(b, &JS)
+	//fmt.Printf("%#v\n", JS)
 	if err != nil {
-		return nil, fmt.Errorf("error: json unmarshal of file failed: %v", err)
+		return nil, fmt.Errorf("error: unmarshal of file failed: %#v", err)
 	}
 
 	return JS, nil

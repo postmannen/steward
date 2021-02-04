@@ -1,0 +1,12 @@
+---
+- subject:
+    node: ship1
+    messageType: command
+    method: shellcommand
+    domain: shell
+  message:
+    data:
+      - bash
+      - '-c'
+      - uname -a
+    messageType: eventReturnAck
