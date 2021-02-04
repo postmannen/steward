@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 
@@ -33,7 +34,7 @@ func (s *server) RunSubscriber() {
 		msg := <-reqMsgCh
 		fmt.Printf("%v\n", msg)
 		switch msg.MessageType {
-		case EventReturnAck:
+		case "Command":
 			// Since the command to execute is at the first position in the
 			// slice we need to slice it out. The arguments are at the
 			// remaining positions.
@@ -45,6 +46,20 @@ func (s *server) RunSubscriber() {
 			if err != nil {
 				fmt.Printf("error: execution of command failed: %v\n", err)
 			}
+		case "Event":
+			// Since the command to execute is at the first position in the
+			// slice we need to slice it out. The arguments are at the
+			// remaining positions.
+			c := msg.Data[0]
+			a := msg.Data[1:]
+			cmd := exec.Command(c, a...)
+			cmd.Stdout = os.Stdout
+			err := cmd.Start()
+			if err != nil {
+				fmt.Printf("error: execution of command failed: %v\n", err)
+			}
+		default:
+			log.Printf("info: did not find that specific type of command: %#v\n", msg.MessageType)
 		}
 
 	}

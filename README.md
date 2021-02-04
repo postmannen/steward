@@ -58,7 +58,8 @@ Subject naming are case sensitive, and can not contain the space are the tab cha
 
 Nodename: Are the hostname of the device. This do not have to be resolvable via DNS, it is just a unique name for the host to receive the message.
 
-Command/Event: Are type of message sent. `command` or `event`. Description of the differences are mentioned earlier.
+Command/Event: Are type of message sent. `command` or `event`. Description of the differences are mentioned earlier.\
+Info: The command/event which is called a MessageType are present in both the Subject structure and the Message structure. The reason for this is that it is used both in the naming of a subject, and in the message for knowing what kind of message it is and how to handle it.
 
 Method: Are the functionality the message provide. Example could be `shellcommand` or `syslogforwarding`
 

@@ -23,13 +23,13 @@ const (
 	// delivered back in the reply ack message.
 	// The message should contain the unique ID of the
 	// command.
-	CommandReturnOutput MessageType = "commandReturnOutput"
+	Command MessageType = "command"
 	// shellCommand, wait for and return the output
 	// of the command in the ACK message. This means
 	// that the command should be executed immediately
 	// and that we should get the confirmation that it
 	// was successful or not.
-	EventReturnAck MessageType = "eventReturnAck"
+	Event MessageType = "event"
 	// eventCommand, just wait for the ACK that the
 	// message is received. What action happens on the
 	// receiving side is up to the received to decide.
@@ -54,8 +54,12 @@ type server struct {
 	processes map[subjectName]process
 	// The last processID created
 	lastProcessID int
-	nodeName      string
-	mu            sync.Mutex
+	// The name of the node
+	nodeName string
+	mu       sync.Mutex
+	// The channel where we receive new messages from the outside to
+	// insert into the system for being processed
+	newMessagesCh chan []jsonFromFile
 }
 
 // newServer will prepare and return a server type
@@ -66,9 +70,10 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 	}
 
 	s := &server{
-		nodeName:  nodeName,
-		natsConn:  conn,
-		processes: make(map[subjectName]process),
+		nodeName:      nodeName,
+		natsConn:      conn,
+		processes:     make(map[subjectName]process),
+		newMessagesCh: make(chan []jsonFromFile),
 	}
 
 	// Start the error handler
@@ -95,23 +100,22 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 
 func (s *server) PublisherStart() {
 	// start the checking of files for input messages
-	fileReadCh := make((chan []jsonFromFile))
-	go getMessagesFromFile("./", "inmsg.txt", fileReadCh)
+	go getMessagesFromFile("./", "inmsg.txt", s.newMessagesCh)
 
 	// TODO: For now we just print content of the files read.
 	// Replace this with a broker function that will know how
 	// send it on to the correct publisher.
-	go func() {
-		for v := range fileReadCh {
-			// Check if there are new content read from file input
-			fmt.Printf("received: %#v\n", v)
-
-		}
-	}()
+	// go func() {
+	// 	for v := range s.newMessagesCh {
+	// 		// Check if there are new content read from file input
+	// 		fmt.Printf("received: %#v\n", v)
+	//
+	// 	}
+	// }()
 
 	// Prepare and start a single process
 	{
-		sub := newSubject("btship1", "command", "shellcommand", "shell")
+		sub := newSubject("ship1", "command", "shellcommand", "shell")
 		proc := s.processPrepareNew(sub)
 		// fmt.Printf("*** %#v\n", proc)
 		go s.processSpawn(proc)
@@ -119,7 +123,7 @@ func (s *server) PublisherStart() {
 
 	// Prepare and start a single process
 	{
-		sub := newSubject("btship2", "command", "shellcommand", "shell")
+		sub := newSubject("ship2", "command", "shellcommand", "shell")
 		proc := s.processPrepareNew(sub)
 		// fmt.Printf("*** %#v\n", proc)
 		go s.processSpawn(proc)
@@ -127,18 +131,23 @@ func (s *server) PublisherStart() {
 
 	// Simulate generating some commands to be sent as messages to nodes.
 	go func() {
-		for {
-			m := Message{
-				Data:        []string{"bash", "-c", "uname -a"},
-				MessageType: EventReturnAck,
-			}
-			subjName := subjectName("btship1.command.shellcommand.shell")
-			_, ok := s.processes[subjName]
-			if ok {
-				s.processes[subjName].subject.messageCh <- m
-			} else {
-				time.Sleep(time.Millisecond * 500)
-				continue
+		for v := range s.newMessagesCh {
+			for _, vv := range v {
+
+				m := vv.Message
+				subjName := vv.Subject.name()
+				fmt.Printf("** message: %v, ** subject: %v\n", m, vv.Subject)
+				_, ok := s.processes[subjName]
+				if ok {
+					log.Printf("info: found the specific subject: %v\n", subjName)
+					fmt.Printf("* Before Putting incomming message on subject.messageCh\n")
+					s.processes[subjName].subject.messageCh <- m
+					fmt.Printf("* After Putting incomming message on subject.messageCh\n")
+				} else {
+					log.Printf("info: did not find that specific subject: %v\n", subjName)
+					time.Sleep(time.Millisecond * 500)
+					continue
+				}
 			}
 		}
 	}()
@@ -148,7 +157,7 @@ func (s *server) PublisherStart() {
 	// 	for {
 	// 		m := Message{
 	// 			Data:        []string{"bash", "-c", "uname -a"},
-	// 			MessageType: eventReturnAck,
+	// 			MessageType: Event,
 	// 		}
 	// 		subjName := subjectName("btship2.command.shellcommand.shell")
 	// 		_, ok := s.processes[subjName]
@@ -262,7 +271,9 @@ func (s *server) processSpawn(proc process) {
 	// messages from the message-pickup-process.
 	for {
 		// Wait and read the next message on the message channel
+		fmt.Printf("* Before checking messageCh inside process\n")
 		m := <-proc.subject.messageCh
+		fmt.Printf("* After checking messageCh inside process: %v\n", m)
 		m.ID = s.processes[proc.subject.name()].messageID
 		messageDeliver(proc, m, s.natsConn)
 

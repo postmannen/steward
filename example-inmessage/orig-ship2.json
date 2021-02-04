@@ -1,0 +1,16 @@
+[
+    {
+        "subject":
+            {
+                "node":"ship2",
+                "messageType":"command",
+                "method":"shellcommand",
+                "domain":"shell"
+            },
+        "message":
+            {
+                "data": ["bash","-c","tree"],
+                "messageType":"Command"
+            }
+    }
+]

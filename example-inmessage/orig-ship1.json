@@ -12,19 +12,5 @@
                 "data": ["bash","-c","uname -a"],
                 "messageType":"Command"
             }
-    },
-    {
-        "subject":
-            {
-                "node":"ship2",
-                "messageType":"command",
-                "method":"shellcommand",
-                "domain":"shell"
-            },
-        "message":
-            {
-                "data": ["bash","-c","uname -a"],
-                "messageType":"Command"
-            }
     }
 ]
