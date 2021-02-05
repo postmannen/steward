@@ -3,7 +3,10 @@ package main
 import (
 	"flag"
 	"log"
+	"net/http"
 	"os"
+
+	_ "net/http/pprof"
 
 	"github.com/RaaLabs/steward"
 )
@@ -13,7 +16,17 @@ func main() {
 	brokerAddress := flag.String("brokerAddress", "0", "the address of the message broker")
 	modePublisher := flag.Bool("modePublisher", false, "set to true if it should be able to publish")
 	modeSubscriber := flag.Bool("modeSubscriber", false, "set to true if it should be able to subscribe")
+	profilingPort := flag.String("profilingPort", "", "The number of the profiling port")
 	flag.Parse()
+
+	if *profilingPort != "" {
+		// TODO REMOVE: Added for profiling
+
+		go func() {
+			http.ListenAndServe("localhost:"+*profilingPort, nil)
+		}()
+
+	}
 
 	s, err := steward.NewServer(*brokerAddress, *nodeName)
 	if err != nil {

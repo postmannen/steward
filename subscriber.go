@@ -25,14 +25,14 @@ func (s *server) RunSubscriber() {
 	subject := fmt.Sprintf("%s.%s.%s.%s", s.nodeName, "command", "shellcommand", "shell")
 	_, err := s.natsConn.Subscribe(subject, listenForMessage(s.natsConn, reqMsgCh, s.nodeName))
 	if err != nil {
-		fmt.Printf("error: Subscribe failed: %v\n", err)
+		log.Printf("error: Subscribe failed: %v\n", err)
 	}
 
 	// Do some further processing of the actual data we received in the
 	// subscriber callback function.
 	for {
 		msg := <-reqMsgCh
-		fmt.Printf("%v\n", msg)
+		//fmt.Printf("%v\n", msg)
 		switch msg.MessageType {
 		case "Command":
 			// Since the command to execute is at the first position in the
@@ -44,7 +44,7 @@ func (s *server) RunSubscriber() {
 			cmd.Stdout = os.Stdout
 			err := cmd.Start()
 			if err != nil {
-				fmt.Printf("error: execution of command failed: %v\n", err)
+				log.Printf("error: execution of command failed: %v\n", err)
 			}
 		case "Event":
 			// Since the command to execute is at the first position in the
@@ -56,7 +56,7 @@ func (s *server) RunSubscriber() {
 			cmd.Stdout = os.Stdout
 			err := cmd.Start()
 			if err != nil {
-				fmt.Printf("error: execution of command failed: %v\n", err)
+				log.Printf("error: execution of command failed: %v\n", err)
 			}
 		default:
 			log.Printf("info: did not find that specific type of command: %#v\n", msg.MessageType)
@@ -78,7 +78,7 @@ func listenForMessage(natsConn *nats.Conn, reqMsgCh chan Message, node string) f
 		gobDec := gob.NewDecoder(buf)
 		err := gobDec.Decode(&message)
 		if err != nil {
-			fmt.Printf("error: gob decoding failed: %v\n", err)
+			log.Printf("error: gob decoding failed: %v\n", err)
 		}
 
 		// Put the data recived on the channel for further processing

@@ -76,6 +76,11 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 		newMessagesCh: make(chan []jsonFromFile),
 	}
 
+	return s, nil
+
+}
+
+func (s *server) PublisherStart() {
 	// Start the error handler
 	// TODO: For now it will just print the error messages to the
 	// console.
@@ -94,11 +99,6 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 		}
 	}()
 
-	return s, nil
-
-}
-
-func (s *server) PublisherStart() {
 	// start the checking of files for input messages
 	go getMessagesFromFile("./", "inmsg.txt", s.newMessagesCh)
 
@@ -182,7 +182,7 @@ type Subject struct {
 	// node, the name of the node
 	Node string `json:"node" yaml:"node"`
 	// messageType, command/event
-	MessageType string `json:"messageType" yaml:"messageType"`
+	MessageType MessageType `json:"messageType" yaml:"messageType"`
 	// method, what is this message doing, etc. shellcommand, syslog, etc.
 	Method string `json:"method" yaml:"method"`
 	// domain is used to differentiate services. Like there can be more
@@ -197,7 +197,7 @@ type Subject struct {
 // newSubject will return a new variable of the type subject, and insert
 // all the values given as arguments. It will also create the channel
 // to receive new messages on the specific subject.
-func newSubject(node string, messageType string, method string, domain string) Subject {
+func newSubject(node string, messageType MessageType, method string, domain string) Subject {
 	return Subject{
 		Node:        node,
 		MessageType: messageType,

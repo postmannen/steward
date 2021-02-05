@@ -18,26 +18,27 @@ func getMessagesFromFile(directoryToCheck string, fileName string, fileContentCh
 	fileUpdated := make(chan bool)
 	go fileWatcherStart(directoryToCheck, fileUpdated)
 
-	for {
-		select {
-		case <-fileUpdated:
-			//load file, read it's content
-			b, err := readTruncateMessageFile(fileName)
-			if err != nil {
-				log.Printf("error: reading file: %v", err)
-			}
+	for range fileUpdated {
 
-			// unmarshal the JSON into a struct
-			js, err := jsonFromFileData(b)
-			if err != nil {
-				log.Printf("%v\n", err)
-			}
-
-			// Send the data back to be consumed
-			fileContentCh <- js
+		//load file, read it's content
+		b, err := readTruncateMessageFile(fileName)
+		if err != nil {
+			log.Printf("error: reading file: %v", err)
 		}
-	}
 
+		// unmarshal the JSON into a struct
+		js, err := jsonFromFileData(b)
+		if err != nil {
+			log.Printf("%v\n", err)
+		}
+
+		for i, _ := range js {
+			fmt.Printf("messageType type: %T, messagetype contains: %#v\n", js[i].Subject.MessageType, js[i].Subject.MessageType)
+		}
+
+		// Send the data back to be consumed
+		fileContentCh <- js
+	}
 }
 
 type jsonFromFile struct {

@@ -9,7 +9,7 @@
             },
         "message":
             {
-                "data": ["bash","-c","uname -a"],
+                "data": ["bash","-c","ls -l"],
                 "messageType":"Command"
             }
     }
