@@ -24,9 +24,10 @@ The idea is to build and use a pure message passing architecture for the control
                                                                              │                 │
                                                                              └─────────────────┘
 ```
+
 Why ?
 
-With existing solutions there is often either a push or a pull kind of setup. 
+With existing solutions there is often either a push or a pull kind of setup.
 
 In a push setup the commands to execute is pushed to the receiver, but if a command fails because for example a broken network link it is up to you as an administrator to detect those failures and retry them at a later time until it is executed successfully.
 
@@ -74,3 +75,11 @@ For syslog of type event to a host named "ship1"
 and for a shell command of type command to a host named "ship2"
 
 `ship2.command.shellcommand.operatingsystem`
+
+## TODO
+
+- Timeouts. Does it makes sense to have a default timeout for all messages, and where that timeout can be overridden per message upon creation of the message.
+
+- Check that there is a node for the specific message new incomming message, and the supervisor should create the process with the wanted subject on both the publishing and the receiving node. If there is no such node an error should be generated and processed by the error-kernel.
+
+- Since a process will be locked while waiting to send the error on the errorCh maybe it makes sense to have a channel inside the processes error handling with a select so we can send back to the process if it should continue or not based not based on how severe the error where. This should be right after sending the error sending in the process. 

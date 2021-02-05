@@ -26,14 +26,20 @@ func getMessagesFromFile(directoryToCheck string, fileName string, fileContentCh
 			log.Printf("error: reading file: %v", err)
 		}
 
+		// Start on top again if the file did not contain
+		// any data.
+		if len(b) == 0 {
+			continue
+		}
+
 		// unmarshal the JSON into a struct
 		js, err := jsonFromFileData(b)
 		if err != nil {
 			log.Printf("%v\n", err)
 		}
 
-		for i, _ := range js {
-			fmt.Printf("messageType type: %T, messagetype contains: %#v\n", js[i].Subject.MessageType, js[i].Subject.MessageType)
+		for i := range js {
+			fmt.Printf("*** Checking message found in file: messageType type: %T, messagetype contains: %#v\n", js[i].Subject.MessageType, js[i].Subject.MessageType)
 		}
 
 		// Send the data back to be consumed
@@ -111,7 +117,7 @@ func fileWatcherStart(directoryToCheck string, fileUpdated chan bool) {
 			select {
 			case event := <-watcher.Events:
 				if event.Op&fsnotify.Write == fsnotify.Write {
-					log.Println("modified file:", event.Name)
+					log.Println("info: infile updated, processing input: ", event.Name)
 					//testing with an update chan to get updates
 					fileUpdated <- true
 				}
