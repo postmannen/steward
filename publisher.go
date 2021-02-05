@@ -63,6 +63,8 @@ type server struct {
 	// errorCh is used to report errors from a process
 	// NB: Implementing this as an int to report for testing
 	errorCh chan string
+	// errorKernel
+	errorKernel *errorKernel
 }
 
 // newServer will prepare and return a server type
@@ -80,14 +82,16 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 		errorCh:       make(chan string, 10),
 	}
 
+	// Start the error kernel that will do all the error handling
+	// not done within a process.
+	s.errorKernel = newErrorKernel()
+	s.errorKernel.startErrorKernel(s.errorCh)
+
 	return s, nil
 
 }
 
 func (s *server) PublisherStart() {
-	// Start the error handler
-	s.startErrorKernel()
-
 	// Start the checking the input file for new messages from operator.
 	go getMessagesFromFile("./", "inmsg.txt", s.newMessagesCh)
 
@@ -113,6 +117,19 @@ func (s *server) PublisherStart() {
 
 }
 
+// errorKernel is the structure that will hold all the error
+// handling values and logic.
+type errorKernel struct {
+	// ringBuffer *ringBuffer
+}
+
+// newErrorKernel will initialize and return a new error kernel
+func newErrorKernel() *errorKernel {
+	return &errorKernel{
+		// ringBuffer: newringBuffer(),
+	}
+}
+
 // startErrorKernel will start the error kernel and check if there
 // have been reveived any errors from any of the processes, and
 // handle them appropriately.
@@ -122,14 +139,14 @@ func (s *server) PublisherStart() {
 // process if it should continue or not based not based on how severe
 // the error where. This should be right after sending the error
 // sending in the process.
-func (s *server) startErrorKernel() {
+func (e *errorKernel) startErrorKernel(errorCh chan string) {
 	// TODO: For now it will just print the error messages to the
 	// console.
 	go func() {
 
 		for {
-			e := <-s.errorCh
-			log.Printf("*** ERROR_KERNEL: %#v, type=%T\n", e, e)
+			er := <-errorCh
+			log.Printf("*** ERROR_KERNEL: %#v, type=%T\n", er, er)
 		}
 	}()
 }
