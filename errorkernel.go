@@ -1,3 +1,10 @@
+// The error kernel shall handle errors for a given process.
+// This will be cases where the process itself where unable
+// to handle the error on it's own, and we might need to
+// restart the process, or send a message back to the operator
+// that the action which the message where supposed to trigger,
+// or that an event where unable to be processed.
+
 package steward
 
 import (
@@ -8,7 +15,10 @@ import (
 // errorKernel is the structure that will hold all the error
 // handling values and logic.
 type errorKernel struct {
-	// ringBuffer *ringBuffer
+	// TODO: The errorKernel should probably have a concept
+	// of error-state which is a map of all the processes,
+	// how many times a process have failed over the same
+	// message etc...
 }
 
 // newErrorKernel will initialize and return a new error kernel
@@ -36,9 +46,16 @@ func (e *errorKernel) startErrorKernel(errorCh chan errProcess) {
 			er := <-errorCh
 
 			// We should be able to handle each error individually and
-			// also concurrently, so the handler is start in it's own
-			// go routine
+			// also concurrently, so the handler is started in it's
+			// own go routine
 			go func() {
+				// TODO: Here we should check the severity of the error,
+				// and also possibly the the error-state of the process
+				// that fails, so we can decide if we should stop and
+				// start a new process to replace to old one, or if we
+				// should just kill the process and send message back to
+				// the operator....or other ?
+				//
 				// Just print the error, and tell the process to continue
 				log.Printf("*** error_kernel: %#v, type=%T\n", er, er)
 				er.errorActionCh <- errActionContinue
@@ -64,10 +81,15 @@ const (
 )
 
 type errProcess struct {
+	// Channel for communicating the action to take back to
+	// to the process who triggered the error
 	errorActionCh chan errorAction
-	infoText      string
-	process       process
-	message       Message
+	// Some informational text
+	infoText string
+	// The process structure that belongs to a given process
+	process process
+	// The message that where in progress when error occured
+	message Message
 }
 
 func (e errProcess) Error() string {
