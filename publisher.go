@@ -102,20 +102,20 @@ func (s *server) PublisherStart() {
 	go getMessagesFromFile("./", "inmsg.txt", s.newMessagesCh)
 
 	// Prepare and start a single process
-	{
-		sub := newSubject("ship1", "command", "shellcommand")
-		proc := s.processPrepareNew(sub, s.errorCh, processKindPublisher)
-		// fmt.Printf("*** %#v\n", proc)
-		go s.processSpawnWorker(proc)
-	}
+	//{
+	//	sub := newSubject("ship1", "command", "shellcommand")
+	//	proc := s.processPrepareNew(sub, s.errorCh, processKindPublisher)
+	//	// fmt.Printf("*** %#v\n", proc)
+	//	go s.processSpawnWorker(proc)
+	//}
 
 	// Prepare and start a single process
-	{
-		sub := newSubject("ship2", "command", "shellcommand")
-		proc := s.processPrepareNew(sub, s.errorCh, processKindPublisher)
-		// fmt.Printf("*** %#v\n", proc)
-		go s.processSpawnWorker(proc)
-	}
+	// {
+	// 	sub := newSubject("ship2", "command", "shellcommand")
+	// 	proc := s.processPrepareNew(sub, s.errorCh, processKindPublisher)
+	// 	// fmt.Printf("*** %#v\n", proc)
+	// 	go s.processSpawnWorker(proc)
+	// }
 
 	s.handleNewOperatorMessages()
 
@@ -137,8 +137,8 @@ func (s *server) handleNewOperatorMessages() {
 	// an error should be generated and processed by the error-kernel.
 	go func() {
 		for v := range s.newMessagesCh {
-			for _, vv := range v {
-
+			for i, vv := range v {
+			redo:
 				m := vv.Message
 				subjName := vv.Subject.name()
 				fmt.Printf("** handleNewOperatorMessages: message: %v, ** subject: %#v\n", m, vv.Subject)
@@ -148,9 +148,16 @@ func (s *server) handleNewOperatorMessages() {
 					// Put the message on the correct process's messageCh
 					s.processes[subjName].subject.messageCh <- m
 				} else {
-					log.Printf("info: did not find that specific subject: %v\n", subjName)
+					// If a publisher do not exist for the given subject, create it.
+					log.Printf("info: did not find that specific subject, starting new process for subject: %v\n", subjName)
+
+					sub := newSubject(v[i].Subject.Node, v[i].Subject.MessageKind, v[i].Subject.Method)
+					proc := s.processPrepareNew(sub, s.errorCh, processKindPublisher)
+					// fmt.Printf("*** %#v\n", proc)
+					go s.processSpawnWorker(proc)
+
 					time.Sleep(time.Millisecond * 500)
-					continue
+					goto redo
 				}
 			}
 		}
