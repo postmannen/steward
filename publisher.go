@@ -283,6 +283,23 @@ func (s *server) processSpawnWorker(proc process) {
 			}
 		}
 	}
+
+	if proc.processKind == processKindSubscriber {
+		//subject := fmt.Sprintf("%s.%s.%s", s.nodeName, "command", "shellcommand")
+		subject := string(proc.subject.name())
+
+		// Subscribe will start up a Go routine under the hood calling the
+		// callback function specified when a new message is received.
+		_, err := s.natsConn.Subscribe(subject, func(msg *nats.Msg) {
+			// We start one handler per message received by using go routines here.
+			// This is for being able to reply back the current publisher who sent
+			// the message.
+			go handler(s.natsConn, s.nodeName, msg)
+		})
+		if err != nil {
+			log.Printf("error: Subscribe failed: %v\n", err)
+		}
+	}
 }
 
 func messageDeliver(proc process, message Message, natsConn *nats.Conn) {

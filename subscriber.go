@@ -14,19 +14,27 @@ import (
 // TODO: Right now the only thing a subscriber can do is ro receive commands,
 // check if there are more things a subscriber should be able to do.
 func (s *server) RunSubscriber() {
-	subject := fmt.Sprintf("%s.%s.%s", s.nodeName, "command", "shellcommand")
-
-	// Subscribe will start up a Go routine under the hood calling the
-	// callback function specified when a new message is received.
-	_, err := s.natsConn.Subscribe(subject, func(msg *nats.Msg) {
-		// We start one handler per message received by using go routines here.
-		// This is for being able to reply back the current publisher who sent
-		// the message.
-		go handler(s.natsConn, s.nodeName, msg)
-	})
-	if err != nil {
-		log.Printf("error: Subscribe failed: %v\n", err)
+	{
+		fmt.Printf("nodeName: %#v\n", s.nodeName)
+		sub := newSubject(s.nodeName, "command", "shellcommand")
+		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
+		// fmt.Printf("*** %#v\n", proc)
+		go s.processSpawnWorker(proc)
 	}
+
+	// subject := fmt.Sprintf("%s.%s.%s", s.nodeName, "command", "shellcommand")
+	//
+	// // Subscribe will start up a Go routine under the hood calling the
+	// // callback function specified when a new message is received.
+	// _, err := s.natsConn.Subscribe(subject, func(msg *nats.Msg) {
+	// 	// We start one handler per message received by using go routines here.
+	// 	// This is for being able to reply back the current publisher who sent
+	// 	// the message.
+	// 	go handler(s.natsConn, s.nodeName, msg)
+	// })
+	// if err != nil {
+	// 	log.Printf("error: Subscribe failed: %v\n", err)
+	// }
 
 	select {}
 }
