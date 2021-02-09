@@ -14,7 +14,7 @@ import (
 // getMessagesFromFile will start a file watcher for the given directory
 // and filename. It will take a channel of []byte as input, and it is
 // in this channel the content of a file that has changed is returned.
-func getMessagesFromFile(directoryToCheck string, fileName string, fileContentCh chan []jsonFromFile) {
+func (s *server) getMessagesFromFile(directoryToCheck string, fileName string, fileContentCh chan []jsonFromFile) {
 	fileUpdated := make(chan bool)
 	go fileWatcherStart(directoryToCheck, fileUpdated)
 
@@ -40,6 +40,7 @@ func getMessagesFromFile(directoryToCheck string, fileName string, fileContentCh
 
 		for i := range js {
 			fmt.Printf("*** Checking message found in file: messageType type: %T, messagetype contains: %#v\n", js[i].Subject.MessageKind, js[i].Subject.MessageKind)
+			js[i].Message.FromNode = node(s.nodeName)
 		}
 
 		// Send the data back to be consumed

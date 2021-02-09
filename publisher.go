@@ -50,6 +50,7 @@ type Message struct {
 	Data []string `json:"data" yaml:"data"`
 	// The type of the message being sent
 	MessageType MessageKind `json:"messageType" yaml:"messageType"`
+	FromNode    node
 }
 
 // server is the structure that will hold the state about spawned
@@ -99,7 +100,7 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 
 func (s *server) PublisherStart() {
 	// Start the checking the input file for new messages from operator.
-	go getMessagesFromFile("./", "inmsg.txt", s.newMessagesCh)
+	go s.getMessagesFromFile("./", "inmsg.txt", s.newMessagesCh)
 
 	// Prepare and start a single process
 	//{
@@ -138,6 +139,10 @@ func (s *server) handleNewOperatorMessages() {
 	go func() {
 		for v := range s.newMessagesCh {
 			for i, vv := range v {
+
+				// Adding a label here so we are able to redo the sending
+				// of the last message if a process with specified subject
+				// is not present.
 			redo:
 				m := vv.Message
 				subjName := vv.Subject.name()
