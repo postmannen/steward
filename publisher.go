@@ -12,7 +12,13 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-type MessageType string
+// MessageKind describes on the message level if this is
+// an event or command kind of message in the Subject name.
+// This field is mainly used to be able to spawn up different
+// worker processes based on the Subject name so we can have
+// one process for handling event kind, and another for
+// handling command kind of messages.
+type MessageKind string
 
 // TODO: Figure it makes sense to have these types at all.
 //  It might make more sense to implement these as two
@@ -23,13 +29,13 @@ const (
 	// delivered back in the reply ack message.
 	// The message should contain the unique ID of the
 	// command.
-	Command MessageType = "command"
+	Command MessageKind = "command"
 	// shellCommand, wait for and return the output
 	// of the command in the ACK message. This means
 	// that the command should be executed immediately
 	// and that we should get the confirmation that it
 	// was successful or not.
-	Event MessageType = "event"
+	Event MessageKind = "event"
 	// eventCommand, just wait for the ACK that the
 	// message is received. What action happens on the
 	// receiving side is up to the received to decide.
@@ -43,7 +49,7 @@ type Message struct {
 	// interface type here to handle several data types ?
 	Data []string `json:"data" yaml:"data"`
 	// The type of the message being sent
-	MessageType MessageType `json:"messageType" yaml:"messageType"`
+	MessageType MessageKind `json:"messageType" yaml:"messageType"`
 }
 
 // server is the structure that will hold the state about spawned
@@ -97,7 +103,7 @@ func (s *server) PublisherStart() {
 
 	// Prepare and start a single process
 	{
-		sub := newSubject("ship1", "command", "shellcommand", "shell")
+		sub := newSubject("ship1", "command", "shellcommand")
 		proc := s.processPrepareNew(sub, s.errorCh)
 		// fmt.Printf("*** %#v\n", proc)
 		go s.processSpawnWorker(proc)
@@ -105,7 +111,7 @@ func (s *server) PublisherStart() {
 
 	// Prepare and start a single process
 	{
-		sub := newSubject("ship2", "command", "shellcommand", "shell")
+		sub := newSubject("ship2", "command", "shellcommand")
 		proc := s.processPrepareNew(sub, s.errorCh)
 		// fmt.Printf("*** %#v\n", proc)
 		go s.processSpawnWorker(proc)
@@ -159,14 +165,9 @@ type Subject struct {
 	// node, the name of the node
 	Node string `json:"node" yaml:"node"`
 	// messageType, command/event
-	MessageType MessageType `json:"messageType" yaml:"messageType"`
+	MessageKind MessageKind `json:"messageKind" yaml:"messageKind"`
 	// method, what is this message doing, etc. shellcommand, syslog, etc.
 	Method string `json:"method" yaml:"method"`
-	// domain is used to differentiate services. Like there can be more
-	// logging services, but rarely more logging services for the same
-	// thing. Domain is here used to differentiate the the services and
-	// tell with one word what it is for.
-	Domain string `json:"domain" yaml:"domain"`
 	// messageCh is the channel for receiving new content to be sent
 	messageCh chan Message
 }
@@ -174,21 +175,28 @@ type Subject struct {
 // newSubject will return a new variable of the type subject, and insert
 // all the values given as arguments. It will also create the channel
 // to receive new messages on the specific subject.
-func newSubject(node string, messageType MessageType, method string, domain string) Subject {
+func newSubject(node string, messageKind MessageKind, method string) Subject {
 	return Subject{
 		Node:        node,
-		MessageType: messageType,
+		MessageKind: messageKind,
 		Method:      method,
-		Domain:      domain,
 		messageCh:   make(chan Message),
 	}
 }
 
+// subjectName is the complete representation of a subject
 type subjectName string
 
 func (s Subject) name() subjectName {
-	return subjectName(fmt.Sprintf("%s.%s.%s.%s", s.Node, s.MessageType, s.Method, s.Domain))
+	return subjectName(fmt.Sprintf("%s.%s.%s", s.Node, s.MessageKind, s.Method))
 }
+
+type processKind string
+
+const (
+	kindSubscriber processKind = "subscriber"
+	kindPublisher  processKind = "publisher"
+)
 
 // process are represent the communication to one individual host
 type process struct {

@@ -39,7 +39,7 @@ func getMessagesFromFile(directoryToCheck string, fileName string, fileContentCh
 		}
 
 		for i := range js {
-			fmt.Printf("*** Checking message found in file: messageType type: %T, messagetype contains: %#v\n", js[i].Subject.MessageType, js[i].Subject.MessageType)
+			fmt.Printf("*** Checking message found in file: messageType type: %T, messagetype contains: %#v\n", js[i].Subject.MessageKind, js[i].Subject.MessageKind)
 		}
 
 		// Send the data back to be consumed
