@@ -55,7 +55,7 @@ All code in this repository are to be concidered not-production-ready. The code 
 
 Subject naming are case sensitive, and can not contain the space are the tab character.
 
-`<nodename>.<command/event>.<method>.<domain>`
+`<nodename>.<command/event>.<method>`
 
 Nodename: Are the hostname of the device. This do not have to be resolvable via DNS, it is just a unique name for the host to receive the message.
 
@@ -64,17 +64,15 @@ Info: The command/event which is called a MessageType are present in both the Su
 
 Method: Are the functionality the message provide. Example could be `shellcommand` or `syslogforwarding`
 
-Domain: Are used to describe what domain the method are for. For example there can be several logging services on an installation, but rarely there are several logging services in place for the same Domain using the same logging method. By having a specific Domain field we will be able to differentiate several loggers having for example `method=syslogforwarding` where one might be for `domain=nginx` and another for `domain=apache`.
-
 ##### Complete subject example
 
 For syslog of type event to a host named "ship1"
 
-`ship1.event.syslogforwarding.nginx`
+`ship1.event.syslogforwarding`
 
 and for a shell command of type command to a host named "ship2"
 
-`ship2.command.shellcommand.operatingsystem`
+`ship2.command.shellcommand`
 
 ## TODO
 
