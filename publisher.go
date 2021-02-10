@@ -72,6 +72,8 @@ type server struct {
 	errorCh chan errProcess
 	// errorKernel
 	errorKernel *errorKernel
+	// TODO: replace this with some structure to hold the logCh value
+	logCh chan []byte
 }
 
 // newServer will prepare and return a server type
@@ -87,6 +89,7 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 		processes:     make(map[subjectName]process),
 		newMessagesCh: make(chan []jsonFromFile),
 		errorCh:       make(chan errProcess, 2),
+		logCh:         make(chan []byte),
 	}
 
 	// Start the error kernel that will do all the error handling
@@ -98,9 +101,35 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 
 }
 
-func (s *server) PublisherStart() {
+func (s *server) Start() {
 	// Start the checking the input file for new messages from operator.
 	go s.getMessagesFromFile("./", "inmsg.txt", s.newMessagesCh)
+
+	// Start the textlogging service that will run on the subscribers
+	// TODO: Figure out how to structure event services like these
+
+	go s.startTextLogging(s.logCh)
+
+	// Start a subscriber for shellCommand messages
+	{
+		fmt.Printf("nodeName: %#v\n", s.nodeName)
+		sub := newSubject(s.nodeName, "command", "shellcommand")
+		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
+		// fmt.Printf("*** %#v\n", proc)
+		go s.processSpawnWorker(proc)
+	}
+
+	// Start a subscriber for textLogging messages
+	{
+		fmt.Printf("nodeName: %#v\n", s.nodeName)
+		sub := newSubject(s.nodeName, "event", "textlogging")
+		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
+		// fmt.Printf("*** %#v\n", proc)
+		go s.processSpawnWorker(proc)
+	}
+
+	time.Sleep(time.Second * 2)
+	fmt.Printf("*** Output of processes map: %#v\n", s.processes)
 
 	// Prepare and start a single process
 	//{
@@ -306,7 +335,7 @@ func (s *server) processSpawnWorker(proc process) {
 			// We start one handler per message received by using go routines here.
 			// This is for being able to reply back the current publisher who sent
 			// the message.
-			go handler(s.natsConn, s.nodeName, msg)
+			go s.handler(s.natsConn, s.nodeName, msg)
 		})
 		if err != nil {
 			log.Printf("error: Subscribe failed: %v\n", err)

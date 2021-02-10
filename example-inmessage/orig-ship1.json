@@ -8,7 +8,7 @@
             },
         "message":
             {
-                "data": ["bash","-c","ls -l"],
+                "data": ["bash","-c","ls -l ../"],
                 "messageType":"Command"
             }
     }

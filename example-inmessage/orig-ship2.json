@@ -8,7 +8,7 @@
             },
         "message":
             {
-                "data": ["bash","-c","tree"],
+                "data": ["bash","-c","tree ../"],
                 "messageType":"Command"
             }
     }

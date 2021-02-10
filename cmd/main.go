@@ -14,8 +14,8 @@ import (
 func main() {
 	nodeName := flag.String("node", "0", "some unique string to identify this Edge unit")
 	brokerAddress := flag.String("brokerAddress", "0", "the address of the message broker")
-	modePublisher := flag.Bool("modePublisher", false, "set to true if it should be able to publish")
-	modeSubscriber := flag.Bool("modeSubscriber", false, "set to true if it should be able to subscribe")
+	// modePublisher := flag.Bool("modePublisher", false, "set to true if it should be able to publish")
+	// modeSubscriber := flag.Bool("modeSubscriber", false, "set to true if it should be able to subscribe")
 	profilingPort := flag.String("profilingPort", "", "The number of the profiling port")
 	flag.Parse()
 
@@ -34,13 +34,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	if *modePublisher {
-		go s.PublisherStart()
-	}
+	// Start the messaging server
+	go s.Start()
 
-	if *modeSubscriber {
-		go s.RunSubscriber()
-	}
+	//if *modeSubscriber {
+	//	go s.RunSubscriber()
+	//}
 
 	select {}
 }

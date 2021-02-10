@@ -1,0 +1,15 @@
+[
+    {
+        "subject":
+            {
+                "node":"central",
+                "messageKind":"event",
+                "method":"textlogging"
+            },
+        "message":
+            {
+                "data": ["some message sent from a ship"],
+                "messageType":"Event"
+            }
+    }
+]

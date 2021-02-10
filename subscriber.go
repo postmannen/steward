@@ -48,7 +48,7 @@ func (s *server) RunSubscriber() {
 // the state of the message being processed, and then reply back to the
 // correct sending process's reply, meaning so we ACK back to the correct
 // publisher.
-func handler(natsConn *nats.Conn, node string, msg *nats.Msg) {
+func (s *server) handler(natsConn *nats.Conn, node string, msg *nats.Msg) {
 
 	message := Message{}
 
@@ -84,7 +84,11 @@ func handler(natsConn *nats.Conn, node string, msg *nats.Msg) {
 		// Send a confirmation message back to the publisher
 		natsConn.Publish(msg.Reply, []byte("confirmed from: "+node+": "+fmt.Sprintf("%v\n%s", message.ID, out)))
 	case message.MessageType == "Event":
-		fmt.Printf("info: the event type is not implemented yet\n")
+		fmt.Printf("info: sending over the message %#v\n", message)
+
+		for _, d := range message.Data {
+			s.logCh <- []byte(d)
+		}
 
 		// Send a confirmation message back to the publisher
 		natsConn.Publish(msg.Reply, []byte("confirmed from: "+node+": "+fmt.Sprint(message.ID)))
