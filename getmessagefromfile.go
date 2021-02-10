@@ -14,7 +14,7 @@ import (
 // getMessagesFromFile will start a file watcher for the given directory
 // and filename. It will take a channel of []byte as input, and it is
 // in this channel the content of a file that has changed is returned.
-func (s *server) getMessagesFromFile(directoryToCheck string, fileName string, fileContentCh chan []jsonFromFile) {
+func (s *server) getMessagesFromFile(directoryToCheck string, fileName string, fileContentCh chan []subjectAndMessage) {
 	fileUpdated := make(chan bool)
 	go fileWatcherStart(directoryToCheck, fileUpdated)
 
@@ -34,12 +34,15 @@ func (s *server) getMessagesFromFile(directoryToCheck string, fileName string, f
 
 		// unmarshal the JSON into a struct
 		js, err := jsonFromFileData(b)
+		fmt.Printf("*** OUTPUT AFTER UNMARSHALING JSON: %#v\n", js)
 		if err != nil {
 			log.Printf("%v\n", err)
 		}
 
 		for i := range js {
 			fmt.Printf("*** Checking message found in file: messageType type: %T, messagetype contains: %#v\n", js[i].Subject.CommandOrEvent, js[i].Subject.CommandOrEvent)
+			// Fill in the value for the FromNode field, so the receiver
+			// can check this field to know where it came from.
 			js[i].Message.FromNode = node(s.nodeName)
 		}
 
@@ -48,24 +51,39 @@ func (s *server) getMessagesFromFile(directoryToCheck string, fileName string, f
 	}
 }
 
-type jsonFromFile struct {
+type subjectAndMessage struct {
 	Subject `json:"subject" yaml:"subject"`
 	Message `json:"message" yaml:"message"`
 }
 
-func jsonFromFileData(b []byte) ([]jsonFromFile, error) {
-	JS := []jsonFromFile{}
+func jsonFromFileData(b []byte) ([]subjectAndMessage, error) {
+	MsgSlice := []Message{}
 
-	err := json.Unmarshal(b, &JS)
+	err := json.Unmarshal(b, &MsgSlice)
+	fmt.Printf("*** OUTPUT DIRECTLY AFTER UNMARSHALING JSON: %#v\n", MsgSlice)
 	// TODO: Look into also marshaling from yaml and toml later
-	//err := yaml.Unmarshal(b, &JS)
-	//err := toml.Unmarshal(b, &JS)
-	//fmt.Printf("%#v\n", JS)
 	if err != nil {
 		return nil, fmt.Errorf("error: unmarshal of file failed: %#v", err)
 	}
 
-	return JS, nil
+	sam := []subjectAndMessage{}
+
+	for _, m := range MsgSlice {
+		s := Subject{
+			Node:           string(m.ToNode),
+			CommandOrEvent: m.CommandOrEvent,
+			Method:         m.Method,
+		}
+
+		sm := subjectAndMessage{
+			Subject: s,
+			Message: m,
+		}
+
+		sam = append(sam, sm)
+	}
+
+	return sam, nil
 }
 
 // readTruncateMessageFile, will read all the messages in the given
@@ -118,7 +136,7 @@ func fileWatcherStart(directoryToCheck string, fileUpdated chan bool) {
 			select {
 			case event := <-watcher.Events:
 				if event.Op&fsnotify.Write == fsnotify.Write {
-					log.Println("info: infile updated, processing input: ", event.Name)
+					log.Println("info: inmsg.txt file updated, processing input: ", event.Name)
 					//testing with an update chan to get updates
 					fileUpdated <- true
 				}

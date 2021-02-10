@@ -1,15 +1,10 @@
 [
     {
-        "subject":
-            {
-                "node":"ship1",
-                "commandOrEvent":"command",
-                "method":"shellcommand"
-            },
-        "message":
-            {
-                "data": ["bash","-c","ls -l ../"],
-                "commandOrEvent":"Command"
-            }
+        
+        "toNode": "ship1",
+        "data": ["bash","-c","ls -l ../"],
+        "commandOrEvent":"command",
+        "method":"shellCommand"
+            
     }
 ]

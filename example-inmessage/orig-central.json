@@ -1,15 +1,8 @@
 [
     {
-        "subject":
-            {
-                "node":"central",
-                "commandOrEvent":"event",
-                "method":"textlogging"
-            },
-        "message":
-            {
-                "data": ["some message sent from a ship"],
-                "commandOrEvent":"Event"
-            }
+        "toNode": "central",
+        "data": ["some message sent from a ship\n"],
+        "commandOrEvent":"event",
+        "method":"textLogging"
     }
 ]
