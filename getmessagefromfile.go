@@ -39,7 +39,7 @@ func (s *server) getMessagesFromFile(directoryToCheck string, fileName string, f
 		}
 
 		for i := range js {
-			fmt.Printf("*** Checking message found in file: messageType type: %T, messagetype contains: %#v\n", js[i].Subject.MessageKind, js[i].Subject.MessageKind)
+			fmt.Printf("*** Checking message found in file: messageType type: %T, messagetype contains: %#v\n", js[i].Subject.CommandOrEvent, js[i].Subject.CommandOrEvent)
 			js[i].Message.FromNode = node(s.nodeName)
 		}
 

@@ -3,13 +3,13 @@
         "subject":
             {
                 "node":"ship1",
-                "messageKind":"command",
+                "commandOrEvent":"command",
                 "method":"shellcommand"
             },
         "message":
             {
                 "data": ["bash","-c","ls -l ../"],
-                "messageType":"Command"
+                "commandOrEvent":"Command"
             }
     }
 ]

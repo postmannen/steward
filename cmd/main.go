@@ -37,9 +37,5 @@ func main() {
 	// Start the messaging server
 	go s.Start()
 
-	//if *modeSubscriber {
-	//	go s.RunSubscriber()
-	//}
-
 	select {}
 }
