@@ -39,6 +39,22 @@ In it's simplest form the idea about using an event driven system as the core fo
 
 All code in this repository are to be concidered not-production-ready. The code are the attempt to concretize the idea of a purely async management system where the controlling unit is decoupled from the receiving unit, and that that we know the state of all the receiving units at all times.
 
+## Features
+
+- Send a message with some command or event to some node and be sure that the message is delivered. If for example the network link is down, the message will be retried until succesful.
+
+- Error messages can or will be sent back to the central upon failure.
+
+- The handling of all messages is done by spawning up a process for the handling in it's own thread, this allows us for individually keep the state for each message both in regards to ACK an Errors handled all within the thread that was spawned for owning the message (if that made sense ??).
+
+- Processes for handling messages on a host can and might be automatically restarted upon failure, or asked to just terminate and send a message back to the operator that something have gone seriously wrong. This is right now just partially implemented to test that the concept works.
+
+- Processes on the publishing node for handling incomming messages for new nodes will automatically be spawned when needed if it does not already exist.
+
+- Publishers will potentially be able to send to all nodes. It is the subscribing nodes who will limit where and what they will receive from.
+
+- More will come. In active development. 
+
 ## Concepts/Ideas
 
 ### Terminology
@@ -83,3 +99,112 @@ and for a shell command of type command to a host named "ship2"
 - Since a process will be locked while waiting to send the error on the errorCh maybe it makes sense to have a channel inside the processes error handling with a select so we can send back to the process if it should continue or not based not based on how severe the error where. This should be right after sending the error sending in the process.
 
 - Look into adding a channel to the error messages sent from a worker process, so the error kernel can send f.ex. a shutdown instruction back to the worker.
+
+- Implement the concept of timeouts/TTL for messages.
+
+- Prometheus exporters for metrics.
+
+## Howto
+
+### Build and Run
+
+clone the repository, then cd `./steward/cmd` and do `go build -o steward`, and run the application with `./steward --help`
+
+### Options for running
+
+```
+  -brokerAddress string
+    	the address of the nats message broker (default "0")
+  -node string
+    	some unique string to identify this Edge unit (default "0")
+  -profilingPort string
+    	The number of the profiling port
+```
+
+### How to Run
+
+On some central server which will act as your command and control server.
+
+`./steward --node="central"`
+
+One the nodes out there
+
+`./steward --node="ship1"` & `./steward --node="ship1"` and so on.
+
+### Sending messages with commands or events
+
+Right now there are to types of messages.
+
+- Commands, are some command you want to run on a node, wait for it to finish, get an ACK back with the result contained in the ACK message. Think like running a shell command on some remote host.
+- Events, are something you just want to deliver, and wait to get an ACK back that it was delivered succesfully. Think like forwarding logs to some host, you just want to be sure it was delivered.
+
+### How to send a Message.
+
+Right now the API for sending a message from one node to another node is by pasting a structured JSON object into a file called `inmsg.txt` living alongside the binary. This file will be watched continously, and when updated the content will be picked up, parsed, and if OK it will be sent a message to the node specified.
+
+Currently there is one Command message type for running shell comands and one event message type for sending logs implemented. More will come.
+
+#### Sending a command from one Node to Another Node
+
+Example JSON for pasting a message of type command into the `inmsg.txt` file
+
+```
+[
+    {
+        
+        "toNode": "ship1",
+        "data": ["bash","-c","ls -l ../"],
+        "commandOrEvent":"command",
+        "method":"shellCommand"
+            
+    }
+]
+```
+
+To send specify more messages at once do 
+
+```
+[
+    {
+        
+        "toNode": "ship1",
+        "data": ["bash","-c","ls -l ../"],
+        "commandOrEvent":"command",
+        "method":"shellCommand"
+            
+    },
+    {
+        
+        "toNode": "ship2",
+        "data": ["bash","-c","ls -l ../"],
+        "commandOrEvent":"command",
+        "method":"shellCommand"
+            
+    }
+]
+```
+
+You can save the content to myfile.JSON and append it to `inmsg.txt`
+
+`cat myfile.json >> inmsg.txt`
+
+The content of `inmsg.txt` will be erased as messages a processed.
+
+#### Sending a message of type Event
+
+```
+[
+    {
+        "toNode": "central",
+        "data": ["some message sent from a ship for testing\n"],
+        "commandOrEvent":"event",
+        "method":"textLogging"
+    }
+]
+```
+
+You can save the content to myfile.JSON and append it to `inmsg.txt`
+
+`cat myfile.json >> inmsg.txt`
+
+The content of `inmsg.txt` will be erased as messages a processed.
