@@ -53,7 +53,7 @@ All code in this repository are to be concidered not-production-ready. The code 
 
 - Publishers will potentially be able to send to all nodes. It is the subscribing nodes who will limit where and what they will receive from.
 
-- More will come. In active development. 
+- More will come. In active development.
 
 ## Concepts/Ideas
 
@@ -93,16 +93,21 @@ and for a shell command of type command to a host named "ship2"
 ## TODO
 
 - Timeouts. Does it makes sense to have a default timeout for all messages, and where that timeout can be overridden per message upon creation of the message.
+Implement the concept of timeouts/TTL for messages.
 
-- Check that there is a node for the specific message new incomming message, and the supervisor should create the process with the wanted subject on both the publishing and the receiving node. If there is no such node an error should be generated and processed by the error-kernel.
+- **Implemented**
+Check that there is a node for the specific message new incomming message, and the supervisor should create the process with the wanted subject on the publishing.
 
-- Since a process will be locked while waiting to send the error on the errorCh maybe it makes sense to have a channel inside the processes error handling with a select so we can send back to the process if it should continue or not based not based on how severe the error where. This should be right after sending the error sending in the process.
+- **Implemented**
+Since a process will be locked while waiting to send the error on the errorCh maybe it makes sense to have a channel inside the processes error handling with a select so we can send back to the process if it should continue or not based not based on how severe the error where. This should be right after sending the error sending in the process.
 
 - Look into adding a channel to the error messages sent from a worker process, so the error kernel can send f.ex. a shutdown instruction back to the worker.
 
-- Implement the concept of timeouts/TTL for messages.
-
 - Prometheus exporters for metrics.
+
+- Go through all processes and check that the error is handled correctly, and also reported back on the error subject to the master supervisor.
+
+- Implement the code running inside of each process as it's own function type that get's passed into the spawn process method up on creation of a new method.
 
 ## Howto
 
@@ -112,13 +117,13 @@ clone the repository, then cd `./steward/cmd` and do `go build -o steward`, and 
 
 ### Options for running
 
-```
+```bash
   -brokerAddress string
-    	the address of the nats message broker (default "0")
+    the address of the nats message broker (default "0")
   -node string
-    	some unique string to identify this Edge unit (default "0")
+    some unique string to identify this Edge unit (default "0")
   -profilingPort string
-    	The number of the profiling port
+    The number of the profiling port
 ```
 
 ### How to Run
@@ -138,7 +143,7 @@ Right now there are to types of messages.
 - Commands, are some command you want to run on a node, wait for it to finish, get an ACK back with the result contained in the ACK message. Think like running a shell command on some remote host.
 - Events, are something you just want to deliver, and wait to get an ACK back that it was delivered succesfully. Think like forwarding logs to some host, you just want to be sure it was delivered.
 
-### How to send a Message.
+### How to send a Message
 
 Right now the API for sending a message from one node to another node is by pasting a structured JSON object into a file called `inmsg.txt` living alongside the binary. This file will be watched continously, and when updated the content will be picked up, parsed, and if OK it will be sent a message to the node specified.
 
@@ -148,7 +153,7 @@ Currently there is one Command message type for running shell comands and one ev
 
 Example JSON for pasting a message of type command into the `inmsg.txt` file
 
-```
+```json
 [
     {
         
@@ -161,9 +166,9 @@ Example JSON for pasting a message of type command into the `inmsg.txt` file
 ]
 ```
 
-To send specify more messages at once do 
+To send specify more messages at once do
 
-```
+```json
 [
     {
         
@@ -192,7 +197,7 @@ The content of `inmsg.txt` will be erased as messages a processed.
 
 #### Sending a message of type Event
 
-```
+```json
 [
     {
         "toNode": "central",
