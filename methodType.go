@@ -57,7 +57,7 @@ func (ma MethodsAvailable) CheckIfExists(m Method) (methodHandler, bool) {
 // ------------------------------------------------------------
 
 type methodHandler interface {
-	handler(*server, Message, string) ([]byte, error)
+	handler(server *server, message Message, node string) ([]byte, error)
 }
 
 type methodCommandShellCommand struct{}
