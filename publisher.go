@@ -14,6 +14,21 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+type Message struct {
+	ToNode node `json:"toNode" yaml:"toNode"`
+	// The Unique ID of the message
+	ID int `json:"id" yaml:"id"`
+	// The actual data in the message
+	// TODO: Change this to a slice instead...or maybe use an
+	// interface type here to handle several data types ?
+	Data []string `json:"data" yaml:"data"`
+	// The type of the message being sent
+	CommandOrEvent CommandOrEvent `json:"commandOrEvent" yaml:"commandOrEvent"`
+	// method, what is this message doing, etc. shellCommand, syslog, etc.
+	Method   Method `json:"method" yaml:"method"`
+	FromNode node
+}
+
 // server is the structure that will hold the state about spawned
 // processes on a local instance.
 type server struct {
@@ -132,7 +147,7 @@ func (s *server) handleMessagesToPublish() {
 				// TODO: Send a message to the error kernel here that
 				// it was unable to process the message with the reason
 				// why ?
-				if !s.methodsAvailable.CheckIfExists(sam.Message.Method) {
+				if _, ok := s.methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
 					continue
 				}
 				if !s.commandOrEventAvailable.CheckIfExists(sam.Message.CommandOrEvent) {
