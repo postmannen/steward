@@ -409,31 +409,47 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, node string, msg *nats.M
 	// method etc.
 	switch {
 	case message.CommandOrEvent == Command:
+		out, err := func(s *server, message Message, node string) ([]byte, error) {
+			// Since the command to execute is at the first position in the
+			// slice we need to slice it out. The arguments are at the
+			// remaining positions.
+			c := message.Data[0]
+			a := message.Data[1:]
+			cmd := exec.Command(c, a...)
+			//cmd.Stdout = os.Stdout
+			out, err := cmd.CombinedOutput()
+			if err != nil {
+				log.Printf("error: execution of command failed: %v\n", err)
+			}
 
-		// Since the command to execute is at the first position in the
-		// slice we need to slice it out. The arguments are at the
-		// remaining positions.
-		c := message.Data[0]
-		a := message.Data[1:]
-		cmd := exec.Command(c, a...)
-		//cmd.Stdout = os.Stdout
-		out, err := cmd.CombinedOutput()
+			outMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n%s---", node, message.ID, out))
+			return outMsg, nil
+		}(s, message, node)
+
 		if err != nil {
-			log.Printf("error: execution of command failed: %v\n", err)
+			// TODO: Send to error kernel ?
+			log.Printf("error: failed to execute event: %v\n", err)
 		}
-		fmt.Printf("%s", out)
 
 		// Send a confirmation message back to the publisher
-		natsConn.Publish(msg.Reply, []byte("confirmed from: "+node+": "+fmt.Sprintf("%v\n%s", message.ID, out)))
+		natsConn.Publish(msg.Reply, out)
 	case message.CommandOrEvent == Event:
-		fmt.Printf("info: sending over the message %#v\n", message)
+		out, err := func(s *server, message Message, node string) ([]byte, error) {
+			for _, d := range message.Data {
+				s.logCh <- []byte(d)
+			}
 
-		for _, d := range message.Data {
-			s.logCh <- []byte(d)
+			outMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+			return outMsg, nil
+		}(s, message, node)
+
+		if err != nil {
+			// TODO: Send to error kernel ?
+			log.Printf("error: failed to execute event: %v\n", err)
 		}
 
 		// Send a confirmation message back to the publisher
-		natsConn.Publish(msg.Reply, []byte("confirmed from: "+node+": "+fmt.Sprint(message.ID)))
+		natsConn.Publish(msg.Reply, out)
 	default:
 		log.Printf("info: did not find that specific type of command: %#v\n", message.CommandOrEvent)
 	}
