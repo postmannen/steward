@@ -6,5 +6,13 @@
         "commandOrEvent":"command",
         "method":"shellCommand"
             
+    },
+    {
+        
+        "toNode": "ship1",
+        "data": ["bash","-c","ls -l ../"],
+        "commandOrEvent":"command",
+        "method":"shellCommand"
+            
     }
 ]

@@ -136,50 +136,71 @@ func (s *server) printProcessesMap() {
 // handleNewOperatorMessages will handle all the new operator messages
 // given to the system, and route them to the correct subject queue.
 func (s *server) handleMessagesToPublish() {
-	// Process the messages that have been received on the incomming
-	// message pipe. Check and send if there are a specific subject
-	// for it, and no subject exist throw an error.
+	// Prepare and start a new ring buffer
+	const bufferSize int = 100
+	rb := newringBuffer(bufferSize)
+	inCh := make(chan subjectAndMessage)
+	outCh := make(chan subjectAndMessage)
+	rb.start(inCh, outCh)
+
+	// Start reading new messages received on the incomming message
+	// pipe requested by operator, and fill them into the buffer.
 	go func() {
 		for samSlice := range s.newMessagesCh {
-			for i, sam := range samSlice {
-				// Check if the format of the message is correct.
-				// TODO: Send a message to the error kernel here that
-				// it was unable to process the message with the reason
-				// why ?
-				if _, ok := s.methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
-					continue
-				}
-				if !s.commandOrEventAvailable.CheckIfExists(sam.Message.CommandOrEvent) {
-					continue
-				}
+			fmt.Println("***** DEBUG ranging samSlice")
+			for _, sam := range samSlice {
+				fmt.Println("***** DEBUG putting on channel")
+				inCh <- sam
+				fmt.Println("***** DEBUG done putting on channel")
+			}
+		}
+		close(inCh)
+	}()
 
-				// Adding a label here so we are able to redo the sending
-				// of the last message if a process with specified subject
-				// is not present.
+	// Process the messages that are in the ring buffer. Check and
+	// send if there are a specific subject for it, and no subject
+	// exist throw an error.
+	go func() {
+		for sam := range outCh {
+			// Check if the format of the message is correct.
+			// TODO: Send a message to the error kernel here that
+			// it was unable to process the message with the reason
+			// why ?
+			if _, ok := s.methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
+				continue
+			}
+			if !s.commandOrEventAvailable.CheckIfExists(sam.Message.CommandOrEvent) {
+				continue
+			}
 
-			redo:
-				m := sam.Message
-				subjName := sam.Subject.name()
-				fmt.Printf("** handleNewOperatorMessages: message: %v, ** subject: %#v\n", m, sam.Subject)
-				_, ok := s.processes[subjName]
-				if ok {
-					log.Printf("info: found the specific subject: %v\n", subjName)
-					// Put the message on the correct process's messageCh
-					s.processes[subjName].subject.messageCh <- m
-				} else {
-					// If a publisher do not exist for the given subject, create it, and
-					// by using the goto at the end redo the process for this specific message.
-					log.Printf("info: did not find that specific subject, starting new process for subject: %v\n", subjName)
+			// Adding a label here so we are able to redo the sending
+			// of the last message if a process with specified subject
+			// is not present. The process will then be created, and
+			// the code will loop back to the redo: label.
 
-					sub := newSubject(samSlice[i].Subject.Node, samSlice[i].Subject.CommandOrEvent, samSlice[i].Subject.Method)
-					proc := s.processPrepareNew(sub, s.errorCh, processKindPublisher)
-					// fmt.Printf("*** %#v\n", proc)
-					go s.processSpawnWorker(proc)
+		redo:
+			m := sam.Message
+			subjName := sam.Subject.name()
+			fmt.Printf("** handleNewOperatorMessages: message: %v, ** subject: %#v\n", m, sam.Subject)
+			_, ok := s.processes[subjName]
+			if ok {
+				log.Printf("info: found the specific subject: %v\n", subjName)
+				// Put the message on the correct process's messageCh
+				s.processes[subjName].subject.messageCh <- m
+			} else {
+				// If a publisher do not exist for the given subject, create it, and
+				// by using the goto at the end redo the process for this specific message.
+				log.Printf("info: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
-					time.Sleep(time.Millisecond * 500)
-					s.printProcessesMap()
-					goto redo
-				}
+				sub := newSubject(sam.Subject.Node, sam.Subject.CommandOrEvent, sam.Subject.Method)
+				proc := s.processPrepareNew(sub, s.errorCh, processKindPublisher)
+				// fmt.Printf("*** %#v\n", proc)
+				go s.processSpawnWorker(proc)
+
+				time.Sleep(time.Millisecond * 500)
+				s.printProcessesMap()
+				// Now when the process is spawned we jump back to the redo: label.
+				goto redo
 			}
 		}
 	}()
