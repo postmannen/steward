@@ -41,7 +41,7 @@ type server struct {
 	mu       sync.Mutex
 	// The channel where we receive new messages from the outside to
 	// insert into the system for being processed
-	newMessagesCh chan []subjectAndMessage
+	inputFromFileCh chan []subjectAndMessage
 	// errorCh is used to report errors from a process
 	// NB: Implementing this as an int to report for testing
 	errorCh chan errProcess
@@ -69,7 +69,7 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 		nodeName:                nodeName,
 		natsConn:                conn,
 		processes:               make(map[subjectName]process),
-		newMessagesCh:           make(chan []subjectAndMessage),
+		inputFromFileCh:         make(chan []subjectAndMessage),
 		errorCh:                 make(chan errProcess, 2),
 		logCh:                   make(chan []byte),
 		methodsAvailable:        m.GetMethodsAvailable(),
@@ -91,7 +91,7 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 // checking is also started here in Start by calling handleMessagesToPublish.
 func (s *server) Start() {
 	// Start the checking the input file for new messages from operator.
-	go s.getMessagesFromFile("./", "inmsg.txt", s.newMessagesCh)
+	go s.getMessagesFromFile("./", "inmsg.txt", s.inputFromFileCh)
 
 	// Start the textLogging service that will run on the subscribers
 	// TODO: Figure out how to structure event services like these
@@ -146,7 +146,7 @@ func (s *server) handleMessagesToPublish() {
 	// Start reading new messages received on the incomming message
 	// pipe requested by operator, and fill them into the buffer.
 	go func() {
-		for samSlice := range s.newMessagesCh {
+		for samSlice := range s.inputFromFileCh {
 			fmt.Println("***** DEBUG ranging samSlice")
 			for _, sam := range samSlice {
 				fmt.Println("***** DEBUG putting on channel")
@@ -355,7 +355,7 @@ func (s *server) processSpawnWorker(proc process) {
 
 func messageDeliver(proc process, message Message, natsConn *nats.Conn) {
 	for {
-		dataPayload, err := gobEncodePayload(message)
+		dataPayload, err := gobEncodeMessage(message)
 		if err != nil {
 			log.Printf("error: createDataPayload: %v\n", err)
 		}
@@ -404,12 +404,12 @@ func messageDeliver(proc process, message Message, natsConn *nats.Conn) {
 // gobEncodePayload will encode the message structure along with its
 // valued in gob binary format.
 // TODO: Check if it adds value to compress with gzip.
-func gobEncodePayload(m Message) ([]byte, error) {
+func gobEncodeMessage(m Message) ([]byte, error) {
 	var buf bytes.Buffer
 	gobEnc := gob.NewEncoder(&buf)
 	err := gobEnc.Encode(m)
 	if err != nil {
-		return nil, fmt.Errorf("error: gob.Enode failed: %v", err)
+		return nil, fmt.Errorf("error: gob.Encode failed: %v", err)
 	}
 
 	return buf.Bytes(), nil

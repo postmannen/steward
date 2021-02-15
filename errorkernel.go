@@ -57,7 +57,9 @@ func (e *errorKernel) startErrorKernel(errorCh chan errProcess) {
 				// the operator....or other ?
 				//
 				// Just print the error, and tell the process to continue
-				log.Printf("*** error_kernel: %#v, type=%T\n", er, er)
+
+				// log.Printf("*** error_kernel: %#v, type=%T\n", er, er)
+				log.Printf("TESTING, we received and error from the process, but we're telling the process back to continue\n")
 				er.errorActionCh <- errActionContinue
 			}()
 		}

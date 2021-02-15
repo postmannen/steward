@@ -14,7 +14,7 @@ import (
 // getMessagesFromFile will start a file watcher for the given directory
 // and filename. It will take a channel of []byte as input, and it is
 // in this channel the content of a file that has changed is returned.
-func (s *server) getMessagesFromFile(directoryToCheck string, fileName string, fileContentCh chan []subjectAndMessage) {
+func (s *server) getMessagesFromFile(directoryToCheck string, fileName string, inputFromFileCh chan []subjectAndMessage) {
 	fileUpdated := make(chan bool)
 	go fileWatcherStart(directoryToCheck, fileUpdated)
 
@@ -47,7 +47,7 @@ func (s *server) getMessagesFromFile(directoryToCheck string, fileName string, f
 		}
 
 		// Send the data back to be consumed
-		fileContentCh <- js
+		inputFromFileCh <- js
 	}
 }
 
