@@ -144,7 +144,7 @@ func (s *server) handleMessagesInRingbuffer() {
 	const bufferSize int = 100
 	rb := newringBuffer(bufferSize)
 	inCh := make(chan subjectAndMessage)
-	outCh := make(chan subjectAndMessage)
+	outCh := make(chan samDBValue)
 	rb.start(inCh, outCh)
 
 	// Start reading new messages received on the incomming message
@@ -165,7 +165,8 @@ func (s *server) handleMessagesInRingbuffer() {
 	// send if there are a specific subject for it, and no subject
 	// exist throw an error.
 	go func() {
-		for sam := range outCh {
+		for samTmp := range outCh {
+			sam := samTmp.Data
 			// Check if the format of the message is correct.
 			// TODO: Send a message to the error kernel here that
 			// it was unable to process the message with the reason
