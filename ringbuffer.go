@@ -10,8 +10,7 @@
 package steward
 
 import (
-	"bytes"
-	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
@@ -29,15 +28,15 @@ type samDBValue struct {
 
 // ringBuffer holds the data of the buffer,
 type ringBuffer struct {
-	bufData chan subjectAndMessage
-	db      *bolt.DB
+	bufData            chan subjectAndMessage
+	db                 *bolt.DB
+	totalMessagesIndex int
 }
 
 // newringBuffer is a push/pop storage for values.
 func newringBuffer(size int) *ringBuffer {
 	db, err := bolt.Open("./incommmingBuffer.db", 0600, nil)
 	if err != nil {
-		// TODO: error handling
 		log.Printf("error: failed to open db: %v\n", err)
 	}
 	return &ringBuffer{
@@ -53,49 +52,44 @@ func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan subjectAndMes
 	// Starting both writing and reading in separate go routines so we
 	// can write and read concurrently.
 
-	const samValueBucket string = "samValues"
+	const samValueBucket string = "samValueBucket"
+	const indexValueBucket string = "indexValueBucket"
 
-	i := 0
+	r.totalMessagesIndex = r.getIndexValue(indexValueBucket)
 
 	// Fill the buffer when new data arrives
 	go func() {
+		// Check for incomming messages. These are typically comming from
+		// the go routine who reads inmsg.txt.
 		for v := range inCh {
-			r.bufData <- v
-			fmt.Printf("**BUFFER** DEBUG PUSHED ON BUFFER: value = %v\n\n", v)
+			// --- Store the incomming message in the k/v store ---
 
-			iv := strconv.Itoa(i)
+			// Create a structure for JSON marshaling.
 			samV := samDBValue{
-				ID:   i,
+				ID:   r.totalMessagesIndex,
 				Data: v,
 			}
 
-			svGob, err := gobEncodeSamValue(samV)
+			js, err := json.Marshal(samV)
 			if err != nil {
 				log.Printf("error: gob encoding samValue: %v\n", err)
 			}
 
-			// Also store the incomming message in key/value store
-			err = r.dbUpdate(r.db, samValueBucket, iv, svGob)
+			// Store the incomming message in key/value store
+			err = r.dbUpdate(r.db, samValueBucket, strconv.Itoa(r.totalMessagesIndex), js)
 			if err != nil {
 				// TODO: Handle error
 				log.Printf("error: dbUpdate samValue failed: %v\n", err)
 			}
 
-			retreivedGob, err := r.dbView(r.db, samValueBucket, iv)
-			if err != nil {
-				// TODO: Handle error
-				log.Printf("error: dbView retreival samValue failed: %v\n", err)
-			}
+			// Send the message to some process to consume it.
+			r.bufData <- v
 
-			retreived, err := gobDecodeSamValue(retreivedGob)
-			if err != nil {
-				// TODO: Handle error
-				log.Printf("error: dbView gobDecode retreival samValue failed: %v\n", err)
-			}
-
-			fmt.Printf("*************** INFO: dbView, key: %v, got value: %v\n ", iv, retreived)
-
-			i++
+			// Increment index, and store the new value to the database.
+			r.totalMessagesIndex++
+			fmt.Printf("*** NEXT INDEX NUMBER INCREMENTED: %v\n", r.totalMessagesIndex)
+			fmt.Println("---------------------------------------------------------")
+			r.dbUpdate(r.db, indexValueBucket, "index", []byte(strconv.Itoa(r.totalMessagesIndex)))
 		}
 
 		// When done close the buffer channel
@@ -106,10 +100,35 @@ func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan subjectAndMes
 	go func() {
 		for v := range r.bufData {
 			outCh <- v
+
+			// TODO: Delete the messages here. The SAM handled here, do
+			// not contain the totalMessageID, so we might need to change
+			// the struct we pass around.
+			// IDEA: Add a go routine for each message handled here, and include
+			// a done channel in the structure, so a go routine handling the
+			// message will be able to signal back here that the message have
+			// been processed, and that we then can delete it out of the K/V Store.
 		}
 
 		close(outCh)
 	}()
+}
+
+func (r *ringBuffer) getIndexValue(indexBucket string) int {
+	const indexKey string = "index"
+	indexB, err := r.dbView(r.db, indexBucket, indexKey)
+	if err != nil {
+		log.Printf("error: getIndexValue: dbView: %v\n", err)
+	}
+
+	index, err := strconv.Atoi(string(indexB))
+	if err != nil {
+		log.Printf("error: getIndexValue: strconv.Atoi : %v\n", err)
+	}
+
+	fmt.Printf("**** RETURNING INDEX, WITH VALUE = %v\n", index)
+
+	return index
 }
 
 func (r *ringBuffer) dbView(db *bolt.DB, bucket string, key string) ([]byte, error) {
@@ -118,10 +137,15 @@ func (r *ringBuffer) dbView(db *bolt.DB, bucket string, key string) ([]byte, err
 	err := db.View(func(tx *bolt.Tx) error {
 		//Open a bucket to get key's and values from.
 		bu := tx.Bucket([]byte(bucket))
+		if bu == nil {
+			log.Printf("info: no such bucket exist: %v\n", bucket)
+			return nil
+		}
 
 		v := bu.Get([]byte(key))
 		if len(v) == 0 {
-			return fmt.Errorf("info: view: key not found")
+			log.Printf("info: view: key not found\n")
+			return nil
 		}
 
 		value = v
@@ -152,29 +176,4 @@ func (r *ringBuffer) dbUpdate(db *bolt.DB, bucket string, key string, value []by
 		return nil
 	})
 	return err
-}
-
-func gobEncodeSamValue(samValue samDBValue) ([]byte, error) {
-	var buf bytes.Buffer
-	gobEnc := gob.NewEncoder(&buf)
-	err := gobEnc.Encode(samValue)
-	if err != nil {
-		return nil, fmt.Errorf("error: gob.Encode failed: %v", err)
-	}
-
-	return buf.Bytes(), nil
-}
-
-func gobDecodeSamValue(b []byte) (samDBValue, error) {
-	sv := samDBValue{}
-
-	buf := bytes.NewBuffer(b)
-	gobDec := gob.NewDecoder(buf)
-	err := gobDec.Decode(&sv)
-	if err != nil {
-		log.Printf("error: gob decoding failed: %v\n", err)
-		return samDBValue{}, err
-	}
-
-	return sv, nil
 }

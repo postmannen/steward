@@ -136,7 +136,7 @@ func fileWatcherStart(directoryToCheck string, fileUpdated chan bool) {
 			select {
 			case event := <-watcher.Events:
 				if event.Op&fsnotify.Write == fsnotify.Write {
-					log.Println("info: inmsg.txt file updated, processing input: ", event.Name)
+					// log.Println("info: inmsg.txt file updated, processing input: ", event.Name)
 					//testing with an update chan to get updates
 					fileUpdated <- true
 				}

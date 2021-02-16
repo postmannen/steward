@@ -147,11 +147,8 @@ func (s *server) handleMessagesToPublish() {
 	// pipe requested by operator, and fill them into the buffer.
 	go func() {
 		for samSlice := range s.inputFromFileCh {
-			fmt.Println("***** DEBUG ranging samSlice")
 			for _, sam := range samSlice {
-				fmt.Println("***** DEBUG putting on channel")
 				inCh <- sam
-				fmt.Println("***** DEBUG done putting on channel")
 			}
 		}
 		close(inCh)

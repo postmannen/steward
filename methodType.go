@@ -46,10 +46,10 @@ type MethodsAvailable struct {
 func (ma MethodsAvailable) CheckIfExists(m Method) (methodHandler, bool) {
 	mFunc, ok := ma.topics[m]
 	if ok {
-		fmt.Printf("******THE TOPIC EXISTS: %v******\n", m)
+		// fmt.Printf("******THE TOPIC EXISTS: %v******\n", m)
 		return mFunc, true
 	} else {
-		fmt.Printf("******THE TOPIC DO NOT EXIST: %v******\n", m)
+		// fmt.Printf("******THE TOPIC DO NOT EXIST: %v******\n", m)
 		return nil, false
 	}
 }
