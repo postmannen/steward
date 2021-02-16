@@ -108,10 +108,45 @@ func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan subjectAndMes
 			// a done channel in the structure, so a go routine handling the
 			// message will be able to signal back here that the message have
 			// been processed, and that we then can delete it out of the K/V Store.
+
+			// Dump the whole KV store
+			err := r.dumpCursor(samValueBucket)
+			if err != nil {
+				fmt.Printf("* Error: dump of db failed: %v\n", err)
+			}
+
 		}
 
 		close(outCh)
 	}()
+}
+
+func (r *ringBuffer) dumpCursor(bucket string) error {
+	err := r.db.View(func(tx *bolt.Tx) error {
+		bu := tx.Bucket([]byte(bucket))
+
+		fmt.Println("--------------------------DUMP---------------------------")
+		bu.ForEach(func(k, v []byte) error {
+			var vv samDBValue
+			err := json.Unmarshal(v, &vv)
+			if err != nil {
+				log.Printf("error: dumpBucket json.Umarshal failed: %v\n", err)
+			}
+			fmt.Printf("k: %s, v: %v\n", k, vv)
+			return nil
+		})
+
+		// c := bu.Cursor()
+		//
+		// fmt.Println("--------------------------DUMP---------------------------")
+		// for k, v := c.First(); k != nil; c.Next() {
+		// 	fmt.Printf("k: %s, v: %v\n", k, v)
+		// }
+
+		return nil
+	})
+
+	return err
 }
 
 func (r *ringBuffer) getIndexValue(indexBucket string) int {
