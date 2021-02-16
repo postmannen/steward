@@ -26,6 +26,10 @@ type Message struct {
 	// method, what is this message doing, etc. shellCommand, syslog, etc.
 	Method   Method `json:"method" yaml:"method"`
 	FromNode node
+	// done is used to signal when a message is fully processed.
+	// This is used when choosing when to move the message from
+	// the ringbuffer into the time series log.
+	done chan struct{}
 }
 
 // server is the structure that will hold the state about spawned
@@ -118,7 +122,7 @@ func (s *server) Start() {
 	time.Sleep(time.Second * 2)
 	s.printProcessesMap()
 
-	s.handleMessagesToPublish()
+	s.handleMessagesInRingbuffer()
 
 	select {}
 
@@ -135,7 +139,7 @@ func (s *server) printProcessesMap() {
 
 // handleNewOperatorMessages will handle all the new operator messages
 // given to the system, and route them to the correct subject queue.
-func (s *server) handleMessagesToPublish() {
+func (s *server) handleMessagesInRingbuffer() {
 	// Prepare and start a new ring buffer
 	const bufferSize int = 100
 	rb := newringBuffer(bufferSize)
@@ -147,6 +151,9 @@ func (s *server) handleMessagesToPublish() {
 	// pipe requested by operator, and fill them into the buffer.
 	go func() {
 		for samSlice := range s.inputFromFileCh {
+			fmt.Println("----------------------DEBUG1--------------------------------")
+			fmt.Printf("DEBUG!!!!!!!!!!!!!!\n")
+			fmt.Println("----------------------DEBUG1END-----------------------------")
 			for _, sam := range samSlice {
 				inCh <- sam
 			}
@@ -307,6 +314,7 @@ func (s *server) processSpawnWorker(proc process) {
 			m := <-proc.subject.messageCh
 			m.ID = s.processes[proc.subject.name()].messageID
 			messageDeliver(proc, m, s.natsConn)
+			m.done <- struct{}{}
 
 			// Increment the counter for the next message to be sent.
 			proc.messageID++

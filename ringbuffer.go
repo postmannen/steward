@@ -98,8 +98,22 @@ func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan subjectAndMes
 
 	// Empty the buffer when data asked for
 	go func() {
+		// Range over the buffer of messages to pass on to processes.
 		for v := range r.bufData {
+			// Create a done channel per message. A process started by the
+			// spawnProcess function will handle incomming messages sequentaly.
+			// So in the spawnProcess function we put a struct{} value when a
+			// message is processed on the "done" channel and an ack is received
+			// for a message, and we wait here for the "done" to be received.
+
+			v.Message.done = make(chan struct{})
 			outCh <- v
+
+			// ----------TESTING
+			<-v.done
+			fmt.Println("-----------------------------------------------------------")
+			fmt.Printf("### DONE WITH THE MESSAGE\n")
+			fmt.Println("-----------------------------------------------------------")
 
 			// TODO: Delete the messages here. The SAM handled here, do
 			// not contain the totalMessageID, so we might need to change
@@ -110,7 +124,7 @@ func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan subjectAndMes
 			// been processed, and that we then can delete it out of the K/V Store.
 
 			// Dump the whole KV store
-			err := r.dumpCursor(samValueBucket)
+			err := r.dumpBucket(samValueBucket)
 			if err != nil {
 				fmt.Printf("* Error: dump of db failed: %v\n", err)
 			}
@@ -121,7 +135,7 @@ func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan subjectAndMes
 	}()
 }
 
-func (r *ringBuffer) dumpCursor(bucket string) error {
+func (r *ringBuffer) dumpBucket(bucket string) error {
 	err := r.db.View(func(tx *bolt.Tx) error {
 		bu := tx.Bucket([]byte(bucket))
 
