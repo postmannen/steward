@@ -141,7 +141,7 @@ func (s *server) printProcessesMap() {
 // given to the system, and route them to the correct subject queue.
 func (s *server) handleMessagesInRingbuffer() {
 	// Prepare and start a new ring buffer
-	const bufferSize int = 100
+	const bufferSize int = 1000
 	rb := newringBuffer(bufferSize)
 	inCh := make(chan subjectAndMessage)
 	outCh := make(chan samDBValue)
