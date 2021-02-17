@@ -34,7 +34,7 @@ func (s *server) getMessagesFromFile(directoryToCheck string, fileName string, i
 
 		// unmarshal the JSON into a struct
 		js, err := jsonFromFileData(b)
-		fmt.Printf("*** OUTPUT AFTER UNMARSHALING JSON: %#v\n", js)
+		// fmt.Printf("*** OUTPUT AFTER UNMARSHALING JSON: %#v\n", js)
 		if err != nil {
 			log.Printf("%v\n", err)
 		}
@@ -60,7 +60,7 @@ func jsonFromFileData(b []byte) ([]subjectAndMessage, error) {
 	MsgSlice := []Message{}
 
 	err := json.Unmarshal(b, &MsgSlice)
-	fmt.Printf("*** OUTPUT DIRECTLY AFTER UNMARSHALING JSON: %#v\n", MsgSlice)
+	//fmt.Printf("*** OUTPUT DIRECTLY AFTER UNMARSHALING JSON: %#v\n", MsgSlice)
 	// TODO: Look into also marshaling from yaml and toml later
 	if err != nil {
 		return nil, fmt.Errorf("error: unmarshal of file failed: %#v", err)

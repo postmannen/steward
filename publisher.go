@@ -151,9 +151,6 @@ func (s *server) handleMessagesInRingbuffer() {
 	// pipe requested by operator, and fill them into the buffer.
 	go func() {
 		for samSlice := range s.inputFromFileCh {
-			fmt.Println("----------------------DEBUG1--------------------------------")
-			fmt.Printf("DEBUG!!!!!!!!!!!!!!\n")
-			fmt.Println("----------------------DEBUG1END-----------------------------")
 			for _, sam := range samSlice {
 				inCh <- sam
 			}
@@ -186,7 +183,7 @@ func (s *server) handleMessagesInRingbuffer() {
 		redo:
 			m := sam.Message
 			subjName := sam.Subject.name()
-			fmt.Printf("** handleNewOperatorMessages: message: %v, ** subject: %#v\n", m, sam.Subject)
+			// DEBUG: fmt.Printf("** handleNewOperatorMessages: message: %v, ** subject: %#v\n", m, sam.Subject)
 			_, ok := s.processes[subjName]
 			if ok {
 				log.Printf("info: found the specific subject: %v\n", subjName)
