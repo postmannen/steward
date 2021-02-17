@@ -2,7 +2,7 @@
 
 Async management of Edge Cloud units.
 
-The idea is to build and use a pure message passing architecture for the control traffic back and forth from the Edge cloud units. The message passing backend used is <https://nats.io>
+The idea is to build and use a pure message passing architecture for the control traffic back and forth from nodes, where a node can be a server, some other host system, or a container living in the cloud, or...other. The message passing backend used is <https://nats.io>
 
 ```text
                                                                              ┌─────────────────┐
@@ -29,7 +29,7 @@ Why ?
 
 With existing solutions there is often either a push or a pull kind of setup.
 
-In a push setup the commands to execute is pushed to the receiver, but if a command fails because for example a broken network link it is up to you as an administrator to detect those failures and retry them at a later time until it is executed successfully.
+In a push setup the commands to be executed is pushed to the receiver, but if a command fails because for example a broken network link it is up to you as an administrator to detect those failures and retry them at a later time until it is executed successfully.
 
 In a pull setup an agent is installed at the Edge unit, and the configuration or commands to execute locally are pulled from a central repository. With this kind of setup you can be pretty certain that sometime in the future the Edge unit will reach it's desired state, but you don't know when. And if you want to know the current state you will need to have some second service which gives you that.
 
@@ -53,13 +53,19 @@ All code in this repository are to be concidered not-production-ready. The code 
 
 - Publishers will potentially be able to send to all nodes. It is the subscribing nodes who will limit where and what they will receive from.
 
+- Messages not fully processed or not started yet will be automatically handled in chronological order if the service is restarted.
+
+- All messages processed by a publisher will be written to a log file as they are processed, with all the information needed to recreate the same message.
+
+- All handling down to the process and message level are handled concurrently. So if there are problems handling one message sent to a node on a subject it will not affect the messages being sent to other nodes, or other messages sent on other subjects to the same host.
+
 - More will come. In active development.
 
 ## Concepts/Ideas
 
 ### Terminology
 
-- Node: An installation of an operating system with an ip address
+- Node: Something with an operating system that have network available. This can be a server, a cloud instance, a container, or other.
 - Process: One message handler running in it's own thread with 1 subject for sending and 1 for reply.
 - Message:
   - Command: Something to be executed on the message received. An example can be a shell command.
@@ -92,6 +98,8 @@ and for a shell command of type command to a host named "ship2"
 
 ## TODO
 
+- Implement a message type where no ack is needed. Use case can be nodes sending "hi, I'm here" (ping) messages to central server.
+
 - Timeouts. Does it makes sense to have a default timeout for all messages, and where that timeout can be overridden per message upon creation of the message.
 Implement the concept of timeouts/TTL for messages.
 
@@ -101,13 +109,15 @@ Check that there is a node for the specific message new incomming message, and t
 - **Implemented**
 Since a process will be locked while waiting to send the error on the errorCh maybe it makes sense to have a channel inside the processes error handling with a select so we can send back to the process if it should continue or not based not based on how severe the error where. This should be right after sending the error sending in the process.
 
-- Look into adding a channel to the error messages sent from a worker process, so the error kernel can send f.ex. a shutdown instruction back to the worker.
+- **Implemented**
+Look into adding a channel to the error messages sent from a worker process, so the error kernel can send f.ex. a shutdown instruction back to the worker.
 
 - Prometheus exporters for metrics.
 
 - Go through all processes and check that the error is handled correctly, and also reported back on the error subject to the master supervisor.
 
-- Implement the code running inside of each process as it's own function type that get's passed into the spawn process method up on creation of a new method.
+- **Implemented**
+Implement the code running inside of each process as it's own function type that get's passed into the spawn process method up on creation of a new method.
 
 ## Howto
 
