@@ -192,8 +192,8 @@ To send specify more messages at once do
         
         "toNode": "ship2",
         "data": ["bash","-c","ls -l ../"],
-        "commandOrEvent":"command",
-        "method":"shellCommandACK"
+        "commandOrEvent":"commandACK",
+        "method":"shellCommand"
             
     }
 ]
