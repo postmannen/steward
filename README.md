@@ -169,7 +169,7 @@ Example JSON for pasting a message of type command into the `inmsg.txt` file
         
         "toNode": "ship1",
         "data": ["bash","-c","ls -l ../"],
-        "commandOrEvent":"command",
+        "commandOrEvent":"commandACK",
         "method":"shellCommand"
             
     }
@@ -184,7 +184,7 @@ To send specify more messages at once do
         
         "toNode": "ship1",
         "data": ["bash","-c","ls -l ../"],
-        "commandOrEvent":"command",
+        "commandOrEvent":"commandACK",
         "method":"shellCommand"
             
     },
@@ -193,7 +193,7 @@ To send specify more messages at once do
         "toNode": "ship2",
         "data": ["bash","-c","ls -l ../"],
         "commandOrEvent":"command",
-        "method":"shellCommand"
+        "method":"shellCommandACK"
             
     }
 ]
@@ -212,7 +212,7 @@ The content of `inmsg.txt` will be erased as messages a processed.
     {
         "toNode": "central",
         "data": ["some message sent from a ship for testing\n"],
-        "commandOrEvent":"event",
+        "commandOrEvent":"eventACK",
         "method":"textLogging"
     }
 ]
