@@ -20,8 +20,10 @@ type CommandOrEvent string
 func (c CommandOrEvent) GetCommandOrEventAvailable() CommandOrEventAvailable {
 	ma := CommandOrEventAvailable{
 		topics: map[CommandOrEvent]struct{}{
-			Command: {},
-			Event:   {},
+			CommandACK:  {},
+			CommandNACK: {},
+			EventACK:    {},
+			EventNACK:   {},
 		},
 	}
 
@@ -34,12 +36,17 @@ const (
 	// delivered back in the reply ack message.
 	// The message should contain the unique ID of the
 	// command.
-	Command CommandOrEvent = "command"
+	CommandACK CommandOrEvent = "commandACK"
+	// Same as above, but No ACK.
+	CommandNACK CommandOrEvent = "commandNACK"
+	// Same as above, but No ACK
 	// Event, wait for and return the ACK message. This means
 	// that the command should be executed immediately
 	// and that we should get the confirmation if it
 	// was successful or not.
-	Event CommandOrEvent = "event"
+	EventACK CommandOrEvent = "eventACK"
+	// Same as above, but No ACK.
+	EventNACK CommandOrEvent = "eventNACK"
 	// eventCommand, just wait for the ACK that the
 	// message is received. What action happens on the
 	// receiving side is up to the received to decide.

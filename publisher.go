@@ -55,7 +55,8 @@ type server struct {
 	logCh chan []byte
 	// used to check if the methods specified in message is valid
 	methodsAvailable MethodsAvailable
-	// used to check if the commandOrEvent specified in message is valid
+	// Map who holds the command and event types available.
+	// Used to check if the commandOrEvent specified in message is valid
 	commandOrEventAvailable CommandOrEventAvailable
 }
 
@@ -104,7 +105,7 @@ func (s *server) Start() {
 	// Start a subscriber for shellCommand messages
 	{
 		fmt.Printf("nodeName: %#v\n", s.nodeName)
-		sub := newSubject(s.nodeName, "command", "shellCommand")
+		sub := newSubject(s.nodeName, CommandACK, "shellCommand")
 		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
 		// fmt.Printf("*** %#v\n", proc)
 		go s.processSpawnWorker(proc)
@@ -113,7 +114,7 @@ func (s *server) Start() {
 	// Start a subscriber for textLogging messages
 	{
 		fmt.Printf("nodeName: %#v\n", s.nodeName)
-		sub := newSubject(s.nodeName, "event", "textLogging")
+		sub := newSubject(s.nodeName, EventACK, "textLogging")
 		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
 		// fmt.Printf("*** %#v\n", proc)
 		go s.processSpawnWorker(proc)
@@ -454,7 +455,8 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, node string, msg *nats.M
 	// that there was a problem like missing method to handle a specific
 	// method etc.
 	switch {
-	case message.CommandOrEvent == Command || message.CommandOrEvent == Event:
+	case message.CommandOrEvent == CommandACK || message.CommandOrEvent == EventACK:
+		fmt.Printf("* message.CommandOrEvent received was = %v\n", message.CommandOrEvent)
 		mf, ok := s.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			// TODO: Check how errors should be handled here!!!
@@ -469,6 +471,8 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, node string, msg *nats.M
 
 		// Send a confirmation message back to the publisher
 		natsConn.Publish(msg.Reply, out)
+	case message.CommandOrEvent == CommandNACK || message.CommandOrEvent == EventNACK:
+		fmt.Printf("* message.CommandOrEvent received was = %v\n", message.CommandOrEvent)
 	default:
 		log.Printf("info: did not find that specific type of command: %#v\n", message.CommandOrEvent)
 	}

@@ -199,6 +199,9 @@ func (r *ringBuffer) dumpBucket(bucket string) ([]samDBValue, error) {
 
 	err := r.db.View(func(tx *bolt.Tx) error {
 		bu := tx.Bucket([]byte(bucket))
+		if bu == nil {
+			return fmt.Errorf("error: dumpBucket: tx.bucket returned nil")
+		}
 
 		// For each element found in the DB, unmarshal, and put on slice.
 		bu.ForEach(func(k, v []byte) error {
@@ -224,6 +227,10 @@ func (r *ringBuffer) dumpBucket(bucket string) ([]samDBValue, error) {
 		return nil
 	})
 
+	if err != nil {
+		return nil, err
+	}
+
 	return samDBValues, err
 }
 
@@ -238,7 +245,7 @@ func (r *ringBuffer) printBucketContent(bucket string) error {
 			var vv samDBValue
 			err := json.Unmarshal(v, &vv)
 			if err != nil {
-				log.Printf("error: dumpBucket json.Umarshal failed: %v\n", err)
+				log.Printf("error: printBucketContent json.Umarshal failed: %v\n", err)
 			}
 			fmt.Printf("k: %s, v: %v\n", k, vv)
 			return nil
