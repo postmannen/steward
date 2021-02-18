@@ -58,6 +58,8 @@ type server struct {
 	// Map who holds the command and event types available.
 	// Used to check if the commandOrEvent specified in message is valid
 	commandOrEventAvailable CommandOrEventAvailable
+	// metric exporter
+	metrics *metrics
 }
 
 // newServer will prepare and return a server type
@@ -79,6 +81,7 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 		logCh:                   make(chan []byte),
 		methodsAvailable:        m.GetMethodsAvailable(),
 		commandOrEventAvailable: co.GetCommandOrEventAvailable(),
+		metrics:                 newMetrics(),
 	}
 
 	// Start the error kernel that will do all the error handling
@@ -95,6 +98,9 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 // if there is publisher process for a given message subject. This
 // checking is also started here in Start by calling handleMessagesToPublish.
 func (s *server) Start() {
+	// Start collecting the metrics
+	go s.startMetrics()
+
 	// Start the checking the input file for new messages from operator.
 	go s.getMessagesFromFile("./", "inmsg.txt", s.inputFromFileCh)
 
