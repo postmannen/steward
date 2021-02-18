@@ -10,14 +10,21 @@ import (
 )
 
 type metrics struct {
-	totalRunningProcesses prometheus.Gauge
+	helloNodes            map[node]struct{}
+	HelloNodes            prometheus.Gauge
+	TotalRunningProcesses prometheus.Gauge
 }
 
 func newMetrics() *metrics {
 	m := metrics{
-		totalRunningProcesses: promauto.NewGauge(prometheus.GaugeOpts{
+		helloNodes: make(map[node]struct{}),
+		TotalRunningProcesses: promauto.NewGauge(prometheus.GaugeOpts{
 			Name: "total_running_processes",
 			Help: "The current number of total running processes",
+		}),
+		HelloNodes: promauto.NewGauge(prometheus.GaugeOpts{
+			Name: "hello_nodes",
+			Help: "The current number of total nodes who have said hello",
 		}),
 	}
 
@@ -28,7 +35,8 @@ func (s *server) startMetrics() {
 
 	go func() {
 		for {
-			s.metrics.totalRunningProcesses.Set(float64(len(s.processes)))
+			s.metrics.TotalRunningProcesses.Set(float64(len(s.processes)))
+			s.metrics.HelloNodes.Set(float64(len(s.metrics.helloNodes)))
 			time.Sleep(2 * time.Second)
 		}
 	}()

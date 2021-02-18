@@ -110,7 +110,7 @@ func (s *server) Start() {
 
 	// Start a subscriber for shellCommand messages
 	{
-		fmt.Printf("nodeName: %#v\n", s.nodeName)
+		fmt.Printf("Starting shellCommand subscriber: %#v\n", s.nodeName)
 		sub := newSubject(s.nodeName, CommandACK, "shellCommand")
 		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
 		// fmt.Printf("*** %#v\n", proc)
@@ -119,8 +119,17 @@ func (s *server) Start() {
 
 	// Start a subscriber for textLogging messages
 	{
-		fmt.Printf("nodeName: %#v\n", s.nodeName)
+		fmt.Printf("Starting textlogging subscriber: %#v\n", s.nodeName)
 		sub := newSubject(s.nodeName, EventACK, "textLogging")
+		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
+		// fmt.Printf("*** %#v\n", proc)
+		go s.processSpawnWorker(proc)
+	}
+
+	// Start a subscriber for sayHello messages
+	{
+		fmt.Printf("Starting sayHello subscriber: %#v\n", s.nodeName)
+		sub := newSubject(s.nodeName, EventNACK, "sayHello")
 		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
 		// fmt.Printf("*** %#v\n", proc)
 		go s.processSpawnWorker(proc)
@@ -407,15 +416,19 @@ func messageDeliver(proc process, message Message, natsConn *nats.Conn) {
 			continue
 		}
 
-		// Wait up until 10 seconds for a reply,
-		// continue and resend if to reply received.
-		msgReply, err := subReply.NextMsg(time.Second * 10)
-		if err != nil {
-			log.Printf("error: subRepl.NextMsg failed for node=%v, subject=%v: %v\n", proc.node, proc.subject.name(), err)
-			// did not receive a reply, continuing from top again
-			continue
+		// If the message is an ACK type of message we must check that a
+		// reply, and if it is not we don't wait here at all.
+		if message.CommandOrEvent == CommandACK || message.CommandOrEvent == EventACK {
+			// Wait up until 10 seconds for a reply,
+			// continue and resend if to reply received.
+			msgReply, err := subReply.NextMsg(time.Second * 10)
+			if err != nil {
+				log.Printf("error: subReply.NextMsg failed for node=%v, subject=%v: %v\n", proc.node, proc.subject.name(), err)
+				// did not receive a reply, continuing from top again
+				continue
+			}
+			log.Printf("publisher: received ACK: %s\n", msgReply.Data)
 		}
-		log.Printf("publisher: received ACK: %s\n", msgReply.Data)
 		return
 	}
 }
@@ -463,23 +476,38 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, node string, msg *nats.M
 	// method etc.
 	switch {
 	case message.CommandOrEvent == CommandACK || message.CommandOrEvent == EventACK:
-		fmt.Printf("* message.CommandOrEvent received was = %v\n", message.CommandOrEvent)
+		log.Printf("info: subscriberHandler: message.CommandOrEvent received was = %v, preparing to call handler\n", message.CommandOrEvent)
 		mf, ok := s.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			// TODO: Check how errors should be handled here!!!
-			log.Printf("*****METHOD MISSING	\n")
+			log.Printf("error: subscriberHandler: method type not available: %v\n", message.CommandOrEvent)
 		}
+		fmt.Printf("*** DEBUG: BEFORE CALLING HANDLER: ACK\n")
 		out, err := mf.handler(s, message, node)
 
 		if err != nil {
 			// TODO: Send to error kernel ?
-			log.Printf("error: failed to execute event: %v\n", err)
+			log.Printf("error: subscriberHandler: failed to execute event: %v\n", err)
 		}
 
 		// Send a confirmation message back to the publisher
 		natsConn.Publish(msg.Reply, out)
 	case message.CommandOrEvent == CommandNACK || message.CommandOrEvent == EventNACK:
-		fmt.Printf("* message.CommandOrEvent received was = %v\n", message.CommandOrEvent)
+		log.Printf("info: subscriberHandler: message.CommandOrEvent received was = %v, preparing to call handler\n", message.CommandOrEvent)
+		mf, ok := s.methodsAvailable.CheckIfExists(message.Method)
+		if !ok {
+			// TODO: Check how errors should be handled here!!!
+			log.Printf("error: subscriberHandler: method type not available: %v\n", message.CommandOrEvent)
+		}
+		// since we don't send a reply for a NACK message, we don't care about the
+		// out return when calling mf.handler
+		fmt.Printf("*** DEBUG: BEFORE CALLING HANDLER: NACK\n")
+		_, err := mf.handler(s, message, node)
+
+		if err != nil {
+			// TODO: Send to error kernel ?
+			log.Printf("error: subscriberHandler: failed to execute event: %v\n", err)
+		}
 	default:
 		log.Printf("info: did not find that specific type of command: %#v\n", message.CommandOrEvent)
 	}

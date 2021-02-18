@@ -23,6 +23,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 		topics: map[Method]methodHandler{
 			ShellCommand: methodCommandShellCommand{},
 			TextLogging:  methodEventTextLogging{},
+			SayHello:     methodEventSayHello{},
 		},
 	}
 
@@ -34,6 +35,8 @@ const (
 	ShellCommand Method = "shellCommand"
 	// Send text logging to some host
 	TextLogging Method = "textLogging"
+	// Send Hello I'm here message
+	SayHello Method = "sayHello"
 )
 
 type MethodsAvailable struct {
@@ -54,6 +57,8 @@ func (ma MethodsAvailable) CheckIfExists(m Method) (methodHandler, bool) {
 	}
 }
 
+// ------------------------------------------------------------
+// Subscriber method handlers
 // ------------------------------------------------------------
 
 type methodHandler interface {
@@ -79,12 +84,26 @@ func (m methodCommandShellCommand) handler(s *server, message Message, node stri
 	return outMsg, nil
 }
 
+// -----
+
 type methodEventTextLogging struct{}
 
 func (m methodEventTextLogging) handler(s *server, message Message, node string) ([]byte, error) {
 	for _, d := range message.Data {
 		s.logCh <- []byte(d)
 	}
+
+	outMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return outMsg, nil
+}
+
+// -----
+
+type methodEventSayHello struct{}
+
+func (m methodEventSayHello) handler(s *server, message Message, node string) ([]byte, error) {
+	log.Printf("################## Received hello from %v ##################\n", message.FromNode)
+	s.metrics.helloNodes[message.FromNode] = struct{}{}
 
 	outMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return outMsg, nil

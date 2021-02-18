@@ -1,0 +1,8 @@
+[
+    {
+        "toNode": "central",
+        "data": [""],
+        "commandOrEvent":"eventNACK",
+        "method":"sayHello"
+    }
+]
