@@ -2,7 +2,7 @@
     {
         
         "toNode": "ship1",
-        "data": ["bash","-c","ls -l ../"],
+        "data": ["bash","-c","netstat -an|grep -i listen"],
         "commandOrEvent":"commandACK",
         "method":"shellCommand"
             

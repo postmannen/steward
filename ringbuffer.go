@@ -96,9 +96,29 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 		}
 	}()
 
+	// Prepare the map structure to know what values are allowed
+	// for the commands or events
+	var coe CommandOrEvent
+	coeAvailable := coe.GetCommandOrEventAvailable()
+	coeAvailableValues := []CommandOrEvent{}
+	for v := range coeAvailable.topics {
+		coeAvailableValues = append(coeAvailableValues, v)
+	}
+
 	// Check for incomming messages. These are typically comming from
 	// the go routine who reads inmsg.txt.
 	for v := range inCh {
+
+		// Check if the command or event exists in commandOrEvent.go
+		if !coeAvailable.CheckIfExists(v.Message.CommandOrEvent) {
+			log.Printf("error: the event or command type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v\n", coeAvailableValues)
+
+			fmt.Println()
+			// if it was not a valid value, we jump back up, and
+			// continue the range iteration.
+			continue
+		}
+
 		// --- Store the incomming message in the k/v store ---
 
 		// Get a unique number for the message to use when storing

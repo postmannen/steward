@@ -6,6 +6,11 @@
 
 package steward
 
+import (
+	"fmt"
+	"log"
+)
+
 // CommandOrEvent describes on the message level if this is
 // an event or command kind of message in the Subject name.
 // This field is mainly used to be able to spawn up different
@@ -59,10 +64,14 @@ type CommandOrEventAvailable struct {
 func (co CommandOrEventAvailable) CheckIfExists(c CommandOrEvent) bool {
 	_, ok := co.topics[c]
 	if ok {
-		// fmt.Printf("******THE TOPIC EXISTS: %v******\n", c)
+		fmt.Println("-------------------------------------------------------------")
+		log.Printf("THE COMMAND OR EVENT EXISTS: %v\n", c)
+		fmt.Println("-------------------------------------------------------------")
 		return true
 	} else {
-		// fmt.Printf("******THE TOPIC DO NOT EXIST: %v******\n", c)
+		fmt.Println("-------------------------------------------------------------")
+		log.Printf("THE COMMAND OR EVENT DO NOT EXIST: %v\n", c)
+		fmt.Println("-------------------------------------------------------------")
 		return false
 	}
 }

@@ -148,6 +148,7 @@ func (s *server) handleMessagesInRingbuffer() {
 	rb := newringBuffer(bufferSize)
 	inCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValue)
+	// start the ringbuffer.
 	rb.start(inCh, ringBufferOutCh)
 
 	// Start reading new messages received on the incomming message
