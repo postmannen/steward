@@ -111,7 +111,7 @@ func (s *server) Start() {
 	// Start a subscriber for shellCommand messages
 	{
 		fmt.Printf("Starting shellCommand subscriber: %#v\n", s.nodeName)
-		sub := newSubject(s.nodeName, CommandACK, "shellCommand")
+		sub := newSubject("shellCommand", CommandACK, s.nodeName)
 		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
 		// fmt.Printf("*** %#v\n", proc)
 		go s.processSpawnWorker(proc)
@@ -120,7 +120,7 @@ func (s *server) Start() {
 	// Start a subscriber for textLogging messages
 	{
 		fmt.Printf("Starting textlogging subscriber: %#v\n", s.nodeName)
-		sub := newSubject(s.nodeName, EventACK, "textLogging")
+		sub := newSubject("textLogging", EventACK, s.nodeName)
 		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
 		// fmt.Printf("*** %#v\n", proc)
 		go s.processSpawnWorker(proc)
@@ -129,7 +129,7 @@ func (s *server) Start() {
 	// Start a subscriber for sayHello messages
 	{
 		fmt.Printf("Starting sayHello subscriber: %#v\n", s.nodeName)
-		sub := newSubject(s.nodeName, EventNACK, "sayHello")
+		sub := newSubject("sayHello", EventNACK, s.nodeName)
 		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
 		// fmt.Printf("*** %#v\n", proc)
 		go s.processSpawnWorker(proc)
@@ -218,7 +218,7 @@ func (s *server) handleMessagesInRingbuffer() {
 				// by using the goto at the end redo the process for this specific message.
 				log.Printf("info: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
-				sub := newSubject(sam.Subject.Node, sam.Subject.CommandOrEvent, sam.Subject.Method)
+				sub := newSubject(sam.Subject.Method, sam.Subject.CommandOrEvent, sam.Subject.Node)
 				proc := s.processPrepareNew(sub, s.errorCh, processKindPublisher)
 				// fmt.Printf("*** %#v\n", proc)
 				go s.processSpawnWorker(proc)
@@ -251,7 +251,7 @@ type Subject struct {
 // newSubject will return a new variable of the type subject, and insert
 // all the values given as arguments. It will also create the channel
 // to receive new messages on the specific subject.
-func newSubject(node string, commandOrEvent CommandOrEvent, method Method) Subject {
+func newSubject(method Method, commandOrEvent CommandOrEvent, node string) Subject {
 	return Subject{
 		Node:           node,
 		CommandOrEvent: commandOrEvent,
@@ -264,7 +264,7 @@ func newSubject(node string, commandOrEvent CommandOrEvent, method Method) Subje
 type subjectName string
 
 func (s Subject) name() subjectName {
-	return subjectName(fmt.Sprintf("%s.%s.%s", s.Node, s.CommandOrEvent, s.Method))
+	return subjectName(fmt.Sprintf("%s.%s.%s", s.Method, s.CommandOrEvent, s.Node))
 }
 
 // processKind are either kindSubscriber or kindPublisher, and are
