@@ -223,3 +223,7 @@ You can save the content to myfile.JSON and append it to `inmsg.txt`
 `cat myfile.json >> inmsg.txt`
 
 The content of `inmsg.txt` will be erased as messages a processed.
+
+## Overvview
+
+![overview](steward.svg)
