@@ -84,11 +84,6 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 		metrics:                 newMetrics(),
 	}
 
-	// Start the error kernel that will do all the error handling
-	// not done within a process.
-	s.errorKernel = newErrorKernel()
-	s.errorKernel.startErrorKernel(s.errorCh)
-
 	return s, nil
 
 }
@@ -98,6 +93,11 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 // if there is publisher process for a given message subject. This
 // checking is also started here in Start by calling handleMessagesToPublish.
 func (s *server) Start() {
+	// Start the error kernel that will do all the error handling
+	// not done within a process.
+	s.errorKernel = newErrorKernel()
+	s.errorKernel.startErrorKernel(s.errorCh)
+
 	// Start collecting the metrics
 	go s.startMetrics()
 

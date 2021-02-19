@@ -14,9 +14,8 @@ import (
 func main() {
 	nodeName := flag.String("node", "0", "some unique string to identify this Edge unit")
 	brokerAddress := flag.String("brokerAddress", "0", "the address of the message broker")
-	// modePublisher := flag.Bool("modePublisher", false, "set to true if it should be able to publish")
-	// modeSubscriber := flag.Bool("modeSubscriber", false, "set to true if it should be able to subscribe")
 	profilingPort := flag.String("profilingPort", "", "The number of the profiling port")
+	//isCentral := flag.Bool("isCentral", false, "used to indicate that this is the central master that will subscribe to error message subjects")
 	flag.Parse()
 
 	if *profilingPort != "" {
