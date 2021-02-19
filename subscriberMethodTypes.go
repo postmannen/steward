@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // ------------------------------------------------------------
@@ -103,8 +105,18 @@ type methodEventSayHello struct{}
 
 func (m methodEventSayHello) handler(s *server, message Message, node string) ([]byte, error) {
 	log.Printf("################## Received hello from %v ##################\n", message.FromNode)
-	s.metrics.helloNodes[message.FromNode] = struct{}{}
+	// Since the handler is only called to handle a specific type of message we need
+	// to store it elsewhere, and choice for now is under s.metrics.sayHelloNodes
+	s.metrics.sayHelloNodes[message.FromNode] = struct{}{}
 
+	// update the prometheus metrics
+	s.metrics.metricsCh <- metricType{
+		metric: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "hello_nodes",
+			Help: "The current number of total nodes who have said hello",
+		}),
+		value: float64(len(s.metrics.sayHelloNodes)),
+	}
 	outMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return outMsg, nil
 }

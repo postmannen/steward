@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Message struct {
@@ -150,6 +151,15 @@ func (s *server) printProcessesMap() {
 	for _, v := range s.processes {
 		fmt.Printf("*** - : %v\n", v)
 	}
+
+	s.metrics.metricsCh <- metricType{
+		metric: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "total_running_processes",
+			Help: "The current number of total running processes",
+		}),
+		value: float64(len(s.processes)),
+	}
+
 	fmt.Println("--------------------------------------------------------------------------------------------")
 }
 
