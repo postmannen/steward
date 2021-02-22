@@ -2,6 +2,8 @@ package steward
 
 import (
 	"fmt"
+	"log"
+	"net"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -19,14 +21,17 @@ type metrics struct {
 	sayHelloNodes map[node]struct{}
 	// The channel to pass metrics that should be processed
 	metricsCh chan metricType
+	// host and port where prometheus metrics will be exported
+	hostAndPort string
 }
 
 // HERE:
-func newMetrics() *metrics {
+func newMetrics(hostAndPort string) *metrics {
 	m := metrics{
 		sayHelloNodes: make(map[node]struct{}),
 	}
 	m.metricsCh = make(chan metricType)
+	m.hostAndPort = hostAndPort
 
 	return &m
 }
@@ -100,6 +105,13 @@ func (s *server) startMetrics() {
 		}
 	}()
 
-	http.Handle("/metrics", promhttp.Handler())
-	http.ListenAndServe(":2112", nil)
+	//http.Handle("/metrics", promhttp.Handler())
+	//http.ListenAndServe(":2112", nil)
+	n, err := net.Listen("tcp", s.metrics.hostAndPort)
+	if err != nil {
+		log.Printf("error: failed to open prometheus listen port: %v\n", err)
+	}
+	m := http.NewServeMux()
+	m.Handle("/metrics", promhttp.Handler())
+	http.Serve(n, m)
 }

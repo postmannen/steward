@@ -41,17 +41,17 @@ const (
 	// delivered back in the reply ack message.
 	// The message should contain the unique ID of the
 	// command.
-	CommandACK CommandOrEvent = "commandACK"
+	CommandACK CommandOrEvent = "CommandACK"
 	// Same as above, but No ACK.
-	CommandNACK CommandOrEvent = "commandNACK"
+	CommandNACK CommandOrEvent = "CommandNACK"
 	// Same as above, but No ACK
 	// Event, wait for and return the ACK message. This means
 	// that the command should be executed immediately
 	// and that we should get the confirmation if it
 	// was successful or not.
-	EventACK CommandOrEvent = "eventACK"
+	EventACK CommandOrEvent = "EventACK"
 	// Same as above, but No ACK.
-	EventNACK CommandOrEvent = "eventNACK"
+	EventNACK CommandOrEvent = "EventNACK"
 	// eventCommand, just wait for the ACK that the
 	// message is received. What action happens on the
 	// receiving side is up to the received to decide.

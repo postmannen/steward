@@ -81,20 +81,20 @@ Subject naming are case sensitive, and can not contain the space are the tab cha
 
 Nodename: Are the hostname of the device. This do not have to be resolvable via DNS, it is just a unique name for the host to receive the message.
 
-Command/Event: Are type of message sent. `command` or `event`. Description of the differences are mentioned earlier.\
+Command/Event: Are type of message sent. `CommandACK`/`EventACK`/`CommandNACK`/`EventNACK`. Description of the differences are mentioned earlier.\
 Info: The command/event which is called a MessageType are present in both the Subject structure and the Message structure. The reason for this is that it is used both in the naming of a subject, and in the message for knowing what kind of message it is and how to handle it.
 
-Method: Are the functionality the message provide. Example could be `shellcommand` or `syslogforwarding`
+Method: Are the functionality the message provide. Example could be `Shellcommand` or `Syslogforwarding`
 
 ##### Complete subject example
 
 For syslog of type event to a host named "ship1"
 
-`ship1.event.syslogforwarding`
+`ship1.EventACK.Syslogforwarding`
 
 and for a shell command of type command to a host named "ship2"
 
-`ship2.command.shellcommand`
+`ship2.CommandACK.Shellcommand`
 
 ## TODO
 
@@ -146,6 +146,8 @@ One the nodes out there
 
 `./steward --node="ship1"` & `./steward --node="ship1"` and so on.
 
+Use the `--help` flag to get all possibilities.
+
 ### Sending messages with commands or events
 
 Right now there are to types of messages.
@@ -169,8 +171,8 @@ Example JSON for pasting a message of type command into the `inmsg.txt` file
         
         "toNode": "ship1",
         "data": ["bash","-c","ls -l ../"],
-        "commandOrEvent":"commandACK",
-        "method":"shellCommand"
+        "commandOrEvent":"CommandACK",
+        "method":"ShellCommand"
             
     }
 ]
@@ -184,16 +186,16 @@ To send specify more messages at once do
         
         "toNode": "ship1",
         "data": ["bash","-c","ls -l ../"],
-        "commandOrEvent":"commandACK",
-        "method":"shellCommand"
+        "commandOrEvent":"CommandACK",
+        "method":"ShellCommand"
             
     },
     {
         
         "toNode": "ship2",
         "data": ["bash","-c","ls -l ../"],
-        "commandOrEvent":"commandACK",
-        "method":"shellCommand"
+        "commandOrEvent":"CommandACK",
+        "method":"ShellCommand"
             
     }
 ]
@@ -212,8 +214,8 @@ The content of `inmsg.txt` will be erased as messages a processed.
     {
         "toNode": "central",
         "data": ["some message sent from a ship for testing\n"],
-        "commandOrEvent":"eventACK",
-        "method":"textLogging"
+        "commandOrEvent":"EventACK",
+        "method":"TextLogging"
     }
 ]
 ```

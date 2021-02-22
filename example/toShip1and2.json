@@ -2,8 +2,8 @@
     {
         "toNode": "*",
         "data": ["bash","-c","tree ../"],
-        "commandOrEvent":"commandACK",
-        "method":"shellCommand"
+        "commandOrEvent":"CommandACK",
+        "method":"ShellCommand"
 
     }
 ]

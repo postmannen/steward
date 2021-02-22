@@ -2,7 +2,7 @@
     {
         "toNode": "central",
         "data": ["some message sent from a ship for testing\n"],
-        "commandOrEvent":"eventACK",
-        "method":"textLogging"
+        "commandOrEvent":"EventACK",
+        "method":"TextLogging"
     }
 ]

@@ -2,8 +2,8 @@
     {
         "toNode": "ship2",
         "data": ["bash","-c","tree ../"],
-        "commandOrEvent":"commandACK",
-        "method":"shellCommand"
+        "commandOrEvent":"CommandACK",
+        "method":"ShellCommand"
 
     }
 ]

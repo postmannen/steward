@@ -64,7 +64,7 @@ type server struct {
 }
 
 // newServer will prepare and return a server type
-func NewServer(brokerAddress string, nodeName string) (*server, error) {
+func NewServer(brokerAddress string, nodeName string, promHostAndPort string) (*server, error) {
 	conn, err := nats.Connect(brokerAddress, nil)
 	if err != nil {
 		log.Printf("error: nats.Connect failed: %v\n", err)
@@ -82,7 +82,7 @@ func NewServer(brokerAddress string, nodeName string) (*server, error) {
 		logCh:                   make(chan []byte),
 		methodsAvailable:        m.GetMethodsAvailable(),
 		commandOrEventAvailable: co.GetCommandOrEventAvailable(),
-		metrics:                 newMetrics(),
+		metrics:                 newMetrics(promHostAndPort),
 	}
 
 	return s, nil
@@ -112,7 +112,7 @@ func (s *server) Start() {
 	// Start a subscriber for shellCommand messages
 	{
 		fmt.Printf("Starting shellCommand subscriber: %#v\n", s.nodeName)
-		sub := newSubject("shellCommand", CommandACK, s.nodeName)
+		sub := newSubject(ShellCommand, CommandACK, s.nodeName)
 		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
 		// fmt.Printf("*** %#v\n", proc)
 		go s.processSpawnWorker(proc)
@@ -121,16 +121,16 @@ func (s *server) Start() {
 	// Start a subscriber for textLogging messages
 	{
 		fmt.Printf("Starting textlogging subscriber: %#v\n", s.nodeName)
-		sub := newSubject("textLogging", EventACK, s.nodeName)
+		sub := newSubject(TextLogging, EventACK, s.nodeName)
 		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
 		// fmt.Printf("*** %#v\n", proc)
 		go s.processSpawnWorker(proc)
 	}
 
-	// Start a subscriber for sayHello messages
+	// Start a subscriber for SayHello messages
 	{
-		fmt.Printf("Starting sayHello subscriber: %#v\n", s.nodeName)
-		sub := newSubject("sayHello", EventNACK, s.nodeName)
+		fmt.Printf("Starting SayHello subscriber: %#v\n", s.nodeName)
+		sub := newSubject(SayHello, EventNACK, s.nodeName)
 		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
 		// fmt.Printf("*** %#v\n", proc)
 		go s.processSpawnWorker(proc)

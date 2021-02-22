@@ -34,11 +34,11 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 
 const (
 	// Shell command to be executed via f.ex. bash
-	ShellCommand Method = "shellCommand"
+	ShellCommand Method = "ShellCommand"
 	// Send text logging to some host
-	TextLogging Method = "textLogging"
+	TextLogging Method = "TextLogging"
 	// Send Hello I'm here message
-	SayHello Method = "sayHello"
+	SayHello Method = "SayHello"
 )
 
 type MethodsAvailable struct {
