@@ -228,7 +228,7 @@ func (s *server) handleMessagesInRingbuffer() {
 				// by using the goto at the end redo the process for this specific message.
 				log.Printf("info: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
-				sub := newSubject(sam.Subject.Method, sam.Subject.CommandOrEvent, sam.Subject.Node)
+				sub := newSubject(sam.Subject.Method, sam.Subject.CommandOrEvent, sam.Subject.ToNode)
 				proc := s.processPrepareNew(sub, s.errorCh, processKindPublisher)
 				// fmt.Printf("*** %#v\n", proc)
 				go s.processSpawnWorker(proc)
@@ -249,7 +249,7 @@ type node string
 // specific process
 type Subject struct {
 	// node, the name of the node
-	Node string `json:"node" yaml:"node"`
+	ToNode string `json:"node" yaml:"toNode"`
 	// messageType, command/event
 	CommandOrEvent CommandOrEvent `json:"commandOrEvent" yaml:"commandOrEvent"`
 	// method, what is this message doing, etc. shellCommand, syslog, etc.
@@ -263,7 +263,7 @@ type Subject struct {
 // to receive new messages on the specific subject.
 func newSubject(method Method, commandOrEvent CommandOrEvent, node string) Subject {
 	return Subject{
-		Node:           node,
+		ToNode:         node,
 		CommandOrEvent: commandOrEvent,
 		Method:         method,
 		messageCh:      make(chan Message),
@@ -274,7 +274,7 @@ func newSubject(method Method, commandOrEvent CommandOrEvent, node string) Subje
 type subjectName string
 
 func (s Subject) name() subjectName {
-	return subjectName(fmt.Sprintf("%s.%s.%s", s.Method, s.CommandOrEvent, s.Node))
+	return subjectName(fmt.Sprintf("%s.%s.%s", s.Method, s.CommandOrEvent, s.ToNode))
 }
 
 // processKind are either kindSubscriber or kindPublisher, and are
@@ -313,7 +313,7 @@ func (s *server) processPrepareNew(subject Subject, errCh chan errProcess, proce
 	proc := process{
 		messageID:   0,
 		subject:     subject,
-		node:        node(subject.Node),
+		node:        node(subject.ToNode),
 		processID:   s.lastProcessID,
 		errorCh:     errCh,
 		processKind: processKind,

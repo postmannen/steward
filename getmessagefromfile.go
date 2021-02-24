@@ -70,7 +70,7 @@ func jsonFromFileData(b []byte) ([]subjectAndMessage, error) {
 
 	for _, m := range MsgSlice {
 		s := Subject{
-			Node:           string(m.ToNode),
+			ToNode:         string(m.ToNode),
 			CommandOrEvent: m.CommandOrEvent,
 			Method:         m.Method,
 		}
