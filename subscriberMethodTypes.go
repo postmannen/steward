@@ -92,7 +92,7 @@ type methodEventTextLogging struct{}
 
 func (m methodEventTextLogging) handler(s *server, message Message, node string) ([]byte, error) {
 	for _, d := range message.Data {
-		s.logCh <- []byte(d)
+		s.subscriberServices.logCh <- []byte(d)
 	}
 
 	outMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -107,7 +107,7 @@ func (m methodEventSayHello) handler(s *server, message Message, node string) ([
 	log.Printf("################## Received hello from %v ##################\n", message.FromNode)
 	// Since the handler is only called to handle a specific type of message we need
 	// to store it elsewhere, and choice for now is under s.metrics.sayHelloNodes
-	s.metrics.sayHelloNodes[message.FromNode] = struct{}{}
+	s.subscriberServices.sayHelloNodes[message.FromNode] = struct{}{}
 
 	// update the prometheus metrics
 	s.metrics.metricsCh <- metricType{
@@ -115,7 +115,7 @@ func (m methodEventSayHello) handler(s *server, message Message, node string) ([
 			Name: "hello_nodes",
 			Help: "The current number of total nodes who have said hello",
 		}),
-		value: float64(len(s.metrics.sayHelloNodes)),
+		value: float64(len(s.subscriberServices.sayHelloNodes)),
 	}
 	outMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return outMsg, nil

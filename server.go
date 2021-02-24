@@ -43,17 +43,15 @@ type server struct {
 	lastProcessID int
 	// The name of the node
 	nodeName string
-	mu       sync.Mutex
-	// The channel where we receive new messages from the outside to
-	// insert into the system for being processed
+	// Mutex for locking when writing to the process map
+	mu sync.Mutex
+	// The channel where we receive new messages read from file.
+	// We can than range this channel for new messages to process.
 	inputFromFileCh chan []subjectAndMessage
-	// errorCh is used to report errors from a process
-	// NB: Implementing this as an int to report for testing
-	errorCh chan errProcess
-	// errorKernel
+	// errorKernel is doing all the error handling like what to do if
+	// an error occurs.
+	// TODO: Will also send error messages to cental error subscriber.
 	errorKernel *errorKernel
-	// TODO: replace this with some structure to hold the logCh value
-	logCh chan []byte
 	// used to check if the methods specified in message is valid
 	methodsAvailable MethodsAvailable
 	// Map who holds the command and event types available.
@@ -61,6 +59,12 @@ type server struct {
 	commandOrEventAvailable CommandOrEventAvailable
 	// metric exporter
 	metrics *metrics
+	// subscriberServices are where we find the services and the API to
+	// use services needed by subscriber.
+	// For example, this can be a service that knows
+	// how to forward the data for a received message of type log to a
+	// central logger.
+	subscriberServices *subscriberServices
 }
 
 // newServer will prepare and return a server type
@@ -71,33 +75,32 @@ func NewServer(brokerAddress string, nodeName string, promHostAndPort string) (*
 	}
 
 	var m Method
-	var co CommandOrEvent
+	var coe CommandOrEvent
 
 	s := &server{
 		nodeName:                nodeName,
 		natsConn:                conn,
 		processes:               make(map[subjectName]process),
 		inputFromFileCh:         make(chan []subjectAndMessage),
-		errorCh:                 make(chan errProcess, 2),
-		logCh:                   make(chan []byte),
 		methodsAvailable:        m.GetMethodsAvailable(),
-		commandOrEventAvailable: co.GetCommandOrEventAvailable(),
+		commandOrEventAvailable: coe.GetCommandOrEventAvailable(),
 		metrics:                 newMetrics(promHostAndPort),
+		subscriberServices:      newSubscriberServices(),
 	}
 
 	return s, nil
 
 }
 
-// Start will spawn up all the defined subscriber processes.
+// Start will spawn up all the predefined subscriber processes.
 // Spawning of publisher processes is done on the fly by checking
-// if there is publisher process for a given message subject. This
-// checking is also started here in Start by calling handleMessagesToPublish.
+// if there is publisher process for a given message subject, and
+// not exist it will spawn one.
 func (s *server) Start() {
 	// Start the error kernel that will do all the error handling
 	// not done within a process.
 	s.errorKernel = newErrorKernel()
-	s.errorKernel.startErrorKernel(s.errorCh)
+	s.errorKernel.startErrorKernel()
 
 	// Start collecting the metrics
 	go s.startMetrics()
@@ -106,40 +109,20 @@ func (s *server) Start() {
 	go s.getMessagesFromFile("./", "inmsg.txt", s.inputFromFileCh)
 
 	// Start the textLogging service that will run on the subscribers
-	// TODO: Figure out how to structure event services like these
-	go s.startTextLogging(s.logCh)
+	// TODO: This should only be started if the flag value provided when
+	// starting asks to subscribe to TextLogging events.
+	go s.subscriberServices.startTextLogging()
 
-	// Start a subscriber for shellCommand messages
-	{
-		fmt.Printf("Starting shellCommand subscriber: %#v\n", s.nodeName)
-		sub := newSubject(ShellCommand, CommandACK, s.nodeName)
-		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
-		// fmt.Printf("*** %#v\n", proc)
-		go s.processSpawnWorker(proc)
-	}
-
-	// Start a subscriber for textLogging messages
-	{
-		fmt.Printf("Starting textlogging subscriber: %#v\n", s.nodeName)
-		sub := newSubject(TextLogging, EventACK, s.nodeName)
-		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
-		// fmt.Printf("*** %#v\n", proc)
-		go s.processSpawnWorker(proc)
-	}
-
-	// Start a subscriber for SayHello messages
-	{
-		fmt.Printf("Starting SayHello subscriber: %#v\n", s.nodeName)
-		sub := newSubject(SayHello, EventNACK, s.nodeName)
-		proc := s.processPrepareNew(sub, s.errorCh, processKindSubscriber)
-		// fmt.Printf("*** %#v\n", proc)
-		go s.processSpawnWorker(proc)
-	}
+	// Start up the predefined subscribers.
+	// TODO: What to subscribe on should be handled via flags, or config
+	// files.
+	s.subscribersStart()
 
 	time.Sleep(time.Second * 2)
 	s.printProcessesMap()
 
-	s.handleMessagesInRingbuffer()
+	// Start the processing of new messaging from an input channel.
+	s.processNewMessages("./incommmingBuffer.db", s.inputFromFileCh)
 
 	select {}
 
@@ -161,86 +144,6 @@ func (s *server) printProcessesMap() {
 	}
 
 	fmt.Println("--------------------------------------------------------------------------------------------")
-}
-
-// handleNewOperatorMessages will handle all the new operator messages
-// given to the system, and route them to the correct subject queue.
-// It will also handle the process of spawning more worker processes
-// for publisher subjects if it does not exist.
-func (s *server) handleMessagesInRingbuffer() {
-	// Prepare and start a new ring buffer
-	const bufferSize int = 1000
-	rb := newringBuffer(bufferSize)
-	inCh := make(chan subjectAndMessage)
-	ringBufferOutCh := make(chan samDBValue)
-	// start the ringbuffer.
-	rb.start(inCh, ringBufferOutCh)
-
-	// Start reading new messages received on the incomming message
-	// pipe requested by operator, and fill them into the buffer.
-	go func() {
-		for samSlice := range s.inputFromFileCh {
-			for _, sam := range samSlice {
-				inCh <- sam
-			}
-		}
-		close(inCh)
-	}()
-
-	// Process the messages that are in the ring buffer. Check and
-	// send if there are a specific subject for it, and no subject
-	// exist throw an error.
-	go func() {
-		for samTmp := range ringBufferOutCh {
-			sam := samTmp.Data
-			// Check if the format of the message is correct.
-			// TODO: Send a message to the error kernel here that
-			// it was unable to process the message with the reason
-			// why ?
-			if _, ok := s.methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
-				continue
-			}
-			if !s.commandOrEventAvailable.CheckIfExists(sam.Message.CommandOrEvent) {
-				continue
-			}
-
-		redo:
-			// Adding a label here so we are able to redo the sending
-			// of the last message if a process with specified subject
-			// is not present. The process will then be created, and
-			// the code will loop back to the redo: label.
-
-			m := sam.Message
-			subjName := sam.Subject.name()
-			// DEBUG: fmt.Printf("** handleNewOperatorMessages: message: %v, ** subject: %#v\n", m, sam.Subject)
-			_, ok := s.processes[subjName]
-
-			// Are there already a process for that subject, put the
-			// message on that processes incomming message channel.
-			if ok {
-				log.Printf("info: found the specific subject: %v\n", subjName)
-				s.processes[subjName].subject.messageCh <- m
-
-				// If no process to handle the specific subject exist,
-				// the we create and spawn one.
-			} else {
-				// If a publisher do not exist for the given subject, create it, and
-				// by using the goto at the end redo the process for this specific message.
-				log.Printf("info: did not find that specific subject, starting new process for subject: %v\n", subjName)
-
-				sub := newSubject(sam.Subject.Method, sam.Subject.CommandOrEvent, sam.Subject.ToNode)
-				proc := s.processPrepareNew(sub, s.errorCh, processKindPublisher)
-				// fmt.Printf("*** %#v\n", proc)
-				go s.processSpawnWorker(proc)
-
-				time.Sleep(time.Millisecond * 500)
-				s.printProcessesMap()
-				// Now when the process is spawned we jump back to the redo: label,
-				// and send the message to that new process.
-				goto redo
-			}
-		}
-	}()
 }
 
 type node string
@@ -323,10 +226,11 @@ func (s *server) processPrepareNew(subject Subject, errCh chan errProcess, proce
 	return proc
 }
 
-// processSpawnWorker will spawn a new process. It will give the
-// process the next available ID, and also add the process to the
-// processes map.
-func (s *server) processSpawnWorker(proc process) {
+// spawnWorkerProcess will spawn take care of spawning both publisher
+// and subscriber proesses.
+//It will give the process the next available ID, and also add the
+// process to the processes map.
+func (s *server) spawnWorkerProcess(proc process) {
 	s.mu.Lock()
 	// We use the full name of the subject to identify a unique
 	// process. We can do that since a process can only handle
@@ -342,52 +246,12 @@ func (s *server) processSpawnWorker(proc process) {
 	//
 	// Handle publisher workers
 	if proc.processKind == processKindPublisher {
-		for {
-			// Wait and read the next message on the message channel
-			m := <-proc.subject.messageCh
-			m.ID = s.processes[proc.subject.name()].messageID
-			messageDeliver(proc, m, s.natsConn)
-			m.done <- struct{}{}
-
-			// Increment the counter for the next message to be sent.
-			proc.messageID++
-			s.processes[proc.subject.name()] = proc
-			time.Sleep(time.Second * 1)
-
-			// NB: simulate that we get an error, and that we can send that
-			// out of the process and receive it in another thread.
-			ep := errProcess{
-				infoText:      "process failed",
-				process:       proc,
-				message:       m,
-				errorActionCh: make(chan errorAction),
-			}
-			s.errorCh <- ep
-
-			// Wait for the response action back from the error kernel, and
-			// decide what to do. Should we continue, quit, or .... ?
-			switch <-ep.errorActionCh {
-			case errActionContinue:
-				log.Printf("The errAction was continue...so we're continuing\n")
-			}
-		}
+		s.publishMessages(proc)
 	}
 
 	// handle subscriber workers
 	if proc.processKind == processKindSubscriber {
-		subject := string(proc.subject.name())
-
-		// Subscribe will start up a Go routine under the hood calling the
-		// callback function specified when a new message is received.
-		_, err := s.natsConn.Subscribe(subject, func(msg *nats.Msg) {
-			// We start one handler per message received by using go routines here.
-			// This is for being able to reply back the current publisher who sent
-			// the message.
-			go s.subscriberHandler(s.natsConn, s.nodeName, msg)
-		})
-		if err != nil {
-			log.Printf("error: Subscribe failed: %v\n", err)
-		}
+		s.subscribeMessages(proc)
 	}
 }
 
@@ -437,7 +301,7 @@ func messageDeliver(proc process, message Message, natsConn *nats.Conn) {
 				// did not receive a reply, continuing from top again
 				continue
 			}
-			log.Printf("publisher: received ACK: %s\n", msgReply.Data)
+			log.Printf("info: publisher: received ACK for message: %s\n", msgReply.Data)
 		}
 		return
 	}

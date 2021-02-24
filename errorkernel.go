@@ -19,12 +19,15 @@ type errorKernel struct {
 	// of error-state which is a map of all the processes,
 	// how many times a process have failed over the same
 	// message etc...
+
+	// errorCh is used to report errors from a process
+	errorCh chan errProcess
 }
 
 // newErrorKernel will initialize and return a new error kernel
 func newErrorKernel() *errorKernel {
 	return &errorKernel{
-		// ringBuffer: newringBuffer(),
+		errorCh: make(chan errProcess, 2),
 	}
 }
 
@@ -37,13 +40,13 @@ func newErrorKernel() *errorKernel {
 // process if it should continue or not based not based on how severe
 // the error where. This should be right after sending the error
 // sending in the process.
-func (e *errorKernel) startErrorKernel(errorCh chan errProcess) {
+func (e *errorKernel) startErrorKernel() {
 	// TODO: For now it will just print the error messages to the
 	// console.
 	go func() {
 
 		for {
-			er := <-errorCh
+			er := <-e.errorCh
 
 			// We should be able to handle each error individually and
 			// also concurrently, so the handler is started in it's

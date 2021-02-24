@@ -40,8 +40,8 @@ type ringBuffer struct {
 }
 
 // newringBuffer is a push/pop storage for values.
-func newringBuffer(size int) *ringBuffer {
-	db, err := bolt.Open("./incommmingBuffer.db", 0600, nil)
+func newringBuffer(size int, dbFileName string) *ringBuffer {
+	db, err := bolt.Open(dbFileName, 0600, nil)
 	if err != nil {
 		log.Printf("error: failed to open db: %v\n", err)
 	}
@@ -186,14 +186,12 @@ func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan sam
 			// message will be able to signal back here that the message have
 			// been processed, and that we then can delete it out of the K/V Store.
 			<-v.Data.done
-			fmt.Println("-----------------------------------------------------------")
-			fmt.Printf("### DONE WITH THE MESSAGE\n")
-			fmt.Println("-----------------------------------------------------------")
+			log.Printf("info: done with message %v\n", v.ID)
 
 			// Since we are now done with the specific message we can delete
 			// it out of the K/V Store.
 			r.deleteKeyFromBucket(samValueBucket, strconv.Itoa(v.ID))
-			fmt.Printf("******* DELETED KEY %v FROM BUCKET*******\n", v.ID)
+			log.Printf("info: deleting key %v from bucket\n", v.ID)
 
 			r.permStore <- fmt.Sprintf("%v : %+v\n", time.Now().UTC(), v)
 

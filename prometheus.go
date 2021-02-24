@@ -1,7 +1,6 @@
 package steward
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -13,25 +12,18 @@ import (
 // metrics are generally used to hold the structure around metrics
 // handling
 type metrics struct {
-	// sayHelloNodes are the register where the register where nodes
-	// who have sent an sayHello are stored. Since the sayHello
-	// subscriber is a handler that will be just be called when a
-	// hello message is received we need to store the metrics somewhere
-	// else, that is why we store it here....at least for now.
-	sayHelloNodes map[node]struct{}
 	// The channel to pass metrics that should be processed
 	metricsCh chan metricType
 	// host and port where prometheus metrics will be exported
 	hostAndPort string
 }
 
-// HERE:
+// newMetrics will prepare and return a *metrics
 func newMetrics(hostAndPort string) *metrics {
 	m := metrics{
-		sayHelloNodes: make(map[node]struct{}),
+		metricsCh:   make(chan metricType),
+		hostAndPort: hostAndPort,
 	}
-	m.metricsCh = make(chan metricType)
-	m.hostAndPort = hostAndPort
 
 	return &m
 }
@@ -76,7 +68,6 @@ func (s *server) startMetrics() {
 	go func() {
 		for {
 			for f := range s.metrics.metricsCh {
-				fmt.Printf("********** RANGED A METRIC = %v, %v\n", f.metric, f.value)
 				// // Try to register the metric of the interface type prometheus.Collector
 				// prometheus.Register(f.metric)
 
