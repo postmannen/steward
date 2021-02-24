@@ -14,25 +14,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-type Message struct {
-	ToNode node `json:"toNode" yaml:"toNode"`
-	// The Unique ID of the message
-	ID int `json:"id" yaml:"id"`
-	// The actual data in the message
-	// TODO: Change this to a slice instead...or maybe use an
-	// interface type here to handle several data types ?
-	Data []string `json:"data" yaml:"data"`
-	// The type of the message being sent
-	CommandOrEvent CommandOrEvent `json:"commandOrEvent" yaml:"commandOrEvent"`
-	// method, what is this message doing, etc. shellCommand, syslog, etc.
-	Method   Method `json:"method" yaml:"method"`
-	FromNode node
-	// done is used to signal when a message is fully processed.
-	// This is used when choosing when to move the message from
-	// the ringbuffer into the time series log.
-	done chan struct{}
-}
-
 // server is the structure that will hold the state about spawned
 // processes on a local instance.
 type server struct {
@@ -45,9 +26,11 @@ type server struct {
 	nodeName string
 	// Mutex for locking when writing to the process map
 	mu sync.Mutex
-	// The channel where we receive new messages read from file.
+	// The channel where we put new messages read from file,
+	// or some other process who wants to send something via the
+	// system
 	// We can than range this channel for new messages to process.
-	inputFromFileCh chan []subjectAndMessage
+	newMessagesCh chan []subjectAndMessage
 	// errorKernel is doing all the error handling like what to do if
 	// an error occurs.
 	// TODO: Will also send error messages to cental error subscriber.
@@ -65,10 +48,12 @@ type server struct {
 	// how to forward the data for a received message of type log to a
 	// central logger.
 	subscriberServices *subscriberServices
+	// Is this the central error logger ?
+	centralErrorLogger bool
 }
 
 // newServer will prepare and return a server type
-func NewServer(brokerAddress string, nodeName string, promHostAndPort string) (*server, error) {
+func NewServer(brokerAddress string, nodeName string, promHostAndPort string, centralErrorLogger bool) (*server, error) {
 	conn, err := nats.Connect(brokerAddress, nil)
 	if err != nil {
 		log.Printf("error: nats.Connect failed: %v\n", err)
@@ -81,11 +66,12 @@ func NewServer(brokerAddress string, nodeName string, promHostAndPort string) (*
 		nodeName:                nodeName,
 		natsConn:                conn,
 		processes:               make(map[subjectName]process),
-		inputFromFileCh:         make(chan []subjectAndMessage),
+		newMessagesCh:           make(chan []subjectAndMessage),
 		methodsAvailable:        m.GetMethodsAvailable(),
 		commandOrEventAvailable: coe.GetCommandOrEventAvailable(),
 		metrics:                 newMetrics(promHostAndPort),
 		subscriberServices:      newSubscriberServices(),
+		centralErrorLogger:      centralErrorLogger,
 	}
 
 	return s, nil
@@ -100,13 +86,13 @@ func (s *server) Start() {
 	// Start the error kernel that will do all the error handling
 	// not done within a process.
 	s.errorKernel = newErrorKernel()
-	s.errorKernel.startErrorKernel()
+	s.errorKernel.startErrorKernel(s.newMessagesCh)
 
 	// Start collecting the metrics
 	go s.startMetrics()
 
 	// Start the checking the input file for new messages from operator.
-	go s.getMessagesFromFile("./", "inmsg.txt", s.inputFromFileCh)
+	go s.getMessagesFromFile("./", "inmsg.txt", s.newMessagesCh)
 
 	// Start the textLogging service that will run on the subscribers
 	// TODO: This should only be started if the flag value provided when
@@ -122,7 +108,7 @@ func (s *server) Start() {
 	s.printProcessesMap()
 
 	// Start the processing of new messaging from an input channel.
-	s.processNewMessages("./incommmingBuffer.db", s.inputFromFileCh)
+	s.processNewMessages("./incommmingBuffer.db", s.newMessagesCh)
 
 	select {}
 
@@ -144,40 +130,6 @@ func (s *server) printProcessesMap() {
 	}
 
 	fmt.Println("--------------------------------------------------------------------------------------------")
-}
-
-type node string
-
-// subject contains the representation of a subject to be used with one
-// specific process
-type Subject struct {
-	// node, the name of the node
-	ToNode string `json:"node" yaml:"toNode"`
-	// messageType, command/event
-	CommandOrEvent CommandOrEvent `json:"commandOrEvent" yaml:"commandOrEvent"`
-	// method, what is this message doing, etc. shellCommand, syslog, etc.
-	Method Method `json:"method" yaml:"method"`
-	// messageCh is the channel for receiving new content to be sent
-	messageCh chan Message
-}
-
-// newSubject will return a new variable of the type subject, and insert
-// all the values given as arguments. It will also create the channel
-// to receive new messages on the specific subject.
-func newSubject(method Method, commandOrEvent CommandOrEvent, node string) Subject {
-	return Subject{
-		ToNode:         node,
-		CommandOrEvent: commandOrEvent,
-		Method:         method,
-		messageCh:      make(chan Message),
-	}
-}
-
-// subjectName is the complete representation of a subject
-type subjectName string
-
-func (s Subject) name() subjectName {
-	return subjectName(fmt.Sprintf("%s.%s.%s", s.Method, s.CommandOrEvent, s.ToNode))
 }
 
 // processKind are either kindSubscriber or kindPublisher, and are
@@ -255,7 +207,7 @@ func (s *server) spawnWorkerProcess(proc process) {
 	}
 }
 
-func messageDeliver(proc process, message Message, natsConn *nats.Conn) {
+func (s *server) messageDeliverNats(proc process, message Message) {
 	for {
 		dataPayload, err := gobEncodeMessage(message)
 		if err != nil {
@@ -276,7 +228,7 @@ func messageDeliver(proc process, message Message, natsConn *nats.Conn) {
 		// that sends out a message every second.
 		//
 		// Create a subscriber for the reply message.
-		subReply, err := natsConn.SubscribeSync(msg.Reply)
+		subReply, err := s.natsConn.SubscribeSync(msg.Reply)
 		if err != nil {
 			log.Printf("error: nc.SubscribeSync failed: %v\n", err)
 			os.Exit(1)
@@ -284,7 +236,7 @@ func messageDeliver(proc process, message Message, natsConn *nats.Conn) {
 		}
 
 		// Publish message
-		err = natsConn.PublishMsg(msg)
+		err = s.natsConn.PublishMsg(msg)
 		if err != nil {
 			log.Printf("error: publish failed: %v\n", err)
 			continue
@@ -292,6 +244,7 @@ func messageDeliver(proc process, message Message, natsConn *nats.Conn) {
 
 		// If the message is an ACK type of message we must check that a
 		// reply, and if it is not we don't wait here at all.
+		fmt.Printf("---- MESSAGE : %v\n", message)
 		if message.CommandOrEvent == CommandACK || message.CommandOrEvent == EventACK {
 			// Wait up until 10 seconds for a reply,
 			// continue and resend if to reply received.
@@ -307,20 +260,6 @@ func messageDeliver(proc process, message Message, natsConn *nats.Conn) {
 	}
 }
 
-// gobEncodePayload will encode the message structure along with its
-// valued in gob binary format.
-// TODO: Check if it adds value to compress with gzip.
-func gobEncodeMessage(m Message) ([]byte, error) {
-	var buf bytes.Buffer
-	gobEnc := gob.NewEncoder(&buf)
-	err := gobEnc.Encode(m)
-	if err != nil {
-		return nil, fmt.Errorf("error: gob.Encode failed: %v", err)
-	}
-
-	return buf.Bytes(), nil
-}
-
 // handler will deserialize the message when a new message is received,
 // check the MessageType field in the message to decide what kind of
 // message it is and then it will check how to handle that message type,
@@ -330,7 +269,7 @@ func gobEncodeMessage(m Message) ([]byte, error) {
 // the state of the message being processed, and then reply back to the
 // correct sending process's reply, meaning so we ACK back to the correct
 // publisher.
-func (s *server) subscriberHandler(natsConn *nats.Conn, node string, msg *nats.Msg) {
+func (s *server) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *nats.Msg) {
 
 	message := Message{}
 
@@ -357,7 +296,7 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, node string, msg *nats.M
 			log.Printf("error: subscriberHandler: method type not available: %v\n", message.CommandOrEvent)
 		}
 		fmt.Printf("*** DEBUG: BEFORE CALLING HANDLER: ACK\n")
-		out, err := mf.handler(s, message, node)
+		out, err := mf.handler(s, message, thisNode)
 
 		if err != nil {
 			// TODO: Send to error kernel ?
@@ -366,6 +305,8 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, node string, msg *nats.M
 
 		// Send a confirmation message back to the publisher
 		natsConn.Publish(msg.Reply, out)
+
+		sendErrorMessage(s.newMessagesCh, node(thisNode))
 	case message.CommandOrEvent == CommandNACK || message.CommandOrEvent == EventNACK:
 		log.Printf("info: subscriberHandler: message.CommandOrEvent received was = %v, preparing to call handler\n", message.CommandOrEvent)
 		mf, ok := s.methodsAvailable.CheckIfExists(message.Method)
@@ -376,7 +317,7 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, node string, msg *nats.M
 		// since we don't send a reply for a NACK message, we don't care about the
 		// out return when calling mf.handler
 		fmt.Printf("*** DEBUG: BEFORE CALLING HANDLER: NACK\n")
-		_, err := mf.handler(s, message, node)
+		_, err := mf.handler(s, message, thisNode)
 
 		if err != nil {
 			// TODO: Send to error kernel ?
@@ -385,4 +326,26 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, node string, msg *nats.M
 	default:
 		log.Printf("info: did not find that specific type of command: %#v\n", message.CommandOrEvent)
 	}
+}
+
+func sendErrorMessage(newMessagesCh chan<- []subjectAndMessage, FromNode node) {
+	// --- Testing
+
+	// TESTING: Creating an error message to send to errorCentral
+	fmt.Printf(" --- Sending error message to central !!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+	sam := subjectAndMessage{
+		Subject: Subject{
+			ToNode:         "errorCentral",
+			CommandOrEvent: EventNACK,
+			Method:         ErrorLog,
+		},
+		Message: Message{
+			ToNode:         "errorCentral",
+			FromNode:       FromNode,
+			Data:           []string{"some tull here .............."},
+			CommandOrEvent: EventNACK,
+			Method:         ErrorLog,
+		},
+	}
+	newMessagesCh <- []subjectAndMessage{sam}
 }

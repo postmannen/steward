@@ -36,7 +36,7 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 	}()
 
 	// Process the messages that are in the ring buffer. Check and
-	// send if there are a specific subject for it, and no subject
+	// send if there are a specific subject for it, and if no subject
 	// exist throw an error.
 	go func() {
 		for samTmp := range ringBufferOutCh {
@@ -46,9 +46,11 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 			// it was unable to process the message with the reason
 			// why ?
 			if _, ok := s.methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
+				log.Printf("error: the method do not exist: %v\n", sam.Message.Method)
 				continue
 			}
 			if !s.commandOrEventAvailable.CheckIfExists(sam.Message.CommandOrEvent) {
+				log.Printf("error: the command or evnt do not exist: %v\n", sam.Message.CommandOrEvent)
 				continue
 			}
 
@@ -72,7 +74,7 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 				// If no process to handle the specific subject exist,
 				// the we create and spawn one.
 			} else {
-				// If a publisher do not exist for the given subject, create it, and
+				// If a publisher process do not exist for the given subject, create it, and
 				// by using the goto at the end redo the process for this specific message.
 				log.Printf("info: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
@@ -96,7 +98,7 @@ func (s *server) publishMessages(proc process) {
 		// Wait and read the next message on the message channel
 		m := <-proc.subject.messageCh
 		m.ID = s.processes[proc.subject.name()].messageID
-		messageDeliver(proc, m, s.natsConn)
+		s.messageDeliverNats(proc, m)
 		m.done <- struct{}{}
 
 		// Increment the counter for the next message to be sent.

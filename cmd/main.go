@@ -16,6 +16,7 @@ func main() {
 	brokerAddress := flag.String("brokerAddress", "0", "the address of the message broker")
 	profilingPort := flag.String("profilingPort", "", "The number of the profiling port")
 	promHostAndPort := flag.String("promHostAndPort", ":2112", "host and port for prometheus listener, e.g. localhost:2112")
+	centralErrorLogger := flag.Bool("centralErrorLogger", false, "seet to true if this is the node that should receive the error log's from other nodes")
 	//isCentral := flag.Bool("isCentral", false, "used to indicate that this is the central master that will subscribe to error message subjects")
 	flag.Parse()
 
@@ -28,7 +29,7 @@ func main() {
 
 	}
 
-	s, err := steward.NewServer(*brokerAddress, *nodeName, *promHostAndPort)
+	s, err := steward.NewServer(*brokerAddress, *nodeName, *promHostAndPort, *centralErrorLogger)
 	if err != nil {
 		log.Printf("error: failed to connect to broker: %v\n", err)
 		os.Exit(1)

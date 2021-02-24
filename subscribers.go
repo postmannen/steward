@@ -50,4 +50,15 @@ func (s *server) subscribersStart() {
 		// fmt.Printf("*** %#v\n", proc)
 		go s.spawnWorkerProcess(proc)
 	}
+
+	if s.centralErrorLogger {
+		// Start a subscriber for ErrorLog messages
+		{
+			fmt.Printf("Starting ErrorLog subscriber: %#v\n", s.nodeName)
+			sub := newSubject(ErrorLog, EventNACK, "errorCentral")
+			proc := s.processPrepareNew(sub, s.errorKernel.errorCh, processKindSubscriber)
+			// fmt.Printf("*** %#v\n", proc)
+			go s.spawnWorkerProcess(proc)
+		}
+	}
 }

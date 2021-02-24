@@ -26,6 +26,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			ShellCommand: methodCommandShellCommand{},
 			TextLogging:  methodEventTextLogging{},
 			SayHello:     methodEventSayHello{},
+			ErrorLog:     methodEventErrorLog{},
 		},
 	}
 
@@ -39,6 +40,8 @@ const (
 	TextLogging Method = "TextLogging"
 	// Send Hello I'm here message
 	SayHello Method = "SayHello"
+	// Error log methods to centralError
+	ErrorLog Method = "ErrorLog"
 )
 
 type MethodsAvailable struct {
@@ -119,4 +122,15 @@ func (m methodEventSayHello) handler(s *server, message Message, node string) ([
 	}
 	outMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return outMsg, nil
+}
+
+// ---
+
+type methodEventErrorLog struct{}
+
+func (m methodEventErrorLog) handler(s *server, message Message, node string) ([]byte, error) {
+	log.Printf("----------------------------------------------------------------------------..\n")
+	log.Printf("Received error from: %v, containing: %v", message.FromNode, message.Data)
+	log.Printf("----------------------------------------------------------------------------..\n")
+	return nil, nil
 }

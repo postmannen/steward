@@ -40,7 +40,7 @@ func newErrorKernel() *errorKernel {
 // process if it should continue or not based not based on how severe
 // the error where. This should be right after sending the error
 // sending in the process.
-func (e *errorKernel) startErrorKernel() {
+func (e *errorKernel) startErrorKernel(newMessagesCh chan<- []subjectAndMessage) {
 	// TODO: For now it will just print the error messages to the
 	// console.
 	go func() {
@@ -63,6 +63,24 @@ func (e *errorKernel) startErrorKernel() {
 
 				// log.Printf("*** error_kernel: %#v, type=%T\n", er, er)
 				log.Printf("TESTING, we received and error from the process, but we're telling the process back to continue\n")
+
+				// // TESTING: Creating an error message to send to errorCentral
+				// fmt.Printf(" --- Sending error message to central !!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+				// sam := subjectAndMessage{
+				// 	Subject: Subject{
+				// 		ToNode:         "errorCentral",
+				// 		CommandOrEvent: EventNACK,
+				// 		Method:         ErrorLog,
+				// 	},
+				// 	Message: Message{
+				// 		ToNode:         "errorCentral",
+				// 		Data:           []string{"some tull here .............."},
+				// 		CommandOrEvent: EventNACK,
+				// 		Method:         ErrorLog,
+				// 	},
+				// }
+				// newMessagesCh <- []subjectAndMessage{sam}
+
 				er.errorActionCh <- errActionContinue
 			}()
 		}
