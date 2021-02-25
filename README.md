@@ -51,13 +51,23 @@ All code in this repository are to be concidered not-production-ready. The code 
 
 - Processes on the publishing node for handling incomming messages for new nodes will automatically be spawned when needed if it does not already exist.
 
-- Publishers will potentially be able to send to all nodes. It is the subscribing nodes who will limit where and what they will receive from.
+- Publishing processes will potentially be able to send to all nodes. It is the subscribing nodes who will limit from where and what they will receive from.
 
 - Messages not fully processed or not started yet will be automatically handled in chronological order if the service is restarted.
 
 - All messages processed by a publisher will be written to a log file as they are processed, with all the information needed to recreate the same message.
 
 - All handling down to the process and message level are handled concurrently. So if there are problems handling one message sent to a node on a subject it will not affect the messages being sent to other nodes, or other messages sent on other subjects to the same host.
+
+- Default timeouts to wait for ACK messages and max attempts to retry sending a message specified upon startup. This can be overridden on the message level.
+
+- Report errors happening on some node in to central error handler.
+
+- Message types of both ACK and NACK, so we can decide if we want or don't want an Acknowledge if a message was delivered succesfully.
+Example: We probably want an ACK when sending some shellcommand to be executed, but we don't care for an acknowledge (NACK) when we send an "hello I'm here" event.
+
+- Prometheus exporters for Metrics
+
 
 - More will come. In active development.
 
@@ -98,26 +108,15 @@ and for a shell command of type command to a host named "ship2"
 
 ## TODO
 
-- Implement a message type where no ack is needed. Use case can be nodes sending "hi, I'm here" (ping) messages to central server.
-
-- Timeouts. Does it makes sense to have a default timeout for all messages, and where that timeout can be overridden per message upon creation of the message.
-Implement the concept of timeouts/TTL for messages.
-
-- **Implemented**
-Check that there is a node for the specific message new incomming message, and the supervisor should create the process with the wanted subject on the publishing.
-
-- **Implemented**
-Since a process will be locked while waiting to send the error on the errorCh maybe it makes sense to have a channel inside the processes error handling with a select so we can send back to the process if it should continue or not based not based on how severe the error where. This should be right after sending the error sending in the process.
-
-- **Implemented**
-Look into adding a channel to the error messages sent from a worker process, so the error kernel can send f.ex. a shutdown instruction back to the worker.
-
-- Prometheus exporters for metrics.
-
 - Go through all processes and check that the error is handled correctly, and also reported back on the error subject to the master supervisor.
 
-- **Implemented**
-Implement the code running inside of each process as it's own function type that get's passed into the spawn process method up on creation of a new method.
+- Implement a log scraper method in `tail -f` style ?
+
+- Implement a web scraper method ?
+
+- Encryption between Node instances and brokers.
+
+- Authentication between node instances and brokers.
 
 ## Howto
 
@@ -127,13 +126,21 @@ clone the repository, then cd `./steward/cmd` and do `go build -o steward`, and 
 
 ### Options for running
 
-```bash
-  -brokerAddress string
-    the address of the nats message broker (default "0")
+```text
+    -brokerAddress string
+      the address of the message broker (default "0")
+  -centralErrorLogger
+      set to true if this is the node that should receive the error log's from other nodes
+  -defaultMessageRetries int
+      default amount of retries that will be done before a message is thrown away, and out of the system
+  -defaultMessageTimeout int
+      default message timeout in seconds. This can be overridden on the message level (default 10)
   -node string
-    some unique string to identify this Edge unit (default "0")
+      some unique string to identify this Edge unit (default "0")
   -profilingPort string
-    The number of the profiling port
+      The number of the profiling port
+  -promHostAndPort string
+      host and port for prometheus listener, e.g. localhost:2112 (default ":2112")
 ```
 
 ### How to Run
@@ -152,14 +159,27 @@ Use the `--help` flag to get all possibilities.
 
 Right now there are to types of messages.
 
-- Commands, are some command you want to run on a node, wait for it to finish, get an ACK back with the result contained in the ACK message. Think like running a shell command on some remote host.
+- Commands, are some command you typically want to run on a node, wait for it to finish, get an ACK back with the result contained in the ACK message. Think like running a shell command on some remote host.
 - Events, are something you just want to deliver, and wait to get an ACK back that it was delivered succesfully. Think like forwarding logs to some host, you just want to be sure it was delivered.
+
+Both Commands and Events can be either ACK or NACK
+
+The types are
+
+```text
+  CommandACK
+  CommandNACK
+  EventACK
+  EventNACK
+```
 
 ### How to send a Message
 
 Right now the API for sending a message from one node to another node is by pasting a structured JSON object into a file called `inmsg.txt` living alongside the binary. This file will be watched continously, and when updated the content will be picked up, parsed, and if OK it will be sent a message to the node specified.
 
 Currently there is one Command message type for running shell comands and one event message type for sending logs implemented. More will come.
+
+NB: The keys and the predefined values like `CommandACK` are case sensitive.
 
 #### Sending a command from one Node to Another Node
 
@@ -197,6 +217,22 @@ To send specify more messages at once do
         "commandOrEvent":"CommandACK",
         "method":"ShellCommand"
             
+    }
+]
+```
+
+To send a message with custom timeout and amount of retries
+
+```json
+[
+    {
+        
+        "toNode": "ship1",
+        "data": ["bash","-c","netstat -an|grep -i listen"],
+        "commandOrEvent":"CommandACK",
+        "method":"ShellCommand",
+        "timeout":3,
+        "retries":3
     }
 ]
 ```
