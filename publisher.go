@@ -22,7 +22,7 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 	inCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValue)
 	// start the ringbuffer.
-	rb.start(inCh, ringBufferOutCh)
+	rb.start(inCh, ringBufferOutCh, s.defaultMessageTimeout, s.defaultMessageRetries)
 
 	// Start reading new fresh messages received on the incomming message
 	// pipe/file requested, and fill them into the buffer.

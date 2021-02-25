@@ -55,7 +55,7 @@ func newringBuffer(size int, dbFileName string) *ringBuffer {
 // start will process incomming messages through the inCh,
 // put the messages on a buffered channel
 // and deliver messages out when requested on the outCh.
-func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan samDBValue) {
+func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan samDBValue, defaultMessageTimeout int, defaultMessageRetries int) {
 	// Starting both writing and reading in separate go routines so we
 	// can write and read concurrently.
 
@@ -68,7 +68,7 @@ func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan samDBValue) {
 	r.totalMessagesIndex = r.getIndexValue(indexValueBucket)
 
 	// Fill the buffer when new data arrives into the system
-	go r.fillBuffer(inCh, samValueBucket, indexValueBucket)
+	go r.fillBuffer(inCh, samValueBucket, indexValueBucket, defaultMessageTimeout, defaultMessageRetries)
 
 	// Start the process to permanently store done messages.
 	go r.startPermanentStore()
@@ -79,7 +79,7 @@ func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan samDBValue) {
 
 // fillBuffer will fill the buffer in the ringbuffer  reading from the inchannel.
 // It will also store the messages in a K/V DB while being processed.
-func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket string, indexValueBucket string) {
+func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket string, indexValueBucket string, defaultMessageTimeout int, defaultMessageRetries int) {
 	// At startup get all the values that might be in the K/V store so we can
 	// put them into the buffer before we start to fill up with new incomming
 	// messages to the system.
@@ -117,6 +117,14 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 			// if it was not a valid value, we jump back up, and
 			// continue the range iteration.
 			continue
+		}
+
+		// Check if message values for timers override default values
+		if v.Message.Timeout < 1 {
+			v.Message.Timeout = defaultMessageTimeout
+		}
+		if v.Message.Retries < 1 {
+			v.Message.Retries = defaultMessageRetries
 		}
 
 		// --- Store the incomming message in the k/v store ---

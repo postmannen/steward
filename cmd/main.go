@@ -16,20 +16,20 @@ func main() {
 	brokerAddress := flag.String("brokerAddress", "0", "the address of the message broker")
 	profilingPort := flag.String("profilingPort", "", "The number of the profiling port")
 	promHostAndPort := flag.String("promHostAndPort", ":2112", "host and port for prometheus listener, e.g. localhost:2112")
-	centralErrorLogger := flag.Bool("centralErrorLogger", false, "seet to true if this is the node that should receive the error log's from other nodes")
-	//isCentral := flag.Bool("isCentral", false, "used to indicate that this is the central master that will subscribe to error message subjects")
+	centralErrorLogger := flag.Bool("centralErrorLogger", false, "set to true if this is the node that should receive the error log's from other nodes")
+	defaultMessageTimeout := flag.Int("defaultMessageTimeout", 10, "default message timeout in seconds. This can be overridden on the message level")
+	defaultMessageRetries := flag.Int("defaultMessageRetries", 0, "default amount of retries that will be done before a message is thrown away, and out of the system")
 	flag.Parse()
 
+	// Start profiling if profiling port is specified
 	if *profilingPort != "" {
-		// TODO REMOVE: Added for profiling
-
 		go func() {
 			http.ListenAndServe("localhost:"+*profilingPort, nil)
 		}()
 
 	}
 
-	s, err := steward.NewServer(*brokerAddress, *nodeName, *promHostAndPort, *centralErrorLogger)
+	s, err := steward.NewServer(*brokerAddress, *nodeName, *promHostAndPort, *centralErrorLogger, *defaultMessageTimeout, *defaultMessageRetries)
 	if err != nil {
 		log.Printf("error: failed to connect to broker: %v\n", err)
 		os.Exit(1)

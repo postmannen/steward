@@ -49,10 +49,14 @@ type server struct {
 	subscriberServices *subscriberServices
 	// Is this the central error logger ?
 	centralErrorLogger bool
+	// default message timeout in seconds. This can be overridden on the message level
+	defaultMessageTimeout int
+	// default amount of retries that will be done before a message is thrown away, and out of the system
+	defaultMessageRetries int
 }
 
 // newServer will prepare and return a server type
-func NewServer(brokerAddress string, nodeName string, promHostAndPort string, centralErrorLogger bool) (*server, error) {
+func NewServer(brokerAddress string, nodeName string, promHostAndPort string, centralErrorLogger bool, defaultMessageTimeout int, defaultMessageRetries int) (*server, error) {
 	conn, err := nats.Connect(brokerAddress, nil)
 	if err != nil {
 		log.Printf("error: nats.Connect failed: %v\n", err)
@@ -71,6 +75,8 @@ func NewServer(brokerAddress string, nodeName string, promHostAndPort string, ce
 		metrics:                 newMetrics(promHostAndPort),
 		subscriberServices:      newSubscriberServices(),
 		centralErrorLogger:      centralErrorLogger,
+		defaultMessageTimeout:   defaultMessageTimeout,
+		defaultMessageRetries:   defaultMessageRetries,
 	}
 
 	return s, nil
@@ -207,6 +213,8 @@ func (s *server) spawnWorkerProcess(proc process) {
 }
 
 func (s *server) messageDeliverNats(proc process, message Message) {
+	retryAttempts := 0
+
 	for {
 		dataPayload, err := gobEncodeMessage(message)
 		if err != nil {
@@ -246,11 +254,25 @@ func (s *server) messageDeliverNats(proc process, message Message) {
 		if message.CommandOrEvent == CommandACK || message.CommandOrEvent == EventACK {
 			// Wait up until 10 seconds for a reply,
 			// continue and resend if to reply received.
-			msgReply, err := subReply.NextMsg(time.Second * 10)
+			msgReply, err := subReply.NextMsg(time.Second * time.Duration(message.Timeout))
 			if err != nil {
 				log.Printf("error: subReply.NextMsg failed for node=%v, subject=%v: %v\n", proc.node, proc.subject.name(), err)
-				// did not receive a reply, continuing from top again
-				continue
+
+				// did not receive a reply, decide what to do..
+				retryAttempts++
+				fmt.Printf("Retry attempts:%v, retries: %v, timeout: %v\n", retryAttempts, message.Retries, message.Timeout)
+				switch {
+				case message.Retries == 0:
+					// 0 indicates unlimited retries
+					continue
+				case retryAttempts >= message.Retries:
+					// max retries reached
+					log.Printf("info: max retries for message reached, breaking out: %v", retryAttempts)
+					return
+				default:
+					// none of the above matched, so we've not reached max retries yet
+					continue
+				}
 			}
 			log.Printf("info: publisher: received ACK for message: %s\n", msgReply.Data)
 		}
