@@ -24,7 +24,9 @@ type Message struct {
 	// done is used to signal when a message is fully processed.
 	// This is used when choosing when to move the message from
 	// the ringbuffer into the time series log.
-	done chan struct{}
+	Timeout int `json:"timeout" yaml:"timeout"`
+	Retries int `json:"retries" yaml:"retries"`
+	done    chan struct{}
 }
 
 // gobEncodePayload will encode the message structure along with its

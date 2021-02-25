@@ -6,7 +6,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
-	"os"
 	"sync"
 	"time"
 
@@ -230,8 +229,7 @@ func (s *server) messageDeliverNats(proc process, message Message) {
 		// Create a subscriber for the reply message.
 		subReply, err := s.natsConn.SubscribeSync(msg.Reply)
 		if err != nil {
-			log.Printf("error: nc.SubscribeSync failed: %v\n", err)
-			os.Exit(1)
+			log.Printf("error: nc.SubscribeSync failed: failed to create reply message: %v\n", err)
 			continue
 		}
 
@@ -306,7 +304,12 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		// Send a confirmation message back to the publisher
 		natsConn.Publish(msg.Reply, out)
 
-		sendErrorMessage(s.newMessagesCh, node(thisNode))
+		// TESTING: Simulate that we also want to send some error that occured
+		// to the errorCentral
+		{
+			err := fmt.Errorf("error: some testing error we want to send out")
+			sendErrorLogMessage(s.newMessagesCh, node(thisNode), err)
+		}
 	case message.CommandOrEvent == CommandNACK || message.CommandOrEvent == EventNACK:
 		log.Printf("info: subscriberHandler: message.CommandOrEvent received was = %v, preparing to call handler\n", message.CommandOrEvent)
 		mf, ok := s.methodsAvailable.CheckIfExists(message.Method)
@@ -328,9 +331,17 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 	}
 }
 
-func sendErrorMessage(newMessagesCh chan<- []subjectAndMessage, FromNode node) {
+// sendErrorMessage will put the error message directly on the channel that is
+// read by the nats publishing functions.
+func sendErrorLogMessage(newMessagesCh chan<- []subjectAndMessage, FromNode node, theError error) {
 	// --- Testing
+	sam := createErrorMsgContent(FromNode, theError)
+	newMessagesCh <- []subjectAndMessage{sam}
+}
 
+// createErrorMsgContent will prepare a subject and message with the content
+// of the error
+func createErrorMsgContent(FromNode node, theError error) subjectAndMessage {
 	// TESTING: Creating an error message to send to errorCentral
 	fmt.Printf(" --- Sending error message to central !!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
 	sam := subjectAndMessage{
@@ -342,10 +353,11 @@ func sendErrorMessage(newMessagesCh chan<- []subjectAndMessage, FromNode node) {
 		Message: Message{
 			ToNode:         "errorCentral",
 			FromNode:       FromNode,
-			Data:           []string{"some tull here .............."},
+			Data:           []string{theError.Error()},
 			CommandOrEvent: EventNACK,
 			Method:         ErrorLog,
 		},
 	}
-	newMessagesCh <- []subjectAndMessage{sam}
+
+	return sam
 }
