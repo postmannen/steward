@@ -114,6 +114,7 @@ func (s *server) Start() {
 	// starting asks to subscribe to TextLogging events.
 	go s.subscriberServices.startTextLogging()
 
+	// if enabled, start the sayHello I'm here service at the given interval
 	if s.publisherServices.sayHelloPublisher.interval != 0 {
 		go s.publisherServices.sayHelloPublisher.start(s.newMessagesCh, node(s.nodeName))
 	}
@@ -177,21 +178,29 @@ type process struct {
 	// NB: Implementing this as an int to report for testing
 	errorCh     chan errProcess
 	processKind processKind
+	// Who are we allowed to receive from ?
+	allowedReceivers map[node]struct{}
 }
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func (s *server) processPrepareNew(subject Subject, errCh chan errProcess, processKind processKind) process {
+func (s *server) processPrepareNew(subject Subject, errCh chan errProcess, processKind processKind, allowedReceivers []node) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
 	s.lastProcessID++
+
+	m := make(map[node]struct{})
+	for _, a := range allowedReceivers {
+		m[a] = struct{}{}
+	}
+
 	proc := process{
-		messageID:   0,
-		subject:     subject,
-		node:        node(subject.ToNode),
-		processID:   s.lastProcessID,
-		errorCh:     errCh,
-		processKind: processKind,
-		//messageCh: make(chan Message),
+		messageID:        0,
+		subject:          subject,
+		node:             node(subject.ToNode),
+		processID:        s.lastProcessID,
+		errorCh:          errCh,
+		processKind:      processKind,
+		allowedReceivers: m,
 	}
 
 	return proc
@@ -296,7 +305,7 @@ func (s *server) messageDeliverNats(proc process, message Message) {
 					continue
 				}
 			}
-			log.Printf("info: publisher: received ACK for message: %s\n", msgReply.Data)
+			log.Printf("<--- publisher: received ACK for message: %s\n", msgReply.Data)
 		}
 		return
 	}
@@ -311,7 +320,7 @@ func (s *server) messageDeliverNats(proc process, message Message) {
 // the state of the message being processed, and then reply back to the
 // correct sending process's reply, meaning so we ACK back to the correct
 // publisher.
-func (s *server) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *nats.Msg) {
+func (s *server) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *nats.Msg, proc process) {
 
 	message := Message{}
 
@@ -338,12 +347,35 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 			log.Printf("error: subscriberHandler: method type not available: %v\n", message.CommandOrEvent)
 		}
 		fmt.Printf("*** DEBUG: BEFORE CALLING HANDLER: ACK\n")
-		out, err := mf.handler(s, message, thisNode)
 
-		if err != nil {
-			// TODO: Send to error kernel ?
-			log.Printf("error: subscriberHandler: failed to execute event: %v\n", err)
+		out := []byte("not allowed from " + message.FromNode)
+		var err error
+
+		// TESTING: TO ALLOW RECEIVING ONLY FROM SPECIFIC HOSTS
+		_, arOK1 := proc.allowedReceivers[message.FromNode]
+		_, arOK2 := proc.allowedReceivers[message.FromNode]
+
+		if arOK1 || arOK2 {
+			out, err = mf.handler(s, message, thisNode)
+
+			if err != nil {
+				// TODO: Send to error kernel ?
+				log.Printf("error: subscriberHandler: failed to execute event: %v\n", err)
+			} else {
+				log.Printf("--- info: we don't allow receiving from: %v\n", message.FromNode)
+			}
 		}
+
+		// if message.FromNode != "central" {
+		// 	log.Printf("--- info: we don't allow receiving from: %v\n", message.FromNode)
+		//
+		// 	out, err = mf.handler(s, message, thisNode)
+		//
+		// 	if err != nil {
+		// 		// TODO: Send to error kernel ?
+		// 		log.Printf("error: subscriberHandler: failed to execute event: %v\n", err)
+		// 	}
+		// }
 
 		// Send a confirmation message back to the publisher
 		natsConn.Publish(msg.Reply, out)

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -101,6 +102,7 @@ func (s *server) startMetrics() {
 	n, err := net.Listen("tcp", s.metrics.hostAndPort)
 	if err != nil {
 		log.Printf("error: failed to open prometheus listen port: %v\n", err)
+		os.Exit(1)
 	}
 	m := http.NewServeMux()
 	m.Handle("/metrics", promhttp.Handler())

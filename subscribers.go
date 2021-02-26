@@ -16,7 +16,7 @@ func (s *server) subscribeMessages(proc process) {
 		// We start one handler per message received by using go routines here.
 		// This is for being able to reply back the current publisher who sent
 		// the message.
-		go s.subscriberHandler(s.natsConn, s.nodeName, msg)
+		go s.subscriberHandler(s.natsConn, s.nodeName, msg, proc)
 	})
 	if err != nil {
 		log.Printf("error: Subscribe failed: %v\n", err)
@@ -28,7 +28,7 @@ func (s *server) subscribersStart() {
 	{
 		fmt.Printf("Starting shellCommand subscriber: %#v\n", s.nodeName)
 		sub := newSubject(ShellCommand, CommandACK, s.nodeName)
-		proc := s.processPrepareNew(sub, s.errorKernel.errorCh, processKindSubscriber)
+		proc := s.processPrepareNew(sub, s.errorKernel.errorCh, processKindSubscriber, []node{"central", "ship2"})
 		// fmt.Printf("*** %#v\n", proc)
 		go s.spawnWorkerProcess(proc)
 	}
@@ -37,7 +37,7 @@ func (s *server) subscribersStart() {
 	{
 		fmt.Printf("Starting textlogging subscriber: %#v\n", s.nodeName)
 		sub := newSubject(TextLogging, EventACK, s.nodeName)
-		proc := s.processPrepareNew(sub, s.errorKernel.errorCh, processKindSubscriber)
+		proc := s.processPrepareNew(sub, s.errorKernel.errorCh, processKindSubscriber, []node{"central"})
 		// fmt.Printf("*** %#v\n", proc)
 		go s.spawnWorkerProcess(proc)
 	}
@@ -46,7 +46,7 @@ func (s *server) subscribersStart() {
 	{
 		fmt.Printf("Starting SayHello subscriber: %#v\n", s.nodeName)
 		sub := newSubject(SayHello, EventNACK, s.nodeName)
-		proc := s.processPrepareNew(sub, s.errorKernel.errorCh, processKindSubscriber)
+		proc := s.processPrepareNew(sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"})
 		// fmt.Printf("*** %#v\n", proc)
 		go s.spawnWorkerProcess(proc)
 	}
@@ -56,7 +56,7 @@ func (s *server) subscribersStart() {
 		{
 			fmt.Printf("Starting ErrorLog subscriber: %#v\n", s.nodeName)
 			sub := newSubject(ErrorLog, EventNACK, "errorCentral")
-			proc := s.processPrepareNew(sub, s.errorKernel.errorCh, processKindSubscriber)
+			proc := s.processPrepareNew(sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"})
 			// fmt.Printf("*** %#v\n", proc)
 			go s.spawnWorkerProcess(proc)
 		}

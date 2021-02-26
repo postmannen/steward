@@ -1,0 +1,11 @@
+[
+    {
+        
+        "toNode": "ship1",
+        "data": ["bash","-c","netstat -an|grep -i listen"],
+        "commandOrEvent":"CommandACK",
+        "method":"ShellCommand",
+        "timeout":3,
+        "retries":3
+    }
+]
