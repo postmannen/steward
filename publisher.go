@@ -63,13 +63,14 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 			m := sam.Message
 			subjName := sam.Subject.name()
 			// DEBUG: fmt.Printf("** handleNewOperatorMessages: message: %v, ** subject: %#v\n", m, sam.Subject)
-			_, ok := s.processes[subjName]
+			pn := processNameGet(subjName, processKindPublisher)
+			_, ok := s.processes[pn]
 
 			// Are there already a process for that subject, put the
 			// message on that processes incomming message channel.
 			if ok {
 				log.Printf("info: found the specific subject: %v\n", subjName)
-				s.processes[subjName].subject.messageCh <- m
+				s.processes[pn].subject.messageCh <- m
 
 				// If no process to handle the specific subject exist,
 				// the we create and spawn one.
@@ -97,13 +98,14 @@ func (s *server) publishMessages(proc process) {
 	for {
 		// Wait and read the next message on the message channel
 		m := <-proc.subject.messageCh
-		m.ID = s.processes[proc.subject.name()].messageID
+		pn := processNameGet(proc.subject.name(), processKindPublisher)
+		m.ID = s.processes[pn].messageID
 		s.messageDeliverNats(proc, m)
 		m.done <- struct{}{}
 
 		// Increment the counter for the next message to be sent.
 		proc.messageID++
-		s.processes[proc.subject.name()] = proc
+		s.processes[pn] = proc
 		time.Sleep(time.Second * 1)
 
 		// NB: simulate that we get an error, and that we can send that

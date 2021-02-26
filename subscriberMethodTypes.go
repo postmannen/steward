@@ -107,7 +107,7 @@ func (m methodEventTextLogging) handler(s *server, message Message, node string)
 type methodEventSayHello struct{}
 
 func (m methodEventSayHello) handler(s *server, message Message, node string) ([]byte, error) {
-	log.Printf("################## Received hello from %v ##################\n", message.FromNode)
+	log.Printf("<--- Received hello from %v \n", message.FromNode)
 	// Since the handler is only called to handle a specific type of message we need
 	// to store it elsewhere, and choice for now is under s.metrics.sayHelloNodes
 	s.subscriberServices.sayHelloNodes[message.FromNode] = struct{}{}

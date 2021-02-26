@@ -13,12 +13,19 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+type processName string
+
+func processNameGet(sn subjectName, pk processKind) processName {
+	pn := fmt.Sprintf("%s_%s", sn, pk)
+	return processName(pn)
+}
+
 // server is the structure that will hold the state about spawned
 // processes on a local instance.
 type server struct {
 	natsConn *nats.Conn
 	// TODO: sessions should probably hold a slice/map of processes ?
-	processes map[subjectName]process
+	processes map[processName]process
 	// The last processID created
 	lastProcessID int
 	// The name of the node
@@ -68,7 +75,7 @@ func NewServer(brokerAddress string, nodeName string, promHostAndPort string, ce
 	s := &server{
 		nodeName:                nodeName,
 		natsConn:                conn,
-		processes:               make(map[subjectName]process),
+		processes:               make(map[processName]process),
 		newMessagesCh:           make(chan []subjectAndMessage),
 		methodsAvailable:        m.GetMethodsAvailable(),
 		commandOrEventAvailable: coe.GetCommandOrEventAvailable(),
@@ -192,7 +199,15 @@ func (s *server) spawnWorkerProcess(proc process) {
 	// We use the full name of the subject to identify a unique
 	// process. We can do that since a process can only handle
 	// one message queue.
-	s.processes[proc.subject.name()] = proc
+	var pn processName
+	if proc.processKind == processKindPublisher {
+		pn = processNameGet(proc.subject.name(), processKindPublisher)
+	}
+	if proc.processKind == processKindSubscriber {
+		pn = processNameGet(proc.subject.name(), processKindSubscriber)
+	}
+
+	s.processes[pn] = proc
 	s.mu.Unlock()
 
 	// TODO: I think it makes most sense that the messages would come to
