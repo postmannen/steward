@@ -55,6 +55,8 @@ type server struct {
 	// central logger.
 	subscriberServices *subscriberServices
 	// Is this the central error logger ?
+	// collection of the publisher services and the types to control them
+	publisherServices  *publisherServices
 	centralErrorLogger bool
 	// default message timeout in seconds. This can be overridden on the message level
 	defaultMessageTimeout int
@@ -63,7 +65,7 @@ type server struct {
 }
 
 // newServer will prepare and return a server type
-func NewServer(brokerAddress string, nodeName string, promHostAndPort string, centralErrorLogger bool, defaultMessageTimeout int, defaultMessageRetries int) (*server, error) {
+func NewServer(brokerAddress string, nodeName string, promHostAndPort string, centralErrorLogger bool, defaultMessageTimeout int, defaultMessageRetries int, sayHelloInterval int) (*server, error) {
 	conn, err := nats.Connect(brokerAddress, nil)
 	if err != nil {
 		log.Printf("error: nats.Connect failed: %v\n", err)
@@ -81,6 +83,7 @@ func NewServer(brokerAddress string, nodeName string, promHostAndPort string, ce
 		commandOrEventAvailable: coe.GetCommandOrEventAvailable(),
 		metrics:                 newMetrics(promHostAndPort),
 		subscriberServices:      newSubscriberServices(),
+		publisherServices:       newPublisherServices(sayHelloInterval),
 		centralErrorLogger:      centralErrorLogger,
 		defaultMessageTimeout:   defaultMessageTimeout,
 		defaultMessageRetries:   defaultMessageRetries,
@@ -110,6 +113,10 @@ func (s *server) Start() {
 	// TODO: This should only be started if the flag value provided when
 	// starting asks to subscribe to TextLogging events.
 	go s.subscriberServices.startTextLogging()
+
+	if s.publisherServices.sayHelloPublisher.interval != 0 {
+		go s.publisherServices.sayHelloPublisher.start(s.newMessagesCh, node(s.nodeName))
+	}
 
 	// Start up the predefined subscribers.
 	// TODO: What to subscribe on should be handled via flags, or config

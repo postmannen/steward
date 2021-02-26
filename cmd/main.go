@@ -19,6 +19,7 @@ func main() {
 	centralErrorLogger := flag.Bool("centralErrorLogger", false, "set to true if this is the node that should receive the error log's from other nodes")
 	defaultMessageTimeout := flag.Int("defaultMessageTimeout", 10, "default message timeout in seconds. This can be overridden on the message level")
 	defaultMessageRetries := flag.Int("defaultMessageRetries", 0, "default amount of retries that will be done before a message is thrown away, and out of the system")
+	publisherServiceSayhello := flag.Int("publisherServiceSayhello", 0, "Make the current node send hello messages to central at given interval in seconds")
 	flag.Parse()
 
 	// Start profiling if profiling port is specified
@@ -29,7 +30,7 @@ func main() {
 
 	}
 
-	s, err := steward.NewServer(*brokerAddress, *nodeName, *promHostAndPort, *centralErrorLogger, *defaultMessageTimeout, *defaultMessageRetries)
+	s, err := steward.NewServer(*brokerAddress, *nodeName, *promHostAndPort, *centralErrorLogger, *defaultMessageTimeout, *defaultMessageRetries, *publisherServiceSayhello)
 	if err != nil {
 		log.Printf("error: failed to connect to broker: %v\n", err)
 		os.Exit(1)

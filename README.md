@@ -1,8 +1,10 @@
 # steward
 
-Async management of Edge Cloud units.
+Command And Control anything asynchronously.
 
-The idea is to build and use a pure message passing architecture for the control traffic back and forth from nodes, where a node can be a server, some other host system, or a container living in the cloud, or...other. The message passing backend used is <https://nats.io>
+Send shell commands to control your servers by passing a message that will have guaranteed delivery if/when the subsribing node is available. Or for example send logs or metrics from an end node back to a central log subscriber.
+
+The idea is to build and use a pure message passing architecture for the commands back and forth from nodes, with guaranteed delivery. A node can be a server running any host operating system, a container living in the cloud somewhere, a rapsberry pi, or something else that needs to be controlled that have an operating system installed  . The message passing backend used is <https://nats.io>
 
 ```text
                                                                              ┌─────────────────┐
@@ -67,7 +69,6 @@ All code in this repository are to be concidered not-production-ready. The code 
 Example: We probably want an ACK when sending some shellcommand to be executed, but we don't care for an acknowledge (NACK) when we send an "hello I'm here" event.
 
 - Prometheus exporters for Metrics
-
 
 - More will come. In active development.
 
@@ -262,6 +263,6 @@ You can save the content to myfile.JSON and append it to `inmsg.txt`
 
 The content of `inmsg.txt` will be erased as messages a processed.
 
-## Overvview
+## Overview
 
 ![overview](steward.svg)
