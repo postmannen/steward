@@ -67,13 +67,16 @@ func jsonFromFileData(b []byte) ([]subjectAndMessage, error) {
 	}
 
 	sam := []subjectAndMessage{}
+	// We need to create a tempory method type to look up the kind for the
+	// real method for the message.
+	var mt Method
 
 	// Range over all the messages parsed from json, and create a subject for
 	// each message.
 	for _, m := range MsgSlice {
 		s := Subject{
 			ToNode:         string(m.ToNode),
-			CommandOrEvent: m.CommandOrEvent,
+			CommandOrEvent: mt.getHandler(m.Method).getKind(),
 			Method:         m.Method,
 		}
 

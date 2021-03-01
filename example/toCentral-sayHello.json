@@ -2,7 +2,6 @@
     {
         "toNode": "central",
         "data": [""],
-        "commandOrEvent":"EventNACK",
         "method":"SayHello"
     }
 ]

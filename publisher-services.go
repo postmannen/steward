@@ -47,11 +47,10 @@ func (s *sayHelloPublisher) createMsg(FromNode node) subjectAndMessage {
 			Method:         ErrorLog,
 		},
 		Message: Message{
-			ToNode:         "errorCentral",
-			FromNode:       FromNode,
-			Data:           []string{m},
-			CommandOrEvent: EventNACK,
-			Method:         SayHello,
+			ToNode:   "errorCentral",
+			FromNode: FromNode,
+			Data:     []string{m},
+			Method:   SayHello,
 		},
 	}
 

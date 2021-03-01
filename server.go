@@ -282,7 +282,7 @@ func (s *server) messageDeliverNats(proc process, message Message) {
 		// If the message is an ACK type of message we must check that a
 		// reply, and if it is not we don't wait here at all.
 		fmt.Printf("---- MESSAGE : %v\n", message)
-		if message.CommandOrEvent == CommandACK || message.CommandOrEvent == EventACK {
+		if proc.subject.CommandOrEvent == CommandACK || proc.subject.CommandOrEvent == EventACK {
 			// Wait up until 10 seconds for a reply,
 			// continue and resend if to reply received.
 			msgReply, err := subReply.NextMsg(time.Second * time.Duration(message.Timeout))
@@ -339,12 +339,12 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 	// that there was a problem like missing method to handle a specific
 	// method etc.
 	switch {
-	case message.CommandOrEvent == CommandACK || message.CommandOrEvent == EventACK:
-		log.Printf("info: subscriberHandler: message.CommandOrEvent received was = %v, preparing to call handler\n", message.CommandOrEvent)
+	case proc.subject.CommandOrEvent == CommandACK || proc.subject.CommandOrEvent == EventACK:
+		log.Printf("info: subscriberHandler: message.CommandOrEvent received was = %v, preparing to call handler\n", proc.subject.CommandOrEvent)
 		mf, ok := s.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			// TODO: Check how errors should be handled here!!!
-			log.Printf("error: subscriberHandler: method type not available: %v\n", message.CommandOrEvent)
+			log.Printf("error: subscriberHandler: method type not available: %v\n", proc.subject.CommandOrEvent)
 		}
 		fmt.Printf("*** DEBUG: BEFORE CALLING HANDLER: ACK\n")
 
@@ -386,12 +386,12 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 			err := fmt.Errorf("error: some testing error we want to send out")
 			sendErrorLogMessage(s.newMessagesCh, node(thisNode), err)
 		}
-	case message.CommandOrEvent == CommandNACK || message.CommandOrEvent == EventNACK:
-		log.Printf("info: subscriberHandler: message.CommandOrEvent received was = %v, preparing to call handler\n", message.CommandOrEvent)
+	case proc.subject.CommandOrEvent == CommandNACK || proc.subject.CommandOrEvent == EventNACK:
+		log.Printf("info: subscriberHandler: message.CommandOrEvent received was = %v, preparing to call handler\n", proc.subject.CommandOrEvent)
 		mf, ok := s.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			// TODO: Check how errors should be handled here!!!
-			log.Printf("error: subscriberHandler: method type not available: %v\n", message.CommandOrEvent)
+			log.Printf("error: subscriberHandler: method type not available: %v\n", proc.subject.CommandOrEvent)
 		}
 		// since we don't send a reply for a NACK message, we don't care about the
 		// out return when calling mf.handler
@@ -403,7 +403,7 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 			log.Printf("error: subscriberHandler: failed to execute event: %v\n", err)
 		}
 	default:
-		log.Printf("info: did not find that specific type of command: %#v\n", message.CommandOrEvent)
+		log.Printf("info: did not find that specific type of command: %#v\n", proc.subject.CommandOrEvent)
 	}
 }
 
@@ -427,11 +427,10 @@ func createErrorMsgContent(FromNode node, theError error) subjectAndMessage {
 			Method:         ErrorLog,
 		},
 		Message: Message{
-			ToNode:         "errorCentral",
-			FromNode:       FromNode,
-			Data:           []string{theError.Error()},
-			CommandOrEvent: EventNACK,
-			Method:         ErrorLog,
+			ToNode:   "errorCentral",
+			FromNode: FromNode,
+			Data:     []string{theError.Error()},
+			Method:   ErrorLog,
 		},
 	}
 

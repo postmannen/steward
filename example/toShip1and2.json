@@ -2,7 +2,6 @@
     {
         "toNode": "*",
         "data": ["bash","-c","tree ../"],
-        "commandOrEvent":"CommandACK",
         "method":"CLICommand"
 
     }

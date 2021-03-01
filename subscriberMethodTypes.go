@@ -1,8 +1,34 @@
-// NB:
-// When adding new constants for the Method or CommandOrEvent
-// types, make sure to also add them to the map
-// <Method/CommandOrEvent>Available since the this will be used
-// to check if the message values are valid later on.
+// The structure of how to add new method types to the system.
+// -----------------------------------------------------------
+// All methods need 3 things:
+//  - A type definition
+//  - The type needs a getKind method
+//  - The type needs a handler method
+// Overall structure example shown below.
+//
+// ---
+// type methodCommandCLICommand struct {
+// 	commandOrEvent CommandOrEvent
+// }
+//
+// func (m methodCommandCLICommand) getKind() CommandOrEvent {
+// 	return m.commandOrEvent
+// }
+//
+// func (m methodCommandCLICommand) handler(s *server, message Message, node string) ([]byte, error) {
+//  ...
+//  ...
+// 	outMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n%s---", node, message.ID, out))
+// 	return outMsg, nil
+// }
+//
+// ---
+// You also need to make a constant for the Method, and add
+// that constant as the key in the map, where the value is
+// the actual type you want to map it to with a handler method.
+// You also specify if it is a Command or Event, and if it is
+// ACK or NACK.
+// Check out the existing code below for more examples.
 
 package steward
 
@@ -15,24 +41,8 @@ import (
 )
 
 // ------------------------------------------------------------
-
-// Method is used to specify the actual function/method that
-// is represented in a typed manner.
-type Method string
-
-func (m Method) GetMethodsAvailable() MethodsAvailable {
-	ma := MethodsAvailable{
-		topics: map[Method]methodHandler{
-			CLICommand:  methodCommandCLICommand{},
-			TextLogging: methodEventTextLogging{},
-			SayHello:    methodEventSayHello{},
-			ErrorLog:    methodEventErrorLog{},
-		},
-	}
-
-	return ma
-}
-
+// The constants that will be used throughout the system for
+// when specifying what kind of Method to send or work with.
 const (
 	// Shell command to be executed via f.ex. bash
 	CLICommand Method = "CLICommand"
@@ -43,6 +53,49 @@ const (
 	// Error log methods to centralError
 	ErrorLog Method = "ErrorLog"
 )
+
+// Method is used to specify the actual function/method that
+// is represented in a typed manner.
+type Method string
+
+// The mapping of all the method constants specified, what type
+// it references, and the kind if it is an Event or Command, and
+// if it is ACK or NACK.
+//  Allowed values for the commandOrEvent field are:
+//   - CommandACK
+//   - CommandNACK
+//   - EventACK
+//   - EventNack
+func (m Method) GetMethodsAvailable() MethodsAvailable {
+	ma := MethodsAvailable{
+		topics: map[Method]methodHandler{
+			CLICommand: methodCommandCLICommand{
+				commandOrEvent: CommandACK,
+			},
+			TextLogging: methodEventTextLogging{
+				commandOrEvent: EventACK,
+			},
+			SayHello: methodEventSayHello{
+				commandOrEvent: EventNACK,
+			},
+			ErrorLog: methodEventErrorLog{
+				commandOrEvent: EventACK,
+			},
+		},
+	}
+
+	return ma
+}
+
+// getHandler will check the methodsAvailable map, and return the
+// method handler for the method given
+// as input argument.
+func (m Method) getHandler(method Method) methodHandler {
+	ma := m.GetMethodsAvailable()
+	mh := ma.topics[method]
+
+	return mh
+}
 
 type MethodsAvailable struct {
 	topics map[Method]methodHandler
@@ -68,9 +121,18 @@ func (ma MethodsAvailable) CheckIfExists(m Method) (methodHandler, bool) {
 
 type methodHandler interface {
 	handler(server *server, message Message, node string) ([]byte, error)
+	getKind() CommandOrEvent
 }
 
-type methodCommandCLICommand struct{}
+// -----
+
+type methodCommandCLICommand struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodCommandCLICommand) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
 
 func (m methodCommandCLICommand) handler(s *server, message Message, node string) ([]byte, error) {
 	// Since the command to execute is at the first position in the
@@ -91,7 +153,13 @@ func (m methodCommandCLICommand) handler(s *server, message Message, node string
 
 // -----
 
-type methodEventTextLogging struct{}
+type methodEventTextLogging struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodEventTextLogging) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
 
 func (m methodEventTextLogging) handler(s *server, message Message, node string) ([]byte, error) {
 	for _, d := range message.Data {
@@ -104,7 +172,13 @@ func (m methodEventTextLogging) handler(s *server, message Message, node string)
 
 // -----
 
-type methodEventSayHello struct{}
+type methodEventSayHello struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodEventSayHello) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
 
 func (m methodEventSayHello) handler(s *server, message Message, node string) ([]byte, error) {
 	log.Printf("<--- Received hello from %v \n", message.FromNode)
@@ -126,7 +200,13 @@ func (m methodEventSayHello) handler(s *server, message Message, node string) ([
 
 // ---
 
-type methodEventErrorLog struct{}
+type methodEventErrorLog struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodEventErrorLog) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
 
 func (m methodEventErrorLog) handler(s *server, message Message, node string) ([]byte, error) {
 	log.Printf("----------------------------------------------------------------------------..\n")

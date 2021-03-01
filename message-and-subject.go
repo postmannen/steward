@@ -16,8 +16,6 @@ type Message struct {
 	// TODO: Change this to a slice instead...or maybe use an
 	// interface type here to handle several data types ?
 	Data []string `json:"data" yaml:"data"`
-	// The type of the message being sent
-	CommandOrEvent CommandOrEvent `json:"commandOrEvent" yaml:"commandOrEvent"`
 	// method, what is this message doing, etc. CLI, syslog, etc.
 	Method   Method `json:"method" yaml:"method"`
 	FromNode node

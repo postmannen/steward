@@ -49,8 +49,8 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 				log.Printf("error: the method do not exist: %v\n", sam.Message.Method)
 				continue
 			}
-			if !s.commandOrEventAvailable.CheckIfExists(sam.Message.CommandOrEvent) {
-				log.Printf("error: the command or evnt do not exist: %v\n", sam.Message.CommandOrEvent)
+			if !s.commandOrEventAvailable.CheckIfExists(sam.Subject.CommandOrEvent) {
+				log.Printf("error: the command or evnt do not exist: %v\n", sam.Subject.CommandOrEvent)
 				continue
 			}
 
