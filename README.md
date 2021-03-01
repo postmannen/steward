@@ -66,7 +66,7 @@ All code in this repository are to be concidered not-production-ready. The code 
 - Report errors happening on some node in to central error handler.
 
 - Message types of both ACK and NACK, so we can decide if we want or don't want an Acknowledge if a message was delivered succesfully.
-Example: We probably want an ACK when sending some shellcommand to be executed, but we don't care for an acknowledge (NACK) when we send an "hello I'm here" event.
+Example: We probably want an ACK when sending some CLICommand to be executed, but we don't care for an acknowledge (NACK) when we send an "hello I'm here" event.
 
 - Prometheus exporters for Metrics
 
@@ -95,7 +95,7 @@ Nodename: Are the hostname of the device. This do not have to be resolvable via 
 Command/Event: Are type of message sent. `CommandACK`/`EventACK`/`CommandNACK`/`EventNACK`. Description of the differences are mentioned earlier.\
 Info: The command/event which is called a MessageType are present in both the Subject structure and the Message structure. The reason for this is that it is used both in the naming of a subject, and in the message for knowing what kind of message it is and how to handle it.
 
-Method: Are the functionality the message provide. Example could be `Shellcommand` or `Syslogforwarding`
+Method: Are the functionality the message provide. Example could be `CLICommand` or `Syslogforwarding`
 
 ##### Complete subject example
 
@@ -105,13 +105,14 @@ For syslog of type event to a host named "ship1"
 
 and for a shell command of type command to a host named "ship2"
 
-`ship2.CommandACK.Shellcommand`
+`ship2.CommandACK.CLICommand
+`
 
 ## TODO
 
 - Add config file options to use when starting up the program for options.
 
-- Rename ShellCommand to cli
+- Rename CLICommand to cli
 
 - Make a scraper that first send an EventACK, and the content of the scraping is returned by a node as a new EventACK back the where the initial event originated.
 
@@ -199,7 +200,7 @@ Example JSON for pasting a message of type command into the `inmsg.txt` file
         "toNode": "ship1",
         "data": ["bash","-c","ls -l ../"],
         "commandOrEvent":"CommandACK",
-        "method":"ShellCommand"
+        "method":"CLICommand"
             
     }
 ]
@@ -214,7 +215,7 @@ To send specify more messages at once do
         "toNode": "ship1",
         "data": ["bash","-c","ls -l ../"],
         "commandOrEvent":"CommandACK",
-        "method":"ShellCommand"
+        "method":"CLICommand"
             
     },
     {
@@ -222,7 +223,7 @@ To send specify more messages at once do
         "toNode": "ship2",
         "data": ["bash","-c","ls -l ../"],
         "commandOrEvent":"CommandACK",
-        "method":"ShellCommand"
+        "method":"CLICommand"
             
     }
 ]
@@ -237,7 +238,7 @@ To send a message with custom timeout and amount of retries
         "toNode": "ship1",
         "data": ["bash","-c","netstat -an|grep -i listen"],
         "commandOrEvent":"CommandACK",
-        "method":"ShellCommand",
+        "method":"CLICommand",
         "timeout":3,
         "retries":3
     }

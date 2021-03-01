@@ -23,10 +23,10 @@ type Method string
 func (m Method) GetMethodsAvailable() MethodsAvailable {
 	ma := MethodsAvailable{
 		topics: map[Method]methodHandler{
-			ShellCommand: methodCommandShellCommand{},
-			TextLogging:  methodEventTextLogging{},
-			SayHello:     methodEventSayHello{},
-			ErrorLog:     methodEventErrorLog{},
+			CLICommand:  methodCommandCLICommand{},
+			TextLogging: methodEventTextLogging{},
+			SayHello:    methodEventSayHello{},
+			ErrorLog:    methodEventErrorLog{},
 		},
 	}
 
@@ -35,7 +35,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 
 const (
 	// Shell command to be executed via f.ex. bash
-	ShellCommand Method = "ShellCommand"
+	CLICommand Method = "CLICommand"
 	// Send text logging to some host
 	TextLogging Method = "TextLogging"
 	// Send Hello I'm here message
@@ -70,9 +70,9 @@ type methodHandler interface {
 	handler(server *server, message Message, node string) ([]byte, error)
 }
 
-type methodCommandShellCommand struct{}
+type methodCommandCLICommand struct{}
 
-func (m methodCommandShellCommand) handler(s *server, message Message, node string) ([]byte, error) {
+func (m methodCommandCLICommand) handler(s *server, message Message, node string) ([]byte, error) {
 	// Since the command to execute is at the first position in the
 	// slice we need to slice it out. The arguments are at the
 	// remaining positions.

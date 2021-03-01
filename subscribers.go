@@ -24,10 +24,10 @@ func (s *server) subscribeMessages(proc process) {
 }
 
 func (s *server) subscribersStart() {
-	// Start a subscriber for shellCommand messages
+	// Start a subscriber for CLICommand messages
 	{
-		fmt.Printf("Starting shellCommand subscriber: %#v\n", s.nodeName)
-		sub := newSubject(ShellCommand, CommandACK, s.nodeName)
+		fmt.Printf("Starting CLICommand subscriber: %#v\n", s.nodeName)
+		sub := newSubject(CLICommand, CommandACK, s.nodeName)
 		proc := s.processPrepareNew(sub, s.errorKernel.errorCh, processKindSubscriber, []node{"central", "ship2"})
 		// fmt.Printf("*** %#v\n", proc)
 		go s.spawnWorkerProcess(proc)

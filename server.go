@@ -254,7 +254,7 @@ func (s *server) messageDeliverNats(proc process, message Message) {
 
 		msg := &nats.Msg{
 			Subject: string(proc.subject.name()),
-			// Subject: fmt.Sprintf("%s.%s.%s", proc.node, "command", "shellCommand"),
+			// Subject: fmt.Sprintf("%s.%s.%s", proc.node, "command", "CLICommand"),
 			// Structure of the reply message are:
 			// reply.<nodename>.<message type>.<method>
 			Reply: fmt.Sprintf("reply.%s", proc.subject.name()),

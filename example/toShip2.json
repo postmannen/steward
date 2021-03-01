@@ -3,7 +3,7 @@
         "toNode": "ship2",
         "data": ["bash","-c","tree ../"],
         "commandOrEvent":"CommandACK",
-        "method":"ShellCommand"
+        "method":"CLICommand"
 
     }
 ]

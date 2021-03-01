@@ -18,7 +18,7 @@ type Message struct {
 	Data []string `json:"data" yaml:"data"`
 	// The type of the message being sent
 	CommandOrEvent CommandOrEvent `json:"commandOrEvent" yaml:"commandOrEvent"`
-	// method, what is this message doing, etc. shellCommand, syslog, etc.
+	// method, what is this message doing, etc. CLI, syslog, etc.
 	Method   Method `json:"method" yaml:"method"`
 	FromNode node
 	// done is used to signal when a message is fully processed.
@@ -54,7 +54,7 @@ type Subject struct {
 	ToNode string `json:"node" yaml:"toNode"`
 	// messageType, command/event
 	CommandOrEvent CommandOrEvent `json:"commandOrEvent" yaml:"commandOrEvent"`
-	// method, what is this message doing, etc. shellCommand, syslog, etc.
+	// method, what is this message doing, etc. CLICommand, Syslog, etc.
 	Method Method `json:"method" yaml:"method"`
 	// messageCh is the channel for receiving new content to be sent
 	messageCh chan Message
