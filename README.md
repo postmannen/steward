@@ -109,6 +109,12 @@ and for a shell command of type command to a host named "ship2"
 
 ## TODO
 
+- Add config file options to use when starting up the program for options.
+
+- Rename ShellCommand to cli
+
+- Make a scraper that first send an EventACK, and the content of the scraping is returned by a node as a new EventACK back the where the initial event originated.
+
 - Go through all processes and check that the error is handled correctly, and also reported back on the error subject to the master supervisor.
 
 - Implement a log scraper method in `tail -f` style ?
