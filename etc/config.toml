@@ -1,0 +1,9 @@
+BrokerAddress = "0"
+CentralErrorLogger = true
+ConfigFolder = "./etc"
+DefaultMessageRetries = 3
+DefaultMessageTimeout = 5
+NodeName = "central"
+ProfilingPort = ""
+PromHostAndPort = ":2112"
+PublisherServiceSayhello = 0

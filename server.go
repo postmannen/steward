@@ -23,6 +23,9 @@ func processNameGet(sn subjectName, pk processKind) processName {
 // server is the structure that will hold the state about spawned
 // processes on a local instance.
 type server struct {
+	// Configuration options used for running the server
+	configuration *Configuration
+	// The nats connection to the broker
 	natsConn *nats.Conn
 	// TODO: sessions should probably hold a slice/map of processes ?
 	processes map[processName]process
@@ -65,8 +68,8 @@ type server struct {
 }
 
 // newServer will prepare and return a server type
-func NewServer(brokerAddress string, nodeName string, promHostAndPort string, centralErrorLogger bool, defaultMessageTimeout int, defaultMessageRetries int, sayHelloInterval int) (*server, error) {
-	conn, err := nats.Connect(brokerAddress, nil)
+func NewServer(c *Configuration) (*server, error) {
+	conn, err := nats.Connect(c.BrokerAddress, nil)
 	if err != nil {
 		log.Printf("error: nats.Connect failed: %v\n", err)
 	}
@@ -75,18 +78,19 @@ func NewServer(brokerAddress string, nodeName string, promHostAndPort string, ce
 	var coe CommandOrEvent
 
 	s := &server{
-		nodeName:                nodeName,
+		configuration:           c,
+		nodeName:                c.NodeName,
 		natsConn:                conn,
 		processes:               make(map[processName]process),
 		newMessagesCh:           make(chan []subjectAndMessage),
 		methodsAvailable:        m.GetMethodsAvailable(),
 		commandOrEventAvailable: coe.GetCommandOrEventAvailable(),
-		metrics:                 newMetrics(promHostAndPort),
+		metrics:                 newMetrics(c.PromHostAndPort),
 		subscriberServices:      newSubscriberServices(),
-		publisherServices:       newPublisherServices(sayHelloInterval),
-		centralErrorLogger:      centralErrorLogger,
-		defaultMessageTimeout:   defaultMessageTimeout,
-		defaultMessageRetries:   defaultMessageRetries,
+		publisherServices:       newPublisherServices(c.PublisherServiceSayhello),
+		centralErrorLogger:      c.CentralErrorLogger,
+		defaultMessageTimeout:   c.DefaultMessageTimeout,
+		defaultMessageRetries:   c.DefaultMessageRetries,
 	}
 
 	return s, nil
