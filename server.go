@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -93,6 +94,22 @@ func NewServer(c *Configuration) (*server, error) {
 		defaultMessageRetries:   c.DefaultMessageRetries,
 	}
 
+	// Create the default data folder for where subscribers should
+	// write it's data if needed.
+
+	// Check if data folder exist, and create it if needed.
+	if _, err := os.Stat(c.SubscribersDataFolder); os.IsNotExist(err) {
+		if c.SubscribersDataFolder == "" {
+			return nil, fmt.Errorf("error: subscribersDataFolder value is empty, you need to provide the config or the flag value at startup %v: %v", c.SubscribersDataFolder, err)
+		}
+		err := os.Mkdir(c.SubscribersDataFolder, 0700)
+		if err != nil {
+			return nil, fmt.Errorf("error: failed to create directory %v: %v", c.SubscribersDataFolder, err)
+		}
+
+		log.Printf("info: Creating subscribers data folder at %v\n", c.SubscribersDataFolder)
+	}
+
 	return s, nil
 
 }
@@ -112,11 +129,6 @@ func (s *server) Start() {
 
 	// Start the checking the input file for new messages from operator.
 	go s.getMessagesFromFile("./", "inmsg.txt", s.newMessagesCh)
-
-	// Start the textLogging service that will run on the subscribers
-	// TODO: This should only be started if the flag value provided when
-	// starting asks to subscribe to TextLogging events.
-	go s.subscriberServices.startTextLogging()
 
 	// if enabled, start the sayHello I'm here service at the given interval
 	if s.publisherServices.sayHelloPublisher.interval != 0 {
@@ -286,7 +298,7 @@ func (s *server) messageDeliverNats(proc process, message Message) {
 
 		// If the message is an ACK type of message we must check that a
 		// reply, and if it is not we don't wait here at all.
-		fmt.Printf("---- MESSAGE : %v\n", message)
+		fmt.Printf("info: messageDeliverNats: preparing to send message: %v\n", message)
 		if proc.subject.CommandOrEvent == CommandACK || proc.subject.CommandOrEvent == EventACK {
 			// Wait up until 10 seconds for a reply,
 			// continue and resend if to reply received.
@@ -345,42 +357,30 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 	// method etc.
 	switch {
 	case proc.subject.CommandOrEvent == CommandACK || proc.subject.CommandOrEvent == EventACK:
-		log.Printf("info: subscriberHandler: message.CommandOrEvent received was = %v, preparing to call handler\n", proc.subject.CommandOrEvent)
+		log.Printf("info: subscriberHandler: ACK Message received received, preparing to call handler: %v\n", proc.subject.name())
 		mf, ok := s.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			// TODO: Check how errors should be handled here!!!
 			log.Printf("error: subscriberHandler: method type not available: %v\n", proc.subject.CommandOrEvent)
 		}
-		fmt.Printf("*** DEBUG: BEFORE CALLING HANDLER: ACK\n")
 
 		out := []byte("not allowed from " + message.FromNode)
 		var err error
 
 		// Check if we are allowed to receive from that host
-		_, arOK := proc.allowedReceivers[message.FromNode]
-		//_, arOK2 := proc.allowedReceivers[message.FromNode]
+		_, arOK1 := proc.allowedReceivers[message.FromNode]
+		_, arOK2 := proc.allowedReceivers["*"]
 
-		if arOK {
-			out, err = mf.handler(s, message, thisNode)
+		if arOK1 || arOK2 {
+			out, err = mf.handler(s, proc, message, thisNode)
 
 			if err != nil {
 				// TODO: Send to error kernel ?
 				log.Printf("error: subscriberHandler: failed to execute event: %v\n", err)
-			} else {
-				log.Printf("--- info: we don't allow receiving from: %v\n", message.FromNode)
 			}
+		} else {
+			log.Printf("info: we don't allow receiving from: %v, %v\n", message.FromNode, proc.subject)
 		}
-
-		// if message.FromNode != "central" {
-		// 	log.Printf("--- info: we don't allow receiving from: %v\n", message.FromNode)
-		//
-		// 	out, err = mf.handler(s, message, thisNode)
-		//
-		// 	if err != nil {
-		// 		// TODO: Send to error kernel ?
-		// 		log.Printf("error: subscriberHandler: failed to execute event: %v\n", err)
-		// 	}
-		// }
 
 		// Send a confirmation message back to the publisher
 		natsConn.Publish(msg.Reply, out)
@@ -392,7 +392,7 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 			sendErrorLogMessage(s.newMessagesCh, node(thisNode), err)
 		}
 	case proc.subject.CommandOrEvent == CommandNACK || proc.subject.CommandOrEvent == EventNACK:
-		log.Printf("info: subscriberHandler: message.CommandOrEvent received was = %v, preparing to call handler\n", proc.subject.CommandOrEvent)
+		log.Printf("info: subscriberHandler: ACK Message received received, preparing to call handler: %v\n", proc.subject.name())
 		mf, ok := s.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			// TODO: Check how errors should be handled here!!!
@@ -400,8 +400,7 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		}
 		// since we don't send a reply for a NACK message, we don't care about the
 		// out return when calling mf.handler
-		fmt.Printf("*** DEBUG: BEFORE CALLING HANDLER: NACK\n")
-		_, err := mf.handler(s, message, thisNode)
+		_, err := mf.handler(s, proc, message, thisNode)
 
 		if err != nil {
 			// TODO: Send to error kernel ?

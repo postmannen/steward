@@ -98,7 +98,7 @@ func readTruncateMessageFile(fileName string) ([]byte, error) {
 
 	f, err := os.OpenFile(fileName, os.O_APPEND|os.O_RDWR, os.ModeAppend)
 	if err != nil {
-		log.Printf("Failed to open file %v\n", err)
+		log.Printf("error: readTruncateMessageFile: Failed to open file: %v\n", err)
 		return nil, err
 	}
 	defer f.Close()

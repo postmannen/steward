@@ -37,7 +37,7 @@ func (s *server) subscribersStart() {
 	{
 		fmt.Printf("Starting textlogging subscriber: %#v\n", s.nodeName)
 		sub := newSubject(TextLogging, EventACK, s.nodeName)
-		proc := s.processPrepareNew(sub, s.errorKernel.errorCh, processKindSubscriber, []node{"central"})
+		proc := s.processPrepareNew(sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"})
 		// fmt.Printf("*** %#v\n", proc)
 		go s.spawnWorkerProcess(proc)
 	}

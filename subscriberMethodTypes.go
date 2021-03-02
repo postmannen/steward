@@ -35,7 +35,9 @@ package steward
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -120,7 +122,7 @@ func (ma MethodsAvailable) CheckIfExists(m Method) (methodHandler, bool) {
 // ------------------------------------------------------------
 
 type methodHandler interface {
-	handler(server *server, message Message, node string) ([]byte, error)
+	handler(server *server, proc process, message Message, node string) ([]byte, error)
 	getKind() CommandOrEvent
 }
 
@@ -134,7 +136,7 @@ func (m methodCommandCLICommand) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodCommandCLICommand) handler(s *server, message Message, node string) ([]byte, error) {
+func (m methodCommandCLICommand) handler(s *server, proc process, message Message, node string) ([]byte, error) {
 	// Since the command to execute is at the first position in the
 	// slice we need to slice it out. The arguments are at the
 	// remaining positions.
@@ -161,9 +163,29 @@ func (m methodEventTextLogging) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodEventTextLogging) handler(s *server, message Message, node string) ([]byte, error) {
+func (m methodEventTextLogging) handler(s *server, proc process, message Message, node string) ([]byte, error) {
+	sub := Subject{
+		ToNode:         string(message.ToNode),
+		CommandOrEvent: proc.subject.CommandOrEvent,
+		Method:         message.Method,
+	}
+
+	logFile := filepath.Join(s.configuration.SubscribersDataFolder, string(sub.name())+"-"+string(message.FromNode))
+	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, os.ModeAppend)
+	if err != nil {
+		log.Printf("error: methodEventTextLogging.handler: failed to open file: %v\n", err)
+		return nil, err
+	}
+	defer f.Close()
+
 	for _, d := range message.Data {
-		s.subscriberServices.logCh <- []byte(d)
+		_, err := f.Write([]byte(d))
+		f.Sync()
+		if err != nil {
+			log.Printf("error: methodEventTextLogging.handler: failed to write to file: %v\n", err)
+		}
+
+		//s.subscriberServices.logCh <- []byte(d)
 	}
 
 	outMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -180,7 +202,7 @@ func (m methodEventSayHello) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodEventSayHello) handler(s *server, message Message, node string) ([]byte, error) {
+func (m methodEventSayHello) handler(s *server, proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- Received hello from %v \n", message.FromNode)
 	// Since the handler is only called to handle a specific type of message we need
 	// to store it elsewhere, and choice for now is under s.metrics.sayHelloNodes
@@ -208,9 +230,7 @@ func (m methodEventErrorLog) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodEventErrorLog) handler(s *server, message Message, node string) ([]byte, error) {
-	log.Printf("----------------------------------------------------------------------------..\n")
-	log.Printf("Received error from: %v, containing: %v", message.FromNode, message.Data)
-	log.Printf("----------------------------------------------------------------------------..\n")
+func (m methodEventErrorLog) handler(s *server, proc process, message Message, node string) ([]byte, error) {
+	log.Printf("<--- Received error from: %v, containing: %v", message.FromNode, message.Data)
 	return nil, nil
 }

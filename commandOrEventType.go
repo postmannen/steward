@@ -7,7 +7,6 @@
 package steward
 
 import (
-	"fmt"
 	"log"
 )
 
@@ -61,17 +60,13 @@ type CommandOrEventAvailable struct {
 	topics map[CommandOrEvent]struct{}
 }
 
-func (co CommandOrEventAvailable) CheckIfExists(c CommandOrEvent) bool {
+func (co CommandOrEventAvailable) CheckIfExists(c CommandOrEvent, subject Subject) bool {
 	_, ok := co.topics[c]
 	if ok {
-		fmt.Println("-------------------------------------------------------------")
-		log.Printf("THE COMMAND OR EVENT EXISTS: %v\n", c)
-		fmt.Println("-------------------------------------------------------------")
+		log.Printf("info: CommandOrEventAvailable.CheckIfExists: command or event found: %v, for %v\n", c, subject.name())
 		return true
 	} else {
-		fmt.Println("-------------------------------------------------------------")
-		log.Printf("THE COMMAND OR EVENT DO NOT EXIST: %v\n", c)
-		fmt.Println("-------------------------------------------------------------")
+		log.Printf("error: CommandOrEventAvailable.CheckIfExists: command or event not found: %v, for %v\n", c, subject.name())
 		return false
 	}
 }

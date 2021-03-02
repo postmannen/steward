@@ -49,7 +49,7 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 				log.Printf("error: the method do not exist: %v\n", sam.Message.Method)
 				continue
 			}
-			if !s.commandOrEventAvailable.CheckIfExists(sam.Subject.CommandOrEvent) {
+			if !s.commandOrEventAvailable.CheckIfExists(sam.Subject.CommandOrEvent, sam.Subject) {
 				log.Printf("error: the command or evnt do not exist: %v\n", sam.Subject.CommandOrEvent)
 				continue
 			}
@@ -69,7 +69,7 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 			// Are there already a process for that subject, put the
 			// message on that processes incomming message channel.
 			if ok {
-				log.Printf("info: found the specific subject: %v\n", subjName)
+				log.Printf("info: processNewMessages: found the specific subject: %v\n", subjName)
 				s.processes[pn].subject.messageCh <- m
 
 				// If no process to handle the specific subject exist,
@@ -77,7 +77,7 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 			} else {
 				// If a publisher process do not exist for the given subject, create it, and
 				// by using the goto at the end redo the process for this specific message.
-				log.Printf("info: did not find that specific subject, starting new process for subject: %v\n", subjName)
+				log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 				sub := newSubject(sam.Subject.Method, sam.Subject.CommandOrEvent, sam.Subject.ToNode)
 				proc := s.processPrepareNew(sub, s.errorKernel.errorCh, processKindPublisher, nil)

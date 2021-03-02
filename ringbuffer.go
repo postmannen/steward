@@ -110,7 +110,7 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 	for v := range inCh {
 
 		// Check if the command or event exists in commandOrEvent.go
-		if !coeAvailable.CheckIfExists(v.CommandOrEvent) {
+		if !coeAvailable.CheckIfExists(v.CommandOrEvent, v.Subject) {
 			log.Printf("error: the event or command type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v\n", coeAvailableValues)
 
 			fmt.Println()
@@ -159,8 +159,6 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 		// Increment index, and store the new value to the database.
 		r.mu.Lock()
 		r.totalMessagesIndex++
-		fmt.Printf("*** NEXT INDEX NUMBER INCREMENTED: %v\n", r.totalMessagesIndex)
-		fmt.Println("---------------------------------------------------------")
 		r.dbUpdate(r.db, indexValueBucket, "index", []byte(strconv.Itoa(r.totalMessagesIndex)))
 		r.mu.Unlock()
 	}
@@ -193,15 +191,12 @@ func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan sam
 			// Listen on the done channel here , so a go routine handling the
 			// message will be able to signal back here that the message have
 			// been processed, and that we then can delete it out of the K/V Store.
-			fmt.Printf("#.#.#.#.#.#.#.# Before DONE: %v\n", v)
 			<-v.Data.done
-			log.Printf("info: done with message %v\n", v.ID)
-			fmt.Printf("#.#.#.#.#.#.#.# Got DONE: %v\n", v)
+			log.Printf("info: processBufferMessages: done with message, deleting key from bucket, %v\n", v.ID)
 
 			// Since we are now done with the specific message we can delete
 			// it out of the K/V Store.
 			r.deleteKeyFromBucket(samValueBucket, strconv.Itoa(v.ID))
-			log.Printf("info: deleting key %v from bucket\n", v.ID)
 
 			r.permStore <- fmt.Sprintf("%v : %+v\n", time.Now().UTC(), v)
 
@@ -316,7 +311,7 @@ func (r *ringBuffer) getIndexValue(indexBucket string) int {
 		log.Printf("error: getIndexValue: strconv.Atoi : %v\n", err)
 	}
 
-	fmt.Printf("**** RETURNING INDEX, WITH VALUE = %v\n", index)
+	fmt.Printf("ringBuffer.getIndexValue: got index value = %v\n", index)
 
 	return index
 }
@@ -377,7 +372,7 @@ func (r *ringBuffer) startPermanentStore() {
 	const storeFile string = "store.log"
 	f, err := os.OpenFile(storeFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
-		log.Printf("Failed to open file %v\n", err)
+		log.Printf("error: startPermanentStore: failed to open file: %v\n", err)
 	}
 	defer f.Close()
 

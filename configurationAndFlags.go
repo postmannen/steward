@@ -29,6 +29,8 @@ type Configuration struct {
 	DefaultMessageRetries int
 	// Make the current node send hello messages to central at given interval in seconds
 	PublisherServiceSayhello int
+	// Publisher data folder
+	SubscribersDataFolder string
 }
 
 func NewConfiguration() *Configuration {
@@ -46,6 +48,7 @@ func newConfigurationDefaults() Configuration {
 		DefaultMessageTimeout:    10,
 		DefaultMessageRetries:    1,
 		PublisherServiceSayhello: 30,
+		SubscribersDataFolder:    "./data",
 	}
 	return c
 }
@@ -76,6 +79,8 @@ func (c *Configuration) CheckFlags() {
 	flag.IntVar(&c.DefaultMessageTimeout, "defaultMessageTimeout", fc.DefaultMessageTimeout, "default message timeout in seconds. This can be overridden on the message level")
 	flag.IntVar(&c.DefaultMessageRetries, "defaultMessageRetries", fc.DefaultMessageRetries, "default amount of retries that will be done before a message is thrown away, and out of the system")
 	flag.IntVar(&c.PublisherServiceSayhello, "publisherServiceSayhello", fc.PublisherServiceSayhello, "Make the current node send hello messages to central at given interval in seconds")
+	flag.StringVar(&c.SubscribersDataFolder, "subscribersDataFolder", fc.SubscribersDataFolder, "The data folder where subscribers are allowed to write their data if needed")
+
 	flag.Parse()
 
 	if err := c.WriteConfigFile(); err != nil {
@@ -93,7 +98,7 @@ func (c *Configuration) ReadConfigFile() (Configuration, error) {
 
 	f, err := os.OpenFile(fp, os.O_RDONLY, 0600)
 	if err != nil {
-		return Configuration{}, fmt.Errorf("error: failed to open file %v", err)
+		return Configuration{}, fmt.Errorf("error: ReadConfigFile: failed to open file: %v", err)
 	}
 	defer f.Close()
 
@@ -122,7 +127,7 @@ func (c *Configuration) WriteConfigFile() error {
 
 	f, err := os.OpenFile(fp, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return fmt.Errorf("error: failed to open file %v", err)
+		return fmt.Errorf("error: WriteConfigFile: failed to open file: %v", err)
 	}
 	defer f.Close()
 

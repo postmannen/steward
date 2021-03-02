@@ -7,3 +7,4 @@ NodeName = "central"
 ProfilingPort = ""
 PromHostAndPort = ":2112"
 PublisherServiceSayhello = 0
+SubscribersDataFolder = "./data"
