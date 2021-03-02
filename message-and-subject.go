@@ -13,8 +13,6 @@ type Message struct {
 	// The Unique ID of the message
 	ID int `json:"id" yaml:"id"`
 	// The actual data in the message
-	// TODO: Change this to a slice instead...or maybe use an
-	// interface type here to handle several data types ?
 	Data []string `json:"data" yaml:"data"`
 	// method, what is this message doing, etc. CLI, syslog, etc.
 	Method   Method `json:"method" yaml:"method"`

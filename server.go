@@ -192,6 +192,7 @@ func (s *server) processPrepareNew(subject Subject, errCh chan errProcess, proce
 	// create the initial configuration for a sessions communicating with 1 host process.
 	s.lastProcessID++
 
+	// make the slice of allowedReceivers into a map value for easy lookup.
 	m := make(map[node]struct{})
 	for _, a := range allowedReceivers {
 		m[a] = struct{}{}
@@ -355,11 +356,11 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		out := []byte("not allowed from " + message.FromNode)
 		var err error
 
-		// TESTING: TO ALLOW RECEIVING ONLY FROM SPECIFIC HOSTS
-		_, arOK1 := proc.allowedReceivers[message.FromNode]
-		_, arOK2 := proc.allowedReceivers[message.FromNode]
+		// Check if we are allowed to receive from that host
+		_, arOK := proc.allowedReceivers[message.FromNode]
+		//_, arOK2 := proc.allowedReceivers[message.FromNode]
 
-		if arOK1 || arOK2 {
+		if arOK {
 			out, err = mf.handler(s, message, thisNode)
 
 			if err != nil {

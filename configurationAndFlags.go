@@ -36,16 +36,38 @@ func NewConfiguration() *Configuration {
 	return &c
 }
 
+func newConfigurationDefaults() Configuration {
+	c := Configuration{
+		ConfigFolder:             "./etc",
+		BrokerAddress:            "127.0.0.1:4222",
+		ProfilingPort:            "",
+		PromHostAndPort:          "",
+		CentralErrorLogger:       false,
+		DefaultMessageTimeout:    10,
+		DefaultMessageRetries:    1,
+		PublisherServiceSayhello: 30,
+	}
+	return c
+}
+
 func (c *Configuration) CheckFlags() {
-	// read file config
+	// TODO: Look into how to be able to specify the location via flag,
+	// now it is only using the default location which is /etc.
+	// The problem is that the flags are parsed after the default config
+	// is set, so we need a way to get that location out of the flag when
+	// creating the config file the first time.
+
+	// Create an empty default config
+	var fc Configuration
+
+	// Read file config. Set system default if it can't find config file.
 	fc, err := c.ReadConfigFile()
 	if err != nil {
 		log.Printf("%v\n", err)
+		fc = newConfigurationDefaults()
 	}
 
-	//fmt.Printf("---\nContent of file\n---\n%#v\n", tmpC)
-
-	flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "")
+	flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "folder who contains the config file")
 	flag.StringVar(&c.NodeName, "node", fc.NodeName, "some unique string to identify this Edge unit")
 	flag.StringVar(&c.BrokerAddress, "brokerAddress", fc.BrokerAddress, "the address of the message broker")
 	flag.StringVar(&c.ProfilingPort, "profilingPort", fc.ProfilingPort, "The number of the profiling port")
@@ -86,9 +108,11 @@ func (c *Configuration) ReadConfigFile() (Configuration, error) {
 	return conf, nil
 }
 
+// WriteConfigFile will write the current config to file. If the file or the
+// directory for the config file does not exist it will be created.
 func (c *Configuration) WriteConfigFile() error {
 	if _, err := os.Stat(c.ConfigFolder); os.IsNotExist(err) {
-		err := os.Mkdir(c.ConfigFolder, 0600)
+		err := os.Mkdir(c.ConfigFolder, 0700)
 		if err != nil {
 			return fmt.Errorf("error: failed to create directory %v: %v", c.ConfigFolder, err)
 		}
