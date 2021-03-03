@@ -80,9 +80,9 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 				log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 				sub := newSubject(sam.Subject.Method, sam.Subject.CommandOrEvent, sam.Subject.ToNode)
-				proc := s.processPrepareNew(sub, s.errorKernel.errorCh, processKindPublisher, nil)
+				proc := newProcess(s, sub, s.errorKernel.errorCh, processKindPublisher, nil)
 				// fmt.Printf("*** %#v\n", proc)
-				go s.spawnWorkerProcess(proc)
+				go proc.spawnWorker(s)
 
 				time.Sleep(time.Millisecond * 500)
 				s.printProcessesMap()
@@ -92,37 +92,4 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 			}
 		}
 	}()
-}
-
-func (s *server) publishMessages(proc process) {
-	for {
-		// Wait and read the next message on the message channel
-		m := <-proc.subject.messageCh
-		pn := processNameGet(proc.subject.name(), processKindPublisher)
-		m.ID = s.processes[pn].messageID
-		s.messageDeliverNats(proc, m)
-		m.done <- struct{}{}
-
-		// Increment the counter for the next message to be sent.
-		proc.messageID++
-		s.processes[pn] = proc
-		time.Sleep(time.Second * 1)
-
-		// NB: simulate that we get an error, and that we can send that
-		// out of the process and receive it in another thread.
-		ep := errProcess{
-			infoText:      "process failed",
-			process:       proc,
-			message:       m,
-			errorActionCh: make(chan errorAction),
-		}
-		s.errorKernel.errorCh <- ep
-
-		// Wait for the response action back from the error kernel, and
-		// decide what to do. Should we continue, quit, or .... ?
-		switch <-ep.errorActionCh {
-		case errActionContinue:
-			log.Printf("The errAction was continue...so we're continuing\n")
-		}
-	}
 }
