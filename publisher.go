@@ -46,11 +46,11 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 			// it was unable to process the message with the reason
 			// why ?
 			if _, ok := s.methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
-				log.Printf("error: the method do not exist: %v\n", sam.Message.Method)
+				log.Printf("error: the method do not exist, message dropped: %v\n", sam.Message.Method)
 				continue
 			}
 			if !s.commandOrEventAvailable.CheckIfExists(sam.Subject.CommandOrEvent, sam.Subject) {
-				log.Printf("error: the command or evnt do not exist: %v\n", sam.Subject.CommandOrEvent)
+				log.Printf("error: the command or event do not exist, message dropped: %v\n", sam.Subject.CommandOrEvent)
 				continue
 			}
 

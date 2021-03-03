@@ -223,10 +223,13 @@ func (s *server) processPrepareNew(subject Subject, errCh chan errProcess, proce
 	return proc
 }
 
-// spawnWorkerProcess will spawn take care of spawning both publisher
-// and subscriber proesses.
-//It will give the process the next available ID, and also add the
-// process to the processes map.
+// The purpose of this function is to check if we should start a
+// publisher or subscriber process, where a process is a go routine
+// that will handle either sending or receiving messages on one
+// subject.
+//
+// It will give the process the next available ID, and also add the
+// process to the processes map in the server structure.
 func (s *server) spawnWorkerProcess(proc process) {
 	s.mu.Lock()
 	// We use the full name of the subject to identify a unique
@@ -240,26 +243,26 @@ func (s *server) spawnWorkerProcess(proc process) {
 		pn = processNameGet(proc.subject.name(), processKindSubscriber)
 	}
 
+	// Add information about the new process to the started processes map.
 	s.processes[pn] = proc
 	s.mu.Unlock()
 
-	// TODO: I think it makes most sense that the messages would come to
-	// here from some other message-pickup-process, and that process will
-	// give the message to the correct publisher process. A channel that
-	// is listened on in the for loop below could be used to receive the
-	// messages from the message-pickup-process.
-	//
-	// Handle publisher workers
+	// Start a publisher worker, which will start a go routine (process)
+	// That will take care of all the messages for the subject it owns.
 	if proc.processKind == processKindPublisher {
 		s.publishMessages(proc)
 	}
 
-	// handle subscriber workers
+	// Start a subscriber worker, which will start a go routine (process)
+	// That will take care of all the messages for the subject it owns.
 	if proc.processKind == processKindSubscriber {
 		s.subscribeMessages(proc)
 	}
 }
 
+// messageDeliverNats will take care of the delivering the message
+// as converted to gob format as a nats.Message. It will also take
+// care of checking timeouts and retries specified for the message.
 func (s *server) messageDeliverNats(proc process, message Message) {
 	retryAttempts := 0
 
@@ -300,8 +303,9 @@ func (s *server) messageDeliverNats(proc process, message Message) {
 		// reply, and if it is not we don't wait here at all.
 		fmt.Printf("info: messageDeliverNats: preparing to send message: %v\n", message)
 		if proc.subject.CommandOrEvent == CommandACK || proc.subject.CommandOrEvent == EventACK {
-			// Wait up until 10 seconds for a reply,
-			// continue and resend if to reply received.
+			// Wait up until timeout specified for a reply,
+			// continue and resend if noo reply received,
+			// or exit if max retries for the message reached.
 			msgReply, err := subReply.NextMsg(time.Second * time.Duration(message.Timeout))
 			if err != nil {
 				log.Printf("error: subReply.NextMsg failed for node=%v, subject=%v: %v\n", proc.node, proc.subject.name(), err)
@@ -328,10 +332,11 @@ func (s *server) messageDeliverNats(proc process, message Message) {
 	}
 }
 
-// handler will deserialize the message when a new message is received,
-// check the MessageType field in the message to decide what kind of
-// message it is and then it will check how to handle that message type,
-// and handle it.
+// subscriberHandler will deserialize the message when a new message is
+// received, check the MessageType field in the message to decide what
+// kind of message it is and then it will check how to handle that message type,
+// and then call the correct method handler for it.
+//
 // This handler function should be started in it's own go routine,so
 // one individual handler is started per message received so we can keep
 // the state of the message being processed, and then reply back to the
@@ -350,7 +355,6 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		log.Printf("error: gob decoding failed: %v\n", err)
 	}
 
-	//fmt.Printf("%v\n", msg)
 	// TODO: Maybe the handling of the errors within the subscriber
 	// should also involve the error-kernel to report back centrally
 	// that there was a problem like missing method to handle a specific
@@ -372,6 +376,10 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		_, arOK2 := proc.allowedReceivers["*"]
 
 		if arOK1 || arOK2 {
+			// Start the method handler for that specific subject type.
+			// The handler started here is what actually doing the action
+			// that executed a CLI command, or writes to a log file on
+			// the node who received the message.
 			out, err = mf.handler(s, proc, message, thisNode)
 
 			if err != nil {
@@ -398,6 +406,12 @@ func (s *server) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 			// TODO: Check how errors should be handled here!!!
 			log.Printf("error: subscriberHandler: method type not available: %v\n", proc.subject.CommandOrEvent)
 		}
+
+		// Start the method handler for that specific subject type.
+		// The handler started here is what actually doing the action
+		// that executed a CLI command, or writes to a log file on
+		// the node who received the message.
+		//
 		// since we don't send a reply for a NACK message, we don't care about the
 		// out return when calling mf.handler
 		_, err := mf.handler(s, proc, message, thisNode)
