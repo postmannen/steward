@@ -38,13 +38,15 @@ type process struct {
 	processKind processKind
 	// Who are we allowed to receive from ?
 	allowedReceivers map[node]struct{}
+	// methodsAvailable
+	methodsAvailable MethodsAvailable
 }
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
 func newProcess(s *server, subject Subject, errCh chan errProcess, processKind processKind, allowedReceivers []node) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
-	s.lastProcessID++
+	s.processes.lastProcessID++
 
 	// make the slice of allowedReceivers into a map value for easy lookup.
 	m := make(map[node]struct{})
@@ -52,14 +54,17 @@ func newProcess(s *server, subject Subject, errCh chan errProcess, processKind p
 		m[a] = struct{}{}
 	}
 
+	var method Method
+
 	proc := process{
 		messageID:        0,
 		subject:          subject,
 		node:             node(subject.ToNode),
-		processID:        s.lastProcessID,
+		processID:        s.processes.lastProcessID,
 		errorCh:          errCh,
 		processKind:      processKind,
 		allowedReceivers: m,
+		methodsAvailable: method.GetMethodsAvailable(),
 	}
 
 	return proc
@@ -85,9 +90,9 @@ func (p process) spawnWorker(s *server) {
 	}
 
 	// Add information about the new process to the started processes map.
-	s.mu.Lock()
-	s.processes[pn] = p
-	s.mu.Unlock()
+	s.processes.mu.Lock()
+	s.processes.active[pn] = p
+	s.processes.mu.Unlock()
 
 	// Start a publisher worker, which will start a go routine (process)
 	// That will take care of all the messages for the subject it owns.
@@ -204,7 +209,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 	switch {
 	case p.subject.CommandOrEvent == CommandACK || p.subject.CommandOrEvent == EventACK:
 		log.Printf("info: subscriberHandler: ACK Message received received, preparing to call handler: %v\n", p.subject.name())
-		mf, ok := s.methodsAvailable.CheckIfExists(message.Method)
+		mf, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			// TODO: Check how errors should be handled here!!!
 			log.Printf("error: subscriberHandler: method type not available: %v\n", p.subject.CommandOrEvent)
@@ -243,7 +248,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		}
 	case p.subject.CommandOrEvent == CommandNACK || p.subject.CommandOrEvent == EventNACK:
 		log.Printf("info: subscriberHandler: ACK Message received received, preparing to call handler: %v\n", p.subject.name())
-		mf, ok := s.methodsAvailable.CheckIfExists(message.Method)
+		mf, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			// TODO: Check how errors should be handled here!!!
 			log.Printf("error: subscriberHandler: method type not available: %v\n", p.subject.CommandOrEvent)
@@ -287,13 +292,13 @@ func (p process) publishMessages(s *server) {
 		// Wait and read the next message on the message channel
 		m := <-p.subject.messageCh
 		pn := processNameGet(p.subject.name(), processKindPublisher)
-		m.ID = s.processes[pn].messageID
+		m.ID = s.processes.active[pn].messageID
 		s.messageDeliverNats(p, m)
 		m.done <- struct{}{}
 
 		// Increment the counter for the next message to be sent.
 		p.messageID++
-		s.processes[pn] = p
+		s.processes.active[pn] = p
 		time.Sleep(time.Second * 1)
 
 		// NB: simulate that we get an error, and that we can send that

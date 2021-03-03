@@ -19,6 +19,25 @@ func processNameGet(sn subjectName, pk processKind) processName {
 	return processName(pn)
 }
 
+// processes holds all the information about running processes
+type processes struct {
+	// The active spawned processes
+	active map[processName]process
+	// mutex to lock the map
+	mu sync.Mutex
+	// The last processID created
+	lastProcessID int
+}
+
+// newProcesses will prepare and return a *processes
+func newProcesses() *processes {
+	p := processes{
+		active: make(map[processName]process),
+	}
+
+	return &p
+}
+
 // server is the structure that will hold the state about spawned
 // processes on a local instance.
 type server struct {
@@ -26,28 +45,16 @@ type server struct {
 	configuration *Configuration
 	// The nats connection to the broker
 	natsConn *nats.Conn
-	// TODO: sessions should probably hold a slice/map of processes ?
-	processes map[processName]process
-	// The last processID created
-	lastProcessID int
+	// processes holds all the information about running processes
+	processes *processes
 	// The name of the node
 	nodeName string
 	// Mutex for locking when writing to the process map
-	mu sync.Mutex
-	// The channel where we put new messages read from file,
-	// or some other process who wants to send something via the
-	// system
-	// We can than range this channel for new messages to process.
 	newMessagesCh chan []subjectAndMessage
 	// errorKernel is doing all the error handling like what to do if
 	// an error occurs.
 	// TODO: Will also send error messages to cental error subscriber.
 	errorKernel *errorKernel
-	// used to check if the methods specified in message is valid
-	methodsAvailable MethodsAvailable
-	// Map who holds the command and event types available.
-	// Used to check if the commandOrEvent specified in message is valid
-	commandOrEventAvailable CommandOrEventAvailable
 	// metric exporter
 	metrics *metrics
 	// subscriberServices are where we find the services and the API to
@@ -60,10 +67,6 @@ type server struct {
 	// collection of the publisher services and the types to control them
 	publisherServices  *publisherServices
 	centralErrorLogger bool
-	// default message timeout in seconds. This can be overridden on the message level
-	defaultMessageTimeout int
-	// default amount of retries that will be done before a message is thrown away, and out of the system
-	defaultMessageRetries int
 }
 
 // newServer will prepare and return a server type
@@ -73,23 +76,16 @@ func NewServer(c *Configuration) (*server, error) {
 		log.Printf("error: nats.Connect failed: %v\n", err)
 	}
 
-	var m Method
-	var coe CommandOrEvent
-
 	s := &server{
-		configuration:           c,
-		nodeName:                c.NodeName,
-		natsConn:                conn,
-		processes:               make(map[processName]process),
-		newMessagesCh:           make(chan []subjectAndMessage),
-		methodsAvailable:        m.GetMethodsAvailable(),
-		commandOrEventAvailable: coe.GetCommandOrEventAvailable(),
-		metrics:                 newMetrics(c.PromHostAndPort),
-		subscriberServices:      newSubscriberServices(),
-		publisherServices:       newPublisherServices(c.PublisherServiceSayhello),
-		centralErrorLogger:      c.CentralErrorLogger,
-		defaultMessageTimeout:   c.DefaultMessageTimeout,
-		defaultMessageRetries:   c.DefaultMessageRetries,
+		configuration:      c,
+		nodeName:           c.NodeName,
+		natsConn:           conn,
+		processes:          newProcesses(),
+		newMessagesCh:      make(chan []subjectAndMessage),
+		metrics:            newMetrics(c.PromHostAndPort),
+		subscriberServices: newSubscriberServices(),
+		publisherServices:  newPublisherServices(c.PublisherServiceSayhello),
+		centralErrorLogger: c.CentralErrorLogger,
 	}
 
 	// Create the default data folder for where subscribers should
@@ -151,18 +147,18 @@ func (s *server) Start() {
 func (s *server) printProcessesMap() {
 	fmt.Println("--------------------------------------------------------------------------------------------")
 	fmt.Printf("*** Output of processes map :\n")
-	s.mu.Lock()
-	for _, v := range s.processes {
+	s.processes.mu.Lock()
+	for _, v := range s.processes.active {
 		fmt.Printf("*** - : %v\n", v)
 	}
-	s.mu.Unlock()
+	s.processes.mu.Unlock()
 
 	s.metrics.metricsCh <- metricType{
 		metric: prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "total_running_processes",
 			Help: "The current number of total running processes",
 		}),
-		value: float64(len(s.processes)),
+		value: float64(len(s.processes.active)),
 	}
 
 	fmt.Println("--------------------------------------------------------------------------------------------")

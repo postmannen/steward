@@ -22,7 +22,7 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 	inCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValue)
 	// start the ringbuffer.
-	rb.start(inCh, ringBufferOutCh, s.defaultMessageTimeout, s.defaultMessageRetries)
+	rb.start(inCh, ringBufferOutCh, s.configuration.DefaultMessageTimeout, s.configuration.DefaultMessageRetries)
 
 	// Start reading new fresh messages received on the incomming message
 	// pipe/file requested, and fill them into the buffer.
@@ -38,6 +38,13 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 	// Process the messages that are in the ring buffer. Check and
 	// send if there are a specific subject for it, and if no subject
 	// exist throw an error.
+
+	var coe CommandOrEvent
+	coeAvailable := coe.GetCommandOrEventAvailable()
+
+	var method Method
+	methodsAvailable := method.GetMethodsAvailable()
+
 	go func() {
 		for samTmp := range ringBufferOutCh {
 			sam := samTmp.Data
@@ -45,11 +52,11 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 			// TODO: Send a message to the error kernel here that
 			// it was unable to process the message with the reason
 			// why ?
-			if _, ok := s.methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
+			if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
 				log.Printf("error: the method do not exist, message dropped: %v\n", sam.Message.Method)
 				continue
 			}
-			if !s.commandOrEventAvailable.CheckIfExists(sam.Subject.CommandOrEvent, sam.Subject) {
+			if !coeAvailable.CheckIfExists(sam.Subject.CommandOrEvent, sam.Subject) {
 				log.Printf("error: the command or event do not exist, message dropped: %v\n", sam.Subject.CommandOrEvent)
 				continue
 			}
@@ -64,13 +71,13 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 			subjName := sam.Subject.name()
 			// DEBUG: fmt.Printf("** handleNewOperatorMessages: message: %v, ** subject: %#v\n", m, sam.Subject)
 			pn := processNameGet(subjName, processKindPublisher)
-			_, ok := s.processes[pn]
+			_, ok := s.processes.active[pn]
 
 			// Are there already a process for that subject, put the
 			// message on that processes incomming message channel.
 			if ok {
 				log.Printf("info: processNewMessages: found the specific subject: %v\n", subjName)
-				s.processes[pn].subject.messageCh <- m
+				s.processes.active[pn].subject.messageCh <- m
 
 				// If no process to handle the specific subject exist,
 				// the we create and spawn one.
