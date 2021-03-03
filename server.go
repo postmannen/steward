@@ -151,9 +151,11 @@ func (s *server) Start() {
 func (s *server) printProcessesMap() {
 	fmt.Println("--------------------------------------------------------------------------------------------")
 	fmt.Printf("*** Output of processes map :\n")
+	s.mu.Lock()
 	for _, v := range s.processes {
 		fmt.Printf("*** - : %v\n", v)
 	}
+	s.mu.Unlock()
 
 	s.metrics.metricsCh <- metricType{
 		metric: prometheus.NewGauge(prometheus.GaugeOpts{
