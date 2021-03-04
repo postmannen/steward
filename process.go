@@ -40,11 +40,21 @@ type process struct {
 	allowedReceivers map[node]struct{}
 	// methodsAvailable
 	methodsAvailable MethodsAvailable
+	// TESTING:
+	// Helper or service function that can do some kind of work
+	// for the process.
+	// The idea is that this can hold for example the map of the
+	// the hello nodes to limit shared resources in the system as
+	// a whole for sharing a map from the *server level.
+	procFunc func() error
+	// The channel to send a messages to the procFunc go routine.
+	// This is typically used within the methodHandler.
+	procFuncCh chan Message
 }
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func newProcess(processes *processes, subject Subject, errCh chan errProcess, processKind processKind, allowedReceivers []node) process {
+func newProcess(processes *processes, subject Subject, errCh chan errProcess, processKind processKind, allowedReceivers []node, procFunc func() error) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
 	processes.lastProcessID++
 
@@ -97,12 +107,24 @@ func (p process) spawnWorker(s *server) {
 	// Start a publisher worker, which will start a go routine (process)
 	// That will take care of all the messages for the subject it owns.
 	if p.processKind == processKindPublisher {
-		p.publishMessages(s)
+		go p.publishMessages(s)
 	}
 
 	// Start a subscriber worker, which will start a go routine (process)
 	// That will take care of all the messages for the subject it owns.
 	if p.processKind == processKindSubscriber {
+		// If there is a procFunc for the process, start it.
+		if p.procFunc != nil {
+			p.procFuncCh = make(chan Message)
+			// Start the procFunc in it's own anonymous func so we are able
+			// to get the return error.
+			go func() {
+				err := p.procFunc()
+				if err != nil {
+					log.Printf("error: spawnWorker: procFunc failed: %v\n", err)
+				}
+			}()
+		}
 		p.subscribeMessages(s)
 	}
 }
@@ -208,7 +230,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 	// method etc.
 	switch {
 	case p.subject.CommandOrEvent == CommandACK || p.subject.CommandOrEvent == EventACK:
-		log.Printf("info: subscriberHandler: ACK Message received received, preparing to call handler: %v\n", p.subject.name())
+		// REMOVED: log.Printf("info: subscriberHandler: ACK Message received received, preparing to call handler: %v\n", p.subject.name())
 		mf, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			// TODO: Check how errors should be handled here!!!
@@ -243,11 +265,11 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		// TESTING: Simulate that we also want to send some error that occured
 		// to the errorCentral
 		{
-			err := fmt.Errorf("error: some testing error we want to send out")
+			err := fmt.Errorf("error: some testing error we want to send out from %v", p.node)
 			sendErrorLogMessage(s.newMessagesCh, node(thisNode), err)
 		}
 	case p.subject.CommandOrEvent == CommandNACK || p.subject.CommandOrEvent == EventNACK:
-		log.Printf("info: subscriberHandler: ACK Message received received, preparing to call handler: %v\n", p.subject.name())
+		// REMOVED: log.Printf("info: subscriberHandler: ACK Message received received, preparing to call handler: %v\n", p.subject.name())
 		mf, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			// TODO: Check how errors should be handled here!!!
@@ -298,24 +320,28 @@ func (p process) publishMessages(s *server) {
 
 		// Increment the counter for the next message to be sent.
 		p.messageID++
+		s.processes.mu.Lock()
 		s.processes.active[pn] = p
-		time.Sleep(time.Second * 1)
+		s.processes.mu.Unlock()
+		// REMOVED: sleep
+		//time.Sleep(time.Second * 1)
 
 		// NB: simulate that we get an error, and that we can send that
 		// out of the process and receive it in another thread.
-		ep := errProcess{
-			infoText:      "process failed",
-			process:       p,
-			message:       m,
-			errorActionCh: make(chan errorAction),
-		}
-		s.errorKernel.errorCh <- ep
-
-		// Wait for the response action back from the error kernel, and
-		// decide what to do. Should we continue, quit, or .... ?
-		switch <-ep.errorActionCh {
-		case errActionContinue:
-			log.Printf("The errAction was continue...so we're continuing\n")
-		}
+		// REMOVED: Error simulation
+		// ep := errProcess{
+		// 	infoText:      "process failed",
+		// 	process:       p,
+		// 	message:       m,
+		// 	errorActionCh: make(chan errorAction),
+		// }
+		// s.errorKernel.errorCh <- ep
+		//
+		// // Wait for the response action back from the error kernel, and
+		// // decide what to do. Should we continue, quit, or .... ?
+		// switch <-ep.errorActionCh {
+		// case errActionContinue:
+		// 	log.Printf("The errAction was continue...so we're continuing\n")
+		// }
 	}
 }

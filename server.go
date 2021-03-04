@@ -57,12 +57,6 @@ type server struct {
 	errorKernel *errorKernel
 	// metric exporter
 	metrics *metrics
-	// subscriberServices are where we find the services and the API to
-	// use services needed by subscriber.
-	// For example, this can be a service that knows
-	// how to forward the data for a received message of type log to a
-	// central logger.
-	subscriberServices *subscriberServices
 	// Is this the central error logger ?
 	// collection of the publisher services and the types to control them
 	publisherServices  *publisherServices
@@ -83,7 +77,6 @@ func NewServer(c *Configuration) (*server, error) {
 		processes:          newProcesses(),
 		newMessagesCh:      make(chan []subjectAndMessage),
 		metrics:            newMetrics(c.PromHostAndPort),
-		subscriberServices: newSubscriberServices(),
 		publisherServices:  newPublisherServices(c.PublisherServiceSayhello),
 		centralErrorLogger: c.CentralErrorLogger,
 	}
@@ -134,7 +127,7 @@ func (s *server) Start() {
 	// files.
 	s.subscribersStart()
 
-	time.Sleep(time.Second * 2)
+	time.Sleep(time.Second * 1)
 	s.printProcessesMap()
 
 	// Start the processing of new messaging from an input channel.

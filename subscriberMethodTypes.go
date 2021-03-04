@@ -38,8 +38,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 // ------------------------------------------------------------
@@ -206,16 +204,11 @@ func (m methodEventSayHello) handler(s *server, proc process, message Message, n
 	log.Printf("<--- Received hello from %v \n", message.FromNode)
 	// Since the handler is only called to handle a specific type of message we need
 	// to store it elsewhere, and choice for now is under s.metrics.sayHelloNodes
-	s.subscriberServices.sayHelloNodes[message.FromNode] = struct{}{}
 
-	// update the prometheus metrics
-	s.metrics.metricsCh <- metricType{
-		metric: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "hello_nodes",
-			Help: "The current number of total nodes who have said hello",
-		}),
-		value: float64(len(s.subscriberServices.sayHelloNodes)),
-	}
+	// send the message to the procFuncCh which is running alongside the process
+	// and can hold registries and handle special things for an individual process.
+	proc.procFuncCh <- message
+
 	outMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return outMsg, nil
 }

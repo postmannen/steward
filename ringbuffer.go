@@ -383,7 +383,8 @@ func (r *ringBuffer) startPermanentStore() {
 			log.Printf("error:failed to write entry: %v\n", err)
 		}
 
-		time.Sleep(time.Second * 1)
+		// REMOVED: time
+		// time.Sleep(time.Second * 1)
 	}
 
 }

@@ -2,7 +2,6 @@ package steward
 
 import (
 	"log"
-	"time"
 )
 
 // processNewMessages takes a database name and an input channel as
@@ -87,11 +86,12 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 				log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 				sub := newSubject(sam.Subject.Method, sam.Subject.CommandOrEvent, sam.Subject.ToNode)
-				proc := newProcess(s.processes, sub, s.errorKernel.errorCh, processKindPublisher, nil)
+				proc := newProcess(s.processes, sub, s.errorKernel.errorCh, processKindPublisher, nil, nil)
 				// fmt.Printf("*** %#v\n", proc)
-				go proc.spawnWorker(s)
+				proc.spawnWorker(s)
 
-				time.Sleep(time.Millisecond * 500)
+				// REMOVED:
+				//time.Sleep(time.Millisecond * 500)
 				s.printProcessesMap()
 				// Now when the process is spawned we jump back to the redo: label,
 				// and send the message to that new process.
