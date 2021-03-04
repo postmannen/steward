@@ -87,7 +87,7 @@ func (s *server) processNewMessages(dbFileName string, newSAM chan []subjectAndM
 				log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 				sub := newSubject(sam.Subject.Method, sam.Subject.CommandOrEvent, sam.Subject.ToNode)
-				proc := newProcess(s, sub, s.errorKernel.errorCh, processKindPublisher, nil)
+				proc := newProcess(s.processes, sub, s.errorKernel.errorCh, processKindPublisher, nil)
 				// fmt.Printf("*** %#v\n", proc)
 				go proc.spawnWorker(s)
 

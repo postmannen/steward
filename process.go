@@ -44,9 +44,9 @@ type process struct {
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func newProcess(s *server, subject Subject, errCh chan errProcess, processKind processKind, allowedReceivers []node) process {
+func newProcess(processes *processes, subject Subject, errCh chan errProcess, processKind processKind, allowedReceivers []node) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
-	s.processes.lastProcessID++
+	processes.lastProcessID++
 
 	// make the slice of allowedReceivers into a map value for easy lookup.
 	m := make(map[node]struct{})
@@ -60,7 +60,7 @@ func newProcess(s *server, subject Subject, errCh chan errProcess, processKind p
 		messageID:        0,
 		subject:          subject,
 		node:             node(subject.ToNode),
-		processID:        s.processes.lastProcessID,
+		processID:        processes.lastProcessID,
 		errorCh:          errCh,
 		processKind:      processKind,
 		allowedReceivers: m,
