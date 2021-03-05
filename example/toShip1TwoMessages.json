@@ -1,0 +1,18 @@
+[
+    {
+        
+        "toNode": "ship1",
+        "data": ["bash","-c","netstat -an|grep -i listen"],
+        "method":"CLICommand",
+        "timeout":5,
+        "retries":10
+    },
+    {
+        
+        "toNode": "ship1",
+        "data": ["bash","-c","netstat -an|grep -i listen"],
+        "method":"CLICommand",
+        "timeout":5,
+        "retries":10
+    }
+]

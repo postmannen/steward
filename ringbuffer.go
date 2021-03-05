@@ -263,7 +263,7 @@ func (r *ringBuffer) printBucketContent(bucket string) error {
 	err := r.db.View(func(tx *bolt.Tx) error {
 		bu := tx.Bucket([]byte(bucket))
 
-		fmt.Println("--------------------------K/V STORE DUMP---------------------------")
+		fmt.Println("-- K/V STORE DUMP--")
 		bu.ForEach(func(k, v []byte) error {
 			var vv samDBValue
 			err := json.Unmarshal(v, &vv)
@@ -273,7 +273,7 @@ func (r *ringBuffer) printBucketContent(bucket string) error {
 			fmt.Printf("k: %s, v: %v\n", k, vv)
 			return nil
 		})
-		fmt.Println("-------------------------------------------------------------------")
+		fmt.Println("--")
 
 		return nil
 	})

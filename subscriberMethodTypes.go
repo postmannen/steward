@@ -68,7 +68,7 @@ type Method string
 //   - EventNack
 func (m Method) GetMethodsAvailable() MethodsAvailable {
 	ma := MethodsAvailable{
-		topics: map[Method]methodHandler{
+		methodhandlers: map[Method]methodHandler{
 			CLICommand: methodCommandCLICommand{
 				commandOrEvent: CommandACK,
 			},
@@ -92,20 +92,20 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 // as input argument.
 func (m Method) getHandler(method Method) methodHandler {
 	ma := m.GetMethodsAvailable()
-	mh := ma.topics[method]
+	mh := ma.methodhandlers[method]
 
 	return mh
 }
 
 type MethodsAvailable struct {
-	topics map[Method]methodHandler
+	methodhandlers map[Method]methodHandler
 }
 
 // Check if exists will check if the Method is defined. If true the bool
 // value will be set to true, and the methodHandler function for that type
 // will be returned.
 func (ma MethodsAvailable) CheckIfExists(m Method) (methodHandler, bool) {
-	mFunc, ok := ma.topics[m]
+	mFunc, ok := ma.methodhandlers[m]
 	if ok {
 		// fmt.Printf("******THE TOPIC EXISTS: %v******\n", m)
 		return mFunc, true
@@ -201,7 +201,10 @@ func (m methodEventSayHello) getKind() CommandOrEvent {
 }
 
 func (m methodEventSayHello) handler(s *server, proc process, message Message, node string) ([]byte, error) {
-	log.Printf("<--- Received hello from %v \n", message.FromNode)
+	//fmt.Printf("-- DEBUG 3.1: %#v, %#v, %#v\n\n", proc.subject.name(), proc.procFunc, proc.procFuncCh)
+	//pn := processNameGet(proc.subject.name(), processKindSubscriber)
+	//fmt.Printf("-- DEBUG 3.2: pn = %#v\n\n", pn)
+	log.Printf("<--- Received hello from %#v\n", message.FromNode)
 	// Since the handler is only called to handle a specific type of message we need
 	// to store it elsewhere, and choice for now is under s.metrics.sayHelloNodes
 

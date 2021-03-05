@@ -115,7 +115,7 @@ func (p process) spawnWorker(s *server) {
 	if p.processKind == processKindSubscriber {
 		// If there is a procFunc for the process, start it.
 		if p.procFunc != nil {
-			p.procFuncCh = make(chan Message)
+			// REMOVED: p.procFuncCh = make(chan Message)
 			// Start the procFunc in it's own anonymous func so we are able
 			// to get the return error.
 			go func() {
@@ -125,6 +125,8 @@ func (p process) spawnWorker(s *server) {
 				}
 			}()
 		}
+
+		//fmt.Printf("-- DEBUG 1.1: %#v, %#v, %#v\n\n", p.subject.name(), p.procFunc, p.procFuncCh)
 		p.subscribeMessages(s)
 	}
 }
@@ -283,6 +285,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		//
 		// since we don't send a reply for a NACK message, we don't care about the
 		// out return when calling mf.handler
+		//fmt.Printf("-- DEBUG 2.2.1: %#v\n\n", p.subject)
 		_, err := mf.handler(s, p, message, thisNode)
 
 		if err != nil {
@@ -297,11 +300,13 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 // Subscribe will start up a Go routine under the hood calling the
 // callback function specified when a new message is received.
 func (p process) subscribeMessages(s *server) {
+	//fmt.Printf("-- DEBUG 2.1: %#v, %#v, %#v\n\n", p.subject.name(), p.procFunc, p.procFuncCh)
 	subject := string(p.subject.name())
 	_, err := s.natsConn.Subscribe(subject, func(msg *nats.Msg) {
 		// We start one handler per message received by using go routines here.
 		// This is for being able to reply back the current publisher who sent
 		// the message.
+		//fmt.Printf("-- DEBUG 2.2: %#v, %#v, %#v\n\n", p.subject.name(), p.procFunc, p.procFuncCh)
 		go p.subscriberHandler(s.natsConn, s.nodeName, msg, s)
 	})
 	if err != nil {

@@ -30,7 +30,25 @@ func (s *server) subscribersStart() {
 		fmt.Printf("Starting SayHello subscriber: %#v\n", s.nodeName)
 		sub := newSubject(SayHello, EventNACK, s.nodeName)
 		proc := newProcess(s.processes, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
-		// fmt.Printf("*** %#v\n", proc)
+		proc.procFuncCh = make(chan Message)
+		proc.procFunc = func() error {
+			sayHelloNodes := make(map[node]struct{})
+			for {
+				//fmt.Printf("-- DEBUG 4.1: procFunc %v, procFuncCh %v\n\n", proc.procFunc, proc.procFuncCh)
+				m := <-proc.procFuncCh
+				fmt.Printf("-----------DEBUG : THIS IS THE procFunc BEING CALLED !!!!! ---------\n")
+				sayHelloNodes[m.FromNode] = struct{}{}
+
+				// update the prometheus metrics
+				s.metrics.metricsCh <- metricType{
+					metric: prometheus.NewGauge(prometheus.GaugeOpts{
+						Name: "hello_nodes",
+						Help: "The current number of total nodes who have said hello",
+					}),
+					value: float64(len(sayHelloNodes)),
+				}
+			}
+		}
 		go proc.spawnWorker(s)
 	}
 
@@ -40,22 +58,6 @@ func (s *server) subscribersStart() {
 			fmt.Printf("Starting ErrorLog subscriber: %#v\n", s.nodeName)
 			sub := newSubject(ErrorLog, EventNACK, "errorCentral")
 			proc := newProcess(s.processes, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
-			proc.procFunc = func() error {
-				sayHelloNodes := make(map[node]struct{})
-				for {
-					m := <-proc.procFuncCh
-					sayHelloNodes[m.FromNode] = struct{}{}
-
-					// update the prometheus metrics
-					s.metrics.metricsCh <- metricType{
-						metric: prometheus.NewGauge(prometheus.GaugeOpts{
-							Name: "hello_nodes",
-							Help: "The current number of total nodes who have said hello",
-						}),
-						value: float64(len(sayHelloNodes)),
-					}
-				}
-			}
 			go proc.spawnWorker(s)
 		}
 	}

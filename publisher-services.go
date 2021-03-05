@@ -42,12 +42,12 @@ func (s *sayHelloPublisher) createMsg(FromNode node) subjectAndMessage {
 
 	sam := subjectAndMessage{
 		Subject: Subject{
-			ToNode:         "errorCentral",
+			ToNode:         "central",
 			CommandOrEvent: EventNACK,
-			Method:         ErrorLog,
+			Method:         SayHello,
 		},
 		Message: Message{
-			ToNode:   "errorCentral",
+			ToNode:   "central",
 			FromNode: FromNode,
 			Data:     []string{m},
 			Method:   SayHello,

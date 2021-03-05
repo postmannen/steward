@@ -110,6 +110,8 @@ and for a shell command of type command to a host named "ship2"
 
 ## TODO
 
+- FIX so it can handle multiple slices of input for inmsg.txt
+
 - Add config file options to use when starting up the program for options.
 
 - Rename CLICommand to cli
