@@ -50,6 +50,8 @@ type process struct {
 	// The channel to send a messages to the procFunc go routine.
 	// This is typically used within the methodHandler.
 	procFuncCh chan Message
+	// copy of the configuration from server
+	configuration *Configuration
 }
 
 // prepareNewProcess will set the the provided values and the default
@@ -88,6 +90,8 @@ func newProcess(processes *processes, subject Subject, errCh chan errProcess, pr
 // It will give the process the next available ID, and also add the
 // process to the processes map in the server structure.
 func (p process) spawnWorker(s *server) {
+	// Copy the configuration from Server
+	p.configuration = s.configuration
 	// We use the full name of the subject to identify a unique
 	// process. We can do that since a process can only handle
 	// one message queue.
@@ -251,7 +255,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 			// The handler started here is what actually doing the action
 			// that executed a CLI command, or writes to a log file on
 			// the node who received the message.
-			out, err = mf.handler(s, p, message, thisNode)
+			out, err = mf.handler(p, message, thisNode)
 
 			if err != nil {
 				// TODO: Send to error kernel ?
@@ -286,7 +290,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		// since we don't send a reply for a NACK message, we don't care about the
 		// out return when calling mf.handler
 		//fmt.Printf("-- DEBUG 2.2.1: %#v\n\n", p.subject)
-		_, err := mf.handler(s, p, message, thisNode)
+		_, err := mf.handler(p, message, thisNode)
 
 		if err != nil {
 			// TODO: Send to error kernel ?

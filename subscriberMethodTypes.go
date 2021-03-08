@@ -120,7 +120,7 @@ func (ma MethodsAvailable) CheckIfExists(m Method) (methodHandler, bool) {
 // ------------------------------------------------------------
 
 type methodHandler interface {
-	handler(server *server, proc process, message Message, node string) ([]byte, error)
+	handler(proc process, message Message, node string) ([]byte, error)
 	getKind() CommandOrEvent
 }
 
@@ -134,7 +134,7 @@ func (m methodCommandCLICommand) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodCommandCLICommand) handler(s *server, proc process, message Message, node string) ([]byte, error) {
+func (m methodCommandCLICommand) handler(proc process, message Message, node string) ([]byte, error) {
 	// Since the command to execute is at the first position in the
 	// slice we need to slice it out. The arguments are at the
 	// remaining positions.
@@ -161,14 +161,14 @@ func (m methodEventTextLogging) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodEventTextLogging) handler(s *server, proc process, message Message, node string) ([]byte, error) {
+func (m methodEventTextLogging) handler(proc process, message Message, node string) ([]byte, error) {
 	sub := Subject{
 		ToNode:         string(message.ToNode),
 		CommandOrEvent: proc.subject.CommandOrEvent,
 		Method:         message.Method,
 	}
 
-	logFile := filepath.Join(s.configuration.SubscribersDataFolder, string(sub.name())+"-"+string(message.FromNode))
+	logFile := filepath.Join(proc.configuration.SubscribersDataFolder, string(sub.name())+"-"+string(message.FromNode))
 	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, os.ModeAppend)
 	if err != nil {
 		log.Printf("error: methodEventTextLogging.handler: failed to open file: %v\n", err)
@@ -200,7 +200,7 @@ func (m methodEventSayHello) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodEventSayHello) handler(s *server, proc process, message Message, node string) ([]byte, error) {
+func (m methodEventSayHello) handler(proc process, message Message, node string) ([]byte, error) {
 	//fmt.Printf("-- DEBUG 3.1: %#v, %#v, %#v\n\n", proc.subject.name(), proc.procFunc, proc.procFuncCh)
 	//pn := processNameGet(proc.subject.name(), processKindSubscriber)
 	//fmt.Printf("-- DEBUG 3.2: pn = %#v\n\n", pn)
@@ -226,7 +226,7 @@ func (m methodEventErrorLog) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodEventErrorLog) handler(s *server, proc process, message Message, node string) ([]byte, error) {
+func (m methodEventErrorLog) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- Received error from: %v, containing: %v", message.FromNode, message.Data)
 	return nil, nil
 }
