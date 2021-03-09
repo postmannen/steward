@@ -14,6 +14,7 @@ import (
 
 type processName string
 
+// Will return a process name made up of subjectName+processKind
 func processNameGet(sn subjectName, pk processKind) processName {
 	pn := fmt.Sprintf("%s_%s", sn, pk)
 	return processName(pn)

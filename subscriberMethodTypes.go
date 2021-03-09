@@ -201,12 +201,8 @@ func (m methodSubscriberSayHello) getKind() CommandOrEvent {
 }
 
 func (m methodSubscriberSayHello) handler(proc process, message Message, node string) ([]byte, error) {
-	//fmt.Printf("-- DEBUG 3.1: %#v, %#v, %#v\n\n", proc.subject.name(), proc.procFunc, proc.procFuncCh)
-	//pn := processNameGet(proc.subject.name(), processKindSubscriber)
-	//fmt.Printf("-- DEBUG 3.2: pn = %#v\n\n", pn)
+
 	log.Printf("<--- Received hello from %#v\n", message.FromNode)
-	// Since the handler is only called to handle a specific type of message we need
-	// to store it elsewhere, and choice for now is under s.metrics.sayHelloNodes
 
 	// send the message to the procFuncCh which is running alongside the process
 	// and can hold registries and handle special things for an individual process.

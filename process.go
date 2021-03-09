@@ -52,11 +52,13 @@ type process struct {
 	procFuncCh chan Message
 	// copy of the configuration from server
 	configuration *Configuration
+	// The new messages channel copied from *Server
+	newMessagesCh chan<- []subjectAndMessage
 }
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func newProcess(processes *processes, subject Subject, errCh chan errProcess, processKind processKind, allowedReceivers []node, procFunc func() error) process {
+func newProcess(processes *processes, newMessagesCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, errCh chan errProcess, processKind processKind, allowedReceivers []node, procFunc func() error) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
 	processes.lastProcessID++
 
@@ -77,6 +79,8 @@ func newProcess(processes *processes, subject Subject, errCh chan errProcess, pr
 		processKind:      processKind,
 		allowedReceivers: m,
 		methodsAvailable: method.GetMethodsAvailable(),
+		newMessagesCh:    newMessagesCh,
+		configuration:    configuration,
 	}
 
 	return proc
@@ -90,8 +94,6 @@ func newProcess(processes *processes, subject Subject, errCh chan errProcess, pr
 // It will give the process the next available ID, and also add the
 // process to the processes map in the server structure.
 func (p process) spawnWorker(s *server) {
-	// Copy the configuration from Server
-	p.configuration = s.configuration
 	// We use the full name of the subject to identify a unique
 	// process. We can do that since a process can only handle
 	// one message queue.

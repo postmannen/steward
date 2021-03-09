@@ -11,7 +11,7 @@ func (s *server) subscribersStart() {
 	{
 		fmt.Printf("Starting CLICommand subscriber: %#v\n", s.nodeName)
 		sub := newSubject(CLICommand, CommandACK, s.nodeName)
-		proc := newProcess(s.processes, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"central", "ship2"}, nil)
+		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"central", "ship2"}, nil)
 		// fmt.Printf("*** %#v\n", proc)
 		go proc.spawnWorker(s)
 	}
@@ -20,7 +20,7 @@ func (s *server) subscribersStart() {
 	{
 		fmt.Printf("Starting textlogging subscriber: %#v\n", s.nodeName)
 		sub := newSubject(TextLogging, EventACK, s.nodeName)
-		proc := newProcess(s.processes, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
+		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
 		// fmt.Printf("*** %#v\n", proc)
 		go proc.spawnWorker(s)
 	}
@@ -29,7 +29,7 @@ func (s *server) subscribersStart() {
 	{
 		fmt.Printf("Starting SayHello subscriber: %#v\n", s.nodeName)
 		sub := newSubject(SayHello, EventNACK, s.nodeName)
-		proc := newProcess(s.processes, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
+		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
 		proc.procFuncCh = make(chan Message)
 		proc.procFunc = func() error {
 			sayHelloNodes := make(map[node]struct{})
@@ -57,7 +57,7 @@ func (s *server) subscribersStart() {
 		{
 			fmt.Printf("Starting ErrorLog subscriber: %#v\n", s.nodeName)
 			sub := newSubject(ErrorLog, EventNACK, "errorCentral")
-			proc := newProcess(s.processes, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
+			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
 			go proc.spawnWorker(s)
 		}
 	}
