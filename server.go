@@ -60,7 +60,8 @@ type server struct {
 	metrics *metrics
 	// Is this the central error logger ?
 	// collection of the publisher services and the types to control them
-	publisherServices  *publisherServices
+	// REMOVED:
+	// publisherServices  *publisherServices
 	centralErrorLogger bool
 }
 
@@ -72,13 +73,14 @@ func NewServer(c *Configuration) (*server, error) {
 	}
 
 	s := &server{
-		configuration:      c,
-		nodeName:           c.NodeName,
-		natsConn:           conn,
-		processes:          newProcesses(),
-		newMessagesCh:      make(chan []subjectAndMessage),
-		metrics:            newMetrics(c.PromHostAndPort),
-		publisherServices:  newPublisherServices(c.PublisherServiceSayhello),
+		configuration: c,
+		nodeName:      c.NodeName,
+		natsConn:      conn,
+		processes:     newProcesses(),
+		newMessagesCh: make(chan []subjectAndMessage),
+		metrics:       newMetrics(c.PromHostAndPort),
+		// REMOVED:
+		//publisherServices:  newPublisherServices(c.PublisherServiceSayhello),
 		centralErrorLogger: c.CentralErrorLogger,
 	}
 
@@ -118,10 +120,11 @@ func (s *server) Start() {
 	// Start the checking the input file for new messages from operator.
 	go s.getMessagesFromFile("./", "inmsg.txt", s.newMessagesCh)
 
-	// if enabled, start the sayHello I'm here service at the given interval
-	if s.publisherServices.sayHelloPublisher.interval != 0 {
-		go s.publisherServices.sayHelloPublisher.start(s.newMessagesCh, node(s.nodeName))
-	}
+	// // if enabled, start the sayHello I'm here service at the given interval
+	// // REMOVED:
+	// if s.publisherServices.sayHelloPublisher.interval != 0 {
+	// 	go s.publisherServices.sayHelloPublisher.start(s.newMessagesCh, node(s.nodeName))
+	// }
 
 	// Start up the predefined subscribers.
 	// TODO: What to subscribe on should be handled via flags, or config
@@ -143,7 +146,7 @@ func (s *server) printProcessesMap() {
 	fmt.Printf("*** Output of processes map :\n")
 	s.processes.mu.Lock()
 	for _, v := range s.processes.active {
-		fmt.Printf("* proc - : id: %v, name: %v, allowed from: %v\n", v.processID, v.subject.name(), v.allowedReceivers)
+		fmt.Printf("* proc - : %v, id: %v, name: %v, allowed from: %v\n", v.processKind, v.processID, v.subject.name(), v.allowedReceivers)
 	}
 	s.processes.mu.Unlock()
 
@@ -254,7 +257,10 @@ func (s *server) routeMessagesToPublish(dbFileName string, newSAM chan []subject
 			subjName := sam.Subject.name()
 			// DEBUG: fmt.Printf("** handleNewOperatorMessages: message: %v, ** subject: %#v\n", m, sam.Subject)
 			pn := processNameGet(subjName, processKindPublisher)
+
+			s.processes.mu.Lock()
 			_, ok := s.processes.active[pn]
+			s.processes.mu.Unlock()
 
 			// Are there already a process for that subject, put the
 			// message on that processes incomming message channel.

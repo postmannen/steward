@@ -2,6 +2,7 @@ package steward
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -36,7 +37,7 @@ func (s *server) subscribersStart() {
 			for {
 				//fmt.Printf("-- DEBUG 4.1: procFunc %v, procFuncCh %v\n\n", proc.procFunc, proc.procFuncCh)
 				m := <-proc.procFuncCh
-				fmt.Printf("-----------DEBUG : THIS IS THE procFunc BEING CALLED !!!!! ---------\n")
+				fmt.Printf("--- DEBUG : procFunc call:kind=%v, Subject=%v, toNode=%v\n", proc.processKind, proc.subject, proc.subject.ToNode)
 				sayHelloNodes[m.FromNode] = struct{}{}
 
 				// update the prometheus metrics
@@ -61,4 +62,48 @@ func (s *server) subscribersStart() {
 			go proc.spawnWorker(s)
 		}
 	}
+
+	// --------- Testing with publisher ------------
+	// Define a process of kind publisher with subject for SayHello to central,
+	// and register a procFunc with the process that will handle the actual
+	// sending of say hello.
+	if s.configuration.PublisherServiceSayhello != 0 {
+		fmt.Printf("Starting SayHello Publisher: %#v\n", s.nodeName)
+		// TODO: Replace "central" name with variable below.
+		sub := newSubject(SayHello, EventNACK, "central")
+		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, []node{}, nil)
+
+		proc.procFunc = func() error {
+			for {
+				fmt.Printf("--- DEBUG : procFunc call:kind=%v, Subject=%v, toNode=%v\n", proc.processKind, proc.subject, proc.subject.ToNode)
+
+				m := fmt.Sprintf("Hello from %v\n", s.nodeName)
+
+				sam := subjectAndMessage{
+					Subject: Subject{
+						ToNode:         "central",
+						CommandOrEvent: EventNACK,
+						Method:         SayHello,
+					},
+					Message: Message{
+						ToNode:   "central",
+						FromNode: node(s.nodeName),
+						Data:     []string{m},
+						Method:   SayHello,
+					},
+				}
+				proc.newMessagesCh <- []subjectAndMessage{sam}
+				time.Sleep(time.Second * time.Duration(10))
+			}
+		}
+		go proc.spawnWorker(s)
+	}
+
+	//func() {
+	//	for {
+	//		sam := s.createMsg(fromNode)
+	//		newMessagesCh <- []subjectAndMessage{sam}
+	//		time.Sleep(time.Second * time.Duration(s.interval))
+	//	}
+	//}()
 }
