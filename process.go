@@ -113,7 +113,20 @@ func (p process) spawnWorker(s *server) {
 	// Start a publisher worker, which will start a go routine (process)
 	// That will take care of all the messages for the subject it owns.
 	if p.processKind == processKindPublisher {
-		go p.publishMessages(s)
+		// If there is a procFunc for the process, start it.
+		if p.procFunc != nil {
+			// REMOVED: p.procFuncCh = make(chan Message)
+			// Start the procFunc in it's own anonymous func so we are able
+			// to get the return error.
+			go func() {
+				err := p.procFunc()
+				if err != nil {
+					log.Printf("error: spawnWorker: procFunc failed: %v\n", err)
+				}
+			}()
+		}
+
+		go p.publishMessages(s.natsConn, s.processes)
 	}
 
 	// Start a subscriber worker, which will start a go routine (process)
@@ -140,7 +153,7 @@ func (p process) spawnWorker(s *server) {
 // messageDeliverNats will take care of the delivering the message
 // as converted to gob format as a nats.Message. It will also take
 // care of checking timeouts and retries specified for the message.
-func (s *server) messageDeliverNats(proc process, message Message) {
+func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 	retryAttempts := 0
 
 	for {
@@ -150,11 +163,11 @@ func (s *server) messageDeliverNats(proc process, message Message) {
 		}
 
 		msg := &nats.Msg{
-			Subject: string(proc.subject.name()),
+			Subject: string(p.subject.name()),
 			// Subject: fmt.Sprintf("%s.%s.%s", proc.node, "command", "CLICommand"),
 			// Structure of the reply message are:
 			// reply.<nodename>.<message type>.<method>
-			Reply: fmt.Sprintf("reply.%s", proc.subject.name()),
+			Reply: fmt.Sprintf("reply.%s", p.subject.name()),
 			Data:  dataPayload,
 		}
 
@@ -163,14 +176,14 @@ func (s *server) messageDeliverNats(proc process, message Message) {
 		// that sends out a message every second.
 		//
 		// Create a subscriber for the reply message.
-		subReply, err := s.natsConn.SubscribeSync(msg.Reply)
+		subReply, err := natsConn.SubscribeSync(msg.Reply)
 		if err != nil {
 			log.Printf("error: nc.SubscribeSync failed: failed to create reply message: %v\n", err)
 			continue
 		}
 
 		// Publish message
-		err = s.natsConn.PublishMsg(msg)
+		err = natsConn.PublishMsg(msg)
 		if err != nil {
 			log.Printf("error: publish failed: %v\n", err)
 			continue
@@ -179,13 +192,13 @@ func (s *server) messageDeliverNats(proc process, message Message) {
 		// If the message is an ACK type of message we must check that a
 		// reply, and if it is not we don't wait here at all.
 		fmt.Printf("info: messageDeliverNats: preparing to send message: %v\n", message)
-		if proc.subject.CommandOrEvent == CommandACK || proc.subject.CommandOrEvent == EventACK {
+		if p.subject.CommandOrEvent == CommandACK || p.subject.CommandOrEvent == EventACK {
 			// Wait up until timeout specified for a reply,
 			// continue and resend if noo reply received,
 			// or exit if max retries for the message reached.
 			msgReply, err := subReply.NextMsg(time.Second * time.Duration(message.Timeout))
 			if err != nil {
-				log.Printf("error: subReply.NextMsg failed for node=%v, subject=%v: %v\n", proc.node, proc.subject.name(), err)
+				log.Printf("error: subReply.NextMsg failed for node=%v, subject=%v: %v\n", p.node, p.subject.name(), err)
 
 				// did not receive a reply, decide what to do..
 				retryAttempts++
@@ -239,7 +252,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 	switch {
 	case p.subject.CommandOrEvent == CommandACK || p.subject.CommandOrEvent == EventACK:
 		// REMOVED: log.Printf("info: subscriberHandler: ACK Message received received, preparing to call handler: %v\n", p.subject.name())
-		mf, ok := p.methodsAvailable.CheckIfExists(message.Method)
+		mh, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			// TODO: Check how errors should be handled here!!!
 			log.Printf("error: subscriberHandler: method type not available: %v\n", p.subject.CommandOrEvent)
@@ -257,7 +270,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 			// The handler started here is what actually doing the action
 			// that executed a CLI command, or writes to a log file on
 			// the node who received the message.
-			out, err = mf.handler(p, message, thisNode)
+			out, err = mh.handler(p, message, thisNode)
 
 			if err != nil {
 				// TODO: Send to error kernel ?
@@ -320,20 +333,29 @@ func (p process) subscribeMessages(s *server) {
 	}
 }
 
-func (p process) publishMessages(s *server) {
+// publishMessages will do the publishing of messages for one single
+// process.
+func (p process) publishMessages(natsConn *nats.Conn, processes *processes) {
 	for {
 		// Wait and read the next message on the message channel
 		m := <-p.subject.messageCh
+
+		// Get the process name so we can look up the process in the
+		// processes map, and increment the message counter.
 		pn := processNameGet(p.subject.name(), processKindPublisher)
-		m.ID = s.processes.active[pn].messageID
-		s.messageDeliverNats(p, m)
+		m.ID = processes.active[pn].messageID
+
+		p.messageDeliverNats(natsConn, m)
+
+		// Signaling back to the ringbuffer that we are done with the
+		// current message, and it can remove it from the ringbuffer.
 		m.done <- struct{}{}
 
 		// Increment the counter for the next message to be sent.
 		p.messageID++
-		s.processes.mu.Lock()
-		s.processes.active[pn] = p
-		s.processes.mu.Unlock()
+		processes.mu.Lock()
+		processes.active[pn] = p
+		processes.mu.Unlock()
 		// REMOVED: sleep
 		//time.Sleep(time.Second * 1)
 

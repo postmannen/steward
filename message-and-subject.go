@@ -52,7 +52,10 @@ type Subject struct {
 	CommandOrEvent CommandOrEvent `json:"commandOrEvent" yaml:"commandOrEvent"`
 	// method, what is this message doing, etc. CLICommand, Syslog, etc.
 	Method Method `json:"method" yaml:"method"`
-	// messageCh is the channel for receiving new content to be sent
+	// messageCh is used by publisher kind processes to read new messages
+	// to be published. The content on this channel have been routed here
+	// from routeMessagesToPublish in *server.
+	// This channel is only used for publishing processes.
 	messageCh chan Message
 }
 
