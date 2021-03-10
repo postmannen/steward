@@ -7,7 +7,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (s *server) subscribersStart() {
+func (s *server) ProcessesStart() {
 	// Start a subscriber for CLICommand messages
 	{
 		fmt.Printf("Starting CLICommand subscriber: %#v\n", s.nodeName)
@@ -32,6 +32,7 @@ func (s *server) subscribersStart() {
 		sub := newSubject(SayHello, EventNACK, s.nodeName)
 		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
 		proc.procFuncCh = make(chan Message)
+
 		proc.procFunc = func() error {
 			sayHelloNodes := make(map[node]struct{})
 			for {
@@ -77,33 +78,20 @@ func (s *server) subscribersStart() {
 			for {
 				fmt.Printf("--- DEBUG : procFunc call:kind=%v, Subject=%v, toNode=%v\n", proc.processKind, proc.subject, proc.subject.ToNode)
 
-				m := fmt.Sprintf("Hello from %v\n", s.nodeName)
+				d := fmt.Sprintf("Hello from %v\n", s.nodeName)
 
-				sam := subjectAndMessage{
-					Subject: Subject{
-						ToNode:         "central",
-						CommandOrEvent: EventNACK,
-						Method:         SayHello,
-					},
-					Message: Message{
-						ToNode:   "central",
-						FromNode: node(s.nodeName),
-						Data:     []string{m},
-						Method:   SayHello,
-					},
+				m := Message{
+					ToNode:   "central",
+					FromNode: node(s.nodeName),
+					Data:     []string{d},
+					Method:   SayHello,
 				}
+
+				sam := createSAMfromMessage(m)
 				proc.newMessagesCh <- []subjectAndMessage{sam}
-				time.Sleep(time.Second * time.Duration(10))
+				time.Sleep(time.Second * time.Duration(s.configuration.PublisherServiceSayhello))
 			}
 		}
 		go proc.spawnWorker(s)
 	}
-
-	//func() {
-	//	for {
-	//		sam := s.createMsg(fromNode)
-	//		newMessagesCh <- []subjectAndMessage{sam}
-	//		time.Sleep(time.Second * time.Duration(s.interval))
-	//	}
-	//}()
 }

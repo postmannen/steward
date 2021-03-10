@@ -67,28 +67,37 @@ func jsonFromFileData(b []byte) ([]subjectAndMessage, error) {
 	}
 
 	sam := []subjectAndMessage{}
-	// We need to create a tempory method type to look up the kind for the
-	// real method for the message.
-	var mt Method
 
 	// Range over all the messages parsed from json, and create a subject for
 	// each message.
 	for _, m := range MsgSlice {
-		s := Subject{
-			ToNode:         string(m.ToNode),
-			CommandOrEvent: mt.getHandler(m.Method).getKind(),
-			Method:         m.Method,
-		}
-
-		sm := subjectAndMessage{
-			Subject: s,
-			Message: m,
-		}
-
+		sm := createSAMfromMessage(m)
 		sam = append(sam, sm)
 	}
 
 	return sam, nil
+}
+
+// createSAMfromMessage will look up the correct values and value types to
+// be used in a subject for a Message, and return the a combined structure
+// of type subjectAndMessage.
+func createSAMfromMessage(m Message) subjectAndMessage {
+	// We need to create a tempory method type to look up the kind for the
+	// real method for the message.
+	var mt Method
+
+	sub := Subject{
+		ToNode:         string(m.ToNode),
+		CommandOrEvent: mt.getHandler(m.Method).getKind(),
+		Method:         m.Method,
+	}
+
+	sm := subjectAndMessage{
+		Subject: sub,
+		Message: m,
+	}
+
+	return sm
 }
 
 // readTruncateMessageFile, will read all the messages in the given

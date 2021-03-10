@@ -129,13 +129,13 @@ func (s *server) Start() {
 	// Start up the predefined subscribers.
 	// TODO: What to subscribe on should be handled via flags, or config
 	// files.
-	s.subscribersStart()
+	s.ProcessesStart()
 
 	time.Sleep(time.Second * 1)
 	s.printProcessesMap()
 
 	// Start the processing of new messages from an input channel.
-	s.routeMessagesToPublish("./incommmingBuffer.db", s.newMessagesCh)
+	s.routeMessagesToProcess("./incommmingBuffer.db", s.newMessagesCh)
 
 	select {}
 
@@ -191,7 +191,7 @@ func createErrorMsgContent(FromNode node, theError error) subjectAndMessage {
 	return sam
 }
 
-// routeMessagesToPublish takes a database name and an input channel as
+// routeMessagesToProcess takes a database name and an input channel as
 // it's input arguments.
 // The database will be used as the persistent store for the work queue
 // which is implemented as a ring buffer.
@@ -201,7 +201,7 @@ func createErrorMsgContent(FromNode node, theError error) subjectAndMessage {
 // worker process.
 // It will also handle the process of spawning more worker processes
 // for publisher subjects if it does not exist.
-func (s *server) routeMessagesToPublish(dbFileName string, newSAM chan []subjectAndMessage) {
+func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subjectAndMessage) {
 	// Prepare and start a new ring buffer
 	const bufferSize int = 1000
 	rb := newringBuffer(bufferSize, dbFileName)
