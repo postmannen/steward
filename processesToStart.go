@@ -36,9 +36,10 @@ func (s *server) ProcessesStart() {
 		proc.procFunc = func() error {
 			sayHelloNodes := make(map[node]struct{})
 			for {
-				//fmt.Printf("-- DEBUG 4.1: procFunc %v, procFuncCh %v\n\n", proc.procFunc, proc.procFuncCh)
+				// Receive a copy of the message sent from the method handler.
 				m := <-proc.procFuncCh
 				fmt.Printf("--- DEBUG : procFunc call:kind=%v, Subject=%v, toNode=%v\n", proc.processKind, proc.subject, proc.subject.ToNode)
+
 				sayHelloNodes[m.FromNode] = struct{}{}
 
 				// update the prometheus metrics
@@ -70,28 +71,31 @@ func (s *server) ProcessesStart() {
 	// sending of say hello.
 	if s.configuration.PublisherServiceSayhello != 0 {
 		fmt.Printf("Starting SayHello Publisher: %#v\n", s.nodeName)
+
 		// TODO: Replace "central" name with variable below.
 		sub := newSubject(SayHello, EventNACK, "central")
 		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, []node{}, nil)
 
-		proc.procFunc = func() error {
-			for {
-				fmt.Printf("--- DEBUG : procFunc call:kind=%v, Subject=%v, toNode=%v\n", proc.processKind, proc.subject, proc.subject.ToNode)
+		// Define the procFun to be used for the process.
+		proc.procFunc = procFunc(
+			func() error {
+				for {
+					fmt.Printf("--- DEBUG : procFunc call:kind=%v, Subject=%v, toNode=%v\n", proc.processKind, proc.subject, proc.subject.ToNode)
 
-				d := fmt.Sprintf("Hello from %v\n", s.nodeName)
+					d := fmt.Sprintf("Hello from %v\n", s.nodeName)
 
-				m := Message{
-					ToNode:   "central",
-					FromNode: node(s.nodeName),
-					Data:     []string{d},
-					Method:   SayHello,
+					m := Message{
+						ToNode:   "central",
+						FromNode: node(s.nodeName),
+						Data:     []string{d},
+						Method:   SayHello,
+					}
+
+					sam := createSAMfromMessage(m)
+					proc.newMessagesCh <- []subjectAndMessage{sam}
+					time.Sleep(time.Second * time.Duration(s.configuration.PublisherServiceSayhello))
 				}
-
-				sam := createSAMfromMessage(m)
-				proc.newMessagesCh <- []subjectAndMessage{sam}
-				time.Sleep(time.Second * time.Duration(s.configuration.PublisherServiceSayhello))
-			}
-		}
+			})
 		go proc.spawnWorker(s)
 	}
 }

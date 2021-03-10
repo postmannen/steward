@@ -40,13 +40,12 @@ type process struct {
 	allowedReceivers map[node]struct{}
 	// methodsAvailable
 	methodsAvailable MethodsAvailable
-	// TESTING:
 	// Helper or service function that can do some kind of work
 	// for the process.
 	// The idea is that this can hold for example the map of the
 	// the hello nodes to limit shared resources in the system as
 	// a whole for sharing a map from the *server level.
-	procFunc func() error
+	procFunc procFunc
 	// The channel to send a messages to the procFunc go routine.
 	// This is typically used within the methodHandler.
 	procFuncCh chan Message
@@ -85,6 +84,16 @@ func newProcess(processes *processes, newMessagesCh chan<- []subjectAndMessage, 
 
 	return proc
 }
+
+// procFunc is a helper function that will do some extra work for
+// a message received for a process. This allows us to ACK back
+// to the publisher that the message was received, but we can let
+// the processFunc keep on working.
+// This can also be used to wrap in other types which we want to
+// work with that come from the outside. An example can be handling
+// of metrics which the message have no notion of, but a procFunc
+// can have that wrapped in from when it was constructed.
+type procFunc func() error
 
 // The purpose of this function is to check if we should start a
 // publisher or subscriber process, where a process is a go routine
