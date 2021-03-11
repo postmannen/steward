@@ -41,37 +41,66 @@ import (
 	"time"
 )
 
+// Method is used to specify the actual function/method that
+// is represented in a typed manner.
+type Method string
+
 // ------------------------------------------------------------
 // The constants that will be used throughout the system for
 // when specifying what kind of Method to send or work with.
 const (
-	// Shell command to be executed via f.ex. bash
+	// Execute a CLI command in for example bash or cmd.
+	// This is a command type, so the output of the command executed
+	// will directly showed in the ACK message received.
+	// The data field is a slice of strings where the first string
+	// value should be the command, and the following the arguments.
 	CLICommand Method = "CLICommand"
-	// Shell command to be executed via f.ex. bash
+	// Execute a CLI command in for example bash or cmd.
+	// This is an event type, where a message will be sent to a
+	// node with the command to execute and an ACK will be replied
+	// if it was delivered succesfully. The output of the command
+	// ran will be delivered back to the node where it was initiated
+	// as a new message.
+	// The data field is a slice of strings where the first string
+	// value should be the command, and the following the arguments.
 	CLICommandRequest Method = "CLICommandRequest"
-	// Shell command to be executed via f.ex. bash
+	// Execute a CLI command in for example bash or cmd.
+	// This is an event type, where a message will be sent to a
+	// node with the command to execute and an ACK will be replied
+	// if it was delivered succesfully. The output of the command
+	// ran will be delivered back to the node where it was initiated
+	// as a new message.
 	// The NOSEQ method will process messages as they are recived,
 	// and the reply back will be sent as soon as the process is
 	// done. No order are preserved.
+	// The data field is a slice of strings where the first string
+	// value should be the command, and the following the arguments.
 	CLICommandRequestNOSEQ Method = "CLICommandRequestNOSEQ"
-	// Will generate a reply for a CLICommandRequest
+	// Will generate a reply for a CLICommandRequest.
+	// This type is normally not used by the user when creating
+	// a message. It is used in creating the reply message with
+	// request messages. It is also used when defining a process to
+	// start up for receiving the CLICommand request messages.
+	// The data field is a slice of strings where the first string
+	// value should be the command, and the following the arguments.
 	CLICommandReply Method = "CLICommandReply"
-	// Send text logging to some host
+	// Send text logging to some host.
+	// A file with the full subject+hostName will be created on
+	// the receiving end.
+	// The data field is a slice of strings where the values of the
+	// slice will be written to the log file.
 	TextLogging Method = "TextLogging"
-	// Send Hello I'm here message
+	// Send Hello I'm here message.
 	SayHello Method = "SayHello"
-	// Error log methods to centralError
+	// Error log methods to centralError node.
 	ErrorLog Method = "ErrorLog"
 	// Echo request will ask the subscriber for a
-	// reply generated as a new message
+	// reply generated as a new message, and sent back to where
+	// the initial request was made.
 	ECHORequest Method = "ECHORequest"
 	// Will generate a reply for a ECHORequest
 	ECHOReply Method = "ECHOReply"
 )
-
-// Method is used to specify the actual function/method that
-// is represented in a typed manner.
-type Method string
 
 // The mapping of all the method constants specified, what type
 // it references, and the kind if it is an Event or Command, and
@@ -127,6 +156,9 @@ func (m Method) getHandler(method Method) methodHandler {
 	return mh
 }
 
+// The structure that works as a reference for all the methods and if
+// they are of the command or event type, and also if it is a ACK or
+// NACK message.
 type MethodsAvailable struct {
 	methodhandlers map[Method]methodHandler
 }
@@ -165,9 +197,6 @@ func (m methodCLICommand) getKind() CommandOrEvent {
 }
 
 func (m methodCLICommand) handler(proc process, message Message, node string) ([]byte, error) {
-	// Since the command to execute is at the first position in the
-	// slice we need to slice it out. The arguments are at the
-	// remaining positions.
 	c := message.Data[0]
 	a := message.Data[1:]
 	cmd := exec.Command(c, a...)
@@ -212,8 +241,6 @@ func (m methodTextLogging) handler(proc process, message Message, node string) (
 		if err != nil {
 			log.Printf("error: methodEventTextLogging.handler: failed to write to file: %v\n", err)
 		}
-
-		//s.subscriberServices.logCh <- []byte(d)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))

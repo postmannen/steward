@@ -9,6 +9,7 @@ import (
 // --- Message
 
 type Message struct {
+	// The node to send the message to
 	ToNode node `json:"toNode" yaml:"toNode"`
 	// The Unique ID of the message
 	ID int `json:"id" yaml:"id"`
@@ -17,15 +18,20 @@ type Message struct {
 	// method, what is this message doing, etc. CLI, syslog, etc.
 	Method   Method `json:"method" yaml:"method"`
 	FromNode node
-	// Reply wait timeout
+	// Normal Reply wait timeout
 	Timeout int `json:"timeout" yaml:"timeout"`
-	// Resend retries
+	// Normal Resend retries
 	Retries int `json:"retries" yaml:"retries"`
+	// The timeout of the new message created via a request event.
+	RequestTimeout int `json:"requestTimeout" yaml:"requestTimeout"`
+	// The retries of the new message created via a request event.
+	RequestRetries int `json:"requestRetries" yaml:"requestRetries"`
+	// Timeout for long a process should be allowed to operate
+	MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
 	// done is used to signal when a message is fully processed.
 	// This is used when choosing when to move the message from
 	// the ringbuffer into the time series log.
-	MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
-	done          chan struct{}
+	done chan struct{}
 }
 
 // gobEncodePayload will encode the message structure along with its
