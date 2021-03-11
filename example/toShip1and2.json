@@ -1,8 +1,0 @@
-[
-    {
-        "toNode": "*",
-        "data": ["bash","-c","tree ../"],
-        "method":"CLICommand"
-
-    }
-]

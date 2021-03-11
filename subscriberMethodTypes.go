@@ -18,8 +18,8 @@
 // func (m methodCommandCLICommand) handler(s *server, message Message, node string) ([]byte, error) {
 //  ...
 //  ...
-// 	outMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n%s---", node, message.ID, out))
-// 	return outMsg, nil
+// 	ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n%s---", node, message.ID, out))
+// 	return ackMsg, nil
 // }
 //
 // ---
@@ -52,6 +52,12 @@ const (
 	SayHello Method = "SayHello"
 	// Error log methods to centralError
 	ErrorLog Method = "ErrorLog"
+	// Echo request will ask the subscriber for a
+	// reply generated as a new message
+	ECHORequest Method = "ECHORequest"
+	// Echo reply will generate a response to a
+	// recived Echo request
+	ECHOReply Method = "ECHOReply"
 )
 
 // Method is used to specify the actual function/method that
@@ -79,6 +85,12 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				commandOrEvent: EventNACK,
 			},
 			ErrorLog: methodSubscriberErrorLog{
+				commandOrEvent: EventACK,
+			},
+			ECHORequest: methodSubscriberEchoRequest{
+				commandOrEvent: EventACK,
+			},
+			ECHOReply: methodSubscriberEchoReply{
 				commandOrEvent: EventACK,
 			},
 		},
@@ -147,8 +159,8 @@ func (m methodSubscriberCLICommand) handler(proc process, message Message, node 
 		log.Printf("error: execution of command failed: %v\n", err)
 	}
 
-	outMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n%s---", node, message.ID, out))
-	return outMsg, nil
+	ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n%s---", node, message.ID, out))
+	return ackMsg, nil
 }
 
 // -----
@@ -186,8 +198,8 @@ func (m methodSubscriberTextLogging) handler(proc process, message Message, node
 		//s.subscriberServices.logCh <- []byte(d)
 	}
 
-	outMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
-	return outMsg, nil
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
 }
 
 // -----
@@ -208,8 +220,8 @@ func (m methodSubscriberSayHello) handler(proc process, message Message, node st
 	// and can hold registries and handle special things for an individual process.
 	proc.procFuncCh <- message
 
-	outMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
-	return outMsg, nil
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
 }
 
 // ---
@@ -225,4 +237,49 @@ func (m methodSubscriberErrorLog) getKind() CommandOrEvent {
 func (m methodSubscriberErrorLog) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- Received error from: %v, containing: %v", message.FromNode, message.Data)
 	return nil, nil
+}
+
+// ---
+
+type methodSubscriberEchoRequest struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodSubscriberEchoRequest) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
+
+func (m methodSubscriberEchoRequest) handler(proc process, message Message, node string) ([]byte, error) {
+	log.Printf("<--- ECHO REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
+
+	// Create a new message for the reply, and put it on the
+	// ringbuffer to be published.
+	newMsg := Message{
+		ToNode:  message.FromNode,
+		Data:    []string{""},
+		Method:  ECHOReply,
+		Timeout: 3,
+		Retries: 3,
+	}
+	proc.newMessagesCh <- []subjectAndMessage{newSAM(newMsg)}
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+// ---
+
+type methodSubscriberEchoReply struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodSubscriberEchoReply) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
+
+func (m methodSubscriberEchoReply) handler(proc process, message Message, node string) ([]byte, error) {
+	log.Printf("<--- ECHO Reply received from: %v, containing: %v", message.FromNode, message.Data)
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
 }

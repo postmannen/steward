@@ -91,11 +91,27 @@ func (s *server) ProcessesStart() {
 						Method:   SayHello,
 					}
 
-					sam := createSAMfromMessage(m)
+					sam := newSAM(m)
 					proc.newMessagesCh <- []subjectAndMessage{sam}
 					time.Sleep(time.Second * time.Duration(s.configuration.PublisherServiceSayhello))
 				}
 			})
+		go proc.spawnWorker(s)
+	}
+
+	// Start a subscriber for ECHORequest messages
+	{
+		fmt.Printf("Starting Echo Request subscriber: %#v\n", s.nodeName)
+		sub := newSubject(ECHORequest, EventACK, s.nodeName)
+		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
+		go proc.spawnWorker(s)
+	}
+
+	// Start a subscriber for ECHOReply messages
+	{
+		fmt.Printf("Starting Echo Reply subscriber: %#v\n", s.nodeName)
+		sub := newSubject(ECHOReply, EventACK, s.nodeName)
+		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
 		go proc.spawnWorker(s)
 	}
 }

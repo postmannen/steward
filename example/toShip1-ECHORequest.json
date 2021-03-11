@@ -1,0 +1,7 @@
+[
+    {
+        "toNode": "ship1",
+        "data": [""],
+        "method":"ECHORequest"
+    }
+]

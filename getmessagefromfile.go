@@ -71,17 +71,17 @@ func jsonFromFileData(b []byte) ([]subjectAndMessage, error) {
 	// Range over all the messages parsed from json, and create a subject for
 	// each message.
 	for _, m := range MsgSlice {
-		sm := createSAMfromMessage(m)
+		sm := newSAM(m)
 		sam = append(sam, sm)
 	}
 
 	return sam, nil
 }
 
-// createSAMfromMessage will look up the correct values and value types to
+// newSAM will look up the correct values and value types to
 // be used in a subject for a Message, and return the a combined structure
 // of type subjectAndMessage.
-func createSAMfromMessage(m Message) subjectAndMessage {
+func newSAM(m Message) subjectAndMessage {
 	// We need to create a tempory method type to look up the kind for the
 	// real method for the message.
 	var mt Method

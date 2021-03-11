@@ -225,7 +225,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 					continue
 				}
 			}
-			log.Printf("<--- publisher: received ACK for message: %s\n", msgReply.Data)
+			log.Printf("<--- publisher: received ACK from:%v, for: %v, data: %s\n", message.ToNode, message.Method, msgReply.Data)
 		}
 		return
 	}
