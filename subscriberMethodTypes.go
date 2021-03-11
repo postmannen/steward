@@ -84,31 +84,31 @@ type Method string
 func (m Method) GetMethodsAvailable() MethodsAvailable {
 	ma := MethodsAvailable{
 		methodhandlers: map[Method]methodHandler{
-			CLICommand: methodSubscriberCLICommand{
+			CLICommand: methodCLICommand{
 				commandOrEvent: CommandACK,
 			},
-			CLICommandRequest: methodSubscriberCLICommandRequest{
+			CLICommandRequest: methodCLICommandRequest{
 				commandOrEvent: EventACK,
 			},
-			CLICommandRequestNOSEQ: methodSubscriberCLICommandRequestNOSEQ{
+			CLICommandRequestNOSEQ: methodCLICommandRequestNOSEQ{
 				commandOrEvent: EventACK,
 			},
-			CLICommandReply: methodSubscriberCLICommandReply{
+			CLICommandReply: methodCLICommandReply{
 				commandOrEvent: EventACK,
 			},
-			TextLogging: methodSubscriberTextLogging{
+			TextLogging: methodTextLogging{
 				commandOrEvent: EventACK,
 			},
-			SayHello: methodSubscriberSayHello{
+			SayHello: methodSayHello{
 				commandOrEvent: EventNACK,
 			},
-			ErrorLog: methodSubscriberErrorLog{
+			ErrorLog: methodErrorLog{
 				commandOrEvent: EventACK,
 			},
-			ECHORequest: methodSubscriberEchoRequest{
+			ECHORequest: methodEchoRequest{
 				commandOrEvent: EventACK,
 			},
-			ECHOReply: methodSubscriberEchoReply{
+			ECHOReply: methodEchoReply{
 				commandOrEvent: EventACK,
 			},
 		},
@@ -156,15 +156,15 @@ type methodHandler interface {
 
 // -----
 
-type methodSubscriberCLICommand struct {
+type methodCLICommand struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodSubscriberCLICommand) getKind() CommandOrEvent {
+func (m methodCLICommand) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodSubscriberCLICommand) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodCLICommand) handler(proc process, message Message, node string) ([]byte, error) {
 	// Since the command to execute is at the first position in the
 	// slice we need to slice it out. The arguments are at the
 	// remaining positions.
@@ -183,15 +183,15 @@ func (m methodSubscriberCLICommand) handler(proc process, message Message, node 
 
 // -----
 
-type methodSubscriberTextLogging struct {
+type methodTextLogging struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodSubscriberTextLogging) getKind() CommandOrEvent {
+func (m methodTextLogging) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodSubscriberTextLogging) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodTextLogging) handler(proc process, message Message, node string) ([]byte, error) {
 	sub := Subject{
 		ToNode:         string(message.ToNode),
 		CommandOrEvent: proc.subject.CommandOrEvent,
@@ -222,15 +222,15 @@ func (m methodSubscriberTextLogging) handler(proc process, message Message, node
 
 // -----
 
-type methodSubscriberSayHello struct {
+type methodSayHello struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodSubscriberSayHello) getKind() CommandOrEvent {
+func (m methodSayHello) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodSubscriberSayHello) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodSayHello) handler(proc process, message Message, node string) ([]byte, error) {
 
 	log.Printf("<--- Received hello from %#v\n", message.FromNode)
 
@@ -244,30 +244,30 @@ func (m methodSubscriberSayHello) handler(proc process, message Message, node st
 
 // ---
 
-type methodSubscriberErrorLog struct {
+type methodErrorLog struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodSubscriberErrorLog) getKind() CommandOrEvent {
+func (m methodErrorLog) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodSubscriberErrorLog) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodErrorLog) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- Received error from: %v, containing: %v", message.FromNode, message.Data)
 	return nil, nil
 }
 
 // ---
 
-type methodSubscriberEchoRequest struct {
+type methodEchoRequest struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodSubscriberEchoRequest) getKind() CommandOrEvent {
+func (m methodEchoRequest) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodSubscriberEchoRequest) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodEchoRequest) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- ECHO REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 
 	// Create a new message for the reply, and put it on the
@@ -287,32 +287,32 @@ func (m methodSubscriberEchoRequest) handler(proc process, message Message, node
 
 // ---
 
-type methodSubscriberEchoReply struct {
+type methodEchoReply struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodSubscriberEchoReply) getKind() CommandOrEvent {
+func (m methodEchoReply) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodSubscriberEchoReply) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodEchoReply) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- ECHO Reply received from: %v, containing: %v", message.FromNode, message.Data)
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
 }
 
-// --- methodSubscriberCLICommandRequest
+// ---
 
-type methodSubscriberCLICommandRequest struct {
+type methodCLICommandRequest struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodSubscriberCLICommandRequest) getKind() CommandOrEvent {
+func (m methodCLICommandRequest) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodSubscriberCLICommandRequest) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodCLICommandRequest) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- CLICommand REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 
 	c := message.Data[0]
@@ -342,20 +342,20 @@ func (m methodSubscriberCLICommandRequest) handler(proc process, message Message
 	return ackMsg, nil
 }
 
-// --- methodSubscriberCLICommandRequestNOSEQ
+// --- methodCLICommandRequestNOSEQ
 
-type methodSubscriberCLICommandRequestNOSEQ struct {
+type methodCLICommandRequestNOSEQ struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodSubscriberCLICommandRequestNOSEQ) getKind() CommandOrEvent {
+func (m methodCLICommandRequestNOSEQ) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
 // The NOSEQ method will process messages as they are recived,
 // and the reply back will be sent as soon as the process is
 // done. No order are preserved.
-func (m methodSubscriberCLICommandRequestNOSEQ) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodCLICommandRequestNOSEQ) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- CLICommand REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 
 	go func() {
@@ -391,15 +391,15 @@ func (m methodSubscriberCLICommandRequestNOSEQ) handler(proc process, message Me
 
 // ---
 
-type methodSubscriberCLICommandReply struct {
+type methodCLICommandReply struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodSubscriberCLICommandReply) getKind() CommandOrEvent {
+func (m methodCLICommandReply) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodSubscriberCLICommandReply) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodCLICommandReply) handler(proc process, message Message, node string) ([]byte, error) {
 	fmt.Printf("### %v\n", message.Data)
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
