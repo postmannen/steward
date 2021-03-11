@@ -1,0 +1,11 @@
+[
+    {
+        
+        "toNode": "ship1",
+        "data": ["bash","-c","tree ../"],
+        "method":"CLICommandRequestNOSEQ",
+        "timeout":10,
+        "retries":3,
+        "MethodTimeout": 0
+    }
+]

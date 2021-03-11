@@ -17,12 +17,15 @@ type Message struct {
 	// method, what is this message doing, etc. CLI, syslog, etc.
 	Method   Method `json:"method" yaml:"method"`
 	FromNode node
+	// Reply wait timeout
+	Timeout int `json:"timeout" yaml:"timeout"`
+	// Resend retries
+	Retries int `json:"retries" yaml:"retries"`
 	// done is used to signal when a message is fully processed.
 	// This is used when choosing when to move the message from
 	// the ringbuffer into the time series log.
-	Timeout int `json:"timeout" yaml:"timeout"`
-	Retries int `json:"retries" yaml:"retries"`
-	done    chan struct{}
+	MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
+	done          chan struct{}
 }
 
 // gobEncodePayload will encode the message structure along with its

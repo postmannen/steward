@@ -38,6 +38,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 )
 
 // ------------------------------------------------------------
@@ -46,6 +47,15 @@ import (
 const (
 	// Shell command to be executed via f.ex. bash
 	CLICommand Method = "CLICommand"
+	// Shell command to be executed via f.ex. bash
+	CLICommandRequest Method = "CLICommandRequest"
+	// Shell command to be executed via f.ex. bash
+	// The NOSEQ method will process messages as they are recived,
+	// and the reply back will be sent as soon as the process is
+	// done. No order are preserved.
+	CLICommandRequestNOSEQ Method = "CLICommandRequestNOSEQ"
+	// Will generate a reply for a CLICommandRequest
+	CLICommandReply Method = "CLICommandReply"
 	// Send text logging to some host
 	TextLogging Method = "TextLogging"
 	// Send Hello I'm here message
@@ -55,8 +65,7 @@ const (
 	// Echo request will ask the subscriber for a
 	// reply generated as a new message
 	ECHORequest Method = "ECHORequest"
-	// Echo reply will generate a response to a
-	// recived Echo request
+	// Will generate a reply for a ECHORequest
 	ECHOReply Method = "ECHOReply"
 )
 
@@ -77,6 +86,15 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 		methodhandlers: map[Method]methodHandler{
 			CLICommand: methodSubscriberCLICommand{
 				commandOrEvent: CommandACK,
+			},
+			CLICommandRequest: methodSubscriberCLICommandRequest{
+				commandOrEvent: EventACK,
+			},
+			CLICommandRequestNOSEQ: methodSubscriberCLICommandRequestNOSEQ{
+				commandOrEvent: EventACK,
+			},
+			CLICommandReply: methodSubscriberCLICommandReply{
+				commandOrEvent: EventACK,
 			},
 			TextLogging: methodSubscriberTextLogging{
 				commandOrEvent: EventACK,
@@ -279,6 +297,110 @@ func (m methodSubscriberEchoReply) getKind() CommandOrEvent {
 
 func (m methodSubscriberEchoReply) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- ECHO Reply received from: %v, containing: %v", message.FromNode, message.Data)
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+// --- methodSubscriberCLICommandRequest
+
+type methodSubscriberCLICommandRequest struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodSubscriberCLICommandRequest) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
+
+func (m methodSubscriberCLICommandRequest) handler(proc process, message Message, node string) ([]byte, error) {
+	log.Printf("<--- CLICommand REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
+
+	c := message.Data[0]
+	a := message.Data[1:]
+	cmd := exec.Command(c, a...)
+	//cmd.Stdout = os.Stdout
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("error: execution of command failed: %v\n", err)
+	}
+
+	time.Sleep(time.Second * time.Duration(message.MethodTimeout))
+
+	// Create a new message for the reply, and put it on the
+	// ringbuffer to be published.
+	newMsg := Message{
+		ToNode:  message.FromNode,
+		Data:    []string{string(out)},
+		Method:  CLICommandReply,
+		Timeout: 3,
+		Retries: 3,
+	}
+	fmt.Printf("** %#v\n", newMsg)
+	proc.newMessagesCh <- []subjectAndMessage{newSAM(newMsg)}
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+// --- methodSubscriberCLICommandRequestNOSEQ
+
+type methodSubscriberCLICommandRequestNOSEQ struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodSubscriberCLICommandRequestNOSEQ) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
+
+// The NOSEQ method will process messages as they are recived,
+// and the reply back will be sent as soon as the process is
+// done. No order are preserved.
+func (m methodSubscriberCLICommandRequestNOSEQ) handler(proc process, message Message, node string) ([]byte, error) {
+	log.Printf("<--- CLICommand REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
+
+	go func() {
+
+		c := message.Data[0]
+		a := message.Data[1:]
+		cmd := exec.Command(c, a...)
+		//cmd.Stdout = os.Stdout
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Printf("error: execution of command failed: %v\n", err)
+		}
+
+		time.Sleep(time.Second * time.Duration(message.MethodTimeout))
+
+		// Create a new message for the reply, and put it on the
+		// ringbuffer to be published.
+		newMsg := Message{
+			ToNode:  message.FromNode,
+			Data:    []string{string(out)},
+			Method:  CLICommandReply,
+			Timeout: 3,
+			Retries: 3,
+		}
+		fmt.Printf("** %#v\n", newMsg)
+		proc.newMessagesCh <- []subjectAndMessage{newSAM(newMsg)}
+
+	}()
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+// ---
+
+type methodSubscriberCLICommandReply struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodSubscriberCLICommandReply) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
+
+func (m methodSubscriberCLICommandReply) handler(proc process, message Message, node string) ([]byte, error) {
+	fmt.Printf("### %v\n", message.Data)
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil

@@ -114,4 +114,28 @@ func (s *server) ProcessesStart() {
 		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
 		go proc.spawnWorker(s)
 	}
+
+	// Start a subscriber for CLICommandRequest messages
+	{
+		fmt.Printf("Starting CLICommand Request subscriber: %#v\n", s.nodeName)
+		sub := newSubject(CLICommandRequest, EventACK, s.nodeName)
+		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
+		go proc.spawnWorker(s)
+	}
+
+	// Start a subscriber for CLICommandRequest messages
+	{
+		fmt.Printf("Starting CLICommand NOSEQ Request subscriber: %#v\n", s.nodeName)
+		sub := newSubject(CLICommandRequestNOSEQ, EventACK, s.nodeName)
+		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
+		go proc.spawnWorker(s)
+	}
+
+	// Start a subscriber for CLICommandReply messages
+	{
+		fmt.Printf("Starting CLICommand Reply subscriber: %#v\n", s.nodeName)
+		sub := newSubject(CLICommandReply, EventACK, s.nodeName)
+		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
+		go proc.spawnWorker(s)
+	}
 }
