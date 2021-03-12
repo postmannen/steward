@@ -77,7 +77,11 @@ func jsonFromFileData(b []byte) ([]subjectAndMessage, error) {
 	// Range over all the messages parsed from json, and create a subject for
 	// each message.
 	for _, m := range MsgSlice {
-		sm := newSAM(m)
+		sm, err := newSAM(m)
+		if err != nil {
+			log.Printf("error: jsonFromFileData: %v\n", err)
+			continue
+		}
 		sam = append(sam, sm)
 	}
 
@@ -87,14 +91,21 @@ func jsonFromFileData(b []byte) ([]subjectAndMessage, error) {
 // newSAM will look up the correct values and value types to
 // be used in a subject for a Message, and return the a combined structure
 // of type subjectAndMessage.
-func newSAM(m Message) subjectAndMessage {
+func newSAM(m Message) (subjectAndMessage, error) {
 	// We need to create a tempory method type to look up the kind for the
 	// real method for the message.
 	var mt Method
 
+	//fmt.Printf("-- \n getKind contains: %v\n\n", mt.getHandler(m.Method).getKind())
+
+	tmpH := mt.getHandler(m.Method)
+	if tmpH == nil {
+		return subjectAndMessage{}, fmt.Errorf("error: method value did not exist in map")
+	}
+
 	sub := Subject{
 		ToNode:         string(m.ToNode),
-		CommandOrEvent: mt.getHandler(m.Method).getKind(),
+		CommandOrEvent: tmpH.getKind(),
 		Method:         m.Method,
 	}
 
@@ -103,7 +114,7 @@ func newSAM(m Message) subjectAndMessage {
 		Message: m,
 	}
 
-	return sm
+	return sm, nil
 }
 
 // readTruncateMessageFile, will read all the messages in the given

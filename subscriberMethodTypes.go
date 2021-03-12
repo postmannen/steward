@@ -306,7 +306,13 @@ func (m methodEchoRequest) handler(proc process, message Message, node string) (
 		Timeout: 3,
 		Retries: 3,
 	}
-	proc.newMessagesCh <- []subjectAndMessage{newSAM(newMsg)}
+
+	nSAM, err := newSAM(newMsg)
+	if err != nil {
+		// In theory the system should drop the message before it reaches here.
+		log.Printf("error: methodEchoRequest: %v\n", err)
+	}
+	proc.newMessagesCh <- []subjectAndMessage{nSAM}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
@@ -363,7 +369,13 @@ func (m methodCLICommandRequest) handler(proc process, message Message, node str
 		Retries: 3,
 	}
 	fmt.Printf("** %#v\n", newMsg)
-	proc.newMessagesCh <- []subjectAndMessage{newSAM(newMsg)}
+
+	nSAM, err := newSAM(newMsg)
+	if err != nil {
+		// In theory the system should drop the message before it reaches here.
+		log.Printf("error: methodCLICommandRequest: %v\n", err)
+	}
+	proc.newMessagesCh <- []subjectAndMessage{nSAM}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
@@ -408,7 +420,13 @@ func (m methodCLICommandRequestNOSEQ) handler(proc process, message Message, nod
 			Retries: 3,
 		}
 		fmt.Printf("** %#v\n", newMsg)
-		proc.newMessagesCh <- []subjectAndMessage{newSAM(newMsg)}
+
+		nSAM, err := newSAM(newMsg)
+		if err != nil {
+			// In theory the system should drop the message before it reaches here.
+			log.Printf("error: methodCLICommandRequestNOSEQ: %v\n", err)
+		}
+		proc.newMessagesCh <- []subjectAndMessage{nSAM}
 
 	}()
 

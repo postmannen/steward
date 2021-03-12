@@ -54,7 +54,6 @@ type server struct {
 	newMessagesCh chan []subjectAndMessage
 	// errorKernel is doing all the error handling like what to do if
 	// an error occurs.
-	// TODO: Will also send error messages to cental error subscriber.
 	errorKernel *errorKernel
 	// metric exporter
 	metrics *metrics
@@ -132,8 +131,6 @@ func (s *server) Start() {
 	// }
 
 	// Start up the predefined subscribers.
-	// TODO: What to subscribe on should be handled via flags, or config
-	// files.
 	s.ProcessesStart()
 
 	time.Sleep(time.Second * 1)
@@ -244,11 +241,16 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 			// it was unable to process the message with the reason
 			// why ?
 			if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
-				log.Printf("error: the method do not exist, message dropped: %v\n", sam.Message.Method)
+				er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
+				log.Printf("%v\n", er)
+				sendErrorLogMessage(s.newMessagesCh, node(s.nodeName), er)
 				continue
 			}
 			if !coeAvailable.CheckIfExists(sam.Subject.CommandOrEvent, sam.Subject) {
-				log.Printf("error: the command or event do not exist, message dropped: %v\n", sam.Subject.CommandOrEvent)
+				er := fmt.Errorf("error: routeMessagesToProcess: the command or event do not exist, message dropped: %v", sam.Message.Method)
+				log.Printf("%v\n", er)
+				sendErrorLogMessage(s.newMessagesCh, node(s.nodeName), er)
+
 				continue
 			}
 

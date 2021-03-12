@@ -2,6 +2,7 @@ package steward
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -72,7 +73,6 @@ func (s *server) ProcessesStart() {
 	if s.configuration.PublisherServiceSayhello != 0 {
 		fmt.Printf("Starting SayHello Publisher: %#v\n", s.nodeName)
 
-		// TODO: Replace "central" name with variable below.
 		sub := newSubject(SayHello, EventNACK, s.configuration.CentralNodeName)
 		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, []node{}, nil)
 
@@ -91,7 +91,11 @@ func (s *server) ProcessesStart() {
 						Method:   SayHello,
 					}
 
-					sam := newSAM(m)
+					sam, err := newSAM(m)
+					if err != nil {
+						// In theory the system should drop the message before it reaches here.
+						log.Printf("error: ProcessesStart: %v\n", err)
+					}
 					proc.newMessagesCh <- []subjectAndMessage{sam}
 					time.Sleep(time.Second * time.Duration(s.configuration.PublisherServiceSayhello))
 				}
