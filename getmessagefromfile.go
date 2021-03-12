@@ -34,9 +34,11 @@ func (s *server) getMessagesFromFile(directoryToCheck string, fileName string, i
 
 		// unmarshal the JSON into a struct
 		js, err := jsonFromFileData(b)
-		// fmt.Printf("*** OUTPUT AFTER UNMARSHALING JSON: %#v\n", js)
 		if err != nil {
-			log.Printf("%v\n", err)
+			er := fmt.Errorf("error: malformed json: %v", err)
+			log.Printf("%v\n", er)
+			sendErrorLogMessage(s.newMessagesCh, node(s.nodeName), er)
+			continue
 		}
 
 		for i := range js {
@@ -49,6 +51,9 @@ func (s *server) getMessagesFromFile(directoryToCheck string, fileName string, i
 		// Send the data back to be consumed
 		inputFromFileCh <- js
 	}
+	er := fmt.Errorf("error: getMessagesFromFile stopped")
+	log.Printf("%v\n", er)
+	sendErrorLogMessage(s.newMessagesCh, node(s.nodeName), er)
 }
 
 type subjectAndMessage struct {
@@ -56,12 +61,13 @@ type subjectAndMessage struct {
 	Message `json:"message" yaml:"message"`
 }
 
+// jsonFromFileData will range over the message given in json format. For
+// each element found the Message type will be converted into a SubjectAndMessage
+// type value and appended to a slice, and the slice is returned to the caller.
 func jsonFromFileData(b []byte) ([]subjectAndMessage, error) {
 	MsgSlice := []Message{}
 
 	err := json.Unmarshal(b, &MsgSlice)
-	//fmt.Printf("*** OUTPUT DIRECTLY AFTER UNMARSHALING JSON: %#v\n", MsgSlice)
-	// TODO: Look into also marshaling from yaml and toml later
 	if err != nil {
 		return nil, fmt.Errorf("error: unmarshal of file failed: %#v", err)
 	}
@@ -134,6 +140,8 @@ func readTruncateMessageFile(fileName string) ([]byte, error) {
 	return lines, nil
 }
 
+// Start the file watcher that will check if the in pipe for new operator
+// messages are updated with new content.
 func fileWatcherStart(directoryToCheck string, fileUpdated chan bool) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
