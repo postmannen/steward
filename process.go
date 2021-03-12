@@ -135,7 +135,7 @@ func (p process) spawnWorker(s *server) {
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: procFunc failed: %v", err)
 					log.Printf("%v\n", er)
-					sendErrorLogMessage(p.newMessagesCh, node(p.node), err)
+					sendErrorLogMessage(p.newMessagesCh, node(p.node), er)
 				}
 			}()
 		}
@@ -156,7 +156,7 @@ func (p process) spawnWorker(s *server) {
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: procFunc failed: %v", err)
 					log.Printf("%v\n", er)
-					sendErrorLogMessage(p.newMessagesCh, node(p.node), err)
+					sendErrorLogMessage(p.newMessagesCh, node(p.node), er)
 				}
 			}()
 		}
@@ -177,7 +177,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		if err != nil {
 			er := fmt.Errorf("error: createDataPayload: %v", err)
 			log.Printf("%v\n", er)
-			sendErrorLogMessage(p.newMessagesCh, node(p.node), err)
+			sendErrorLogMessage(p.newMessagesCh, node(p.node), er)
 			continue
 		}
 
@@ -199,7 +199,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		if err != nil {
 			er := fmt.Errorf("error: nc.SubscribeSync failed: failed to create reply message: %v", err)
 			log.Printf("%v\n", er)
-			sendErrorLogMessage(p.newMessagesCh, node(p.node), err)
+			sendErrorLogMessage(p.newMessagesCh, node(p.node), er)
 			continue
 		}
 
@@ -208,7 +208,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		if err != nil {
 			er := fmt.Errorf("error: publish failed: %v", err)
 			log.Printf("%v\n", er)
-			sendErrorLogMessage(p.newMessagesCh, node(p.node), err)
+			sendErrorLogMessage(p.newMessagesCh, node(p.node), er)
 			continue
 		}
 
@@ -267,7 +267,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 	if err != nil {
 		er := fmt.Errorf("error: gob decoding failed: %v", err)
 		log.Printf("%v\n", er)
-		sendErrorLogMessage(s.newMessagesCh, node(thisNode), err)
+		sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
 	}
 
 	switch {
@@ -276,7 +276,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.CommandOrEvent)
 			log.Printf("%v\n", er)
-			sendErrorLogMessage(s.newMessagesCh, node(thisNode), err)
+			sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
 		}
 
 		out := []byte("not allowed from " + message.FromNode)
@@ -296,7 +296,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: failed to execute event: %v", err)
 				log.Printf("%v\n", er)
-				sendErrorLogMessage(s.newMessagesCh, node(thisNode), err)
+				sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
 			}
 		} else {
 			log.Printf("info: we don't allow receiving from: %v, %v\n", message.FromNode, p.subject)
@@ -311,7 +311,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.CommandOrEvent)
 			log.Printf("%v\n", er)
-			sendErrorLogMessage(s.newMessagesCh, node(thisNode), err)
+			sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
 		}
 
 		// Start the method handler for that specific subject type.
@@ -327,12 +327,12 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		if err != nil {
 			er := fmt.Errorf("error: subscriberHandler: failed to execute event: %v", err)
 			log.Printf("%v\n", er)
-			sendErrorLogMessage(s.newMessagesCh, node(thisNode), err)
+			sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
 		}
 	default:
 		er := fmt.Errorf("info: did not find that specific type of command: %#v", p.subject.CommandOrEvent)
 		log.Printf("%v\n", er)
-		sendErrorLogMessage(s.newMessagesCh, node(thisNode), err)
+		sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
 
 	}
 }

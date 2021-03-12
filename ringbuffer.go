@@ -90,7 +90,9 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 	func() {
 		s, err := r.dumpBucket(samValueBucket)
 		if err != nil {
-			log.Printf("error: retreival of values from k/v store failed: %v\n", err)
+			er := fmt.Errorf("error: fillBuffer: retreival of values from k/v store failed: %v", err)
+			log.Printf("%v\n", er)
+			sendErrorLogMessage(r.newMessagesCh, node(r.nodeName), er)
 		}
 
 		for _, v := range s {
@@ -113,7 +115,9 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 
 		// Check if the command or event exists in commandOrEvent.go
 		if !coeAvailable.CheckIfExists(v.CommandOrEvent, v.Subject) {
-			log.Printf("error: the event or command type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v\n", coeAvailableValues)
+			er := fmt.Errorf("error: fillBuffer: the event or command type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v", coeAvailableValues)
+			log.Printf("%v\n", er)
+			sendErrorLogMessage(r.newMessagesCh, node(r.nodeName), er)
 
 			fmt.Println()
 			// if it was not a valid value, we jump back up, and
@@ -145,7 +149,9 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 
 		js, err := json.Marshal(samV)
 		if err != nil {
-			log.Printf("error: gob encoding samValue: %v\n", err)
+			er := fmt.Errorf("error:fillBuffer gob encoding samValue: %v", err)
+			log.Printf("%v\n", er)
+			sendErrorLogMessage(r.newMessagesCh, node(r.nodeName), er)
 		}
 
 		// Store the incomming message in key/value store
@@ -153,7 +159,7 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 		if err != nil {
 			er := fmt.Errorf("error: dbUpdate samValue failed: %v", err)
 			log.Printf("%v\n", er)
-			sendErrorLogMessage(r.newMessagesCh, node(r.nodeName), err)
+			sendErrorLogMessage(r.newMessagesCh, node(r.nodeName), er)
 
 		}
 
