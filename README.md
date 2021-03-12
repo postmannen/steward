@@ -34,7 +34,6 @@ All code in this repository are to be concidered not-production-ready. The code 
   - Command: Something to be executed on the message received. An example can be a shell command.
   - Event: Something that have happened. An example can be transfer of syslog data from a host.
 
-
 ## Features
 
 - By default the system guarantees that the order of the messages are handled by the subscriber in the order they where sent. So if a network link is down when the message is being sent, it will automatically be rescheduled at the specified interval with the given number of retries.
@@ -63,8 +62,6 @@ All code in this repository are to be concidered not-production-ready. The code 
 
 - Message types of both ACK and NACK, so we can decide if we want or don't want an Acknowledge if a message was delivered succesfully.
 Example: We probably want an ACK when sending some CLICommand to be executed, but we don't care for an acknowledge (NACK) when we send an "hello I'm here" event.
-
-
 
 - Prometheus exporters for Metrics
 
@@ -96,6 +93,8 @@ clone the repository, then cd `./steward/cmd` and do `go build -o steward`, and 
 ```
 
 ### How to Run
+
+The broker for messaging is Nats-server from <https://nats.io>. Download, run it, and use the `--brokerAddress` flag on Steward to point to it. 
 
 On some central server which will act as your command and control server.
 
