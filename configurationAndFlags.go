@@ -54,11 +54,6 @@ func newConfigurationDefaults() Configuration {
 }
 
 func (c *Configuration) CheckFlags() {
-	// TODO: Look into how to be able to specify the location via flag,
-	// now it is only using the default location which is /etc.
-	// The problem is that the flags are parsed after the default config
-	// is set, so we need a way to get that location out of the flag when
-	// creating the config file the first time.
 
 	// Create an empty default config
 	var fc Configuration
@@ -70,7 +65,7 @@ func (c *Configuration) CheckFlags() {
 		fc = newConfigurationDefaults()
 	}
 
-	flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "folder who contains the config file")
+	flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "folder who contains the config file. Defaults to ./etc/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.NodeName, "node", fc.NodeName, "some unique string to identify this Edge unit")
 	flag.StringVar(&c.BrokerAddress, "brokerAddress", fc.BrokerAddress, "the address of the message broker")
 	flag.StringVar(&c.ProfilingPort, "profilingPort", fc.ProfilingPort, "The number of the profiling port")
