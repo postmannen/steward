@@ -237,9 +237,6 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 		for samTmp := range ringBufferOutCh {
 			sam := samTmp.Data
 			// Check if the format of the message is correct.
-			// TODO: Send a message to the error kernel here that
-			// it was unable to process the message with the reason
-			// why ?
 			if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
 				er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
 				log.Printf("%v\n", er)

@@ -28,8 +28,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// TODO: Add a context
-	// Start the messaging server
 	go s.Start()
 
 	select {}

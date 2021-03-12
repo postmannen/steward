@@ -289,13 +289,7 @@ and for a shell command of type command to a host named "ship2"
 
 - FIX so it can handle multiple slices of input for inmsg.txt
 
-- Add config file options to use when starting up the program for options.
-
-- Rename CLICommand to cli
-
 - Make a scraper that first send an EventACK, and the content of the scraping is returned by a node as a new EventACK back the where the initial event originated.
-
-- Go through all processes and check that the error is handled correctly, and also reported back on the error subject to the master supervisor.
 
 - Implement a log scraper method in `tail -f` style ?
 
@@ -304,6 +298,8 @@ and for a shell command of type command to a host named "ship2"
 - Encryption between Node instances and brokers.
 
 - Authentication between node instances and brokers.
+
+- Implement context to be able to stop processes, and message handlers.
 
 ## Overview
 
