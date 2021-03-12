@@ -37,18 +37,22 @@ type ringBuffer struct {
 	totalMessagesIndex int
 	mu                 sync.Mutex
 	permStore          chan string
+	nodeName           node
+	newMessagesCh      chan []subjectAndMessage
 }
 
 // newringBuffer is a push/pop storage for values.
-func newringBuffer(size int, dbFileName string) *ringBuffer {
+func newringBuffer(size int, dbFileName string, nodeName node, newMessagesCh chan []subjectAndMessage) *ringBuffer {
 	db, err := bolt.Open(dbFileName, 0600, nil)
 	if err != nil {
 		log.Printf("error: failed to open db: %v\n", err)
 	}
 	return &ringBuffer{
-		bufData:   make(chan samDBValue, size),
-		db:        db,
-		permStore: make(chan string),
+		bufData:       make(chan samDBValue, size),
+		db:            db,
+		permStore:     make(chan string),
+		nodeName:      nodeName,
+		newMessagesCh: newMessagesCh,
 	}
 }
 
@@ -56,11 +60,9 @@ func newringBuffer(size int, dbFileName string) *ringBuffer {
 // put the messages on a buffered channel
 // and deliver messages out when requested on the outCh.
 func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan samDBValue, defaultMessageTimeout int, defaultMessageRetries int) {
+
 	// Starting both writing and reading in separate go routines so we
 	// can write and read concurrently.
-
-	// TODO: At startup, check if there are unprocessed messages in
-	// the K/V store, and process them.
 
 	const samValueBucket string = "samValueBucket"
 	const indexValueBucket string = "indexValueBucket"
@@ -149,8 +151,10 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 		// Store the incomming message in key/value store
 		err = r.dbUpdate(r.db, samValueBucket, strconv.Itoa(dbID), js)
 		if err != nil {
-			// TODO: Handle error
-			log.Printf("error: dbUpdate samValue failed: %v\n", err)
+			er := fmt.Errorf("error: dbUpdate samValue failed: %v", err)
+			log.Printf("%v\n", er)
+			sendErrorLogMessage(r.newMessagesCh, node(r.nodeName), err)
+
 		}
 
 		// Put the message on the inmemory buffer.

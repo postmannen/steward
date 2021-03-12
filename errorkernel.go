@@ -15,7 +15,7 @@ import (
 // errorKernel is the structure that will hold all the error
 // handling values and logic.
 type errorKernel struct {
-	// TODO: The errorKernel should probably have a concept
+	// NOTE: The errorKernel should probably have a concept
 	// of error-state which is a map of all the processes,
 	// how many times a process have failed over the same
 	// message etc...
@@ -34,14 +34,15 @@ func newErrorKernel() *errorKernel {
 // startErrorKernel will start the error kernel and check if there
 // have been reveived any errors from any of the processes, and
 // handle them appropriately.
-// TODO: Since a process will be locked while waiting to send the error
+//
+// NOTE: Since a process will be locked while waiting to send the error
 // on the errorCh maybe it makes sense to have a channel inside the
 // processes error handling with a select so we can send back to the
 // process if it should continue or not based not based on how severe
 // the error where. This should be right after sending the error
 // sending in the process.
 func (e *errorKernel) startErrorKernel(newMessagesCh chan<- []subjectAndMessage) {
-	// TODO: For now it will just print the error messages to the
+	// NOTE: For now it will just print the error messages to the
 	// console.
 	go func() {
 
@@ -52,7 +53,7 @@ func (e *errorKernel) startErrorKernel(newMessagesCh chan<- []subjectAndMessage)
 			// also concurrently, so the handler is started in it's
 			// own go routine
 			go func() {
-				// TODO: Here we should check the severity of the error,
+				// NOTE: Here we should check the severity of the error,
 				// and also possibly the the error-state of the process
 				// that fails, so we can decide if we should stop and
 				// start a new process to replace to old one, or if we

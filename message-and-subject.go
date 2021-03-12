@@ -36,7 +36,6 @@ type Message struct {
 
 // gobEncodePayload will encode the message structure along with its
 // valued in gob binary format.
-// TODO: Check if it adds value to compress with gzip.
 func gobEncodeMessage(m Message) ([]byte, error) {
 	var buf bytes.Buffer
 	gobEnc := gob.NewEncoder(&buf)

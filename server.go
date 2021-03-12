@@ -204,7 +204,7 @@ func createErrorMsgContent(FromNode node, theError error) subjectAndMessage {
 func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subjectAndMessage) {
 	// Prepare and start a new ring buffer
 	const bufferSize int = 1000
-	rb := newringBuffer(bufferSize, dbFileName)
+	rb := newringBuffer(bufferSize, dbFileName, node(s.nodeName), s.newMessagesCh)
 	inCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValue)
 	// start the ringbuffer.
