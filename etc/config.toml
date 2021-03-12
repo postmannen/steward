@@ -1,5 +1,6 @@
 BrokerAddress = "0"
 CentralErrorLogger = true
+CentralNodeName = "central"
 ConfigFolder = "./etc"
 DefaultMessageRetries = 3
 DefaultMessageTimeout = 5

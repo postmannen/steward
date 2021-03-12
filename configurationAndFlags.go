@@ -32,7 +32,7 @@ type Configuration struct {
 	// Publisher data folder
 	SubscribersDataFolder string
 	// central node to receive messages published from nodes
-	centralNodeName string
+	CentralNodeName string
 }
 
 func NewConfiguration() *Configuration {
@@ -40,6 +40,7 @@ func NewConfiguration() *Configuration {
 	return &c
 }
 
+// Default configuration
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
 		ConfigFolder:             "./etc",
@@ -51,7 +52,7 @@ func newConfigurationDefaults() Configuration {
 		DefaultMessageRetries:    1,
 		PublisherServiceSayhello: 30,
 		SubscribersDataFolder:    "./data",
-		centralNodeName:          "",
+		CentralNodeName:          "",
 	}
 	return c
 }
@@ -78,7 +79,7 @@ func (c *Configuration) CheckFlags() {
 	flag.IntVar(&c.DefaultMessageRetries, "defaultMessageRetries", fc.DefaultMessageRetries, "default amount of retries that will be done before a message is thrown away, and out of the system")
 	flag.IntVar(&c.PublisherServiceSayhello, "publisherServiceSayhello", fc.PublisherServiceSayhello, "Make the current node send hello messages to central at given interval in seconds")
 	flag.StringVar(&c.SubscribersDataFolder, "subscribersDataFolder", fc.SubscribersDataFolder, "The data folder where subscribers are allowed to write their data if needed")
-	flag.StringVar(&c.centralNodeName, "centralNodeName", fc.centralNodeName, "The name of the central node to receive messages published by this node")
+	flag.StringVar(&c.CentralNodeName, "centralNodeName", fc.CentralNodeName, "The name of the central node to receive messages published by this node")
 
 	flag.Parse()
 

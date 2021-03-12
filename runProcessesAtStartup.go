@@ -73,7 +73,7 @@ func (s *server) ProcessesStart() {
 		fmt.Printf("Starting SayHello Publisher: %#v\n", s.nodeName)
 
 		// TODO: Replace "central" name with variable below.
-		sub := newSubject(SayHello, EventNACK, "central")
+		sub := newSubject(SayHello, EventNACK, s.configuration.CentralNodeName)
 		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, []node{}, nil)
 
 		// Define the procFun to be used for the process.

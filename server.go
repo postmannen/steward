@@ -100,7 +100,8 @@ func NewServer(c *Configuration) (*server, error) {
 		log.Printf("info: Creating subscribers data folder at %v\n", c.SubscribersDataFolder)
 	}
 
-	if s.configuration.centralNodeName == "" {
+	// The node name of the central server have to be set.
+	if s.configuration.CentralNodeName == "" {
 		return nil, fmt.Errorf("error: the centralNodeName config option or flag cannot be empty")
 	}
 
