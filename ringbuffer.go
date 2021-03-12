@@ -210,9 +210,6 @@ func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan sam
 
 			r.permStore <- fmt.Sprintf("%v : %+v\n", time.Now().UTC(), v)
 
-			// TODO: Write the Key/Value we just deleted to a file acting
-			// as the transaction log for the system.
-
 			// REMOVE: Dump the whole KV store
 			err := r.printBucketContent(samValueBucket)
 			if err != nil {

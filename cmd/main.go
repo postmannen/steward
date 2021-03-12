@@ -24,7 +24,7 @@ func main() {
 
 	s, err := steward.NewServer(c)
 	if err != nil {
-		log.Printf("error: failed to connect to broker: %v\n", err)
+		log.Printf("%v\n", err)
 		os.Exit(1)
 	}
 
