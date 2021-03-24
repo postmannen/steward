@@ -1,0 +1,10 @@
+[
+    {
+        
+        "toNode": "ship1",
+        "data": ["bash","-c","curl http://localhost:8888/metrics"],
+        "method":"CLICommand",
+        "timeout":3,
+        "retries":3
+    }
+]

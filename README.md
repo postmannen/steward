@@ -94,7 +94,7 @@ clone the repository, then cd `./steward/cmd` and do `go build -o steward`, and 
 
 ### How to Run
 
-The broker for messaging is Nats-server from <https://nats.io>. Download, run it, and use the `--brokerAddress` flag on Steward to point to it. 
+The broker for messaging is Nats-server from <https://nats.io>. Download, run it, and use the `--brokerAddress` flag on Steward to point to it.
 
 On some central server which will act as your command and control server.
 

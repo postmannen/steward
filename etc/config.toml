@@ -1,5 +1,4 @@
 BrokerAddress = "0"
-CentralErrorLogger = true
 CentralNodeName = "central"
 ConfigFolder = "./etc"
 DefaultMessageRetries = 3
@@ -8,4 +7,6 @@ NodeName = "central"
 ProfilingPort = "6060"
 PromHostAndPort = ":2112"
 PublisherServiceSayhello = 0
+StartCentralErrorLogger = false
+StartSayHelloSubscriber = false
 SubscribersDataFolder = "./data"

@@ -6,10 +6,54 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	toml "github.com/pelletier/go-toml"
 )
 
+// --- flag string slice
+
+// flagStringSlice is a type used when a flag value contains
+// comma separated values like `-myflag="somevalue,anothervalue`.
+// If a flag of this type is used, and it contains a value, the
+// Set(string) method will call the Parse() method.
+// The comma separated content will then be split, and put into
+// the []values field, and the `ok` field will be set to true, so
+// it can be used to check if the flag was used and contained any
+// values.
+type flagStringSlice struct {
+	value  string
+	ok     bool
+	values []string
+}
+
+func (f *flagStringSlice) String() string {
+	return ""
+}
+
+// Set will be called when this flag type is used as a flag.Var.
+// It will put the comma separated string value given as input into
+// the `value`field, then call the Parse function to split those
+// comma separated values into []values.
+func (f *flagStringSlice) Set(s string) error {
+	f.value = s
+	f.Parse()
+	return nil
+}
+
+func (f *flagStringSlice) Parse() error {
+	if len(f.value) == 0 {
+		return nil
+	}
+
+	fv := f.value
+	sp := strings.Split(fv, ",")
+	f.ok = true
+	f.values = sp
+	return nil
+}
+
+// --- Configuration
 type Configuration struct {
 	// The configuration folder on disk
 	ConfigFolder string
@@ -22,8 +66,6 @@ type Configuration struct {
 	// host and port for prometheus listener, e.g. localhost:2112
 	PromHostAndPort string
 	// set to true if this is the node that should receive the error log's from other nodes
-	CentralErrorLogger bool
-	// default message timeout in seconds. This can be overridden on the message level")
 	DefaultMessageTimeout int
 	// default amount of retries that will be done before a message is thrown away, and out of the system
 	DefaultMessageRetries int
@@ -33,6 +75,11 @@ type Configuration struct {
 	SubscribersDataFolder string
 	// central node to receive messages published from nodes
 	CentralNodeName string
+	// HERE: SHOULD TAKE STRING
+	// ALSO RENAME ALL STARTING FLAGS TO BEGIN WITH START
+	StartCentralErrorLogger bool
+	// default message timeout in seconds. This can be overridden on the message level")
+	StartSayHelloSubscriber bool
 }
 
 func NewConfiguration() *Configuration {
@@ -47,7 +94,7 @@ func newConfigurationDefaults() Configuration {
 		BrokerAddress:            "127.0.0.1:4222",
 		ProfilingPort:            "",
 		PromHostAndPort:          "",
-		CentralErrorLogger:       false,
+		StartCentralErrorLogger:  false,
 		DefaultMessageTimeout:    10,
 		DefaultMessageRetries:    1,
 		PublisherServiceSayhello: 30,
@@ -74,7 +121,7 @@ func (c *Configuration) CheckFlags() {
 	flag.StringVar(&c.BrokerAddress, "brokerAddress", fc.BrokerAddress, "the address of the message broker")
 	flag.StringVar(&c.ProfilingPort, "profilingPort", fc.ProfilingPort, "The number of the profiling port")
 	flag.StringVar(&c.PromHostAndPort, "promHostAndPort", fc.PromHostAndPort, "host and port for prometheus listener, e.g. localhost:2112")
-	flag.BoolVar(&c.CentralErrorLogger, "centralErrorLogger", fc.CentralErrorLogger, "set to true if this is the node that should receive the error log's from other nodes")
+	flag.BoolVar(&c.StartCentralErrorLogger, "startCentralErrorLogger", fc.StartCentralErrorLogger, "set to true if this is the node that should receive the error log's from other nodes")
 	flag.IntVar(&c.DefaultMessageTimeout, "defaultMessageTimeout", fc.DefaultMessageTimeout, "default message timeout in seconds. This can be overridden on the message level")
 	flag.IntVar(&c.DefaultMessageRetries, "defaultMessageRetries", fc.DefaultMessageRetries, "default amount of retries that will be done before a message is thrown away, and out of the system")
 	flag.IntVar(&c.PublisherServiceSayhello, "publisherServiceSayhello", fc.PublisherServiceSayhello, "Make the current node send hello messages to central at given interval in seconds")
@@ -89,6 +136,7 @@ func (c *Configuration) CheckFlags() {
 	}
 }
 
+// Reads the current config file from disk.
 func (c *Configuration) ReadConfigFile() (Configuration, error) {
 	fp := filepath.Join("./etc/", "config.toml")
 

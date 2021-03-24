@@ -56,7 +56,7 @@ func (s *server) ProcessesStart() {
 		go proc.spawnWorker(s)
 	}
 
-	if s.centralErrorLogger {
+	if s.configuration.StartCentralErrorLogger {
 		// Start a subscriber for ErrorLog messages
 		{
 			fmt.Printf("Starting ErrorLog subscriber: %#v\n", s.nodeName)
