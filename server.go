@@ -80,7 +80,7 @@ func NewServer(c *Configuration) (*server, error) {
 		metrics:       newMetrics(c.PromHostAndPort),
 		// REMOVED:
 		//publisherServices:  newPublisherServices(c.PublisherServiceSayhello),
-		centralErrorLogger: c.StartCentralErrorLogger,
+		centralErrorLogger: c.StartCentralErrorLogger.ok,
 	}
 
 	// Create the default data folder for where subscribers should
@@ -97,11 +97,6 @@ func NewServer(c *Configuration) (*server, error) {
 		}
 
 		log.Printf("info: Creating subscribers data folder at %v\n", c.SubscribersDataFolder)
-	}
-
-	// The node name of the central server have to be set.
-	if s.configuration.CentralNodeName == "" {
-		return nil, fmt.Errorf("error: the centralNodeName config option or flag cannot be empty")
 	}
 
 	return s, nil

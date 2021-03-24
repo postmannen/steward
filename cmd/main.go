@@ -12,7 +12,11 @@ import (
 
 func main() {
 	c := steward.NewConfiguration()
-	c.CheckFlags()
+	err := c.CheckFlags()
+	if err != nil {
+		log.Printf("%v\n", err)
+		return
+	}
 
 	// Start profiling if profiling port is specified
 	if c.ProfilingPort != "" {

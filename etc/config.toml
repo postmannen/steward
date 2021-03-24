@@ -1,12 +1,13 @@
-BrokerAddress = "0"
+BrokerAddress = "127.0.0.1:4222"
 CentralNodeName = "central"
 ConfigFolder = "./etc"
 DefaultMessageRetries = 3
 DefaultMessageTimeout = 5
 NodeName = "central"
-ProfilingPort = "6060"
-PromHostAndPort = ":2112"
-PublisherServiceSayhello = 0
-StartCentralErrorLogger = false
+ProfilingPort = ""
+PromHostAndPort = ""
+PublisherServiceSayhello = 30
 StartSayHelloSubscriber = false
 SubscribersDataFolder = "./data"
+
+[StartCentralErrorLogger]

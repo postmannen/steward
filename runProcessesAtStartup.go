@@ -56,12 +56,12 @@ func (s *server) ProcessesStart() {
 		go proc.spawnWorker(s)
 	}
 
-	if s.configuration.StartCentralErrorLogger {
+	if s.configuration.StartCentralErrorLogger.ok {
 		// Start a subscriber for ErrorLog messages
 		{
 			fmt.Printf("Starting ErrorLog subscriber: %#v\n", s.nodeName)
 			sub := newSubject(ErrorLog, EventNACK, "errorCentral")
-			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
+			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartCentralErrorLogger.values, nil)
 			go proc.spawnWorker(s)
 		}
 	}
