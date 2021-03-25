@@ -99,8 +99,8 @@ type Configuration struct {
 	// Start the central error logger.
 	// Takes a comma separated string of nodes to receive from or "*" for all nodes.
 	StartSubErrorLog flagNodeSlice
-	// default message timeout in seconds. This can be overridden on the message level")
-	StartSayHelloSubscriber bool
+	// Subscriber for hello messages
+	StartSubSayHello flagNodeSlice
 }
 
 func NewConfiguration() *Configuration {
@@ -121,6 +121,7 @@ func newConfigurationDefaults() Configuration {
 		SubscribersDataFolder:    "./data",
 		CentralNodeName:          "",
 		StartSubErrorLog:         flagNodeSlice{Values: []node{}},
+		StartSubSayHello:         flagNodeSlice{Values: []node{}},
 	}
 	return c
 }
@@ -147,11 +148,13 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.PromHostAndPort, "promHostAndPort", fc.PromHostAndPort, "host and port for prometheus listener, e.g. localhost:2112")
 	flag.IntVar(&c.DefaultMessageTimeout, "defaultMessageTimeout", fc.DefaultMessageTimeout, "default message timeout in seconds. This can be overridden on the message level")
 	flag.IntVar(&c.DefaultMessageRetries, "defaultMessageRetries", fc.DefaultMessageRetries, "default amount of retries that will be done before a message is thrown away, and out of the system")
-	flag.IntVar(&c.PublisherServiceSayhello, "publisherServiceSayhello", fc.PublisherServiceSayhello, "Make the current node send hello messages to central at given interval in seconds")
 	flag.StringVar(&c.SubscribersDataFolder, "subscribersDataFolder", fc.SubscribersDataFolder, "The data folder where subscribers are allowed to write their data if needed")
 	flag.StringVar(&c.CentralNodeName, "centralNodeName", fc.CentralNodeName, "The name of the central node to receive messages published by this node")
 
-	flag.Var(&c.StartSubErrorLog, "startSubErrorLog", "When value are given this node will become central error logger. Value can be \"*\" to receive from all hosts, or a comma separated list of hosts to allow processing messages from can be specified, like \"node1,node2\". Use the value RST to reset the value set in the config file to turn off the process.")
+	flag.IntVar(&c.PublisherServiceSayhello, "publisherServiceSayhello", fc.PublisherServiceSayhello, "Make the current node send hello messages to central at given interval in seconds")
+
+	flag.Var(&c.StartSubErrorLog, "startSubErrorLog", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubSayHello, "startSubSayHello", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 
 	flag.Parse()
 

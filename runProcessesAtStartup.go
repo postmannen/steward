@@ -28,32 +28,34 @@ func (s *server) ProcessesStart() {
 	}
 
 	// Start a subscriber for SayHello messages
-	{
-		fmt.Printf("Starting SayHello subscriber: %#v\n", s.nodeName)
-		sub := newSubject(SayHello, EventNACK, s.nodeName)
-		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
-		proc.procFuncCh = make(chan Message)
+	if s.configuration.StartSubSayHello.OK {
+		{
+			fmt.Printf("Starting SayHello subscriber: %#v\n", s.nodeName)
+			sub := newSubject(SayHello, EventNACK, s.nodeName)
+			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubSayHello.Values, nil)
+			proc.procFuncCh = make(chan Message)
 
-		proc.procFunc = func() error {
-			sayHelloNodes := make(map[node]struct{})
-			for {
-				// Receive a copy of the message sent from the method handler.
-				m := <-proc.procFuncCh
-				fmt.Printf("--- DEBUG : procFunc call:kind=%v, Subject=%v, toNode=%v\n", proc.processKind, proc.subject, proc.subject.ToNode)
+			proc.procFunc = func() error {
+				sayHelloNodes := make(map[node]struct{})
+				for {
+					// Receive a copy of the message sent from the method handler.
+					m := <-proc.procFuncCh
+					fmt.Printf("--- DEBUG : procFunc call:kind=%v, Subject=%v, toNode=%v\n", proc.processKind, proc.subject, proc.subject.ToNode)
 
-				sayHelloNodes[m.FromNode] = struct{}{}
+					sayHelloNodes[m.FromNode] = struct{}{}
 
-				// update the prometheus metrics
-				s.metrics.metricsCh <- metricType{
-					metric: prometheus.NewGauge(prometheus.GaugeOpts{
-						Name: "hello_nodes",
-						Help: "The current number of total nodes who have said hello",
-					}),
-					value: float64(len(sayHelloNodes)),
+					// update the prometheus metrics
+					s.metrics.metricsCh <- metricType{
+						metric: prometheus.NewGauge(prometheus.GaugeOpts{
+							Name: "hello_nodes",
+							Help: "The current number of total nodes who have said hello",
+						}),
+						value: float64(len(sayHelloNodes)),
+					}
 				}
 			}
+			go proc.spawnWorker(s)
 		}
-		go proc.spawnWorker(s)
 	}
 
 	if s.configuration.StartSubErrorLog.OK {

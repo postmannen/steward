@@ -7,9 +7,12 @@ NodeName = "central"
 ProfilingPort = ""
 PromHostAndPort = ""
 PublisherServiceSayhello = 30
-StartSayHelloSubscriber = false
 SubscribersDataFolder = "./data"
 
-[StartCentralErrorLogger]
+[StartSubErrorLog]
+  OK = true
+  Values = ["*"]
+
+[StartSubSayHello]
   OK = true
   Values = ["*"]
