@@ -122,7 +122,7 @@ func newSAM(m Message) (subjectAndMessage, error) {
 // A []byte will be returned with the content read.
 func readTruncateMessageFile(fileName string) ([]byte, error) {
 
-	f, err := os.OpenFile(fileName, os.O_APPEND|os.O_RDWR, os.ModeAppend)
+	f, err := os.OpenFile(fileName, os.O_APPEND|os.O_RDWR|os.O_CREATE, os.ModeAppend)
 	if err != nil {
 		log.Printf("error: readTruncateMessageFile: Failed to open file: %v\n", err)
 		return nil, err
@@ -169,7 +169,7 @@ func fileWatcherStart(directoryToCheck string, fileUpdated chan bool) {
 			select {
 			case event := <-watcher.Events:
 				if event.Op&fsnotify.Write == fsnotify.Write {
-					// log.Println("info: inmsg.txt file updated, processing input: ", event.Name)
+					// log.Println("info: steward.sock file updated, processing input: ", event.Name)
 					//testing with an update chan to get updates
 					fileUpdated <- true
 				}

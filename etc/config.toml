@@ -11,5 +11,5 @@ StartSayHelloSubscriber = false
 SubscribersDataFolder = "./data"
 
 [StartCentralErrorLogger]
-  OK = false
-  Values = []
+  OK = true
+  Values = ["*"]

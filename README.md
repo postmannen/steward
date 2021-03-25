@@ -161,7 +161,7 @@ methodTimeout
 
 ### How to send a Message
 
-Right now the API for sending a message from one node to another node is by pasting a structured JSON object into a file called `inmsg.txt` living alongside the binary. This file will be watched continously, and when updated the content will be picked up, umarshaled, and if OK it will be sent a message to the node specified in the `toNode` field.
+Right now the API for sending a message from one node to another node is by pasting a structured JSON object into a file called `steward.sock` living alongside the binary. This file will be watched continously, and when updated the content will be picked up, umarshaled, and if OK it will be sent a message to the node specified in the `toNode` field.
 
 The `method` is what defines what the event will do. The preconfigured methods are:
 
@@ -213,7 +213,7 @@ NB: Both the keys and the values used are case sensitive.
 
 #### Sending a command from one Node to Another Node
 
-Example JSON for appending a message of type command into the `inmsg.txt` file
+Example JSON for appending a message of type command into the `steward.sock` file
 
 ```json
 [
@@ -267,11 +267,11 @@ To send a message with custom timeout and amount of retries
 ]
 ```
 
-You can save the content to myfile.JSON and append it to `inmsg.txt`
+You can save the content to myfile.JSON and append it to `steward.sock`
 
-`cat myfile.json >> inmsg.txt`
+`cat myfile.json >> steward.sock`
 
-The content of `inmsg.txt` will be erased as messages a processed.
+The content of `steward.sock` will be erased as messages a processed.
 
 #### Sending a message of type Event
 
@@ -286,11 +286,11 @@ The content of `inmsg.txt` will be erased as messages a processed.
 ]
 ```
 
-You can save the content to myfile.JSON and append it to `inmsg.txt`
+You can save the content to myfile.JSON and append it to `steward.sock`
 
-`cat myfile.json >> inmsg.txt`
+`cat myfile.json >> steward.sock`
 
-The content of `inmsg.txt` will be erased as messages a processed.
+The content of `steward.sock` will be erased as messages a processed.
 
 ## Concepts/Ideas
 
@@ -319,7 +319,7 @@ and for a shell command of type command to a host named "ship2"
 
 ## TODO
 
-- FIX so it can handle multiple slices of input for inmsg.txt
+- FIX so it can handle multiple slices of input for steward.sock
 
 - Make a scraper that first send an EventACK, and the content of the scraping is returned by a node as a new EventACK back the where the initial event originated.
 

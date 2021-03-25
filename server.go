@@ -117,7 +117,7 @@ func (s *server) Start() {
 	go s.startMetrics()
 
 	// Start the checking the input file for new messages from operator.
-	go s.getMessagesFromFile("./", "inmsg.txt", s.newMessagesCh)
+	go s.getMessagesFromFile("./", "steward.sock", s.newMessagesCh)
 
 	// // if enabled, start the sayHello I'm here service at the given interval
 	// // REMOVED:

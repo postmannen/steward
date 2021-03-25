@@ -110,7 +110,7 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 	}
 
 	// Check for incomming messages. These are typically comming from
-	// the go routine who reads inmsg.txt.
+	// the go routine who reads steward.sock.
 	for v := range inCh {
 
 		// Check if the command or event exists in commandOrEvent.go
