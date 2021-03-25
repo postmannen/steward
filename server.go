@@ -80,7 +80,7 @@ func NewServer(c *Configuration) (*server, error) {
 		metrics:       newMetrics(c.PromHostAndPort),
 		// REMOVED:
 		//publisherServices:  newPublisherServices(c.PublisherServiceSayhello),
-		centralErrorLogger: c.StartCentralErrorLogger.ok,
+		centralErrorLogger: c.StartCentralErrorLogger.OK,
 	}
 
 	// Create the default data folder for where subscribers should

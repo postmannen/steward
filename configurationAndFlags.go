@@ -3,6 +3,7 @@ package steward
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,8 +23,8 @@ import (
 // values.
 type flagNodeSlice struct {
 	value  string
-	ok     bool
-	values []node
+	OK     bool
+	Values []node
 }
 
 func (f *flagNodeSlice) String() string {
@@ -40,17 +41,35 @@ func (f *flagNodeSlice) Set(s string) error {
 	return nil
 }
 
+// If the flag value "RST" is given, set the default values
+// for each of the flag var's fields, and return back.
+// Since we reset the actual flag values, it is also these
+// blank values that will be written to the config file, and
+// making the change persistent in the system. This will also
+// be reflected in values stored in the config file, since the
+// config file is written after the flags have been parsed.
 func (f *flagNodeSlice) Parse() error {
 	if len(f.value) == 0 {
 		return nil
 	}
 
+	split := strings.Split(f.value, ",")
+
+	// Reset values if RST was the flag value.
+	if split[0] == "RST" {
+		f.OK = false
+		f.value = ""
+		f.Values = []node{}
+		return nil
+	}
+
 	fv := f.value
 	sp := strings.Split(fv, ",")
-	f.ok = true
+	f.OK = true
+	f.Values = []node{}
 
 	for _, v := range sp {
-		f.values = append(f.values, node(v))
+		f.Values = append(f.Values, node(v))
 	}
 	return nil
 }
@@ -96,7 +115,7 @@ func newConfigurationDefaults() Configuration {
 		BrokerAddress:            "127.0.0.1:4222",
 		ProfilingPort:            "",
 		PromHostAndPort:          "",
-		StartCentralErrorLogger:  flagNodeSlice{values: []node{}},
+		StartCentralErrorLogger:  flagNodeSlice{Values: []node{}},
 		DefaultMessageTimeout:    10,
 		DefaultMessageRetries:    1,
 		PublisherServiceSayhello: 30,
@@ -113,11 +132,13 @@ func (c *Configuration) CheckFlags() error {
 
 	// NB: Disabling the config file options for now.
 	// Read file config. Set system default if it can't find config file.
-	//fc, err := c.ReadConfigFile()
-	//if err != nil {
-	//	log.Printf("%v\n", err)
-	fc = newConfigurationDefaults()
-	//}
+	fc, err := c.ReadConfigFile()
+	if err != nil {
+		log.Printf("%v\n", err)
+		fc = newConfigurationDefaults()
+	}
+
+	*c = fc
 
 	flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "folder who contains the config file. Defaults to ./etc/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.NodeName, "nodeName", fc.NodeName, "some unique string to identify this Edge unit")
@@ -130,7 +151,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.SubscribersDataFolder, "subscribersDataFolder", fc.SubscribersDataFolder, "The data folder where subscribers are allowed to write their data if needed")
 	flag.StringVar(&c.CentralNodeName, "centralNodeName", fc.CentralNodeName, "The name of the central node to receive messages published by this node")
 
-	flag.Var(&c.StartCentralErrorLogger, "startCentralErrorLogger", "When value are given this node will become central error logger. Value can be \"*\" to receive from all hosts, or a comma separated list of hosts to allow processing messages from can be specified, like \"node1,node2\"")
+	flag.Var(&c.StartCentralErrorLogger, "startCentralErrorLogger", "When value are given this node will become central error logger. Value can be \"*\" to receive from all hosts, or a comma separated list of hosts to allow processing messages from can be specified, like \"node1,node2\". Use the value RST to reset the value set in the config file to turn off the process.")
 
 	flag.Parse()
 
@@ -142,11 +163,11 @@ func (c *Configuration) CheckFlags() error {
 		return fmt.Errorf("error: the centralNodeName config option or flag cannot be empty, check -help")
 	}
 
-	// // NB: Disabling the config file options for now.
-	// if err := c.WriteConfigFile(); err != nil {
-	// 	log.Printf("error: checkFlags: failed writing config file: %v\n", err)
-	// 	os.Exit(1)
-	// }
+	// NB: Disabling the config file options for now.
+	if err := c.WriteConfigFile(); err != nil {
+		log.Printf("error: checkFlags: failed writing config file: %v\n", err)
+		os.Exit(1)
+	}
 
 	return nil
 }

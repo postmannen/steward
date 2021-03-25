@@ -36,11 +36,19 @@ All code in this repository are to be concidered not-production-ready. The code 
 
 ## Features
 
+### Messages in order
+
 - By default the system guarantees that the order of the messages are handled by the subscriber in the order they where sent. So if a network link is down when the message is being sent, it will automatically be rescheduled at the specified interval with the given number of retries.
+
+### Messages not in order
 
 - There have been implemented a special type `NOSEQ` which will allow messages to be handled within that process in a not sequential manner. This is handy for jobs that will run for a long time, and where other messages are not dependent on it's result.
 
+### Error messages from nodes
+
 - Error messages will be sent back to the central error handler upon failure on a node.
+
+### Message handling and threads
 
 - The handling of all messages is done by spawning up a process for the handling the message in it's own thread. This allows us to individually down to the message level keep the state for each message both in regards to ACK's, error handling, send retries, and rerun of a method for a message if the first run was not successful.
 
@@ -58,12 +66,32 @@ All code in this repository are to be concidered not-production-ready. The code 
 
 - Default timeouts to wait for ACK messages and max attempts to retry sending a message specified upon startup. This can be overridden on the message level.
 
-- Report errors happening on some node in to central error handler.
-
 - Message types of both ACK and NACK, so we can decide if we want or don't want an Acknowledge if a message was delivered succesfully.
 Example: We probably want an ACK when sending some CLICommand to be executed, but we don't care for an acknowledge (NACK) when we send an "hello I'm here" event.
 
+### Flags and configuration file
+
+Steward supports both the use of flags/arguments set at startup, and the use of a config file. But how it is used might be a little different than how similar use is normally done.
+
+A default config file will be created at first startup if one does not exist, with standard defaults values set. Any value also provided via a flag will also be written to the config file. If Steward is restarted the current content of the config file will be used as the new defaults. Said with other words, if you restart Steward without any flags specified the values of the last run will be read from the config file and used.
+
+If new values are provided via flags they will take precedence over the ones currently in the config file, and they will also replace the current value in the config file, making it the default for the next restart.
+
+The only exception from the above are the `startSubscriberX` flags which got one extra value that can be used which is the value `RST` for Reset. This will disable the specified subscriber, and also null out the array for which Nodes the subscriber will allow traffic from.
+
+The config file can also be edited directly, making the use of flags not needed.
+
+If just getting back to standard default for all config options needed, then delete the current config file, restart Steward, and a new config file with all the options set to it's default values will be created.
+
+### Errors reporting
+
+- Report errors happening on some node in to central error handler.
+
+### Prometheus metrics
+
 - Prometheus exporters for Metrics
+
+### Other
 
 - More will come. In active development.
 
@@ -105,6 +133,10 @@ One the nodes out there
 `./steward --node="ship1"` & `./steward --node="ship1"` and so on.
 
 Use the `--help` flag to get all possibilities.
+
+#### Start subscriber flags
+
+The start subscribers flags take a string value of which nodes that it will process messages from. Since using a flag to set a value automatically sets that value also in the config file, a value of RST can be given to turn off the subscriber.
 
 ### Message fields explanation
 
