@@ -98,7 +98,7 @@ type Configuration struct {
 	CentralNodeName string
 	// Start the central error logger.
 	// Takes a comma separated string of nodes to receive from or "*" for all nodes.
-	StartCentralErrorLogger flagNodeSlice
+	StartSubErrorLog flagNodeSlice
 	// default message timeout in seconds. This can be overridden on the message level")
 	StartSayHelloSubscriber bool
 }
@@ -115,12 +115,12 @@ func newConfigurationDefaults() Configuration {
 		BrokerAddress:            "127.0.0.1:4222",
 		ProfilingPort:            "",
 		PromHostAndPort:          "",
-		StartCentralErrorLogger:  flagNodeSlice{Values: []node{}},
 		DefaultMessageTimeout:    10,
 		DefaultMessageRetries:    1,
 		PublisherServiceSayhello: 30,
 		SubscribersDataFolder:    "./data",
 		CentralNodeName:          "",
+		StartSubErrorLog:         flagNodeSlice{Values: []node{}},
 	}
 	return c
 }
@@ -151,7 +151,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.SubscribersDataFolder, "subscribersDataFolder", fc.SubscribersDataFolder, "The data folder where subscribers are allowed to write their data if needed")
 	flag.StringVar(&c.CentralNodeName, "centralNodeName", fc.CentralNodeName, "The name of the central node to receive messages published by this node")
 
-	flag.Var(&c.StartCentralErrorLogger, "startCentralErrorLogger", "When value are given this node will become central error logger. Value can be \"*\" to receive from all hosts, or a comma separated list of hosts to allow processing messages from can be specified, like \"node1,node2\". Use the value RST to reset the value set in the config file to turn off the process.")
+	flag.Var(&c.StartSubErrorLog, "startSubErrorLog", "When value are given this node will become central error logger. Value can be \"*\" to receive from all hosts, or a comma separated list of hosts to allow processing messages from can be specified, like \"node1,node2\". Use the value RST to reset the value set in the config file to turn off the process.")
 
 	flag.Parse()
 

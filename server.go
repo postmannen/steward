@@ -57,11 +57,6 @@ type server struct {
 	errorKernel *errorKernel
 	// metric exporter
 	metrics *metrics
-	// Is this the central error logger ?
-	// collection of the publisher services and the types to control them
-	// REMOVED:
-	// publisherServices  *publisherServices
-	centralErrorLogger bool
 }
 
 // newServer will prepare and return a server type
@@ -78,15 +73,10 @@ func NewServer(c *Configuration) (*server, error) {
 		processes:     newProcesses(),
 		newMessagesCh: make(chan []subjectAndMessage),
 		metrics:       newMetrics(c.PromHostAndPort),
-		// REMOVED:
-		//publisherServices:  newPublisherServices(c.PublisherServiceSayhello),
-		centralErrorLogger: c.StartCentralErrorLogger.OK,
 	}
 
 	// Create the default data folder for where subscribers should
-	// write it's data if needed.
-
-	// Check if data folder exist, and create it if needed.
+	// write it's data, check if data folder exist, and create it if needed.
 	if _, err := os.Stat(c.SubscribersDataFolder); os.IsNotExist(err) {
 		if c.SubscribersDataFolder == "" {
 			return nil, fmt.Errorf("error: subscribersDataFolder value is empty, you need to provide the config or the flag value at startup %v: %v", c.SubscribersDataFolder, err)
