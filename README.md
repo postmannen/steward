@@ -12,7 +12,11 @@ By default the system guarantees that the order of the messages are handled by t
 
 A node can be a server running any host operating system, a container living in the cloud somewhere, a rapsberry pi, or something else that needs to be controlled that have an operating system installed  . The message passing backend used is <https://nats.io>
 
-## Why ?
+## Inspiration
+
+The idea for how to handle processes, messages and errors are based on Joe Armstrongs idea behind Erlang described in his Thesis <https://erlang.org/download/armstrong_thesis_2003.pdf>. This does mean it is done in exactly the same way, but more on how I understood those ideas and implemented them using the Go programming language with NATS as the message broker to get a fully decoupled message passing system to handle processes.
+
+## Why
 
 With existing solutions there is often either a push or a pull kind of setup.
 
@@ -21,8 +25,6 @@ In a push setup the commands to be executed is pushed to the receiver, but if a 
 In a pull setup an agent is installed at the Edge unit, and the configuration or commands to execute locally are pulled from a central repository. With this kind of setup you can be pretty certain that sometime in the future the node will reach it's desired state, but you don't know when. And if you want to know the current state you will need to have some second service which gives you that information.
 
 In it's simplest form the idea about using an event driven system as the core for management of Edge units is that the sender/publisher are fully decoupled from the receiver/subscriber. We can get an acknowledge if a message is received or not, and with this functionality we will at all times know the current state of the receiving end. We can also add information in the ACK message if the command sent to the receiver was successful or not by appending the actual output of the command.
-
-The idea for how to handle processes, messages and errors are based on Joe Armstrongs idea behind Erlang described in his Thesis <https://erlang.org/download/armstrong_thesis_2003.pdf>. That do not mean this is done in exactly the same way, but more on how I understood those ideas and implemented then using the Go programming language with NATS as the message broker to get a fully decoupled message passing system to handle processes.
 
 ## Overview
 
