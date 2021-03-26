@@ -22,9 +22,31 @@ In a pull setup an agent is installed at the Edge unit, and the configuration or
 
 In it's simplest form the idea about using an event driven system as the core for management of Edge units is that the sender/publisher are fully decoupled from the receiver/subscriber. We can get an acknowledge if a message is received or not, and with this functionality we will at all times know the current state of the receiving end. We can also add information in the ACK message if the command sent to the receiver was successful or not by appending the actual output of the command.
 
-## Disclaimer
+The idea for how to handle processes, messages and errors are based on Joe Armstrongs idea behind Erlang described in his Thesis <https://erlang.org/download/armstrong_thesis_2003.pdf>. That do not mean this is done in exactly the same way, but more on how I understood those ideas and implemented then using the Go programming language with NATS as the message broker to get a fully decoupled message passing system to handle processes.
 
-All code in this repository are to be concidered not-production-ready. The code are the attempt to concretize the idea of a purely async management system where the controlling unit is decoupled from the receiving unit, and that that we know the state of all the receiving units at all times.
+## Overview
+
+All parts of the system like processes, method handlers, messages, error handling are running concurrently.
+
+If one process hangs on a long running message method it will not affect the rest of the system.
+
+### Publisher
+
+- A message in valid format is appended to the in pipe.
+- The message is picked up by the system and put on a FIFO ringbuffer.
+- The method type of the message is checked, a subject is created based on the content of the message,  and a process to handle that message type for that specific receiving node is started if it does not exist.
+- The message is then serialized to binary format, and sent to the subscriber on the receiving node.
+- If the message is expected to be ACK'ed by the subcriber then the publisher will wait for an ACK if the message was delivered. If an ACK was not received within the defined timeout the message will be resent. The amount of retries are defined within the message.
+
+### Subscriber
+
+- The subscriber will need to have a listener started on the wanted subject and allowed message from nodes specified to be able to receive messages.
+- When a message have been deserialized, it will lookup the correct handler for the method type specified within the message, and execute that handler.
+- If the output of the method called is supposed to be returned to the publiser it will do so, or else it will be finish, and pick up the next message in the queue.
+
+### Logical structure
+
+![overview](steward.svg)
 
 ## Terminology
 
@@ -83,6 +105,8 @@ The config file can also be edited directly, making the use of flags not needed.
 
 If just getting back to standard default for all config options needed, then delete the current config file, restart Steward, and a new config file with all the options set to it's default values will be created.
 
+TIP: Most likely the best way to control how the service should behave and what is started is to start Steward the first time so it creates the default config file. Then stop the service, edit the config file and change the defaults needed. Then start the service again.
+
 ### Errors reporting
 
 - Report errors happening on some node in to central error handler.
@@ -104,20 +128,44 @@ clone the repository, then cd `./steward/cmd` and do `go build -o steward`, and 
 ### Options for running
 
 ```text
-    -brokerAddress string
-      the address of the message broker (default "0")
-  -centralErrorLogger
-      set to true if this is the node that should receive the error log's from other nodes
+  -brokerAddress string
+    the address of the message broker (default "127.0.0.1:4222")
+  -centralNodeName string
+    The name of the central node to receive messages published by this node (default "central")
+  -configFolder string
+    folder who contains the config file. Defaults to ./etc/. If other folder is used this flag must be specified at startup. (default "./etc")
   -defaultMessageRetries int
-      default amount of retries that will be done before a message is thrown away, and out of the system
+    default amount of retries that will be done before a message is thrown away, and out of the system (default 3)
   -defaultMessageTimeout int
-      default message timeout in seconds. This can be overridden on the message level (default 10)
-  -node string
-      some unique string to identify this Edge unit (default "0")
+    default message timeout in seconds. This can be overridden on the message level (default 5)
+  -nodeName string
+    some unique string to identify this Edge unit (default "central")
   -profilingPort string
-      The number of the profiling port
+    The number of the profiling port
   -promHostAndPort string
-      host and port for prometheus listener, e.g. localhost:2112 (default ":2112")
+    host and port for prometheus listener, e.g. localhost:2112
+  -startPubSayHello int
+    Make the current node send hello messages to central at given interval in seconds
+  -startSubCLICommand value
+    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
+  -startSubCLICommandReply value
+    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
+  -startSubCLICommandRequest value
+    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
+  -startSubCLICommandRequestNOSEQ value
+    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
+  -startSubEchoReply value
+    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
+  -startSubEchoRequest value
+    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
+  -startSubErrorLog value
+    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
+  -startSubSayHello value
+    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
+  -startSubTextLogging value
+    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
+  -subscribersDataFolder string
+    The data folder where subscribers are allowed to write their data if needed (default "./data")
 ```
 
 ### How to Run
@@ -333,24 +381,8 @@ and for a shell command of type command to a host named "ship2"
 
 - Implement context to be able to stop processes, and message handlers.
 
-## Overview
+## Disclaimer
 
-All parts of the system like processes, method handlers, messages, error handling are running concurrently.
+All code in this repository are to be concidered not-production-ready. The code are the attempt to concretize the idea of a purely async management system where the controlling unit is decoupled from the receiving unit, and that that we know the state of all the receiving units at all times.
 
-If one process hangs on a long running message method it will not affect the rest of the system.
-
-### Publisher
-
-- A message in valid format is appended to the in pipe.
-- The message is picked up by the system and put on a FIFO ringbuffer.
-- The method type of the message is checked, a subject is created based on the content of the message,  and a process to handle that message type for that specific receiving node is started if it does not exist.
-- The message is then serialized to binary format, and sent to the subscriber on the receiving node.
-- If the message is expected to be ACK'ed by the subcriber then the publisher will wait for an ACK if the message was delivered. If an ACK was not received within the defined timeout the message will be resent. The amount of retries are defined within the message.
-
-### Subscriber
-
-- The subscriber will need to have a listener started on the wanted subject to be able to receive messages.
-- When a message have been deserialized, it will lookup the correct handler for the method type specified within the message, and execute that handler.
-- If the output of the method called is supposed to be returned to the publiser it will do so, or else it will be finish, and pick up the next message in the queue.
-
-![overview](steward.svg)
+Also read the license file for further details.
