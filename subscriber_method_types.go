@@ -198,13 +198,32 @@ func (m methodCLICommand) getKind() CommandOrEvent {
 }
 
 func (m methodCLICommand) handler(proc process, message Message, node string) ([]byte, error) {
+	out := []byte{}
+
 	c := message.Data[0]
 	a := message.Data[1:]
-	cmd := exec.Command(c, a...)
-	//cmd.Stdout = os.Stdout
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Printf("error: execution of command failed: %v\n", err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(message.MethodTimeout))
+	defer cancel()
+
+	outCh := make(chan []byte)
+
+	go func() {
+		cmd := exec.CommandContext(ctx, c, a...)
+		out, err := cmd.Output()
+		if err != nil {
+			log.Printf("error: %v\n", err)
+		}
+		outCh <- out
+	}()
+
+	select {
+	case <-ctx.Done():
+		fmt.Printf(" ** Before\n")
+		er := fmt.Errorf("error: method timed out %v", proc)
+		sendErrorLogMessage(proc.newMessagesCh, proc.node, er)
+		fmt.Printf(" ** After\n")
+	case out = <-outCh:
 	}
 
 	ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n%s---", node, message.ID, out))
@@ -349,10 +368,9 @@ func (m methodCLICommandRequest) getKind() CommandOrEvent {
 func (m methodCLICommandRequest) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- CLICommand REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 
-	c := message.Data[0]
-	a := message.Data[1:]
-
 	go func() {
+		c := message.Data[0]
+		a := message.Data[1:]
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(message.MethodTimeout))
 		defer cancel()
@@ -418,35 +436,49 @@ func (m methodCLICommandRequestNOSEQ) handler(proc process, message Message, nod
 	log.Printf("<--- CLICommand REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 
 	go func() {
-
 		c := message.Data[0]
 		a := message.Data[1:]
-		cmd := exec.Command(c, a...)
-		//cmd.Stdout = os.Stdout
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			log.Printf("error: execution of command failed: %v\n", err)
-		}
 
-		time.Sleep(time.Second * time.Duration(message.MethodTimeout))
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(message.MethodTimeout))
+		defer cancel()
 
-		// Create a new message for the reply, and put it on the
-		// ringbuffer to be published.
-		newMsg := Message{
-			ToNode:  message.FromNode,
-			Data:    []string{string(out)},
-			Method:  CLICommandReply,
-			Timeout: 3,
-			Retries: 3,
-		}
-		fmt.Printf("** %#v\n", newMsg)
+		outCh := make(chan []byte)
 
-		nSAM, err := newSAM(newMsg)
-		if err != nil {
-			// In theory the system should drop the message before it reaches here.
-			log.Printf("error: methodCLICommandRequestNOSEQ: %v\n", err)
+		go func() {
+			cmd := exec.CommandContext(ctx, c, a...)
+			out, err := cmd.Output()
+			if err != nil {
+				log.Printf("error: %v\n", err)
+			}
+			outCh <- out
+		}()
+
+		select {
+		case <-ctx.Done():
+			fmt.Printf(" ** Before\n")
+			er := fmt.Errorf("error: method timed out %v", proc)
+			sendErrorLogMessage(proc.newMessagesCh, proc.node, er)
+			fmt.Printf(" ** After\n")
+		case out := <-outCh:
+
+			// Create a new message for the reply, and put it on the
+			// ringbuffer to be published.
+			newMsg := Message{
+				ToNode:  message.FromNode,
+				Data:    []string{string(out)},
+				Method:  CLICommandReply,
+				Timeout: 3,
+				Retries: 3,
+			}
+			fmt.Printf("** %#v\n", newMsg)
+
+			nSAM, err := newSAM(newMsg)
+			if err != nil {
+				// In theory the system should drop the message before it reaches here.
+				log.Printf("error: methodCLICommandRequest: %v\n", err)
+			}
+			proc.newMessagesCh <- []subjectAndMessage{nSAM}
 		}
-		proc.newMessagesCh <- []subjectAndMessage{nSAM}
 
 	}()
 

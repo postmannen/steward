@@ -2,9 +2,10 @@
     {
         
         "toNode": "ship1",
-        "data": ["bash","-c","netstat -an|grep -i listen"],
+        "data": ["bash","-c","sleep 5 && netstat -an|grep -i listen"],
         "method":"CLICommand",
         "timeout":3,
-        "retries":3
+        "retries":3,
+        "MethodTimeout": 7
     }
 ]
