@@ -10,12 +10,14 @@ import (
 
 func (s *server) ProcessesStart() {
 	// Start a subscriber for CLICommand messages
-	{
-		fmt.Printf("Starting CLICommand subscriber: %#v\n", s.nodeName)
-		sub := newSubject(CLICommand, CommandACK, s.nodeName)
-		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"central", "ship2"}, nil)
-		// fmt.Printf("*** %#v\n", proc)
-		go proc.spawnWorker(s)
+	if s.configuration.StartSubCLICommand.OK {
+		{
+			fmt.Printf("Starting CLICommand subscriber: %#v\n", s.nodeName)
+			sub := newSubject(CLICommand, CommandACK, s.nodeName)
+			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommand.Values, nil)
+			// fmt.Printf("*** %#v\n", proc)
+			go proc.spawnWorker(s)
+		}
 	}
 
 	// Start a subscriber for textLogging messages

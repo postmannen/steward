@@ -101,6 +101,8 @@ type Configuration struct {
 	StartSubErrorLog flagNodeSlice
 	// Subscriber for hello messages
 	StartSubSayHello flagNodeSlice
+	// Subscriber for CLI Commands
+	StartSubCLICommand flagNodeSlice
 }
 
 func NewConfiguration() *Configuration {
@@ -122,6 +124,7 @@ func newConfigurationDefaults() Configuration {
 		CentralNodeName:          "",
 		StartSubErrorLog:         flagNodeSlice{Values: []node{}},
 		StartSubSayHello:         flagNodeSlice{Values: []node{}},
+		StartSubCLICommand:       flagNodeSlice{Values: []node{}},
 	}
 	return c
 }
@@ -155,6 +158,7 @@ func (c *Configuration) CheckFlags() error {
 
 	flag.Var(&c.StartSubErrorLog, "startSubErrorLog", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubSayHello, "startSubSayHello", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubCLICommand, "startSubCLICommand", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 
 	flag.Parse()
 

@@ -216,7 +216,8 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 			// or exit if max retries for the message reached.
 			msgReply, err := subReply.NextMsg(time.Second * time.Duration(message.Timeout))
 			if err != nil {
-				log.Printf("error: subReply.NextMsg failed for node=%v, subject=%v: %v\n", p.node, p.subject.name(), err)
+				er := fmt.Errorf("error: subReply.NextMsg failed for node=%v, subject=%v: %v", p.node, p.subject.name(), err)
+				sendErrorLogMessage(p.newMessagesCh, message.FromNode, er)
 
 				// did not receive a reply, decide what to do..
 				retryAttempts++
@@ -227,8 +228,10 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 					continue
 				case retryAttempts >= message.Retries:
 					// max retries reached
-					log.Printf("info: max retries for message reached, breaking out: %v", retryAttempts)
+					er := fmt.Errorf("info: max retries for message reached, breaking out: %v", message)
+					sendErrorLogMessage(p.newMessagesCh, message.FromNode, er)
 					return
+
 				default:
 					// none of the above matched, so we've not reached max retries yet
 					continue

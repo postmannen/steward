@@ -9,6 +9,10 @@ PromHostAndPort = ""
 PublisherServiceSayhello = 30
 SubscribersDataFolder = "./data"
 
+[StartSubCLICommand]
+  OK = true
+  Values = ["central"]
+
 [StartSubErrorLog]
   OK = true
   Values = ["*"]
