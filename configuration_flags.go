@@ -91,7 +91,7 @@ type Configuration struct {
 	// default amount of retries that will be done before a message is thrown away, and out of the system
 	DefaultMessageRetries int
 	// Make the current node send hello messages to central at given interval in seconds
-	PublisherServiceSayhello int
+	StartPubSayHello int
 	// Publisher data folder
 	SubscribersDataFolder string
 	// central node to receive messages published from nodes
@@ -131,7 +131,7 @@ func newConfigurationDefaults() Configuration {
 		PromHostAndPort:                "",
 		DefaultMessageTimeout:          10,
 		DefaultMessageRetries:          1,
-		PublisherServiceSayhello:       30,
+		StartPubSayHello:               30,
 		SubscribersDataFolder:          "./data",
 		CentralNodeName:                "",
 		StartSubErrorLog:               flagNodeSlice{Values: []node{}},
@@ -172,7 +172,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.SubscribersDataFolder, "subscribersDataFolder", fc.SubscribersDataFolder, "The data folder where subscribers are allowed to write their data if needed")
 	flag.StringVar(&c.CentralNodeName, "centralNodeName", fc.CentralNodeName, "The name of the central node to receive messages published by this node")
 
-	flag.IntVar(&c.PublisherServiceSayhello, "publisherServiceSayhello", fc.PublisherServiceSayhello, "Make the current node send hello messages to central at given interval in seconds")
+	flag.IntVar(&c.StartPubSayHello, "startPubSayHello", fc.StartPubSayHello, "Make the current node send hello messages to central at given interval in seconds")
 
 	flag.Var(&c.StartSubErrorLog, "startSubErrorLog", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubSayHello, "startSubSayHello", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")

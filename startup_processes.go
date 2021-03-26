@@ -131,13 +131,13 @@ func (s *server) ProcessesStart() {
 	// Define a process of kind publisher with subject for SayHello to central,
 	// and register a procFunc with the process that will handle the actual
 	// sending of say hello.
-	if s.configuration.PublisherServiceSayhello != 0 {
+	if s.configuration.StartPubSayHello != 0 {
 		fmt.Printf("Starting SayHello Publisher: %#v\n", s.nodeName)
 
 		sub := newSubject(SayHello, EventNACK, s.configuration.CentralNodeName)
 		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, []node{}, nil)
 
-		// Define the procFun to be used for the process.
+		// Define the procFunc to be used for the process.
 		proc.procFunc = procFunc(
 			func() error {
 				for {
@@ -158,7 +158,7 @@ func (s *server) ProcessesStart() {
 						log.Printf("error: ProcessesStart: %v\n", err)
 					}
 					proc.newMessagesCh <- []subjectAndMessage{sam}
-					time.Sleep(time.Second * time.Duration(s.configuration.PublisherServiceSayhello))
+					time.Sleep(time.Second * time.Duration(s.configuration.StartPubSayHello))
 				}
 			})
 		go proc.spawnWorker(s)
