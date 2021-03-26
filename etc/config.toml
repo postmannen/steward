@@ -6,7 +6,7 @@ DefaultMessageTimeout = 5
 NodeName = "central"
 ProfilingPort = ""
 PromHostAndPort = ""
-StartPubSayhello = 0
+StartPubSayHello = 0
 SubscribersDataFolder = "./data"
 
 [StartSubCLICommand]

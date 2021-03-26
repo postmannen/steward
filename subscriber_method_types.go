@@ -33,6 +33,7 @@
 package steward
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -350,32 +351,51 @@ func (m methodCLICommandRequest) handler(proc process, message Message, node str
 
 	c := message.Data[0]
 	a := message.Data[1:]
-	cmd := exec.Command(c, a...)
-	//cmd.Stdout = os.Stdout
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Printf("error: execution of command failed: %v\n", err)
-	}
 
-	time.Sleep(time.Second * time.Duration(message.MethodTimeout))
+	go func() {
 
-	// Create a new message for the reply, and put it on the
-	// ringbuffer to be published.
-	newMsg := Message{
-		ToNode:  message.FromNode,
-		Data:    []string{string(out)},
-		Method:  CLICommandReply,
-		Timeout: 3,
-		Retries: 3,
-	}
-	fmt.Printf("** %#v\n", newMsg)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(message.MethodTimeout))
+		defer cancel()
 
-	nSAM, err := newSAM(newMsg)
-	if err != nil {
-		// In theory the system should drop the message before it reaches here.
-		log.Printf("error: methodCLICommandRequest: %v\n", err)
-	}
-	proc.newMessagesCh <- []subjectAndMessage{nSAM}
+		outCh := make(chan []byte)
+
+		go func() {
+			cmd := exec.CommandContext(ctx, c, a...)
+			out, err := cmd.Output()
+			if err != nil {
+				log.Printf("error: %v\n", err)
+			}
+			outCh <- out
+		}()
+
+		select {
+		case <-ctx.Done():
+			fmt.Printf(" ** Before\n")
+			er := fmt.Errorf("error: method timed out %v", proc)
+			sendErrorLogMessage(proc.newMessagesCh, proc.node, er)
+			fmt.Printf(" ** After\n")
+		case out := <-outCh:
+
+			// Create a new message for the reply, and put it on the
+			// ringbuffer to be published.
+			newMsg := Message{
+				ToNode:  message.FromNode,
+				Data:    []string{string(out)},
+				Method:  CLICommandReply,
+				Timeout: 3,
+				Retries: 3,
+			}
+			fmt.Printf("** %#v\n", newMsg)
+
+			nSAM, err := newSAM(newMsg)
+			if err != nil {
+				// In theory the system should drop the message before it reaches here.
+				log.Printf("error: methodCLICommandRequest: %v\n", err)
+			}
+			proc.newMessagesCh <- []subjectAndMessage{nSAM}
+		}
+
+	}()
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
@@ -445,7 +465,7 @@ func (m methodCLICommandReply) getKind() CommandOrEvent {
 }
 
 func (m methodCLICommandReply) handler(proc process, message Message, node string) ([]byte, error) {
-	fmt.Printf("### %v\n", message.Data)
+	fmt.Printf("<--- methodCLICommandReply: %v\n", message.Data)
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
