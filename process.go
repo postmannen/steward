@@ -135,7 +135,6 @@ func (p process) spawnWorker(s *server) {
 				err := p.procFunc()
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: procFunc failed: %v", err)
-					log.Printf("%v\n", er)
 					sendErrorLogMessage(p.newMessagesCh, node(p.node), er)
 				}
 			}()
@@ -156,7 +155,6 @@ func (p process) spawnWorker(s *server) {
 				err := p.procFunc()
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: procFunc failed: %v", err)
-					log.Printf("%v\n", er)
 					sendErrorLogMessage(p.newMessagesCh, node(p.node), er)
 				}
 			}()
@@ -176,7 +174,6 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		dataPayload, err := gobEncodeMessage(message)
 		if err != nil {
 			er := fmt.Errorf("error: createDataPayload: %v", err)
-			log.Printf("%v\n", er)
 			sendErrorLogMessage(p.newMessagesCh, node(p.node), er)
 			continue
 		}
@@ -198,7 +195,6 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		subReply, err := natsConn.SubscribeSync(msg.Reply)
 		if err != nil {
 			er := fmt.Errorf("error: nc.SubscribeSync failed: failed to create reply message: %v", err)
-			log.Printf("%v\n", er)
 			sendErrorLogMessage(p.newMessagesCh, node(p.node), er)
 			continue
 		}
@@ -207,7 +203,6 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		err = natsConn.PublishMsg(msg)
 		if err != nil {
 			er := fmt.Errorf("error: publish failed: %v", err)
-			log.Printf("%v\n", er)
 			sendErrorLogMessage(p.newMessagesCh, node(p.node), er)
 			continue
 		}
@@ -266,7 +261,6 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 	err := gobDec.Decode(&message)
 	if err != nil {
 		er := fmt.Errorf("error: gob decoding failed: %v", err)
-		log.Printf("%v\n", er)
 		sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
 	}
 
@@ -275,7 +269,6 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		mh, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.CommandOrEvent)
-			log.Printf("%v\n", er)
 			sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
 		}
 
@@ -295,12 +288,10 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: failed to execute event: %v", err)
-				log.Printf("%v\n", er)
 				sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
 			}
 		} else {
 			er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
-			log.Printf("%v\n", er)
 			sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
 		}
 
@@ -311,7 +302,6 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		mf, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.CommandOrEvent)
-			log.Printf("%v\n", er)
 			sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
 		}
 
@@ -332,18 +322,15 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: failed to execute event: %v", err)
-				log.Printf("%v\n", er)
 				sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
 			}
 		} else {
 			er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
-			log.Printf("%v\n", er)
 			sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
 		}
 		// ---
 	default:
 		er := fmt.Errorf("info: did not find that specific type of command: %#v", p.subject.CommandOrEvent)
-		log.Printf("%v\n", er)
 		sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
 
 	}

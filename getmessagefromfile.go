@@ -36,7 +36,6 @@ func (s *server) getMessagesFromFile(directoryToCheck string, fileName string, i
 		js, err := jsonFromFileData(b)
 		if err != nil {
 			er := fmt.Errorf("error: malformed json: %v", err)
-			log.Printf("%v\n", er)
 			sendErrorLogMessage(s.newMessagesCh, node(s.nodeName), er)
 			continue
 		}
@@ -52,7 +51,6 @@ func (s *server) getMessagesFromFile(directoryToCheck string, fileName string, i
 		inputFromFileCh <- js
 	}
 	er := fmt.Errorf("error: getMessagesFromFile stopped")
-	log.Printf("%v\n", er)
 	sendErrorLogMessage(s.newMessagesCh, node(s.nodeName), er)
 }
 

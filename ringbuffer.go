@@ -91,7 +91,6 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 		s, err := r.dumpBucket(samValueBucket)
 		if err != nil {
 			er := fmt.Errorf("error: fillBuffer: retreival of values from k/v store failed: %v", err)
-			log.Printf("%v\n", er)
 			sendErrorLogMessage(r.newMessagesCh, node(r.nodeName), er)
 		}
 
@@ -116,7 +115,6 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 		// Check if the command or event exists in commandOrEvent.go
 		if !coeAvailable.CheckIfExists(v.CommandOrEvent, v.Subject) {
 			er := fmt.Errorf("error: fillBuffer: the event or command type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v", coeAvailableValues)
-			log.Printf("%v\n", er)
 			sendErrorLogMessage(r.newMessagesCh, node(r.nodeName), er)
 
 			fmt.Println()
@@ -150,7 +148,6 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 		js, err := json.Marshal(samV)
 		if err != nil {
 			er := fmt.Errorf("error:fillBuffer gob encoding samValue: %v", err)
-			log.Printf("%v\n", er)
 			sendErrorLogMessage(r.newMessagesCh, node(r.nodeName), er)
 		}
 
@@ -158,7 +155,6 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 		err = r.dbUpdate(r.db, samValueBucket, strconv.Itoa(dbID), js)
 		if err != nil {
 			er := fmt.Errorf("error: dbUpdate samValue failed: %v", err)
-			log.Printf("%v\n", er)
 			sendErrorLogMessage(r.newMessagesCh, node(r.nodeName), er)
 
 		}

@@ -151,7 +151,8 @@ func (s *server) printProcessesMap() {
 // sendErrorMessage will put the error message directly on the channel that is
 // read by the nats publishing functions.
 func sendErrorLogMessage(newMessagesCh chan<- []subjectAndMessage, FromNode node, theError error) {
-	// --- Testing
+	// NB: Adding log statement here for more visuality during development.
+	log.Printf("%v\n", theError)
 	sam := createErrorMsgContent(FromNode, theError)
 	newMessagesCh <- []subjectAndMessage{sam}
 }
@@ -224,13 +225,11 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 			// Check if the format of the message is correct.
 			if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
 				er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
-				log.Printf("%v\n", er)
 				sendErrorLogMessage(s.newMessagesCh, node(s.nodeName), er)
 				continue
 			}
 			if !coeAvailable.CheckIfExists(sam.Subject.CommandOrEvent, sam.Subject) {
 				er := fmt.Errorf("error: routeMessagesToProcess: the command or event do not exist, message dropped: %v", sam.Message.Method)
-				log.Printf("%v\n", er)
 				sendErrorLogMessage(s.newMessagesCh, node(s.nodeName), er)
 
 				continue
