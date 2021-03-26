@@ -9,6 +9,9 @@ import (
 )
 
 func (s *server) ProcessesStart() {
+
+	// --- Subscriber services that can be started via flags
+
 	// Start a subscriber for CLICommand messages
 	if s.configuration.StartSubCLICommand.OK {
 		{
@@ -21,12 +24,14 @@ func (s *server) ProcessesStart() {
 	}
 
 	// Start a subscriber for textLogging messages
-	{
-		fmt.Printf("Starting textlogging subscriber: %#v\n", s.nodeName)
-		sub := newSubject(TextLogging, EventACK, s.nodeName)
-		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
-		// fmt.Printf("*** %#v\n", proc)
-		go proc.spawnWorker(s)
+	if s.configuration.StartSubTextLogging.OK {
+		{
+			fmt.Printf("Starting textlogging subscriber: %#v\n", s.nodeName)
+			sub := newSubject(TextLogging, EventACK, s.nodeName)
+			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubTextLogging.Values, nil)
+			// fmt.Printf("*** %#v\n", proc)
+			go proc.spawnWorker(s)
+		}
 	}
 
 	// Start a subscriber for SayHello messages
@@ -70,6 +75,58 @@ func (s *server) ProcessesStart() {
 		}
 	}
 
+	// Start a subscriber for ECHORequest messages
+	if s.configuration.StartSubEchoRequest.OK {
+		{
+			fmt.Printf("Starting Echo Request subscriber: %#v\n", s.nodeName)
+			sub := newSubject(ECHORequest, EventACK, s.nodeName)
+			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubEchoRequest.Values, nil)
+			go proc.spawnWorker(s)
+		}
+	}
+
+	// Start a subscriber for ECHOReply messages
+	if s.configuration.StartSubEchoReply.OK {
+		{
+			fmt.Printf("Starting Echo Reply subscriber: %#v\n", s.nodeName)
+			sub := newSubject(ECHOReply, EventACK, s.nodeName)
+			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubEchoReply.Values, nil)
+			go proc.spawnWorker(s)
+		}
+	}
+
+	// Start a subscriber for CLICommandRequest messages
+	if s.configuration.StartSubCLICommandRequest.OK {
+		{
+			fmt.Printf("Starting CLICommand Request subscriber: %#v\n", s.nodeName)
+			sub := newSubject(CLICommandRequest, EventACK, s.nodeName)
+			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommandRequest.Values, nil)
+			go proc.spawnWorker(s)
+		}
+	}
+
+	// Start a subscriber for CLICommandRequestNOSEQ messages
+	if s.configuration.StartSubCLICommandRequestNOSEQ.OK {
+		{
+			fmt.Printf("Starting CLICommand NOSEQ Request subscriber: %#v\n", s.nodeName)
+			sub := newSubject(CLICommandRequestNOSEQ, EventACK, s.nodeName)
+			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommandRequestNOSEQ.Values, nil)
+			go proc.spawnWorker(s)
+		}
+	}
+
+	// Start a subscriber for CLICommandReply messages
+	if s.configuration.StartSubCLICommandReply.OK {
+		{
+			fmt.Printf("Starting CLICommand Reply subscriber: %#v\n", s.nodeName)
+			sub := newSubject(CLICommandReply, EventACK, s.nodeName)
+			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommandReply.Values, nil)
+			go proc.spawnWorker(s)
+		}
+	}
+
+	// --- Publisher services that can be started via flags
+
 	// --------- Testing with publisher ------------
 	// Define a process of kind publisher with subject for SayHello to central,
 	// and register a procFunc with the process that will handle the actual
@@ -104,46 +161,6 @@ func (s *server) ProcessesStart() {
 					time.Sleep(time.Second * time.Duration(s.configuration.PublisherServiceSayhello))
 				}
 			})
-		go proc.spawnWorker(s)
-	}
-
-	// Start a subscriber for ECHORequest messages
-	{
-		fmt.Printf("Starting Echo Request subscriber: %#v\n", s.nodeName)
-		sub := newSubject(ECHORequest, EventACK, s.nodeName)
-		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
-		go proc.spawnWorker(s)
-	}
-
-	// Start a subscriber for ECHOReply messages
-	{
-		fmt.Printf("Starting Echo Reply subscriber: %#v\n", s.nodeName)
-		sub := newSubject(ECHOReply, EventACK, s.nodeName)
-		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
-		go proc.spawnWorker(s)
-	}
-
-	// Start a subscriber for CLICommandRequest messages
-	{
-		fmt.Printf("Starting CLICommand Request subscriber: %#v\n", s.nodeName)
-		sub := newSubject(CLICommandRequest, EventACK, s.nodeName)
-		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
-		go proc.spawnWorker(s)
-	}
-
-	// Start a subscriber for CLICommandRequest messages
-	{
-		fmt.Printf("Starting CLICommand NOSEQ Request subscriber: %#v\n", s.nodeName)
-		sub := newSubject(CLICommandRequestNOSEQ, EventACK, s.nodeName)
-		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
-		go proc.spawnWorker(s)
-	}
-
-	// Start a subscriber for CLICommandReply messages
-	{
-		fmt.Printf("Starting CLICommand Reply subscriber: %#v\n", s.nodeName)
-		sub := newSubject(CLICommandReply, EventACK, s.nodeName)
-		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
 		go proc.spawnWorker(s)
 	}
 }

@@ -103,6 +103,18 @@ type Configuration struct {
 	StartSubSayHello flagNodeSlice
 	// Subscriber for CLI Commands
 	StartSubCLICommand flagNodeSlice
+	// Subscriber for text logging
+	StartSubTextLogging flagNodeSlice
+	// Subscriber for Echo Request
+	StartSubEchoRequest flagNodeSlice
+	// Subscriber for Echo Reply
+	StartSubEchoReply flagNodeSlice
+	// Subscriber for CLICommandRequest
+	StartSubCLICommandRequest flagNodeSlice
+	// Subscriber for CLICommandRequestNOSEQ
+	StartSubCLICommandRequestNOSEQ flagNodeSlice
+	// Subscriber for CLICommandReply
+	StartSubCLICommandReply flagNodeSlice
 }
 
 func NewConfiguration() *Configuration {
@@ -113,18 +125,24 @@ func NewConfiguration() *Configuration {
 // Default configuration
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
-		ConfigFolder:             "./etc",
-		BrokerAddress:            "127.0.0.1:4222",
-		ProfilingPort:            "",
-		PromHostAndPort:          "",
-		DefaultMessageTimeout:    10,
-		DefaultMessageRetries:    1,
-		PublisherServiceSayhello: 30,
-		SubscribersDataFolder:    "./data",
-		CentralNodeName:          "",
-		StartSubErrorLog:         flagNodeSlice{Values: []node{}},
-		StartSubSayHello:         flagNodeSlice{Values: []node{}},
-		StartSubCLICommand:       flagNodeSlice{Values: []node{}},
+		ConfigFolder:                   "./etc",
+		BrokerAddress:                  "127.0.0.1:4222",
+		ProfilingPort:                  "",
+		PromHostAndPort:                "",
+		DefaultMessageTimeout:          10,
+		DefaultMessageRetries:          1,
+		PublisherServiceSayhello:       30,
+		SubscribersDataFolder:          "./data",
+		CentralNodeName:                "",
+		StartSubErrorLog:               flagNodeSlice{Values: []node{}},
+		StartSubSayHello:               flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubCLICommand:             flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubTextLogging:            flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubEchoRequest:            flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubEchoReply:              flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubCLICommandRequest:      flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubCLICommandRequestNOSEQ: flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubCLICommandReply:        flagNodeSlice{OK: true, Values: []node{"*"}},
 	}
 	return c
 }
@@ -159,6 +177,12 @@ func (c *Configuration) CheckFlags() error {
 	flag.Var(&c.StartSubErrorLog, "startSubErrorLog", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubSayHello, "startSubSayHello", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubCLICommand, "startSubCLICommand", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubTextLogging, "startSubTextLogging", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubEchoRequest, "startSubEchoRequest", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubEchoReply, "startSubEchoReply", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubCLICommandRequest, "startSubCLICommandRequest", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubCLICommandRequestNOSEQ, "startSubCLICommandRequestNOSEQ", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubCLICommandReply, "startSubCLICommandReply", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 
 	flag.Parse()
 
