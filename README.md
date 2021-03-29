@@ -88,10 +88,16 @@ If one process hangs on a long running message method it will not affect the res
 
 - All handling down to the process and message level are handled concurrently. So if there are problems handling one message sent to a node on a subject it will not affect the messages being sent to other nodes, or other messages sent on other subjects to the same host.
 
-- Default timeouts to wait for ACK messages and max attempts to retry sending a message specified upon startup. This can be overridden on the message level.
-
 - Message types of both ACK and NACK, so we can decide if we want or don't want an Acknowledge if a message was delivered succesfully.
 Example: We probably want an ACK when sending some CLICommand to be executed, but we don't care for an acknowledge (NACK) when we send an "hello I'm here" event.
+
+### Timeouts and retries
+
+- Default timeouts to wait for ACK messages and max attempts to retry sending a message are specified upon startup. This can be overridden on the message level.
+
+- Timeout's can be specified on both the message, and the method. With other words a message can have a timeout, and for example if the method it will trigger is a shell command it can have it's own timeout so processes can have a timeout if they get stuck.
+
+- Setting the retries to `0` is the same as unlimited retries.
 
 ### Flags and configuration file
 
@@ -369,10 +375,6 @@ and for a shell command of type command to a host named "ship2"
 
 ## TODO
 
-- FIX so it can handle multiple slices of input for msg.pipe
-
-- Make a scraper that first send an EventACK, and the content of the scraping is returned by a node as a new EventACK back the where the initial event originated.
-
 - Implement a log scraper method in `tail -f` style ?
 
 - Implement a web scraper method ?
@@ -380,8 +382,6 @@ and for a shell command of type command to a host named "ship2"
 - Encryption between Node instances and brokers.
 
 - Authentication between node instances and brokers.
-
-- Implement context to be able to stop processes, and message handlers.
 
 ## Disclaimer
 
