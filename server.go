@@ -51,7 +51,7 @@ type server struct {
 	// The name of the node
 	nodeName string
 	// Mutex for locking when writing to the process map
-	newMessagesCh chan []subjectAndMessage
+	toRingbufferCh chan []subjectAndMessage
 	// errorKernel is doing all the error handling like what to do if
 	// an error occurs.
 	errorKernel *errorKernel
@@ -67,12 +67,12 @@ func NewServer(c *Configuration) (*server, error) {
 	}
 
 	s := &server{
-		configuration: c,
-		nodeName:      c.NodeName,
-		natsConn:      conn,
-		processes:     newProcesses(),
-		newMessagesCh: make(chan []subjectAndMessage),
-		metrics:       newMetrics(c.PromHostAndPort),
+		configuration:  c,
+		nodeName:       c.NodeName,
+		natsConn:       conn,
+		processes:      newProcesses(),
+		toRingbufferCh: make(chan []subjectAndMessage),
+		metrics:        newMetrics(c.PromHostAndPort),
 	}
 
 	// Create the default data folder for where subscribers should
@@ -101,19 +101,13 @@ func (s *server) Start() {
 	// Start the error kernel that will do all the error handling
 	// not done within a process.
 	s.errorKernel = newErrorKernel()
-	s.errorKernel.startErrorKernel(s.newMessagesCh)
+	s.errorKernel.startErrorKernel(s.toRingbufferCh)
 
 	// Start collecting the metrics
 	go s.startMetrics()
 
-	// Start the checking the input file for new messages from operator.
-	go s.getMessagesFromFile("./", "steward.sock", s.newMessagesCh)
-
-	// // if enabled, start the sayHello I'm here service at the given interval
-	// // REMOVED:
-	// if s.publisherServices.sayHelloPublisher.interval != 0 {
-	// 	go s.publisherServices.sayHelloPublisher.start(s.newMessagesCh, node(s.nodeName))
-	// }
+	// Start the checking the input socket for new messages from operator.
+	go s.readSocket(s.toRingbufferCh)
 
 	// Start up the predefined subscribers.
 	s.ProcessesStart()
@@ -122,7 +116,7 @@ func (s *server) Start() {
 	s.printProcessesMap()
 
 	// Start the processing of new messages from an input channel.
-	s.routeMessagesToProcess("./incommmingBuffer.db", s.newMessagesCh)
+	s.routeMessagesToProcess("./incommmingBuffer.db", s.toRingbufferCh)
 
 	select {}
 
@@ -192,7 +186,7 @@ func createErrorMsgContent(FromNode node, theError error) subjectAndMessage {
 func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subjectAndMessage) {
 	// Prepare and start a new ring buffer
 	const bufferSize int = 1000
-	rb := newringBuffer(bufferSize, dbFileName, node(s.nodeName), s.newMessagesCh)
+	rb := newringBuffer(bufferSize, dbFileName, node(s.nodeName), s.toRingbufferCh)
 	inCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValue)
 	// start the ringbuffer.
@@ -225,12 +219,12 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 			// Check if the format of the message is correct.
 			if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
 				er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
-				sendErrorLogMessage(s.newMessagesCh, node(s.nodeName), er)
+				sendErrorLogMessage(s.toRingbufferCh, node(s.nodeName), er)
 				continue
 			}
 			if !coeAvailable.CheckIfExists(sam.Subject.CommandOrEvent, sam.Subject) {
 				er := fmt.Errorf("error: routeMessagesToProcess: the command or event do not exist, message dropped: %v", sam.Message.Method)
-				sendErrorLogMessage(s.newMessagesCh, node(s.nodeName), er)
+				sendErrorLogMessage(s.toRingbufferCh, node(s.nodeName), er)
 
 				continue
 			}
@@ -264,7 +258,7 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 				log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 				sub := newSubject(sam.Subject.Method, sam.Subject.CommandOrEvent, sam.Subject.ToNode)
-				proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil, nil)
+				proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil, nil)
 				// fmt.Printf("*** %#v\n", proc)
 				proc.spawnWorker(s)
 

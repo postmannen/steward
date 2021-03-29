@@ -55,12 +55,12 @@ type process struct {
 	// copy of the configuration from server
 	configuration *Configuration
 	// The new messages channel copied from *Server
-	newMessagesCh chan<- []subjectAndMessage
+	toRingbufferCh chan<- []subjectAndMessage
 }
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func newProcess(processes *processes, newMessagesCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, errCh chan errProcess, processKind processKind, allowedReceivers []node, procFunc func() error) process {
+func newProcess(processes *processes, toRingbufferCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, errCh chan errProcess, processKind processKind, allowedReceivers []node, procFunc func() error) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
 	processes.lastProcessID++
 
@@ -81,7 +81,7 @@ func newProcess(processes *processes, newMessagesCh chan<- []subjectAndMessage, 
 		processKind:      processKind,
 		allowedReceivers: m,
 		methodsAvailable: method.GetMethodsAvailable(),
-		newMessagesCh:    newMessagesCh,
+		toRingbufferCh:   toRingbufferCh,
 		configuration:    configuration,
 	}
 
@@ -135,7 +135,7 @@ func (p process) spawnWorker(s *server) {
 				err := p.procFunc()
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: procFunc failed: %v", err)
-					sendErrorLogMessage(p.newMessagesCh, node(p.node), er)
+					sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
 				}
 			}()
 		}
@@ -155,7 +155,7 @@ func (p process) spawnWorker(s *server) {
 				err := p.procFunc()
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: procFunc failed: %v", err)
-					sendErrorLogMessage(p.newMessagesCh, node(p.node), er)
+					sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
 				}
 			}()
 		}
@@ -174,7 +174,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		dataPayload, err := gobEncodeMessage(message)
 		if err != nil {
 			er := fmt.Errorf("error: createDataPayload: %v", err)
-			sendErrorLogMessage(p.newMessagesCh, node(p.node), er)
+			sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
 			continue
 		}
 
@@ -195,7 +195,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		subReply, err := natsConn.SubscribeSync(msg.Reply)
 		if err != nil {
 			er := fmt.Errorf("error: nc.SubscribeSync failed: failed to create reply message: %v", err)
-			sendErrorLogMessage(p.newMessagesCh, node(p.node), er)
+			sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
 			continue
 		}
 
@@ -203,7 +203,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		err = natsConn.PublishMsg(msg)
 		if err != nil {
 			er := fmt.Errorf("error: publish failed: %v", err)
-			sendErrorLogMessage(p.newMessagesCh, node(p.node), er)
+			sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
 			continue
 		}
 
@@ -217,7 +217,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 			msgReply, err := subReply.NextMsg(time.Second * time.Duration(message.Timeout))
 			if err != nil {
 				er := fmt.Errorf("error: subReply.NextMsg failed for node=%v, subject=%v: %v", p.node, p.subject.name(), err)
-				sendErrorLogMessage(p.newMessagesCh, message.FromNode, er)
+				sendErrorLogMessage(p.toRingbufferCh, message.FromNode, er)
 
 				// did not receive a reply, decide what to do..
 				retryAttempts++
@@ -229,7 +229,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 				case retryAttempts >= message.Retries:
 					// max retries reached
 					er := fmt.Errorf("info: max retries for message reached, breaking out: %v", message)
-					sendErrorLogMessage(p.newMessagesCh, message.FromNode, er)
+					sendErrorLogMessage(p.toRingbufferCh, message.FromNode, er)
 					return
 
 				default:
@@ -264,7 +264,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 	err := gobDec.Decode(&message)
 	if err != nil {
 		er := fmt.Errorf("error: gob decoding failed: %v", err)
-		sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
+		sendErrorLogMessage(s.toRingbufferCh, node(thisNode), er)
 	}
 
 	switch {
@@ -272,7 +272,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		mh, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.CommandOrEvent)
-			sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
+			sendErrorLogMessage(s.toRingbufferCh, node(thisNode), er)
 		}
 
 		out := []byte("not allowed from " + message.FromNode)
@@ -291,11 +291,11 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: failed to execute event: %v", err)
-				sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
+				sendErrorLogMessage(s.toRingbufferCh, node(thisNode), er)
 			}
 		} else {
 			er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
-			sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
+			sendErrorLogMessage(s.toRingbufferCh, node(thisNode), er)
 		}
 
 		// Send a confirmation message back to the publisher
@@ -305,7 +305,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		mf, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.CommandOrEvent)
-			sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
+			sendErrorLogMessage(s.toRingbufferCh, node(thisNode), er)
 		}
 
 		// Check if we are allowed to receive from that host
@@ -325,16 +325,16 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: failed to execute event: %v", err)
-				sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
+				sendErrorLogMessage(s.toRingbufferCh, node(thisNode), er)
 			}
 		} else {
 			er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
-			sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
+			sendErrorLogMessage(s.toRingbufferCh, node(thisNode), er)
 		}
 		// ---
 	default:
 		er := fmt.Errorf("info: did not find that specific type of command: %#v", p.subject.CommandOrEvent)
-		sendErrorLogMessage(s.newMessagesCh, node(thisNode), er)
+		sendErrorLogMessage(s.toRingbufferCh, node(thisNode), er)
 
 	}
 }

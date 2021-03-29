@@ -223,7 +223,7 @@ func (m methodCLICommand) handler(proc process, message Message, node string) ([
 	case <-ctx.Done():
 		cancel()
 		er := fmt.Errorf("error: method timed out %v", message)
-		sendErrorLogMessage(proc.newMessagesCh, proc.node, er)
+		sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 	case out = <-outCh:
 		cancel()
 	}
@@ -334,7 +334,7 @@ func (m methodEchoRequest) handler(proc process, message Message, node string) (
 		// In theory the system should drop the message before it reaches here.
 		log.Printf("error: methodEchoRequest: %v\n", err)
 	}
-	proc.newMessagesCh <- []subjectAndMessage{nSAM}
+	proc.toRingbufferCh <- []subjectAndMessage{nSAM}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
@@ -398,7 +398,7 @@ func (m methodCLICommandRequest) handler(proc process, message Message, node str
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: method timed out %v", message)
-			sendErrorLogMessage(proc.newMessagesCh, proc.node, er)
+			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 		case out := <-outCh:
 			cancel()
 
@@ -418,7 +418,7 @@ func (m methodCLICommandRequest) handler(proc process, message Message, node str
 				// In theory the system should drop the message before it reaches here.
 				log.Printf("error: methodCLICommandRequest: %v\n", err)
 			}
-			proc.newMessagesCh <- []subjectAndMessage{nSAM}
+			proc.toRingbufferCh <- []subjectAndMessage{nSAM}
 		}
 
 	}()
@@ -471,7 +471,7 @@ func (m methodCLICommandRequestNOSEQ) handler(proc process, message Message, nod
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: method timed out %v", message)
-			sendErrorLogMessage(proc.newMessagesCh, proc.node, er)
+			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 		case out := <-outCh:
 			cancel()
 
@@ -491,7 +491,7 @@ func (m methodCLICommandRequestNOSEQ) handler(proc process, message Message, nod
 				// In theory the system should drop the message before it reaches here.
 				log.Printf("error: methodCLICommandRequest: %v\n", err)
 			}
-			proc.newMessagesCh <- []subjectAndMessage{nSAM}
+			proc.toRingbufferCh <- []subjectAndMessage{nSAM}
 		}
 
 	}()

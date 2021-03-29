@@ -1,57 +1,65 @@
 package steward
 
 import (
-	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
+	"net"
 	"os"
-
-	"github.com/fsnotify/fsnotify"
 )
 
-// getMessagesFromFile will start a file watcher for the given directory
-// and filename. It will take a channel of []byte as input, and it is
-// in this channel the content of a file that has changed is returned.
-func (s *server) getMessagesFromFile(directoryToCheck string, fileName string, inputFromFileCh chan []subjectAndMessage) {
-	fileUpdated := make(chan bool)
-	go fileWatcherStart(directoryToCheck, fileUpdated)
+// readSocket will read the .sock file specified.
+// It will take a channel of []byte as input, and it is in this
+// channel the content of a file that has changed is returned.
+func (s *server) readSocket(toRingbufferCh chan []subjectAndMessage) {
+	err := os.Remove("steward.sock")
+	if err != nil {
+		log.Printf("error: could not delete sock file: %v\n", err)
+	}
 
-	for range fileUpdated {
+	l, err := net.Listen("unix", "steward.sock")
+	if err != nil {
+		log.Printf("error: failed to open socket: %v\n", err)
+		os.Exit(1)
+	}
 
-		//load file, read it's content
-		b, err := readTruncateMessageFile(fileName)
+	// Loop, and wait for new connections.
+	for {
+		conn, err := l.Accept()
 		if err != nil {
-			log.Printf("error: reading file: %v", err)
+			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
+			sendErrorLogMessage(toRingbufferCh, node(s.nodeName), er)
 		}
 
-		// Start on top again if the file did not contain
-		// any data.
-		if len(b) == 0 {
+		b := make([]byte, 65535)
+		_, err = conn.Read(b)
+		if err != nil {
+			er := fmt.Errorf("error: failed to read data from socket: %v", err)
+			sendErrorLogMessage(toRingbufferCh, node(s.nodeName), er)
 			continue
 		}
+
+		b = bytes.Trim(b, "\x00")
 
 		// unmarshal the JSON into a struct
-		js, err := jsonFromFileData(b)
+		sam, err := convertBytesToSAM(b)
 		if err != nil {
 			er := fmt.Errorf("error: malformed json: %v", err)
-			sendErrorLogMessage(s.newMessagesCh, node(s.nodeName), er)
+			sendErrorLogMessage(toRingbufferCh, node(s.nodeName), er)
 			continue
 		}
 
-		for i := range js {
-			fmt.Printf("*** Checking message found in file: messageType type: %T, messagetype contains: %#v\n", js[i].Subject.CommandOrEvent, js[i].Subject.CommandOrEvent)
+		for i := range sam {
+
 			// Fill in the value for the FromNode field, so the receiver
 			// can check this field to know where it came from.
-			js[i].Message.FromNode = node(s.nodeName)
+			sam[i].Message.FromNode = node(s.nodeName)
 		}
 
-		// Send the data back to be consumed
-		inputFromFileCh <- js
+		// Send the SAM struct to be picked up by the ring buffer.
+		toRingbufferCh <- sam
 	}
-	er := fmt.Errorf("error: getMessagesFromFile stopped")
-	sendErrorLogMessage(s.newMessagesCh, node(s.nodeName), er)
 }
 
 type subjectAndMessage struct {
@@ -59,10 +67,11 @@ type subjectAndMessage struct {
 	Message `json:"message" yaml:"message"`
 }
 
-// jsonFromFileData will range over the message given in json format. For
-// each element found the Message type will be converted into a SubjectAndMessage
-// type value and appended to a slice, and the slice is returned to the caller.
-func jsonFromFileData(b []byte) ([]subjectAndMessage, error) {
+// convertBytesToSAM will range over the  byte representing a message given in
+// json format. For each element found the Message type will be converted into
+// a SubjectAndMessage type value and appended to a slice, and the slice is
+// returned to the caller.
+func convertBytesToSAM(b []byte) ([]subjectAndMessage, error) {
 	MsgSlice := []Message{}
 
 	err := json.Unmarshal(b, &MsgSlice)
@@ -113,73 +122,4 @@ func newSAM(m Message) (subjectAndMessage, error) {
 	}
 
 	return sm, nil
-}
-
-// readTruncateMessageFile, will read all the messages in the given
-// file, and truncate the file after read.
-// A []byte will be returned with the content read.
-func readTruncateMessageFile(fileName string) ([]byte, error) {
-
-	f, err := os.OpenFile(fileName, os.O_APPEND|os.O_RDWR|os.O_CREATE, os.ModeAppend)
-	if err != nil {
-		log.Printf("error: readTruncateMessageFile: Failed to open file: %v\n", err)
-		return nil, err
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-
-	lines := []byte{}
-
-	for scanner.Scan() {
-		lines = append(lines, scanner.Bytes()...)
-	}
-
-	// empty the file after all is read
-	_, err = f.Seek(0, io.SeekStart)
-	if err != nil {
-		return nil, fmt.Errorf("f.Seek failed: %v", err)
-	}
-
-	err = f.Truncate(0)
-	if err != nil {
-		return nil, fmt.Errorf("f.Truncate failed: %v", err)
-	}
-
-	return lines, nil
-}
-
-// Start the file watcher that will check if the in pipe for new operator
-// messages are updated with new content.
-func fileWatcherStart(directoryToCheck string, fileUpdated chan bool) {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Println("Failed fsnotify.NewWatcher")
-		return
-	}
-	defer watcher.Close()
-
-	done := make(chan bool)
-	go func() {
-		//Give a true value to updated so it reads the file the first time.
-		fileUpdated <- true
-		for {
-			select {
-			case event := <-watcher.Events:
-				if event.Op&fsnotify.Write == fsnotify.Write {
-					// log.Println("info: steward.sock file updated, processing input: ", event.Name)
-					//testing with an update chan to get updates
-					fileUpdated <- true
-				}
-			case err := <-watcher.Errors:
-				log.Println("error:", err)
-			}
-		}
-	}()
-
-	err = watcher.Add(directoryToCheck)
-	if err != nil {
-		log.Printf("error: watcher add: %v\n", err)
-	}
-	<-done
 }

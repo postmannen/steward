@@ -17,7 +17,7 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting CLICommand subscriber: %#v\n", s.nodeName)
 			sub := newSubject(CLICommand, CommandACK, s.nodeName)
-			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommand.Values, nil)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommand.Values, nil)
 			// fmt.Printf("*** %#v\n", proc)
 			go proc.spawnWorker(s)
 		}
@@ -28,7 +28,7 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting textlogging subscriber: %#v\n", s.nodeName)
 			sub := newSubject(TextLogging, EventACK, s.nodeName)
-			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubTextLogging.Values, nil)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubTextLogging.Values, nil)
 			// fmt.Printf("*** %#v\n", proc)
 			go proc.spawnWorker(s)
 		}
@@ -39,7 +39,7 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting SayHello subscriber: %#v\n", s.nodeName)
 			sub := newSubject(SayHello, EventNACK, s.nodeName)
-			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubSayHello.Values, nil)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubSayHello.Values, nil)
 			proc.procFuncCh = make(chan Message)
 
 			proc.procFunc = func() error {
@@ -70,7 +70,7 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting ErrorLog subscriber: %#v\n", s.nodeName)
 			sub := newSubject(ErrorLog, EventNACK, "errorCentral")
-			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubErrorLog.Values, nil)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubErrorLog.Values, nil)
 			go proc.spawnWorker(s)
 		}
 	}
@@ -80,7 +80,7 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting Echo Request subscriber: %#v\n", s.nodeName)
 			sub := newSubject(ECHORequest, EventACK, s.nodeName)
-			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubEchoRequest.Values, nil)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubEchoRequest.Values, nil)
 			go proc.spawnWorker(s)
 		}
 	}
@@ -90,7 +90,7 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting Echo Reply subscriber: %#v\n", s.nodeName)
 			sub := newSubject(ECHOReply, EventACK, s.nodeName)
-			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubEchoReply.Values, nil)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubEchoReply.Values, nil)
 			go proc.spawnWorker(s)
 		}
 	}
@@ -100,7 +100,7 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting CLICommand Request subscriber: %#v\n", s.nodeName)
 			sub := newSubject(CLICommandRequest, EventACK, s.nodeName)
-			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommandRequest.Values, nil)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommandRequest.Values, nil)
 			go proc.spawnWorker(s)
 		}
 	}
@@ -110,7 +110,7 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting CLICommand NOSEQ Request subscriber: %#v\n", s.nodeName)
 			sub := newSubject(CLICommandRequestNOSEQ, EventACK, s.nodeName)
-			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommandRequestNOSEQ.Values, nil)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommandRequestNOSEQ.Values, nil)
 			go proc.spawnWorker(s)
 		}
 	}
@@ -120,7 +120,7 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting CLICommand Reply subscriber: %#v\n", s.nodeName)
 			sub := newSubject(CLICommandReply, EventACK, s.nodeName)
-			proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommandReply.Values, nil)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommandReply.Values, nil)
 			go proc.spawnWorker(s)
 		}
 	}
@@ -135,7 +135,7 @@ func (s *server) ProcessesStart() {
 		fmt.Printf("Starting SayHello Publisher: %#v\n", s.nodeName)
 
 		sub := newSubject(SayHello, EventNACK, s.configuration.CentralNodeName)
-		proc := newProcess(s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, []node{}, nil)
+		proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, []node{}, nil)
 
 		// Define the procFunc to be used for the process.
 		proc.procFunc = procFunc(
@@ -157,7 +157,7 @@ func (s *server) ProcessesStart() {
 						// In theory the system should drop the message before it reaches here.
 						log.Printf("error: ProcessesStart: %v\n", err)
 					}
-					proc.newMessagesCh <- []subjectAndMessage{sam}
+					proc.toRingbufferCh <- []subjectAndMessage{sam}
 					time.Sleep(time.Second * time.Duration(s.configuration.StartPubSayHello))
 				}
 			})

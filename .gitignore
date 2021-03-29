@@ -4,3 +4,4 @@ tmp/
 incommmingBuffer.db
 store.log
 changes.md
+steward.sock
