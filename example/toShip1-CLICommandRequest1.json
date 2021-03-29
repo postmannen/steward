@@ -2,10 +2,10 @@
     {
         
         "toNode": "ship1",
-        "data": ["bash","-c","sleep 5 & echo 'apekatt'"],
+        "data": ["bash","-c","sleep 3 & echo 'apekatt'"],
         "method":"CLICommandRequest",
         "timeout":10,
         "retries":3,
-        "MethodTimeout": 3
+        "MethodTimeout": 7
     }
 ]
