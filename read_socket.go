@@ -5,28 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
-	"os"
 )
 
 // readSocket will read the .sock file specified.
 // It will take a channel of []byte as input, and it is in this
 // channel the content of a file that has changed is returned.
 func (s *server) readSocket(toRingbufferCh chan []subjectAndMessage) {
-	err := os.Remove("steward.sock")
-	if err != nil {
-		log.Printf("error: could not delete sock file: %v\n", err)
-	}
-
-	l, err := net.Listen("unix", "steward.sock")
-	if err != nil {
-		log.Printf("error: failed to open socket: %v\n", err)
-		os.Exit(1)
-	}
 
 	// Loop, and wait for new connections.
 	for {
-		conn, err := l.Accept()
+		conn, err := s.netListener.Accept()
 		if err != nil {
 			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
 			sendErrorLogMessage(toRingbufferCh, node(s.nodeName), er)

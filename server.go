@@ -4,6 +4,7 @@ package steward
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"sync"
 	"time"
@@ -46,6 +47,8 @@ type server struct {
 	configuration *Configuration
 	// The nats connection to the broker
 	natsConn *nats.Conn
+	// net listener for communicating via the socket
+	netListener net.Listener
 	// processes holds all the information about running processes
 	processes *processes
 	// The name of the node
@@ -66,10 +69,23 @@ func NewServer(c *Configuration) (*server, error) {
 		log.Printf("error: nats.Connect failed: %v\n", err)
 	}
 
+	// Prepare the connection to the socket file
+	err = os.Remove("steward.sock")
+	if err != nil {
+		log.Printf("error: could not delete sock file: %v\n", err)
+	}
+
+	nl, err := net.Listen("unix", "steward.sock")
+	if err != nil {
+		log.Printf("error: failed to open socket: %v\n", err)
+		os.Exit(1)
+	}
+
 	s := &server{
 		configuration:  c,
 		nodeName:       c.NodeName,
 		natsConn:       conn,
+		netListener:    nl,
 		processes:      newProcesses(),
 		toRingbufferCh: make(chan []subjectAndMessage),
 		metrics:        newMetrics(c.PromHostAndPort),
