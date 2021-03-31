@@ -6,6 +6,6 @@
         "method":"CLICommandRequestNOSEQ",
         "timeout":10,
         "retries":3,
-        "MethodTimeout": 0
+        "methodTimeout": 0
     }
 ]

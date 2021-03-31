@@ -6,6 +6,6 @@
         "method":"CLICommandRequest",
         "timeout":10,
         "retries":3,
-        "MethodTimeout": 7
+        "methodTimeout": 4
     }
 ]

@@ -270,29 +270,39 @@ func (m methodOpCommandRequest) handler(proc process, message Message, node stri
 			return
 		}
 
-		//--
-		// Create a new message for the reply, and put it on the
-		// ringbuffer to be published.
-		newMsg := Message{
-			ToNode:  message.FromNode,
-			Data:    []string{string(out)},
-			Method:  OpCommandReply,
-			Timeout: 3,
-			Retries: 3,
-		}
-		fmt.Printf("** %#v\n", newMsg)
-
-		nSAM, err := newSAM(newMsg)
-		if err != nil {
-			// In theory the system should drop the message before it reaches here.
-			log.Printf("error: methodCLICommandRequest: %v\n", err)
-		}
-		proc.toRingbufferCh <- []subjectAndMessage{nSAM}
-		//--
+		// Prepare and queue for sending a new message with the output
+		// of the action executed.
+		newReplyMessage(proc, message, OpCommandReply, out)
 	}()
 
 	ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n", node, message.ID))
 	return ackMsg, nil
+}
+
+//--
+// Create a new message for the reply containing the output of the
+// action executed put in outData, and put it on the ringbuffer to
+// be published.
+func newReplyMessage(proc process, message Message, method Method, outData []byte) {
+	//--
+	// Create a new message for the reply, and put it on the
+	// ringbuffer to be published.
+	newMsg := Message{
+		ToNode:  message.FromNode,
+		Data:    []string{string(outData)},
+		Method:  method,
+		Timeout: message.RequestTimeout,
+		Retries: message.RequestRetries,
+	}
+	fmt.Printf("** %#v\n", newMsg)
+
+	nSAM, err := newSAM(newMsg)
+	if err != nil {
+		// In theory the system should drop the message before it reaches here.
+		log.Printf("error: %v: %v\n", message.Method, err)
+	}
+	proc.toRingbufferCh <- []subjectAndMessage{nSAM}
+	//--
 }
 
 // -----
@@ -442,22 +452,9 @@ func (m methodEchoRequest) getKind() CommandOrEvent {
 func (m methodEchoRequest) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- ECHO REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 
-	// Create a new message for the reply, and put it on the
-	// ringbuffer to be published.
-	newMsg := Message{
-		ToNode:  message.FromNode,
-		Data:    []string{""},
-		Method:  ECHOReply,
-		Timeout: 3,
-		Retries: 3,
-	}
-
-	nSAM, err := newSAM(newMsg)
-	if err != nil {
-		// In theory the system should drop the message before it reaches here.
-		log.Printf("error: methodEchoRequest: %v\n", err)
-	}
-	proc.toRingbufferCh <- []subjectAndMessage{nSAM}
+	// Prepare and queue for sending a new message with the output
+	// of the action executed.
+	newReplyMessage(proc, message, ECHOReply, []byte{})
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
@@ -525,23 +522,9 @@ func (m methodCLICommandRequest) handler(proc process, message Message, node str
 		case out := <-outCh:
 			cancel()
 
-			// Create a new message for the reply, and put it on the
-			// ringbuffer to be published.
-			newMsg := Message{
-				ToNode:  message.FromNode,
-				Data:    []string{string(out)},
-				Method:  CLICommandReply,
-				Timeout: 3,
-				Retries: 3,
-			}
-			fmt.Printf("** %#v\n", newMsg)
-
-			nSAM, err := newSAM(newMsg)
-			if err != nil {
-				// In theory the system should drop the message before it reaches here.
-				log.Printf("error: methodCLICommandRequest: %v\n", err)
-			}
-			proc.toRingbufferCh <- []subjectAndMessage{nSAM}
+			// Prepare and queue for sending a new message with the output
+			// of the action executed.
+			newReplyMessage(proc, message, CLICommandReply, out)
 		}
 
 	}()
@@ -598,23 +581,9 @@ func (m methodCLICommandRequestNOSEQ) handler(proc process, message Message, nod
 		case out := <-outCh:
 			cancel()
 
-			// Create a new message for the reply, and put it on the
-			// ringbuffer to be published.
-			newMsg := Message{
-				ToNode:  message.FromNode,
-				Data:    []string{string(out)},
-				Method:  CLICommandReply,
-				Timeout: 3,
-				Retries: 3,
-			}
-			fmt.Printf("** %#v\n", newMsg)
-
-			nSAM, err := newSAM(newMsg)
-			if err != nil {
-				// In theory the system should drop the message before it reaches here.
-				log.Printf("error: methodCLICommandRequest: %v\n", err)
-			}
-			proc.toRingbufferCh <- []subjectAndMessage{nSAM}
+			// Prepare and queue for sending a new message with the output
+			// of the action executed.
+			newReplyMessage(proc, message, CLICommandReply, out)
 		}
 
 	}()

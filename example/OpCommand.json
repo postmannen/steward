@@ -6,6 +6,6 @@
         "method":"OpCommand",
         "timeout":3,
         "retries":3,
-        "MethodTimeout": 7
+        "methodTimeout": 7
     }
 ]
