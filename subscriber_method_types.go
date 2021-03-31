@@ -50,6 +50,8 @@ type Method string
 // The constants that will be used throughout the system for
 // when specifying what kind of Method to send or work with.
 const (
+	// Command for client operation of the system
+	OpCommand Method = "OpCommand"
 	// Execute a CLI command in for example bash or cmd.
 	// This is a command type, so the output of the command executed
 	// will directly showed in the ACK message received.
@@ -114,6 +116,9 @@ const (
 func (m Method) GetMethodsAvailable() MethodsAvailable {
 	ma := MethodsAvailable{
 		methodhandlers: map[Method]methodHandler{
+			OpCommand: methodOpCommand{
+				commandOrEvent: CommandACK,
+			},
 			CLICommand: methodCLICommand{
 				commandOrEvent: CommandACK,
 			},
@@ -188,6 +193,41 @@ type methodHandler interface {
 }
 
 // -----
+type methodOpCommand struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodOpCommand) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
+
+// handler to run a CLI command with timeout context. The handler will
+// return the output of the command run back to the calling publisher
+// in the ack message.
+func (m methodOpCommand) handler(proc process, message Message, node string) ([]byte, error) {
+	out := []byte{}
+
+	switch {
+	case message.Data[0] == "ps":
+		proc.processes.mu.Lock()
+		for _, v := range proc.processes.active {
+			s := fmt.Sprintf("* proc - : %v, id: %v, name: %v, allowed from: %s\n", v.processKind, v.processID, v.subject.name(), v.allowedReceivers)
+			sb := []byte(s)
+			out = append(out, sb...)
+		}
+		proc.processes.mu.Unlock()
+
+	default:
+		out = []byte("error: no such OpCommand specified: " + message.Data[0])
+		ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v, error: %s\n---\n", node, message.ID, out))
+		return ackMsg, nil
+	}
+
+	ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n%s", node, message.ID, out))
+	return ackMsg, nil
+}
+
+// -----
 
 type methodCLICommand struct {
 	commandOrEvent CommandOrEvent
@@ -231,8 +271,6 @@ func (m methodCLICommand) handler(proc process, message Message, node string) ([
 	ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n%s---", node, message.ID, out))
 	return ackMsg, nil
 }
-
-// -----
 
 type methodTextLogging struct {
 	commandOrEvent CommandOrEvent

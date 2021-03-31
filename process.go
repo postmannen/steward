@@ -56,6 +56,8 @@ type process struct {
 	configuration *Configuration
 	// The new messages channel copied from *Server
 	toRingbufferCh chan<- []subjectAndMessage
+	// The structure who holds all processes information
+	processes *processes
 }
 
 // prepareNewProcess will set the the provided values and the default
@@ -83,6 +85,7 @@ func newProcess(processes *processes, toRingbufferCh chan<- []subjectAndMessage,
 		methodsAvailable: method.GetMethodsAvailable(),
 		toRingbufferCh:   toRingbufferCh,
 		configuration:    configuration,
+		processes:        processes,
 	}
 
 	return proc

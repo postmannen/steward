@@ -29,12 +29,15 @@ type processes struct {
 	mu sync.RWMutex
 	// The last processID created
 	lastProcessID int
+	// metrics channel
+	metricsCh chan metricType
 }
 
 // newProcesses will prepare and return a *processes
-func newProcesses() *processes {
+func newProcesses(metricsCh chan metricType) *processes {
 	p := processes{
-		active: make(map[processName]process),
+		active:    make(map[processName]process),
+		metricsCh: metricsCh,
 	}
 
 	return &p
@@ -81,14 +84,16 @@ func NewServer(c *Configuration) (*server, error) {
 		os.Exit(1)
 	}
 
+	metrics := newMetrics(c.PromHostAndPort)
+
 	s := &server{
 		configuration:  c,
 		nodeName:       c.NodeName,
 		natsConn:       conn,
 		netListener:    nl,
-		processes:      newProcesses(),
+		processes:      newProcesses(metrics.metricsCh),
 		toRingbufferCh: make(chan []subjectAndMessage),
-		metrics:        newMetrics(c.PromHostAndPort),
+		metrics:        metrics,
 	}
 
 	// Create the default data folder for where subscribers should
@@ -129,7 +134,7 @@ func (s *server) Start() {
 	s.ProcessesStart()
 
 	time.Sleep(time.Second * 1)
-	s.printProcessesMap()
+	s.processes.printProcessesMap()
 
 	// Start the processing of new messages from an input channel.
 	s.routeMessagesToProcess("./incommmingBuffer.db", s.toRingbufferCh)
@@ -138,21 +143,21 @@ func (s *server) Start() {
 
 }
 
-func (s *server) printProcessesMap() {
+func (p *processes) printProcessesMap() {
 	fmt.Println("--------------------------------------------------------------------------------------------")
 	fmt.Printf("*** Output of processes map :\n")
-	s.processes.mu.Lock()
-	for _, v := range s.processes.active {
+	p.mu.Lock()
+	for _, v := range p.active {
 		fmt.Printf("* proc - : %v, id: %v, name: %v, allowed from: %v\n", v.processKind, v.processID, v.subject.name(), v.allowedReceivers)
 	}
-	s.processes.mu.Unlock()
+	p.mu.Unlock()
 
-	s.metrics.metricsCh <- metricType{
+	p.metricsCh <- metricType{
 		metric: prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "total_running_processes",
 			Help: "The current number of total running processes",
 		}),
-		value: float64(len(s.processes.active)),
+		value: float64(len(p.active)),
 	}
 
 	fmt.Println("--------------------------------------------------------------------------------------------")
@@ -280,7 +285,7 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 
 				// REMOVED:
 				//time.Sleep(time.Millisecond * 500)
-				s.printProcessesMap()
+				//s.printProcessesMap()
 				// Now when the process is spawned we jump back to the redo: label,
 				// and send the message to that new process.
 				goto redo

@@ -12,6 +12,14 @@ func (s *server) ProcessesStart() {
 
 	// --- Subscriber services that can be started via flags
 
+	// Start a subscriber for OPCommand messages
+	{
+		fmt.Printf("Starting OpCommand subscriber: %#v\n", s.nodeName)
+		sub := newSubject(OpCommand, CommandACK, s.nodeName)
+		proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
+		go proc.spawnWorker(s)
+	}
+
 	// Start a subscriber for CLICommand messages
 	if s.configuration.StartSubCLICommand.OK {
 		{

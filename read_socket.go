@@ -47,6 +47,8 @@ func (s *server) readSocket(toRingbufferCh chan []subjectAndMessage) {
 
 		// Send the SAM struct to be picked up by the ring buffer.
 		toRingbufferCh <- sam
+
+		conn.Close()
 	}
 }
 
