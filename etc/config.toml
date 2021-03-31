@@ -37,6 +37,10 @@ SubscribersDataFolder = "./data"
   OK = true
   Values = ["*"]
 
+[StartSubOpCommand]
+  OK = false
+  Values = []
+
 [StartSubSayHello]
   OK = true
   Values = ["*"]

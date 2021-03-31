@@ -115,6 +115,8 @@ type Configuration struct {
 	StartSubCLICommandRequestNOSEQ flagNodeSlice
 	// Subscriber for CLICommandReply
 	StartSubCLICommandReply flagNodeSlice
+	// Subscriber for OpCommand
+	StartSubOpCommand flagNodeSlice
 }
 
 func NewConfiguration() *Configuration {
@@ -143,6 +145,7 @@ func newConfigurationDefaults() Configuration {
 		StartSubCLICommandRequest:      flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubCLICommandRequestNOSEQ: flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubCLICommandReply:        flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubOpCommand:              flagNodeSlice{OK: true, Values: []node{"*"}},
 	}
 	return c
 }
@@ -183,6 +186,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.Var(&c.StartSubCLICommandRequest, "startSubCLICommandRequest", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubCLICommandRequestNOSEQ, "startSubCLICommandRequestNOSEQ", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubCLICommandReply, "startSubCLICommandReply", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubOpCommand, "startSubOpCommand", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 
 	flag.Parse()
 
