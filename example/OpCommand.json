@@ -1,0 +1,11 @@
+[
+    {
+        
+        "toNode": "central",
+        "data": ["ps"],
+        "method":"OpCommand",
+        "timeout":3,
+        "retries":3,
+        "MethodTimeout": 7
+    }
+]

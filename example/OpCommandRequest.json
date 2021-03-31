@@ -2,8 +2,8 @@
     {
         
         "toNode": "ship1",
-        "data": ["ps"],
-        "method":"OpCommand",
+        "data": ["psa"],
+        "method":"OpCommandRequest",
         "timeout":3,
         "retries":3,
         "MethodTimeout": 7
