@@ -50,6 +50,10 @@ func (s *server) ProcessesStart() {
 			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubSayHello.Values, nil)
 			proc.procFuncCh = make(chan Message)
 
+			// The reason for running the say hello subscriber as a procFunc is that
+			// a handler are not able to hold state, and we need to hold the state
+			// of the nodes we've received hello's from in the sayHelloNodes map,
+			// which is the information we pass along to generate metrics.
 			proc.procFunc = func() error {
 				sayHelloNodes := make(map[node]struct{})
 				for {
@@ -60,7 +64,7 @@ func (s *server) ProcessesStart() {
 					sayHelloNodes[m.FromNode] = struct{}{}
 
 					// update the prometheus metrics
-					s.metrics.metricsCh <- metricType{
+					proc.processes.metricsCh <- metricType{
 						metric: prometheus.NewGauge(prometheus.GaugeOpts{
 							Name: "hello_nodes",
 							Help: "The current number of total nodes who have said hello",

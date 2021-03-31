@@ -5,7 +5,7 @@ DefaultMessageRetries = 3
 DefaultMessageTimeout = 5
 NodeName = "central"
 ProfilingPort = ""
-PromHostAndPort = ""
+PromHostAndPort = ":2112"
 StartPubSayHello = 0
 SubscribersDataFolder = "./data"
 

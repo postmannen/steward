@@ -14,7 +14,7 @@ A node can be a server running any host operating system, a container living in 
 
 ## Inspiration
 
-The idea for how to handle processes, messages and errors are based on Joe Armstrongs idea behind Erlang described in his Thesis <https://erlang.org/download/armstrong_thesis_2003.pdf>. This does mean it is done in exactly the same way, but more on how I understood those ideas and implemented them using the Go programming language with NATS as the message broker to get a fully decoupled message passing system to handle processes.
+The idea for how to handle processes, messages and errors are based on Joe Armstrongs idea behind Erlang described in his Thesis <https://erlang.org/download/armstrong_thesis_2003.pdf>. This does not mean it is done in exactly the same way, but more on how I understood those ideas and implemented them using the Go programming language with NATS as the message broker to get a fully decoupled message passing system to handle processes.
 
 ## Why
 
@@ -199,7 +199,7 @@ The start subscribers flags take a string value of which nodes that it will proc
 ```go
 // The node to send the message to
 toNode
-// The Unique ID of the message
+// The actual data in the message
 data
 // method, what is this message doing, etc. CLI, syslog, etc.
 method
@@ -211,7 +211,7 @@ retries
 requestTimeout
 // The retries of the new message created via a request event.
 requestRetries
-// Timeout for long a process should be allowed to operate
+// Timeout for how long a process should be allowed to operate
 methodTimeout
 ```
 
