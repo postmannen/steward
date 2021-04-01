@@ -293,8 +293,12 @@ func newReplyMessage(proc process, message Message, method Method, outData []byt
 		Method:  method,
 		Timeout: message.RequestTimeout,
 		Retries: message.RequestRetries,
+		MsgOrigSubject: Subject{
+			ToNode: string(message.ToNode),
+			Method: message.Method,
+		},
 	}
-	fmt.Printf("** %#v\n", newMsg)
+	fmt.Printf("   ** %#v\n", newMsg)
 
 	nSAM, err := newSAM(newMsg)
 	if err != nil {
@@ -316,7 +320,29 @@ func (m methodOpCommandReply) getKind() CommandOrEvent {
 }
 
 func (m methodOpCommandReply) handler(proc process, message Message, node string) ([]byte, error) {
-	log.Printf("<--- OpCommand Reply received from: %v, containing: %v", message.FromNode, message.Data)
+	// Recreate the subject structure for the message, so we can use
+	// it in the naming of the files to create.
+	sub := Subject{
+		ToNode:         string(message.MsgOrigSubject.ToNode),
+		CommandOrEvent: proc.subject.CommandOrEvent,
+		Method:         message.MsgOrigSubject.Method,
+	}
+
+	logFile := filepath.Join(proc.configuration.SubscribersDataFolder, string(sub.name()))
+	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, os.ModeAppend)
+	if err != nil {
+		log.Printf("error: methodEventTextLogging.handler: failed to open file: %v\n", err)
+		return nil, err
+	}
+	defer f.Close()
+
+	for _, d := range message.Data {
+		_, err := f.Write([]byte(d))
+		f.Sync()
+		if err != nil {
+			log.Printf("error: methodEventTextLogging.handler: failed to write to file: %v\n", err)
+		}
+	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil

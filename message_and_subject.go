@@ -28,14 +28,19 @@ type Message struct {
 	RequestRetries int `json:"requestRetries" yaml:"requestRetries"`
 	// Timeout for long a process should be allowed to operate
 	MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
+
+	// msgOriginal are used for example if a reply message is
+	// generated and we also need a copy of  thedetails of the
+	// the initial request message
+	MsgOrigSubject Subject
 	// done is used to signal when a message is fully processed.
 	// This is used when choosing when to move the message from
 	// the ringbuffer into the time series log.
 	done chan struct{}
 }
 
-// gobEncodePayload will encode the message structure along with its
-// valued in gob binary format.
+// gobEncodePayload will encode the message structure into gob
+// binary format.
 func gobEncodeMessage(m Message) ([]byte, error) {
 	var buf bytes.Buffer
 	gobEnc := gob.NewEncoder(&buf)
