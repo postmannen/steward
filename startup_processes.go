@@ -29,13 +29,6 @@ func (s *server) ProcessesStart() {
 		go proc.spawnWorker(s)
 	}
 
-	{
-		fmt.Printf("Starting OpCommandReply subscriber: %#v\n", s.nodeName)
-		sub := newSubject(OpCommandReply, CommandACK, s.nodeName)
-		proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
-		go proc.spawnWorker(s)
-	}
-
 	// Start a subscriber for CLICommand messages
 	if s.configuration.StartSubCLICommand.OK {
 		{

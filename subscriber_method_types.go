@@ -54,8 +54,6 @@ const (
 	OpCommand Method = "OpCommand"
 	// Command for client operation request of the system
 	OpCommandRequest Method = "OpCommandRequest"
-	// Command for client operation reply from a node
-	OpCommandReply Method = "OpCommandReply"
 	// Execute a CLI command in for example bash or cmd.
 	// This is a command type, so the output of the command executed
 	// will directly showed in the ACK message received.
@@ -124,9 +122,6 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				commandOrEvent: CommandACK,
 			},
 			OpCommandRequest: methodOpCommandRequest{
-				commandOrEvent: CommandACK,
-			},
-			OpCommandReply: methodOpCommandReply{
 				commandOrEvent: CommandACK,
 			},
 			CLICommand: methodCLICommand{
@@ -272,7 +267,7 @@ func (m methodOpCommandRequest) handler(proc process, message Message, node stri
 
 		// Prepare and queue for sending a new message with the output
 		// of the action executed.
-		newReplyMessage(proc, message, OpCommandReply, out)
+		newReplyMessage(proc, message, TextLogging, out)
 	}()
 
 	ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n", node, message.ID))
@@ -288,15 +283,12 @@ func newReplyMessage(proc process, message Message, method Method, outData []byt
 	// Create a new message for the reply, and put it on the
 	// ringbuffer to be published.
 	newMsg := Message{
-		ToNode:  message.FromNode,
-		Data:    []string{string(outData)},
-		Method:  method,
-		Timeout: message.RequestTimeout,
-		Retries: message.RequestRetries,
-		MsgOrigSubject: Subject{
-			ToNode: string(message.ToNode),
-			Method: message.Method,
-		},
+		ToNode:                 message.FromNode,
+		Data:                   []string{string(outData)},
+		Method:                 method,
+		Timeout:                message.RequestTimeout,
+		Retries:                message.RequestRetries,
+		PreviousMessageSubject: proc.subject,
 	}
 	fmt.Printf("   ** %#v\n", newMsg)
 
@@ -310,45 +302,6 @@ func newReplyMessage(proc process, message Message, method Method, outData []byt
 }
 
 // -----
-
-type methodOpCommandReply struct {
-	commandOrEvent CommandOrEvent
-}
-
-func (m methodOpCommandReply) getKind() CommandOrEvent {
-	return m.commandOrEvent
-}
-
-func (m methodOpCommandReply) handler(proc process, message Message, node string) ([]byte, error) {
-	// Recreate the subject structure for the message, so we can use
-	// it in the naming of the files to create.
-	sub := Subject{
-		ToNode:         string(message.MsgOrigSubject.ToNode),
-		CommandOrEvent: proc.subject.CommandOrEvent,
-		Method:         message.MsgOrigSubject.Method,
-	}
-
-	logFile := filepath.Join(proc.configuration.SubscribersDataFolder, string(sub.name()))
-	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, os.ModeAppend)
-	if err != nil {
-		log.Printf("error: methodEventTextLogging.handler: failed to open file: %v\n", err)
-		return nil, err
-	}
-	defer f.Close()
-
-	for _, d := range message.Data {
-		_, err := f.Write([]byte(d))
-		f.Sync()
-		if err != nil {
-			log.Printf("error: methodEventTextLogging.handler: failed to write to file: %v\n", err)
-		}
-	}
-
-	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
-	return ackMsg, nil
-}
-
-// ---
 
 type methodCLICommand struct {
 	commandOrEvent CommandOrEvent
@@ -402,13 +355,17 @@ func (m methodTextLogging) getKind() CommandOrEvent {
 }
 
 func (m methodTextLogging) handler(proc process, message Message, node string) ([]byte, error) {
-	sub := Subject{
-		ToNode:         string(message.ToNode),
-		CommandOrEvent: proc.subject.CommandOrEvent,
-		Method:         message.Method,
+	// Recreate the subject structure for the message, so we can use
+	// it in the naming of the files to create.
+	var fileName string
+	switch {
+	case message.PreviousMessageSubject.ToNode != "":
+		fileName = fmt.Sprintf("%v.%v.log", message.PreviousMessageSubject.ToNode, message.PreviousMessageSubject.Method)
+	case message.PreviousMessageSubject.ToNode == "":
+		fileName = fmt.Sprintf("%v.%v.log", message.FromNode, message.Method)
 	}
 
-	logFile := filepath.Join(proc.configuration.SubscribersDataFolder, string(sub.name())+"-"+string(message.FromNode))
+	logFile := filepath.Join(proc.configuration.SubscribersDataFolder, fileName)
 	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, os.ModeAppend)
 	if err != nil {
 		log.Printf("error: methodEventTextLogging.handler: failed to open file: %v\n", err)

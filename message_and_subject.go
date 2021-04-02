@@ -29,10 +29,10 @@ type Message struct {
 	// Timeout for long a process should be allowed to operate
 	MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
 
-	// msgOriginal are used for example if a reply message is
-	// generated and we also need a copy of  thedetails of the
-	// the initial request message
-	MsgOrigSubject Subject
+	// PreviousMessageSubject are used for example if a reply
+	// message is generated and we also need a copy of  thedetails
+	// of the the initial request message
+	PreviousMessageSubject Subject
 	// done is used to signal when a message is fully processed.
 	// This is used when choosing when to move the message from
 	// the ringbuffer into the time series log.
