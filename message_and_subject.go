@@ -16,7 +16,7 @@ type Message struct {
 	// information that can be used on the subscriber side to for
 	// example create specific folders using the Format name to
 	// logically group data recevied.
-	Label string
+	Label string `json:"label" yaml:"label"`
 	// The node to send the message to
 	ToNode node `json:"toNode" yaml:"toNode"`
 	// The Unique ID of the message
@@ -78,6 +78,9 @@ type Subject struct {
 	// from routeMessagesToPublish in *server.
 	// This channel is only used for publishing processes.
 	messageCh chan Message
+	// Label, single word used to describe the data content. For example
+	// syslog, metrics, etc.
+	Label string
 }
 
 // newSubject will return a new variable of the type subject, and insert
