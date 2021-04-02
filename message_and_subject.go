@@ -9,6 +9,14 @@ import (
 // --- Message
 
 type Message struct {
+	// Label is a word without white spaces that can be used to
+	// desribe what kind of service the message is for. For
+	// example syslog, web_log, prometheus_scraper, metrics.
+	// The intentention is that it can be used to add some extra
+	// information that can be used on the subscriber side to for
+	// example create specific folders using the Format name to
+	// logically group data recevied.
+	Label string
 	// The node to send the message to
 	ToNode node `json:"toNode" yaml:"toNode"`
 	// The Unique ID of the message
@@ -88,5 +96,5 @@ func newSubject(method Method, commandOrEvent CommandOrEvent, node string) Subje
 type subjectName string
 
 func (s Subject) name() subjectName {
-	return subjectName(fmt.Sprintf("%s.%s.%s", s.Method, s.CommandOrEvent, s.ToNode))
+	return subjectName(fmt.Sprintf("%s.%s.%s", s.ToNode, s.Method, s.CommandOrEvent))
 }
