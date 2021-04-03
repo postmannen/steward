@@ -285,28 +285,16 @@ func newReplyMessage(proc process, message Message, method Method, outData []byt
 	// Create a new message for the reply, and put it on the
 	// ringbuffer to be published.
 	newMsg := Message{
-		ToNode:                 message.FromNode,
-		Data:                   []string{string(outData)},
-		Method:                 method,
-		Timeout:                message.RequestTimeout,
-		Retries:                message.RequestRetries,
-		PreviousMessageSubject: proc.subject,
-	}
+		ToNode:  message.FromNode,
+		Data:    []string{string(outData)},
+		Method:  method,
+		Timeout: message.RequestTimeout,
+		Retries: message.RequestRetries,
 
-	// The label field is part of the subject struct, but it is not
-	// used for creating subjects for Nats messages.
-	// The label field is set in the individual message that are brought
-	// into the system via the socket.
-	// since the process don't care or knows about the labels for the message
-	// handling we need to manually add it here on the message level,
-	// so the receiving subscriber gets that information.
-	//
-	// NB: This would probably be better handled if the Message rather
-	// contained the whole previous message instead of using the previous
-	// subject, but when testing it seemed to fail to unmarshal a *message
-	// field in the message struct. That is also why the previousSubject
-	// field were introduced to avoid having a field with *previousMessage.
-	newMsg.PreviousMessageSubject.Label = message.Label
+		// Put in a copy of the initial request message, so we can use it's properties if
+		// needed to for example create the file structure naming on the subscriber.
+		PreviousMessage: &message,
+	}
 
 	nSAM, err := newSAM(newMsg)
 	if err != nil {
@@ -374,16 +362,17 @@ func (m methodTextLogging) handler(proc process, message Message, node string) (
 
 	// If it was a request type message we want to check what the initial messages
 	// method, so we can use that in creating the file name to store the data.
+	fmt.Printf(" ** DEBUG: %v\n", message.PreviousMessage)
 	var fileName string
 	switch {
-	case message.PreviousMessageSubject.ToNode != "":
-		fileName = fmt.Sprintf("%v.%v.log", message.PreviousMessageSubject.ToNode, message.PreviousMessageSubject.Method)
-	case message.PreviousMessageSubject.ToNode == "":
+	case message.PreviousMessage.ToNode != "":
+		fileName = fmt.Sprintf("%v.%v.log", message.PreviousMessage.ToNode, message.PreviousMessage.Method)
+	case message.PreviousMessage.ToNode == "":
 		fileName = fmt.Sprintf("%v.%v.log", message.FromNode, message.Method)
 	}
 
 	// Check if folder structure exist, if not create it.
-	folderTree := filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessageSubject.Label, message.PreviousMessageSubject.ToNode)
+	folderTree := filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Label, string(message.PreviousMessage.ToNode))
 
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
 		err := os.MkdirAll(folderTree, 0700)
