@@ -255,7 +255,7 @@ func (m methodOpCommandRequest) handler(proc process, message Message, node stri
 			// Loop the the processes map, and find all that is active to
 			// be returned in the reply message.
 			for _, v := range proc.processes.active {
-				s := fmt.Sprintf("* proc - : %v, id: %v, name: %v, allowed from: %s\n", v.processKind, v.processID, v.subject.name(), v.allowedReceivers)
+				s := fmt.Sprintf("%v, proc: %v, id: %v, name: %v, allowed from: %s\n", time.Now().UTC(), v.processKind, v.processID, v.subject.name(), v.allowedReceivers)
 				sb := []byte(s)
 				out = append(out, sb...)
 			}
