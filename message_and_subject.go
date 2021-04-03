@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"log"
+	"os"
 )
 
 // --- Message
@@ -88,10 +90,18 @@ type Subject struct {
 // newSubject will return a new variable of the type subject, and insert
 // all the values given as arguments. It will also create the channel
 // to receive new messages on the specific subject.
-func newSubject(method Method, commandOrEvent CommandOrEvent, node string) Subject {
+func newSubject(method Method, node string) Subject {
+	// Get the CommandOrEvent type for the Method.
+	ma := method.GetMethodsAvailable()
+	coe, ok := ma.methodhandlers[method]
+	if !ok {
+		log.Printf("error: no CommandOrEvent type specified for the method\n")
+		os.Exit(1)
+	}
+
 	return Subject{
 		ToNode:         node,
-		CommandOrEvent: commandOrEvent,
+		CommandOrEvent: coe.getKind(),
 		Method:         method,
 		messageCh:      make(chan Message),
 	}

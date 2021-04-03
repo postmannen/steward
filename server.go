@@ -278,7 +278,7 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 				// by using the goto at the end redo the process for this specific message.
 				log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
-				sub := newSubject(sam.Subject.Method, sam.Subject.CommandOrEvent, sam.Subject.ToNode)
+				sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
 				proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil, nil)
 				// fmt.Printf("*** %#v\n", proc)
 				proc.spawnWorker(s)

@@ -16,7 +16,7 @@ func (s *server) ProcessesStart() {
 	if s.configuration.StartSubOpCommand.OK {
 		{
 			fmt.Printf("Starting OpCommand subscriber: %#v\n", s.nodeName)
-			sub := newSubject(OpCommand, CommandACK, s.nodeName)
+			sub := newSubject(OpCommand, s.nodeName)
 			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubOpCommand.Values, nil)
 			go proc.spawnWorker(s)
 		}
@@ -24,7 +24,7 @@ func (s *server) ProcessesStart() {
 
 	{
 		fmt.Printf("Starting OpCommandRequest subscriber: %#v\n", s.nodeName)
-		sub := newSubject(OpCommandRequest, CommandACK, s.nodeName)
+		sub := newSubject(OpCommandRequest, s.nodeName)
 		proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
 		go proc.spawnWorker(s)
 	}
@@ -33,7 +33,7 @@ func (s *server) ProcessesStart() {
 	if s.configuration.StartSubCLICommand.OK {
 		{
 			fmt.Printf("Starting CLICommand subscriber: %#v\n", s.nodeName)
-			sub := newSubject(CLICommand, CommandACK, s.nodeName)
+			sub := newSubject(CLICommand, s.nodeName)
 			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommand.Values, nil)
 			// fmt.Printf("*** %#v\n", proc)
 			go proc.spawnWorker(s)
@@ -44,7 +44,7 @@ func (s *server) ProcessesStart() {
 	if s.configuration.StartSubTextLogging.OK {
 		{
 			fmt.Printf("Starting textlogging subscriber: %#v\n", s.nodeName)
-			sub := newSubject(TextLogging, EventACK, s.nodeName)
+			sub := newSubject(TextLogging, s.nodeName)
 			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubTextLogging.Values, nil)
 			// fmt.Printf("*** %#v\n", proc)
 			go proc.spawnWorker(s)
@@ -55,7 +55,7 @@ func (s *server) ProcessesStart() {
 	if s.configuration.StartSubSayHello.OK {
 		{
 			fmt.Printf("Starting SayHello subscriber: %#v\n", s.nodeName)
-			sub := newSubject(SayHello, EventNACK, s.nodeName)
+			sub := newSubject(SayHello, s.nodeName)
 			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubSayHello.Values, nil)
 			proc.procFuncCh = make(chan Message)
 
@@ -90,7 +90,7 @@ func (s *server) ProcessesStart() {
 		// Start a subscriber for ErrorLog messages
 		{
 			fmt.Printf("Starting ErrorLog subscriber: %#v\n", s.nodeName)
-			sub := newSubject(ErrorLog, EventNACK, "errorCentral")
+			sub := newSubject(ErrorLog, "errorCentral")
 			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubErrorLog.Values, nil)
 			go proc.spawnWorker(s)
 		}
@@ -100,7 +100,7 @@ func (s *server) ProcessesStart() {
 	if s.configuration.StartSubEchoRequest.OK {
 		{
 			fmt.Printf("Starting Echo Request subscriber: %#v\n", s.nodeName)
-			sub := newSubject(ECHORequest, EventACK, s.nodeName)
+			sub := newSubject(ECHORequest, s.nodeName)
 			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubEchoRequest.Values, nil)
 			go proc.spawnWorker(s)
 		}
@@ -110,7 +110,7 @@ func (s *server) ProcessesStart() {
 	if s.configuration.StartSubEchoReply.OK {
 		{
 			fmt.Printf("Starting Echo Reply subscriber: %#v\n", s.nodeName)
-			sub := newSubject(ECHOReply, EventACK, s.nodeName)
+			sub := newSubject(ECHOReply, s.nodeName)
 			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubEchoReply.Values, nil)
 			go proc.spawnWorker(s)
 		}
@@ -120,7 +120,7 @@ func (s *server) ProcessesStart() {
 	if s.configuration.StartSubCLICommandRequest.OK {
 		{
 			fmt.Printf("Starting CLICommand Request subscriber: %#v\n", s.nodeName)
-			sub := newSubject(CLICommandRequest, CommandACK, s.nodeName)
+			sub := newSubject(CLICommandRequest, s.nodeName)
 			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommandRequest.Values, nil)
 			go proc.spawnWorker(s)
 		}
@@ -130,7 +130,7 @@ func (s *server) ProcessesStart() {
 	if s.configuration.StartSubCLICommandRequestNOSEQ.OK {
 		{
 			fmt.Printf("Starting CLICommand NOSEQ Request subscriber: %#v\n", s.nodeName)
-			sub := newSubject(CLICommandRequestNOSEQ, CommandACK, s.nodeName)
+			sub := newSubject(CLICommandRequestNOSEQ, s.nodeName)
 			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommandRequestNOSEQ.Values, nil)
 			go proc.spawnWorker(s)
 		}
@@ -140,7 +140,7 @@ func (s *server) ProcessesStart() {
 	if s.configuration.StartSubCLICommandReply.OK {
 		{
 			fmt.Printf("Starting CLICommand Reply subscriber: %#v\n", s.nodeName)
-			sub := newSubject(CLICommandReply, EventACK, s.nodeName)
+			sub := newSubject(CLICommandReply, s.nodeName)
 			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommandReply.Values, nil)
 			go proc.spawnWorker(s)
 		}
@@ -155,7 +155,7 @@ func (s *server) ProcessesStart() {
 	if s.configuration.StartPubSayHello != 0 {
 		fmt.Printf("Starting SayHello Publisher: %#v\n", s.nodeName)
 
-		sub := newSubject(SayHello, EventNACK, s.configuration.CentralNodeName)
+		sub := newSubject(SayHello, s.configuration.CentralNodeName)
 		proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, []node{}, nil)
 
 		// Define the procFunc to be used for the process.
