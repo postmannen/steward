@@ -120,7 +120,7 @@ func (s *server) ProcessesStart() {
 	if s.configuration.StartSubCLICommandRequest.OK {
 		{
 			fmt.Printf("Starting CLICommand Request subscriber: %#v\n", s.nodeName)
-			sub := newSubject(CLICommandRequest, EventACK, s.nodeName)
+			sub := newSubject(CLICommandRequest, CommandACK, s.nodeName)
 			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommandRequest.Values, nil)
 			go proc.spawnWorker(s)
 		}
@@ -130,7 +130,7 @@ func (s *server) ProcessesStart() {
 	if s.configuration.StartSubCLICommandRequestNOSEQ.OK {
 		{
 			fmt.Printf("Starting CLICommand NOSEQ Request subscriber: %#v\n", s.nodeName)
-			sub := newSubject(CLICommandRequestNOSEQ, EventACK, s.nodeName)
+			sub := newSubject(CLICommandRequestNOSEQ, CommandACK, s.nodeName)
 			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommandRequestNOSEQ.Values, nil)
 			go proc.spawnWorker(s)
 		}

@@ -116,6 +116,9 @@ const (
 //   - EventACK
 //   - EventNack
 func (m Method) GetMethodsAvailable() MethodsAvailable {
+
+	// Command, Used to make a request to perform an action
+	// Event, Used to communicate that an action has been performed.
 	ma := MethodsAvailable{
 		methodhandlers: map[Method]methodHandler{
 			OpCommand: methodOpCommand{
@@ -128,10 +131,10 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				commandOrEvent: CommandACK,
 			},
 			CLICommandRequest: methodCLICommandRequest{
-				commandOrEvent: EventACK,
+				commandOrEvent: CommandACK,
 			},
 			CLICommandRequestNOSEQ: methodCLICommandRequestNOSEQ{
-				commandOrEvent: EventACK,
+				commandOrEvent: CommandACK,
 			},
 			CLICommandReply: methodCLICommandReply{
 				commandOrEvent: EventACK,
@@ -250,6 +253,7 @@ func (m methodOpCommandRequest) handler(proc process, message Message, node stri
 		out := []byte{}
 
 		switch {
+
 		case message.Data[0] == "ps":
 			proc.processes.mu.Lock()
 			// Loop the the processes map, and find all that is active to
