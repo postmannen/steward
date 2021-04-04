@@ -530,7 +530,7 @@ func (m methodCLICommandRequest) handler(proc process, message Message, node str
 
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
-			newReplyMessage(proc, message, CLICommandReply, out)
+			newReplyMessage(proc, message, TextLogging, out)
 		}
 
 	}()

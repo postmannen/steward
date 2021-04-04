@@ -1,6 +1,6 @@
 [
     {
-        
+        "label":"cli-command-executed-result",
         "toNode": "ship1",
         "data": ["bash","-c","sleep 3 & tree ./"],
         "method":"CLICommandRequest",
