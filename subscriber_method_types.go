@@ -51,7 +51,7 @@ type Method string
 // when specifying what kind of Method to send or work with.
 const (
 	// Command for client operation request of the system
-	OpCommandRequest Method = "OpCommandRequest"
+	REQOpCommand Method = "REQOpCommand"
 	// Execute a CLI command in for example bash or cmd.
 	// This is an event type, where a message will be sent to a
 	// node with the command to execute and an ACK will be replied
@@ -113,7 +113,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 	// Event, Used to communicate that an action has been performed.
 	ma := MethodsAvailable{
 		methodhandlers: map[Method]methodHandler{
-			OpCommandRequest: methodOpCommandRequest{
+			REQOpCommand: methodREQOpCommand{
 				commandOrEvent: CommandACK,
 			},
 			CLICommandRequest: methodCLICommandRequest{
@@ -188,18 +188,18 @@ type methodHandler interface {
 
 // -----
 
-type methodOpCommandRequest struct {
+type methodREQOpCommand struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodOpCommandRequest) getKind() CommandOrEvent {
+func (m methodREQOpCommand) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
 // handler to run a CLI command with timeout context. The handler will
 // return the output of the command run back to the calling publisher
 // in the ack message.
-func (m methodOpCommandRequest) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodREQOpCommand) handler(proc process, message Message, node string) ([]byte, error) {
 	go func() {
 		out := []byte{}
 

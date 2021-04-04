@@ -3,7 +3,7 @@
         "label":"opcommand_logs",
         "toNode": "ship1",
         "data": ["ps"],
-        "method":"OpCommandRequest",
+        "method":"REQOpCommand",
         "timeout":3,
         "retries":3,
         "requestTimeout":3,

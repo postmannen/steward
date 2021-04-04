@@ -13,8 +13,8 @@ func (s *server) ProcessesStart() {
 	// --- Subscriber services that can be started via flags
 
 	{
-		fmt.Printf("Starting OpCommandRequest subscriber: %#v\n", s.nodeName)
-		sub := newSubject(OpCommandRequest, s.nodeName)
+		fmt.Printf("Starting REQOpCommand subscriber: %#v\n", s.nodeName)
+		sub := newSubject(REQOpCommand, s.nodeName)
 		proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
 		go proc.spawnWorker(s)
 	}
