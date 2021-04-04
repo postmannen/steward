@@ -13,10 +13,6 @@ SubscribersDataFolder = "./data"
   OK = true
   Values = ["*"]
 
-[StartSubCLICommandRequest]
-  OK = true
-  Values = ["*"]
-
 [StartSubCLICommandRequestNOSEQ]
   OK = true
   Values = ["*"]
@@ -30,6 +26,10 @@ SubscribersDataFolder = "./data"
   Values = ["*"]
 
 [StartSubErrorLog]
+  OK = true
+  Values = ["*"]
+
+[StartSubREQCLICommand]
   OK = true
   Values = ["*"]
 

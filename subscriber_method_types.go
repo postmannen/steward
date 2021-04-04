@@ -60,7 +60,7 @@ const (
 	// as a new message.
 	// The data field is a slice of strings where the first string
 	// value should be the command, and the following the arguments.
-	CLICommandRequest Method = "CLICommandRequest"
+	REQCLICommand Method = "REQCLICommand"
 	// Execute a CLI command in for example bash or cmd.
 	// This is an event type, where a message will be sent to a
 	// node with the command to execute and an ACK will be replied
@@ -116,7 +116,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQOpCommand: methodREQOpCommand{
 				commandOrEvent: CommandACK,
 			},
-			CLICommandRequest: methodCLICommandRequest{
+			REQCLICommand: methodREQCLICommand{
 				commandOrEvent: CommandACK,
 			},
 			CLICommandRequestNOSEQ: methodCLICommandRequestNOSEQ{
@@ -391,18 +391,18 @@ func (m methodEchoReply) handler(proc process, message Message, node string) ([]
 
 // ---
 
-type methodCLICommandRequest struct {
+type methodREQCLICommand struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodCLICommandRequest) getKind() CommandOrEvent {
+func (m methodREQCLICommand) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
 // handler to run a CLI command with timeout context. The handler will
 // return the output of the command run back to the calling publisher
 // as a new message.
-func (m methodCLICommandRequest) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodREQCLICommand) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- CLICommandREQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 
 	// Execute the CLI command in it's own go routine, so we are able

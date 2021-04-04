@@ -108,7 +108,7 @@ type Configuration struct {
 	// Subscriber for Echo Reply
 	StartSubEchoReply flagNodeSlice
 	// Subscriber for CLICommandRequest
-	StartSubCLICommandRequest flagNodeSlice
+	StartSubREQCLICommand flagNodeSlice
 	// Subscriber for CLICommandRequestNOSEQ
 	StartSubCLICommandRequestNOSEQ flagNodeSlice
 	// Subscriber for CLICommandReply
@@ -137,7 +137,7 @@ func newConfigurationDefaults() Configuration {
 		StartSubTextLogging:            flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubEchoRequest:            flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubEchoReply:              flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubCLICommandRequest:      flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQCLICommand:          flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubCLICommandRequestNOSEQ: flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubCLICommandReply:        flagNodeSlice{OK: true, Values: []node{"*"}},
 	}
@@ -176,7 +176,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.Var(&c.StartSubTextLogging, "startSubTextLogging", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubEchoRequest, "startSubEchoRequest", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubEchoReply, "startSubEchoReply", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubCLICommandRequest, "startSubCLICommandRequest", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubREQCLICommand, "startSubREQCLICommand", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubCLICommandRequestNOSEQ, "startSubCLICommandRequestNOSEQ", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubCLICommandReply, "startSubCLICommandReply", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 
