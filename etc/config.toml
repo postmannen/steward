@@ -29,7 +29,7 @@ SubscribersDataFolder = "./data"
   OK = true
   Values = ["*"]
 
-[StartSubREQCLICommand]
+[StartSubREQCliCommand]
   OK = true
   Values = ["*"]
 

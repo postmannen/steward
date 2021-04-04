@@ -3,7 +3,7 @@
         "label":"cli-command-executed-result",
         "toNode": "ship1",
         "data": ["bash","-c","sleep 3 & tree ./"],
-        "method":"REQCLICommand",
+        "method":"REQCliCommand",
         "timeout":10,
         "retries":3,
         "methodTimeout": 4

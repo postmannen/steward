@@ -95,12 +95,12 @@ func (s *server) ProcessesStart() {
 		}
 	}
 
-	// Start a subscriber for REQCLICommand messages
-	if s.configuration.StartSubREQCLICommand.OK {
+	// Start a subscriber for REQCliCommand messages
+	if s.configuration.StartSubREQCliCommand.OK {
 		{
 			fmt.Printf("Starting CLICommand Request subscriber: %#v\n", s.nodeName)
-			sub := newSubject(REQCLICommand, s.nodeName)
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQCLICommand.Values, nil)
+			sub := newSubject(REQCliCommand, s.nodeName)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQCliCommand.Values, nil)
 			go proc.spawnWorker(s)
 		}
 	}
