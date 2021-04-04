@@ -1,8 +1,0 @@
-[
-    {
-        "toNode": "ship2",
-        "data": ["bash","-c","tree ../"],
-        "method":"CLICommand"
-
-    }
-]

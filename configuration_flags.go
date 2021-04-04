@@ -101,8 +101,6 @@ type Configuration struct {
 	StartSubErrorLog flagNodeSlice
 	// Subscriber for hello messages
 	StartSubSayHello flagNodeSlice
-	// Subscriber for CLI Commands
-	StartSubCLICommand flagNodeSlice
 	// Subscriber for text logging
 	StartSubTextLogging flagNodeSlice
 	// Subscriber for Echo Request
@@ -115,8 +113,6 @@ type Configuration struct {
 	StartSubCLICommandRequestNOSEQ flagNodeSlice
 	// Subscriber for CLICommandReply
 	StartSubCLICommandReply flagNodeSlice
-	// Subscriber for OpCommand
-	StartSubOpCommand flagNodeSlice
 }
 
 func NewConfiguration() *Configuration {
@@ -138,14 +134,12 @@ func newConfigurationDefaults() Configuration {
 		CentralNodeName:                "",
 		StartSubErrorLog:               flagNodeSlice{Values: []node{}},
 		StartSubSayHello:               flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubCLICommand:             flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubTextLogging:            flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubEchoRequest:            flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubEchoReply:              flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubCLICommandRequest:      flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubCLICommandRequestNOSEQ: flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubCLICommandReply:        flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubOpCommand:              flagNodeSlice{OK: true, Values: []node{"*"}},
 	}
 	return c
 }
@@ -179,14 +173,12 @@ func (c *Configuration) CheckFlags() error {
 
 	flag.Var(&c.StartSubErrorLog, "startSubErrorLog", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubSayHello, "startSubSayHello", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubCLICommand, "startSubCLICommand", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubTextLogging, "startSubTextLogging", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubEchoRequest, "startSubEchoRequest", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubEchoReply, "startSubEchoReply", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubCLICommandRequest, "startSubCLICommandRequest", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubCLICommandRequestNOSEQ, "startSubCLICommandRequestNOSEQ", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubCLICommandReply, "startSubCLICommandReply", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubOpCommand, "startSubOpCommand", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 
 	flag.Parse()
 

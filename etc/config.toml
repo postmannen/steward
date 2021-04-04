@@ -9,10 +9,6 @@ PromHostAndPort = ":2112"
 StartPubSayHello = 0
 SubscribersDataFolder = "./data"
 
-[StartSubCLICommand]
-  OK = true
-  Values = ["*"]
-
 [StartSubCLICommandReply]
   OK = true
   Values = ["*"]
@@ -34,10 +30,6 @@ SubscribersDataFolder = "./data"
   Values = ["*"]
 
 [StartSubErrorLog]
-  OK = true
-  Values = ["*"]
-
-[StartSubOpCommand]
   OK = true
   Values = ["*"]
 

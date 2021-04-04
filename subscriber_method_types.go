@@ -7,15 +7,15 @@
 // Overall structure example shown below.
 //
 // ---
-// type methodCommandCLICommand struct {
+// type methodCommandCLICommandRequest struct {
 // 	commandOrEvent CommandOrEvent
 // }
 //
-// func (m methodCommandCLICommand) getKind() CommandOrEvent {
+// func (m methodCommandCLICommandRequest) getKind() CommandOrEvent {
 // 	return m.commandOrEvent
 // }
 //
-// func (m methodCommandCLICommand) handler(s *server, message Message, node string) ([]byte, error) {
+// func (m methodCommandCLICommandRequest) handler(s *server, message Message, node string) ([]byte, error) {
 //  ...
 //  ...
 // 	ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n%s---", node, message.ID, out))
@@ -50,16 +50,8 @@ type Method string
 // The constants that will be used throughout the system for
 // when specifying what kind of Method to send or work with.
 const (
-	// Command for client operation of the system
-	OpCommand Method = "OpCommand"
 	// Command for client operation request of the system
 	OpCommandRequest Method = "OpCommandRequest"
-	// Execute a CLI command in for example bash or cmd.
-	// This is a command type, so the output of the command executed
-	// will directly showed in the ACK message received.
-	// The data field is a slice of strings where the first string
-	// value should be the command, and the following the arguments.
-	CLICommand Method = "CLICommand"
 	// Execute a CLI command in for example bash or cmd.
 	// This is an event type, where a message will be sent to a
 	// node with the command to execute and an ACK will be replied
@@ -121,13 +113,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 	// Event, Used to communicate that an action has been performed.
 	ma := MethodsAvailable{
 		methodhandlers: map[Method]methodHandler{
-			OpCommand: methodOpCommand{
-				commandOrEvent: CommandACK,
-			},
 			OpCommandRequest: methodOpCommandRequest{
-				commandOrEvent: CommandACK,
-			},
-			CLICommand: methodCLICommand{
 				commandOrEvent: CommandACK,
 			},
 			CLICommandRequest: methodCLICommandRequest{
@@ -198,41 +184,6 @@ func (ma MethodsAvailable) CheckIfExists(m Method) (methodHandler, bool) {
 type methodHandler interface {
 	handler(proc process, message Message, node string) ([]byte, error)
 	getKind() CommandOrEvent
-}
-
-// -----
-type methodOpCommand struct {
-	commandOrEvent CommandOrEvent
-}
-
-func (m methodOpCommand) getKind() CommandOrEvent {
-	return m.commandOrEvent
-}
-
-// handler to run a CLI command with timeout context. The handler will
-// return the output of the command run back to the calling publisher
-// in the ack message.
-func (m methodOpCommand) handler(proc process, message Message, node string) ([]byte, error) {
-	out := []byte{}
-
-	switch {
-	case message.Data[0] == "ps":
-		proc.processes.mu.Lock()
-		for _, v := range proc.processes.active {
-			s := fmt.Sprintf("* proc - : %v, id: %v, name: %v, allowed from: %s\n", v.processKind, v.processID, v.subject.name(), v.allowedReceivers)
-			sb := []byte(s)
-			out = append(out, sb...)
-		}
-		proc.processes.mu.Unlock()
-
-	default:
-		out = []byte("error: no such OpCommand specified: " + message.Data[0])
-		ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v, error: %s\n---\n", node, message.ID, out))
-		return ackMsg, nil
-	}
-
-	ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n%s", node, message.ID, out))
-	return ackMsg, nil
 }
 
 // -----
@@ -307,51 +258,6 @@ func newReplyMessage(proc process, message Message, method Method, outData []byt
 	}
 	proc.toRingbufferCh <- []subjectAndMessage{nSAM}
 	//--
-}
-
-// -----
-
-type methodCLICommand struct {
-	commandOrEvent CommandOrEvent
-}
-
-func (m methodCLICommand) getKind() CommandOrEvent {
-	return m.commandOrEvent
-}
-
-// handler to run a CLI command with timeout context. The handler will
-// return the output of the command run back to the calling publisher
-// in the ack message.
-func (m methodCLICommand) handler(proc process, message Message, node string) ([]byte, error) {
-	out := []byte{}
-
-	c := message.Data[0]
-	a := message.Data[1:]
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(message.MethodTimeout))
-
-	outCh := make(chan []byte)
-
-	go func() {
-		cmd := exec.CommandContext(ctx, c, a...)
-		out, err := cmd.Output()
-		if err != nil {
-			log.Printf("error: %v\n", err)
-		}
-		outCh <- out
-	}()
-
-	select {
-	case <-ctx.Done():
-		cancel()
-		er := fmt.Errorf("error: method timed out %v", message)
-		sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-	case out = <-outCh:
-		cancel()
-	}
-
-	ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n%s---", node, message.ID, out))
-	return ackMsg, nil
 }
 
 type methodTextLogging struct {
