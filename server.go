@@ -175,14 +175,9 @@ func sendErrorLogMessage(newMessagesCh chan<- []subjectAndMessage, FromNode node
 // createErrorMsgContent will prepare a subject and message with the content
 // of the error
 func createErrorMsgContent(FromNode node, theError error) subjectAndMessage {
-	// TESTING: Creating an error message to send to errorCentral
 	fmt.Printf(" --- Sending error message to central !!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
 	sam := subjectAndMessage{
-		Subject: Subject{
-			ToNode:         "errorCentral",
-			CommandOrEvent: EventNACK,
-			Method:         ErrorLog,
-		},
+		Subject: newSubject(ErrorLog, "errorCentral"),
 		Message: Message{
 			ToNode:   "errorCentral",
 			FromNode: FromNode,
