@@ -80,7 +80,7 @@ const (
 	// start up for receiving the CLICommand request messages.
 	// The data field is a slice of strings where the first string
 	// value should be the command, and the following the arguments.
-	CLICommandReply Method = "CLICommandReply"
+	REQTextToConsole Method = "REQTextToConsole"
 	// Send text logging to some host.
 	// A file with the full subject+hostName will be created on
 	// the receiving end.
@@ -122,7 +122,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQnCliCommand: methodREQnCliCommand{
 				commandOrEvent: CommandACK,
 			},
-			CLICommandReply: methodCLICommandReply{
+			REQTextToConsole: methodREQTextToConsole{
 				commandOrEvent: EventACK,
 			},
 			TextLogging: methodTextLogging{
@@ -495,7 +495,7 @@ func (m methodREQnCliCommand) handler(proc process, message Message, node string
 
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
-			newReplyMessage(proc, message, CLICommandReply, out)
+			newReplyMessage(proc, message, REQTextToConsole, out)
 		}
 
 	}()
@@ -506,15 +506,15 @@ func (m methodREQnCliCommand) handler(proc process, message Message, node string
 
 // ---
 
-type methodCLICommandReply struct {
+type methodREQTextToConsole struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodCLICommandReply) getKind() CommandOrEvent {
+func (m methodREQTextToConsole) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodCLICommandReply) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodREQTextToConsole) handler(proc process, message Message, node string) ([]byte, error) {
 	fmt.Printf("<--- methodCLICommandReply: %v\n", message.Data)
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))

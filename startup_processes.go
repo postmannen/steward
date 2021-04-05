@@ -116,11 +116,11 @@ func (s *server) ProcessesStart() {
 	}
 
 	// Start a subscriber for CLICommandReply messages
-	if s.configuration.StartSubCLICommandReply.OK {
+	if s.configuration.StartSubREQTextToConsole.OK {
 		{
-			fmt.Printf("Starting CLICommand Reply subscriber: %#v\n", s.nodeName)
-			sub := newSubject(CLICommandReply, s.nodeName)
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommandReply.Values, nil)
+			fmt.Printf("Starting Text To Console subscriber: %#v\n", s.nodeName)
+			sub := newSubject(REQTextToConsole, s.nodeName)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQTextToConsole.Values, nil)
 			go proc.spawnWorker(s)
 		}
 	}

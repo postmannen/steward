@@ -9,10 +9,6 @@ PromHostAndPort = ":2112"
 StartPubSayHello = 0
 SubscribersDataFolder = "./data"
 
-[StartSubCLICommandReply]
-  OK = true
-  Values = ["*"]
-
 [StartSubEchoReply]
   OK = true
   Values = ["*"]
@@ -26,6 +22,10 @@ SubscribersDataFolder = "./data"
   Values = ["*"]
 
 [StartSubREQCliCommand]
+  OK = true
+  Values = ["*"]
+
+[StartSubREQTextToConsole]
   OK = true
   Values = ["*"]
 

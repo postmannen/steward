@@ -112,8 +112,8 @@ type Configuration struct {
 	StartSubREQCliCommand flagNodeSlice
 	// Subscriber for REQnCliCommand
 	StartSubREQnCliCommand flagNodeSlice
-	// Subscriber for CLICommandReply
-	StartSubCLICommandReply flagNodeSlice
+	// Subscriber for REQTextToConsole
+	StartSubREQTextToConsole flagNodeSlice
 }
 
 func NewConfiguration() *Configuration {
@@ -124,23 +124,23 @@ func NewConfiguration() *Configuration {
 // Default configuration
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
-		ConfigFolder:            "./etc",
-		BrokerAddress:           "127.0.0.1:4222",
-		ProfilingPort:           "",
-		PromHostAndPort:         "",
-		DefaultMessageTimeout:   10,
-		DefaultMessageRetries:   1,
-		StartPubSayHello:        30,
-		SubscribersDataFolder:   "./data",
-		CentralNodeName:         "",
-		StartSubErrorLog:        flagNodeSlice{Values: []node{}},
-		StartSubSayHello:        flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubTextLogging:     flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubEchoRequest:     flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubEchoReply:       flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQCliCommand:   flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQnCliCommand:  flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubCLICommandReply: flagNodeSlice{OK: true, Values: []node{"*"}},
+		ConfigFolder:             "./etc",
+		BrokerAddress:            "127.0.0.1:4222",
+		ProfilingPort:            "",
+		PromHostAndPort:          "",
+		DefaultMessageTimeout:    10,
+		DefaultMessageRetries:    1,
+		StartPubSayHello:         30,
+		SubscribersDataFolder:    "./data",
+		CentralNodeName:          "",
+		StartSubErrorLog:         flagNodeSlice{Values: []node{}},
+		StartSubSayHello:         flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubTextLogging:      flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubEchoRequest:      flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubEchoReply:        flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQCliCommand:    flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQnCliCommand:   flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQTextToConsole: flagNodeSlice{OK: true, Values: []node{"*"}},
 	}
 	return c
 }
@@ -179,7 +179,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.Var(&c.StartSubEchoReply, "startSubEchoReply", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQCliCommand, "startSubREQCliCommand", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQnCliCommand, "startSubREQnCliCommand", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubCLICommandReply, "startSubCLICommandReply", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubREQTextToConsole, "startSubREQTextToConsole", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 
 	flag.Parse()
 
