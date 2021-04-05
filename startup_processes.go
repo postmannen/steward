@@ -20,11 +20,11 @@ func (s *server) ProcessesStart() {
 	}
 
 	// Start a subscriber for textLogging messages
-	if s.configuration.StartSubTextLogging.OK {
+	if s.configuration.StartSubREQTextToLogFile.OK {
 		{
-			fmt.Printf("Starting textlogging subscriber: %#v\n", s.nodeName)
-			sub := newSubject(TextLogging, s.nodeName)
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubTextLogging.Values, nil)
+			fmt.Printf("Starting text logging subscriber: %#v\n", s.nodeName)
+			sub := newSubject(REQTextToLogFile, s.nodeName)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQTextToLogFile.Values, nil)
 			// fmt.Printf("*** %#v\n", proc)
 			go proc.spawnWorker(s)
 		}

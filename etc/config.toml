@@ -29,14 +29,14 @@ SubscribersDataFolder = "./data"
   OK = true
   Values = ["*"]
 
+[StartSubREQTextToLogFile]
+  OK = true
+  Values = ["*"]
+
 [StartSubREQnCliCommand]
   OK = true
   Values = ["*"]
 
 [StartSubSayHello]
-  OK = true
-  Values = ["*"]
-
-[StartSubTextLogging]
   OK = true
   Values = ["*"]

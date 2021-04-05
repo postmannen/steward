@@ -73,20 +73,17 @@ const (
 	// The data field is a slice of strings where the first string
 	// value should be the command, and the following the arguments.
 	REQnCliCommand Method = "REQnCliCommand"
-	// Will generate a reply for a CLICommandRequest.
-	// This type is normally not used by the user when creating
-	// a message. It is used in creating the reply message with
-	// request messages. It is also used when defining a process to
-	// start up for receiving the CLICommand request messages.
+	// Send text to be logged to the console.
 	// The data field is a slice of strings where the first string
 	// value should be the command, and the following the arguments.
 	REQTextToConsole Method = "REQTextToConsole"
-	// Send text logging to some host.
+	// Send text logging to some host by appending the output to a
+	// file, if the file do not exist we create it.
 	// A file with the full subject+hostName will be created on
 	// the receiving end.
 	// The data field is a slice of strings where the values of the
 	// slice will be written to the log file.
-	TextLogging Method = "TextLogging"
+	REQTextToLogFile Method = "REQTextToLogFile"
 	// Send Hello I'm here message.
 	SayHello Method = "SayHello"
 	// Error log methods to centralError node.
@@ -125,7 +122,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQTextToConsole: methodREQTextToConsole{
 				commandOrEvent: EventACK,
 			},
-			TextLogging: methodTextLogging{
+			REQTextToLogFile: methodREQTextToLogFile{
 				commandOrEvent: EventACK,
 			},
 			SayHello: methodSayHello{
@@ -224,7 +221,7 @@ func (m methodREQOpCommand) handler(proc process, message Message, node string) 
 
 		// Prepare and queue for sending a new message with the output
 		// of the action executed.
-		newReplyMessage(proc, message, TextLogging, out)
+		newReplyMessage(proc, message, REQTextToLogFile, out)
 	}()
 
 	ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n", node, message.ID))
@@ -260,30 +257,36 @@ func newReplyMessage(proc process, message Message, method Method, outData []byt
 	//--
 }
 
-type methodTextLogging struct {
+type methodREQTextToLogFile struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodTextLogging) getKind() CommandOrEvent {
+func (m methodREQTextToLogFile) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodTextLogging) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodREQTextToLogFile) handler(proc process, message Message, node string) ([]byte, error) {
 
 	// If it was a request type message we want to check what the initial messages
 	// method, so we can use that in creating the file name to store the data.
 	fmt.Printf(" ** DEBUG: %v\n", message.PreviousMessage)
 	var fileName string
+	var folderTree string
 	switch {
+	case message.PreviousMessage == nil:
+		// If this was a direct request there are no previous message to take
+		// information from, so we use the one that are in the current mesage.
+		fileName = fmt.Sprintf("%v.%v.log", message.ToNode, message.Method)
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Label, string(message.FromNode))
 	case message.PreviousMessage.ToNode != "":
 		fileName = fmt.Sprintf("%v.%v.log", message.PreviousMessage.ToNode, message.PreviousMessage.Method)
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Label, string(message.PreviousMessage.ToNode))
 	case message.PreviousMessage.ToNode == "":
 		fileName = fmt.Sprintf("%v.%v.log", message.FromNode, message.Method)
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Label, string(message.PreviousMessage.ToNode))
 	}
 
 	// Check if folder structure exist, if not create it.
-	folderTree := filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Label, string(message.PreviousMessage.ToNode))
-
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
 		err := os.MkdirAll(folderTree, 0700)
 		if err != nil {
@@ -436,7 +439,7 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
-			newReplyMessage(proc, message, TextLogging, out)
+			newReplyMessage(proc, message, REQTextToLogFile, out)
 		}
 
 	}()
