@@ -6,7 +6,7 @@ DefaultMessageTimeout = 5
 NodeName = "central"
 ProfilingPort = ""
 PromHostAndPort = ":2112"
-StartPubSayHello = 0
+StartPubReqHello = 0
 SubscribersDataFolder = "./data"
 
 [StartSubEchoReply]
@@ -37,6 +37,6 @@ SubscribersDataFolder = "./data"
   OK = true
   Values = ["*"]
 
-[StartSubSayHello]
+[StartSubReqHello]
   OK = true
   Values = ["*"]

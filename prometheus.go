@@ -39,31 +39,6 @@ type metricType struct {
 }
 
 func (s *server) startMetrics() {
-	// go func(ch chan metricType) {
-	// 	for {
-	// 		s.metrics.metricsCh <- metricType{
-	// 			metric: prometheus.NewGauge(prometheus.GaugeOpts{
-	// 				Name: "total_running_processes",
-	// 				Help: "The current number of total running processes",
-	// 			}),
-	// 			value: float64(len(s.processes)),
-	// 		}
-	// 		time.Sleep(time.Second * 2)
-	// 	}
-	// }(s.metrics.metricsCh)
-
-	// go func(ch chan metricType) {
-	// 	for {
-	// 		s.metrics.metricsCh <- metricType{
-	// 			metric: prometheus.NewGauge(prometheus.GaugeOpts{
-	// 				Name: "hello_nodes",
-	// 				Help: "The current number of total nodes who have said hello",
-	// 			}),
-	// 			value: float64(len(s.metrics.sayHelloNodes)),
-	// 		}
-	// 		time.Sleep(time.Second * 2)
-	// 	}
-	// }(s.metrics.metricsCh)
 
 	// Receive and process all metrics
 	go func() {

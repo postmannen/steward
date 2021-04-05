@@ -2,6 +2,6 @@
     {
         "toNode": "central",
         "data": [""],
-        "method":"SayHello"
+        "method":"ReqHello"
     }
 ]

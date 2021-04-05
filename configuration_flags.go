@@ -90,18 +90,19 @@ type Configuration struct {
 	DefaultMessageTimeout int
 	// default amount of retries that will be done before a message is thrown away, and out of the system
 	DefaultMessageRetries int
-	// Make the current node send hello messages to central at given interval in seconds
-	StartPubSayHello int
 	// Publisher data folder
 	SubscribersDataFolder string
 	// central node to receive messages published from nodes
 	CentralNodeName string
 
+	// Make the current node send hello messages to central at given interval in seconds
+	StartPubReqHello int
+
 	// Start the central error logger.
 	// Takes a comma separated string of nodes to receive from or "*" for all nodes.
 	StartSubErrorLog flagNodeSlice
 	// Subscriber for hello messages
-	StartSubSayHello flagNodeSlice
+	StartSubReqHello flagNodeSlice
 	// Subscriber for text logging
 	StartSubREQTextToLogFile flagNodeSlice
 	// Subscriber for Echo Request
@@ -130,11 +131,11 @@ func newConfigurationDefaults() Configuration {
 		PromHostAndPort:          "",
 		DefaultMessageTimeout:    10,
 		DefaultMessageRetries:    1,
-		StartPubSayHello:         30,
+		StartPubReqHello:         30,
 		SubscribersDataFolder:    "./data",
 		CentralNodeName:          "",
 		StartSubErrorLog:         flagNodeSlice{Values: []node{}},
-		StartSubSayHello:         flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubReqHello:         flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubREQTextToLogFile: flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubEchoRequest:      flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubEchoReply:        flagNodeSlice{OK: true, Values: []node{"*"}},
@@ -170,10 +171,10 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.SubscribersDataFolder, "subscribersDataFolder", fc.SubscribersDataFolder, "The data folder where subscribers are allowed to write their data if needed")
 	flag.StringVar(&c.CentralNodeName, "centralNodeName", fc.CentralNodeName, "The name of the central node to receive messages published by this node")
 
-	flag.IntVar(&c.StartPubSayHello, "startPubSayHello", fc.StartPubSayHello, "Make the current node send hello messages to central at given interval in seconds")
+	flag.IntVar(&c.StartPubReqHello, "startPubReqHello", fc.StartPubReqHello, "Make the current node send hello messages to central at given interval in seconds")
 
 	flag.Var(&c.StartSubErrorLog, "startSubErrorLog", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubSayHello, "startSubSayHello", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubReqHello, "startSubReqHello", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQTextToLogFile, "startSubREQTextToLogFile", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubEchoRequest, "startSubEchoRequest", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubEchoReply, "startSubEchoReply", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
