@@ -96,6 +96,7 @@ type Configuration struct {
 	SubscribersDataFolder string
 	// central node to receive messages published from nodes
 	CentralNodeName string
+
 	// Start the central error logger.
 	// Takes a comma separated string of nodes to receive from or "*" for all nodes.
 	StartSubErrorLog flagNodeSlice
@@ -109,8 +110,8 @@ type Configuration struct {
 	StartSubEchoReply flagNodeSlice
 	// Subscriber for CLICommandRequest
 	StartSubREQCliCommand flagNodeSlice
-	// Subscriber for CLICommandRequestNOSEQ
-	StartSubCLICommandRequestNOSEQ flagNodeSlice
+	// Subscriber for REQnCliCommand
+	StartSubREQnCliCommand flagNodeSlice
 	// Subscriber for CLICommandReply
 	StartSubCLICommandReply flagNodeSlice
 }
@@ -123,23 +124,23 @@ func NewConfiguration() *Configuration {
 // Default configuration
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
-		ConfigFolder:                   "./etc",
-		BrokerAddress:                  "127.0.0.1:4222",
-		ProfilingPort:                  "",
-		PromHostAndPort:                "",
-		DefaultMessageTimeout:          10,
-		DefaultMessageRetries:          1,
-		StartPubSayHello:               30,
-		SubscribersDataFolder:          "./data",
-		CentralNodeName:                "",
-		StartSubErrorLog:               flagNodeSlice{Values: []node{}},
-		StartSubSayHello:               flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubTextLogging:            flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubEchoRequest:            flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubEchoReply:              flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQCliCommand:          flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubCLICommandRequestNOSEQ: flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubCLICommandReply:        flagNodeSlice{OK: true, Values: []node{"*"}},
+		ConfigFolder:            "./etc",
+		BrokerAddress:           "127.0.0.1:4222",
+		ProfilingPort:           "",
+		PromHostAndPort:         "",
+		DefaultMessageTimeout:   10,
+		DefaultMessageRetries:   1,
+		StartPubSayHello:        30,
+		SubscribersDataFolder:   "./data",
+		CentralNodeName:         "",
+		StartSubErrorLog:        flagNodeSlice{Values: []node{}},
+		StartSubSayHello:        flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubTextLogging:     flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubEchoRequest:     flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubEchoReply:       flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQCliCommand:   flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQnCliCommand:  flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubCLICommandReply: flagNodeSlice{OK: true, Values: []node{"*"}},
 	}
 	return c
 }
@@ -177,7 +178,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.Var(&c.StartSubEchoRequest, "startSubEchoRequest", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubEchoReply, "startSubEchoReply", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQCliCommand, "startSubREQCliCommand", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubCLICommandRequestNOSEQ, "startSubCLICommandRequestNOSEQ", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubREQnCliCommand, "startSubREQnCliCommand", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubCLICommandReply, "startSubCLICommandReply", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 
 	flag.Parse()

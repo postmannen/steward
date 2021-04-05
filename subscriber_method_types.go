@@ -72,7 +72,7 @@ const (
 	// done. No order are preserved.
 	// The data field is a slice of strings where the first string
 	// value should be the command, and the following the arguments.
-	CLICommandRequestNOSEQ Method = "CLICommandRequestNOSEQ"
+	REQnCliCommand Method = "REQnCliCommand"
 	// Will generate a reply for a CLICommandRequest.
 	// This type is normally not used by the user when creating
 	// a message. It is used in creating the reply message with
@@ -119,7 +119,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQCliCommand: methodREQCliCommand{
 				commandOrEvent: CommandACK,
 			},
-			CLICommandRequestNOSEQ: methodCLICommandRequestNOSEQ{
+			REQnCliCommand: methodREQnCliCommand{
 				commandOrEvent: CommandACK,
 			},
 			CLICommandReply: methodCLICommandReply{
@@ -447,11 +447,11 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 
 // --- methodCLICommandRequestNOSEQ
 
-type methodCLICommandRequestNOSEQ struct {
+type methodREQnCliCommand struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodCLICommandRequestNOSEQ) getKind() CommandOrEvent {
+func (m methodREQnCliCommand) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
@@ -461,7 +461,7 @@ func (m methodCLICommandRequestNOSEQ) getKind() CommandOrEvent {
 // The NOSEQ method will process messages as they are recived,
 // and the reply back will be sent as soon as the process is
 // done. No order are preserved.
-func (m methodCLICommandRequestNOSEQ) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodREQnCliCommand) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- CLICommand REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 
 	// Execute the CLI command in it's own go routine, so we are able

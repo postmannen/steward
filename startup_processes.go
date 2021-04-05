@@ -105,12 +105,12 @@ func (s *server) ProcessesStart() {
 		}
 	}
 
-	// Start a subscriber for CLICommandRequestNOSEQ messages
-	if s.configuration.StartSubCLICommandRequestNOSEQ.OK {
+	// Start a subscriber for Not In Order Cli Command Request messages
+	if s.configuration.StartSubREQnCliCommand.OK {
 		{
-			fmt.Printf("Starting CLICommand NOSEQ Request subscriber: %#v\n", s.nodeName)
-			sub := newSubject(CLICommandRequestNOSEQ, s.nodeName)
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubCLICommandRequestNOSEQ.Values, nil)
+			fmt.Printf("Starting CLICommand Not Sequential Request subscriber: %#v\n", s.nodeName)
+			sub := newSubject(REQnCliCommand, s.nodeName)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQnCliCommand.Values, nil)
 			go proc.spawnWorker(s)
 		}
 	}
