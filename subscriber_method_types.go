@@ -86,6 +86,13 @@ const (
 	// The data field is a slice of strings where the values of the
 	// slice will be written to the log file.
 	REQTextToLogFile Method = "REQTextToLogFile"
+	// Send text to some host by overwriting the existing content of
+	// the fileoutput to a file. If the file do not exist we create it.
+	// A file with the full subject+hostName will be created on
+	// the receiving end.
+	// The data field is a slice of strings where the values of the
+	// slice will be written to the file.
+	REQTextToFile Method = "REQTextToFile"
 	// Send Hello I'm here message.
 	REQHello Method = "REQHello"
 	// Error log methods to centralError node.
@@ -125,6 +132,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				commandOrEvent: EventACK,
 			},
 			REQTextToLogFile: methodREQTextToLogFile{
+				commandOrEvent: EventACK,
+			},
+			REQTextToFile: methodREQTextToFile{
 				commandOrEvent: EventACK,
 			},
 			REQHello: methodREQHello{
@@ -321,6 +331,67 @@ func (m methodREQTextToLogFile) handler(proc process, message Message, node stri
 
 // -----
 
+type methodREQTextToFile struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodREQTextToFile) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
+
+func (m methodREQTextToFile) handler(proc process, message Message, node string) ([]byte, error) {
+
+	// If it was a request type message we want to check what the initial messages
+	// method, so we can use that in creating the file name to store the data.
+	fmt.Printf(" ** DEBUG: %v\n", message.PreviousMessage)
+	var fileName string
+	var folderTree string
+	switch {
+	case message.PreviousMessage == nil:
+		// If this was a direct request there are no previous message to take
+		// information from, so we use the one that are in the current mesage.
+		fileName = fmt.Sprintf("%v.%v.log", message.ToNode, message.Method)
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Label, string(message.FromNode))
+	case message.PreviousMessage.ToNode != "":
+		fileName = fmt.Sprintf("%v.%v.log", message.PreviousMessage.ToNode, message.PreviousMessage.Method)
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Label, string(message.PreviousMessage.ToNode))
+	case message.PreviousMessage.ToNode == "":
+		fileName = fmt.Sprintf("%v.%v.log", message.FromNode, message.Method)
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Label, string(message.PreviousMessage.ToNode))
+	}
+
+	// Check if folder structure exist, if not create it.
+	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
+		err := os.MkdirAll(folderTree, 0700)
+		if err != nil {
+			return nil, fmt.Errorf("error: failed to create directory %v: %v", folderTree, err)
+		}
+
+		log.Printf("info: Creating subscribers data folder at %v\n", folderTree)
+	}
+
+	// Open file and write data.
+	file := filepath.Join(folderTree, fileName)
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
+		log.Printf("error: methodEventTextLogging.handler: failed to open file: %v\n", err)
+		return nil, err
+	}
+	defer f.Close()
+
+	for _, d := range message.Data {
+		_, err := f.Write([]byte(d))
+		f.Sync()
+		if err != nil {
+			log.Printf("error: methodEventTextLogging.handler: failed to write to file: %v\n", err)
+		}
+	}
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+// ----
 type methodREQHello struct {
 	commandOrEvent CommandOrEvent
 }
