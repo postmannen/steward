@@ -75,22 +75,22 @@ func (s *server) ProcessesStart() {
 		}
 	}
 
-	// Start a subscriber for ECHORequest messages
-	if s.configuration.StartSubEchoRequest.OK {
+	// Start a subscriber for Ping Request messages
+	if s.configuration.StartSubREQPing.OK {
 		{
-			fmt.Printf("Starting Echo Request subscriber: %#v\n", s.nodeName)
-			sub := newSubject(ECHORequest, s.nodeName)
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubEchoRequest.Values, nil)
+			fmt.Printf("Starting Ping Request subscriber: %#v\n", s.nodeName)
+			sub := newSubject(REQPing, s.nodeName)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQPing.Values, nil)
 			go proc.spawnWorker(s)
 		}
 	}
 
-	// Start a subscriber for ECHOReply messages
-	if s.configuration.StartSubEchoReply.OK {
+	// Start a subscriber for REQPong messages
+	if s.configuration.StartSubREQPong.OK {
 		{
-			fmt.Printf("Starting Echo Reply subscriber: %#v\n", s.nodeName)
-			sub := newSubject(ECHOReply, s.nodeName)
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubEchoReply.Values, nil)
+			fmt.Printf("Starting Pong subscriber: %#v\n", s.nodeName)
+			sub := newSubject(REQPong, s.nodeName)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQPong.Values, nil)
 			go proc.spawnWorker(s)
 		}
 	}

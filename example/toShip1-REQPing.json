@@ -1,0 +1,11 @@
+[
+    {
+        
+        "toNode": "ship1",
+        "data": [""],
+        "method":"REQPing",
+        "timeout":3,
+        "retries":3,
+        "methodTimeout": 10
+    }
+]
