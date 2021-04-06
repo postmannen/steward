@@ -107,7 +107,7 @@ A default config file will be created at first startup if one does not exist, wi
 
 If new values are provided via flags they will take precedence over the ones currently in the config file, and they will also replace the current value in the config file, making it the default for the next restart.
 
-The only exception from the above are the `startSubscriberX` flags which got one extra value that can be used which is the value `RST` for Reset. This will disable the specified subscriber, and also null out the array for which Nodes the subscriber will allow traffic from.
+The only exception from the above are the `startSubX` flags which got one extra value that can be used which is the value `RST` for Reset. This will disable the specified subscriber, and also null out the array for which Nodes the subscriber will allow traffic from.
 
 The config file can also be edited directly, making the use of flags not needed.
 
@@ -151,34 +151,32 @@ clone the repository, then cd `./steward/cmd` and do `go build -o steward`, and 
   -profilingPort string
     The number of the profiling port
   -promHostAndPort string
-    host and port for prometheus listener, e.g. localhost:2112
-  -startPubSayHello int
+    host and port for prometheus listener, e.g. localhost:2112 (default ":2112")
+  -startPubREQHello int
     Make the current node send hello messages to central at given interval in seconds
-  -startSubCLICommand value
+  -startSubREQCliCommand value
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubCLICommandReply value
+  -startSubREQErrorLog value
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubCLICommandRequest value
+  -startSubREQHello value
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubCLICommandRequestNOSEQ value
+  -startSubREQPing value
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubEchoReply value
+  -startSubREQPong value
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubEchoRequest value
+  -startSubREQTextToConsole value
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubErrorLog value
+  -startSubREQTextToLogFile value
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubSayHello value
-    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubTextLogging value
+  -startSubREQnCliCommand value
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
   -subscribersDataFolder string
-    The data folder where subscribers are allowed to write their data if needed (default "./data")
+    The data folder where subscribers are allowed to write their data if needed (default "./var")
 ```
 
 ### How to Run
 
-The broker for messaging is Nats-server from <https://nats.io>. Download, run it, and use the `--brokerAddress` flag on Steward to point to it.
+The broker for messaging is Nats-server from <https://nats.io>. Download, run it, and use the `-brokerAddress` flag on Steward to point to it.
 
 On some central server which will act as your command and control server.
 
@@ -188,7 +186,7 @@ One the nodes out there
 
 `./steward --node="ship1"` & `./steward --node="ship1"` and so on.
 
-Use the `--help` flag to get all possibilities.
+Use the `-help` flag to get all possibilities.
 
 #### Start subscriber flags
 
@@ -222,17 +220,19 @@ Right now the API for sending a message from one node to another node is by past
 The `method` is what defines what the event will do. The preconfigured methods are:
 
 ```go
-// Execute a CLI command in for example bash or cmd.
-// This is a command type, so the output of the command executed
-// will directly showed in the ACK message received.
-CLICommand Method = "CLICommand"
+// Command for client operation request of the system. The op
+// command to execute shall be given in the data field of the
+// message as string value. For example "ps".
+REQOpCommand Method = "REQOpCommand"
 // Execute a CLI command in for example bash or cmd.
 // This is an event type, where a message will be sent to a
 // node with the command to execute and an ACK will be replied
 // if it was delivered succesfully. The output of the command
 // ran will be delivered back to the node where it was initiated
 // as a new message.
-CLICommandRequest Method = "CLICommandRequest"
+// The data field is a slice of strings where the first string
+// value should be the command, and the following the arguments.
+REQCliCommand Method = "REQCliCommand"
 // Execute a CLI command in for example bash or cmd.
 // This is an event type, where a message will be sent to a
 // node with the command to execute and an ACK will be replied
@@ -242,44 +242,48 @@ CLICommandRequest Method = "CLICommandRequest"
 // The NOSEQ method will process messages as they are recived,
 // and the reply back will be sent as soon as the process is
 // done. No order are preserved.
-CLICommandRequestNOSEQ Method = "CLICommandRequestNOSEQ"
-// Will generate a reply for a CLICommandRequest.
-// This type is normally not used by the user when creating
-// a message. It is used in creating the reply message with
-// request messages. It is also used when defining a process to
-// start up for receiving the CLICommand request messages.
-CLICommandReply Method = "CLICommandReply"
-// Send text logging to some host.
+// The data field is a slice of strings where the first string
+// value should be the command, and the following the arguments.
+REQnCliCommand Method = "REQnCliCommand"
+// Send text to be logged to the console.
+// The data field is a slice of strings where the first string
+// value should be the command, and the following the arguments.
+REQTextToConsole Method = "REQTextToConsole"
+// Send text logging to some host by appending the output to a
+// file, if the file do not exist we create it.
 // A file with the full subject+hostName will be created on
 // the receiving end.
-TextLogging Method = "TextLogging"
+// The data field is a slice of strings where the values of the
+// slice will be written to the log file.
+REQTextToLogFile Method = "REQTextToLogFile"
 // Send Hello I'm here message.
-SayHello Method = "SayHello"
+REQHello Method = "REQHello"
 // Error log methods to centralError node.
-ErrorLog Method = "ErrorLog"
+REQErrorLog Method = "REQErrorLog"
 // Echo request will ask the subscriber for a
 // reply generated as a new message, and sent back to where
 // the initial request was made.
-ECHORequest Method = "ECHORequest"
+REQPing Method = "REQPing"
 // Will generate a reply for a ECHORequest
-ECHOReply Method = "ECHOReply"
+REQPong Method = "REQPong"
 ```
 
 NB: Both the keys and the values used are case sensitive.
 
 #### Sending a command from one Node to Another Node
 
-Example JSON for appending a message of type command into the `msg.pipe` file
+Example JSON for appending a message of type command into the `socket` file
 
 ```json
 [
     {
-        
+        "label":"cli-command-executed-result",
         "toNode": "ship1",
-        "data": ["bash","-c","ls -l ../"],
-        "commandOrEvent":"CommandACK",
-        "method":"CLICommand"
-            
+        "data": ["bash","-c","sleep 3 & tree ./"],
+        "method":"REQCliCommand",
+        "timeout":10,
+        "retries":3,
+        "methodTimeout": 4
     }
 ]
 ```
@@ -289,20 +293,22 @@ To send specify more messages at once do
 ```json
 [
     {
-        
+        "label":"cli-command-executed-result",
         "toNode": "ship1",
-        "data": ["bash","-c","ls -l ../"],
-        "commandOrEvent":"CommandACK",
-        "method":"CLICommand"
-            
+        "data": ["bash","-c","sleep 3 & tree ./"],
+        "method":"REQCliCommand",
+        "timeout":10,
+        "retries":3,
+        "methodTimeout": 4
     },
     {
-        
+        "label":"cli-command-executed-result",
         "toNode": "ship2",
-        "data": ["bash","-c","ls -l ../"],
-        "commandOrEvent":"CommandACK",
-        "method":"CLICommand"
-            
+        "data": ["bash","-c","sleep 3 & tree ./"],
+        "method":"REQCliCommand",
+        "timeout":10,
+        "retries":3,
+        "methodTimeout": 4
     }
 ]
 ```
@@ -312,41 +318,22 @@ To send a message with custom timeout and amount of retries
 ```json
 [
     {
-        
+        "label":"opcommand_logs",
         "toNode": "ship1",
-        "data": ["bash","-c","netstat -an|grep -i listen"],
-        "commandOrEvent":"CommandACK",
-        "method":"CLICommand",
+        "data": ["ps"],
+        "method":"REQOpCommand",
         "timeout":3,
-        "retries":3
+        "retries":3,
+        "requestTimeout":3,
+        "requestRetries":3,
+        "MethodTimeout": 7
     }
 ]
 ```
 
-You can save the content to myfile.JSON and append it to `msg.pipe`
+You can save the content to myfile.JSON and append it to the `socket` file.
 
-`cat myfile.json >> msg.pipe`
-
-The content of `msg.pipe` will be erased as messages a processed.
-
-#### Sending a message of type Event
-
-```json
-[
-    {
-        "toNode": "central",
-        "data": ["some message sent from a ship for testing\n"],
-        "commandOrEvent":"EventACK",
-        "method":"TextLogging"
-    }
-]
-```
-
-You can save the content to myfile.JSON and append it to `msg.pipe`
-
-`cat myfile.json >> msg.pipe`
-
-The content of `msg.pipe` will be erased as messages a processed.
+`nc -U ./steward.sock < example/toShip1-REQCliCommand.json`
 
 ## Concepts/Ideas
 
@@ -354,7 +341,7 @@ The content of `msg.pipe` will be erased as messages a processed.
 
 #### Subject
 
-`<nodename>.<command/event>.<method>`
+`<nodename>.<method>.<command/event>`
 
 Nodename: Are the hostname of the device. This do not have to be resolvable via DNS, it is just a unique name for the host to receive the message.
 
@@ -365,13 +352,13 @@ Method: Are the functionality the message provide. Example could be `CLICommand`
 
 ##### Complete subject example
 
-For syslog of type event to a host named "ship1"
+For Hello Message to a node named "central" of type Event and there is No Ack.
 
-`ship1.EventACK.Syslogforwarding`
+`central.REQHello.EventNACK`
 
-and for a shell command of type command to a host named "ship2"
+For CliCommand message to a node named "ship1" of type Command and it wants an Ack.
 
-`ship2.CommandACK.CLICommand`
+`ship1.REQCliCommand.CommandACK`
 
 ## TODO
 

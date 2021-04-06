@@ -50,7 +50,9 @@ type Method string
 // The constants that will be used throughout the system for
 // when specifying what kind of Method to send or work with.
 const (
-	// Command for client operation request of the system
+	// Command for client operation request of the system. The op
+	// command to execute shall be given in the data field of the
+	// message as string value. For example "ps".
 	REQOpCommand Method = "REQOpCommand"
 	// Execute a CLI command in for example bash or cmd.
 	// This is an event type, where a message will be sent to a

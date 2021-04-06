@@ -27,6 +27,7 @@ type flagNodeSlice struct {
 	Values []node
 }
 
+// String method
 func (f *flagNodeSlice) String() string {
 	return ""
 }
@@ -117,6 +118,8 @@ type Configuration struct {
 	StartSubREQTextToConsole flagNodeSlice
 }
 
+// NewConfiguration will set a default Configuration,
+// and return a *Configuration.
 func NewConfiguration() *Configuration {
 	c := Configuration{}
 	return &c
@@ -146,6 +149,7 @@ func newConfigurationDefaults() Configuration {
 	return c
 }
 
+// CheckFlags will parse all flags
 func (c *Configuration) CheckFlags() error {
 
 	// Create an empty default config
