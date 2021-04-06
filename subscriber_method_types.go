@@ -85,7 +85,7 @@ const (
 	// slice will be written to the log file.
 	REQTextToLogFile Method = "REQTextToLogFile"
 	// Send Hello I'm here message.
-	ReqHello Method = "ReqHello"
+	REQHello Method = "REQHello"
 	// Error log methods to centralError node.
 	ErrorLog Method = "ErrorLog"
 	// Echo request will ask the subscriber for a
@@ -125,7 +125,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQTextToLogFile: methodREQTextToLogFile{
 				commandOrEvent: EventACK,
 			},
-			ReqHello: methodReqHello{
+			REQHello: methodREQHello{
 				commandOrEvent: EventNACK,
 			},
 			ErrorLog: methodErrorLog{
@@ -319,15 +319,15 @@ func (m methodREQTextToLogFile) handler(proc process, message Message, node stri
 
 // -----
 
-type methodReqHello struct {
+type methodREQHello struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodReqHello) getKind() CommandOrEvent {
+func (m methodREQHello) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodReqHello) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodREQHello) handler(proc process, message Message, node string) ([]byte, error) {
 
 	log.Printf("<--- Received hello from %#v\n", message.FromNode)
 

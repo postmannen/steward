@@ -31,11 +31,11 @@ func (s *server) ProcessesStart() {
 	}
 
 	// Start a subscriber for Hello messages
-	if s.configuration.StartSubReqHello.OK {
+	if s.configuration.StartSubREQHello.OK {
 		{
 			fmt.Printf("Starting Hello subscriber: %#v\n", s.nodeName)
-			sub := newSubject(ReqHello, s.nodeName)
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubReqHello.Values, nil)
+			sub := newSubject(REQHello, s.nodeName)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQHello.Values, nil)
 			proc.procFuncCh = make(chan Message)
 
 			// The reason for running the say hello subscriber as a procFunc is that
@@ -131,10 +131,10 @@ func (s *server) ProcessesStart() {
 	// Define a process of kind publisher with subject for SayHello to central,
 	// and register a procFunc with the process that will handle the actual
 	// sending of say hello.
-	if s.configuration.StartPubReqHello != 0 {
+	if s.configuration.StartPubREQHello != 0 {
 		fmt.Printf("Starting Hello Publisher: %#v\n", s.nodeName)
 
-		sub := newSubject(ReqHello, s.configuration.CentralNodeName)
+		sub := newSubject(REQHello, s.configuration.CentralNodeName)
 		proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, []node{}, nil)
 
 		// Define the procFunc to be used for the process.
@@ -149,7 +149,7 @@ func (s *server) ProcessesStart() {
 						ToNode:   "central",
 						FromNode: node(s.nodeName),
 						Data:     []string{d},
-						Method:   ReqHello,
+						Method:   REQHello,
 					}
 
 					sam, err := newSAM(m)
@@ -158,7 +158,7 @@ func (s *server) ProcessesStart() {
 						log.Printf("error: ProcessesStart: %v\n", err)
 					}
 					proc.toRingbufferCh <- []subjectAndMessage{sam}
-					time.Sleep(time.Second * time.Duration(s.configuration.StartPubReqHello))
+					time.Sleep(time.Second * time.Duration(s.configuration.StartPubREQHello))
 				}
 			})
 		go proc.spawnWorker(s)
