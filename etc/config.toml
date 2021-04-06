@@ -9,11 +9,11 @@ PromHostAndPort = ":2112"
 StartPubREQHello = 0
 SubscribersDataFolder = "./data"
 
-[StartSubErrorLog]
+[StartSubREQCliCommand]
   OK = true
   Values = ["*"]
 
-[StartSubREQCliCommand]
+[StartSubREQErrorLog]
   OK = true
   Values = ["*"]
 

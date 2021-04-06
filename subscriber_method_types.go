@@ -87,7 +87,7 @@ const (
 	// Send Hello I'm here message.
 	REQHello Method = "REQHello"
 	// Error log methods to centralError node.
-	ErrorLog Method = "ErrorLog"
+	REQErrorLog Method = "REQErrorLog"
 	// Echo request will ask the subscriber for a
 	// reply generated as a new message, and sent back to where
 	// the initial request was made.
@@ -128,7 +128,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQHello: methodREQHello{
 				commandOrEvent: EventNACK,
 			},
-			ErrorLog: methodErrorLog{
+			REQErrorLog: methodREQErrorLog{
 				commandOrEvent: EventACK,
 			},
 			REQPing: methodREQPing{
@@ -341,16 +341,21 @@ func (m methodREQHello) handler(proc process, message Message, node string) ([]b
 
 // ---
 
-type methodErrorLog struct {
+type methodREQErrorLog struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodErrorLog) getKind() CommandOrEvent {
+func (m methodREQErrorLog) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodErrorLog) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodREQErrorLog) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- Received error from: %v, containing: %v", message.FromNode, message.Data)
+
+	// --
+
+	// --
+
 	return nil, nil
 }
 

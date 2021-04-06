@@ -65,12 +65,12 @@ func (s *server) ProcessesStart() {
 		}
 	}
 
-	if s.configuration.StartSubErrorLog.OK {
-		// Start a subscriber for ErrorLog messages
+	if s.configuration.StartSubREQErrorLog.OK {
+		// Start a subscriber for REQErrorLog messages
 		{
-			fmt.Printf("Starting ErrorLog subscriber: %#v\n", s.nodeName)
-			sub := newSubject(ErrorLog, "errorCentral")
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubErrorLog.Values, nil)
+			fmt.Printf("Starting REQErrorLog subscriber: %#v\n", s.nodeName)
+			sub := newSubject(REQErrorLog, "errorCentral")
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQErrorLog.Values, nil)
 			go proc.spawnWorker(s)
 		}
 	}

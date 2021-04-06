@@ -100,7 +100,7 @@ type Configuration struct {
 
 	// Start the central error logger.
 	// Takes a comma separated string of nodes to receive from or "*" for all nodes.
-	StartSubErrorLog flagNodeSlice
+	StartSubREQErrorLog flagNodeSlice
 	// Subscriber for hello messages
 	StartSubREQHello flagNodeSlice
 	// Subscriber for text logging
@@ -134,7 +134,7 @@ func newConfigurationDefaults() Configuration {
 		StartPubREQHello:         30,
 		SubscribersDataFolder:    "./data",
 		CentralNodeName:          "",
-		StartSubErrorLog:         flagNodeSlice{Values: []node{}},
+		StartSubREQErrorLog:      flagNodeSlice{Values: []node{}},
 		StartSubREQHello:         flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubREQTextToLogFile: flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubREQPing:          flagNodeSlice{OK: true, Values: []node{"*"}},
@@ -173,7 +173,7 @@ func (c *Configuration) CheckFlags() error {
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 
-	flag.Var(&c.StartSubErrorLog, "startSubErrorLog", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubREQErrorLog, "startSubREQErrorLog", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQHello, "startSubREQHello", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQTextToLogFile, "startSubREQTextToLogFile", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQPing, "startSubREQPing", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
