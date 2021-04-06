@@ -21,6 +21,10 @@ SubscribersDataFolder = "./var"
   OK = true
   Values = ["*"]
 
+[StartSubREQHttpGet]
+  OK = true
+  Values = ["*"]
+
 [StartSubREQPing]
   OK = true
   Values = ["*"]
@@ -30,6 +34,10 @@ SubscribersDataFolder = "./var"
   Values = ["*"]
 
 [StartSubREQTextToConsole]
+  OK = true
+  Values = ["*"]
+
+[StartSubREQTextToFile]
   OK = true
   Values = ["*"]
 

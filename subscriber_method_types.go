@@ -35,7 +35,9 @@ package steward
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -103,6 +105,8 @@ const (
 	REQPing Method = "REQPing"
 	// Will generate a reply for a ECHORequest
 	REQPong Method = "REQPong"
+	// Http Get
+	REQHttpGet Method = "REQHttpGet"
 )
 
 // The mapping of all the method constants specified, what type
@@ -147,6 +151,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				commandOrEvent: EventACK,
 			},
 			REQPong: methodREQPong{
+				commandOrEvent: EventACK,
+			},
+			REQHttpGet: methodREQHttpGet{
 				commandOrEvent: EventACK,
 			},
 		},
@@ -372,7 +379,7 @@ func (m methodREQTextToFile) handler(proc process, message Message, node string)
 
 	// Open file and write data.
 	file := filepath.Join(folderTree, fileName)
-	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_CREATE, 0755)
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
 	if err != nil {
 		log.Printf("error: methodEventTextLogging.handler: failed to open file: %v\n", err)
 		return nil, err
@@ -647,6 +654,82 @@ func (m methodREQTextToConsole) getKind() CommandOrEvent {
 
 func (m methodREQTextToConsole) handler(proc process, message Message, node string) ([]byte, error) {
 	fmt.Printf("<--- methodCLICommandReply: %v\n", message.Data)
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+// ---
+
+type methodREQHttpGet struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodREQHttpGet) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
+
+// handler to run a Http Get.
+func (m methodREQHttpGet) handler(proc process, message Message, node string) ([]byte, error) {
+	log.Printf("<--- REQHttpGet received from: %v, containing: %v", message.FromNode, message.Data)
+
+	go func() {
+		url := message.Data[0]
+
+		client := http.Client{
+			Timeout: time.Second * 5,
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(message.MethodTimeout))
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			er := fmt.Errorf("error: NewRequest failed: %v, bailing out: %v", err, message)
+			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+			cancel()
+			return
+		}
+
+		outCh := make(chan []byte)
+
+		go func() {
+			resp, err := client.Do(req)
+			if err != nil {
+				er := fmt.Errorf("error: client.Do failed: %v, bailing out: %v", err, message)
+				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				return
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != 200 {
+				cancel()
+				er := fmt.Errorf("error: not 200, where %#v, bailing out: %v", resp.StatusCode, message)
+				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				return
+			}
+
+			b, err := io.ReadAll(resp.Body)
+			if err != nil {
+				log.Printf("error: ReadAll failed: %v\n", err)
+			}
+
+			outCh <- b
+		}()
+
+		select {
+		case <-ctx.Done():
+			cancel()
+			er := fmt.Errorf("error: method timed out %v", message)
+			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+		case out := <-outCh:
+			cancel()
+
+			// Prepare and queue for sending a new message with the output
+			// of the action executed.
+			newReplyMessage(proc, message, REQTextToFile, out)
+		}
+
+	}()
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil

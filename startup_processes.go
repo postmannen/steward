@@ -30,6 +30,17 @@ func (s *server) ProcessesStart() {
 		}
 	}
 
+	// Start a subscriber for text to file messages
+	if s.configuration.StartSubREQTextToFile.OK {
+		{
+			fmt.Printf("Starting text to file subscriber: %#v\n", s.nodeName)
+			sub := newSubject(REQTextToFile, s.nodeName)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQTextToFile.Values, nil)
+			// fmt.Printf("*** %#v\n", proc)
+			go proc.spawnWorker(s)
+		}
+	}
+
 	// Start a subscriber for Hello messages
 	if s.configuration.StartSubREQHello.OK {
 		{
@@ -162,5 +173,16 @@ func (s *server) ProcessesStart() {
 				}
 			})
 		go proc.spawnWorker(s)
+	}
+
+	// Start a subscriber for Http Get Requests
+	if s.configuration.StartSubREQHttpGet.OK {
+		{
+			fmt.Printf("Starting Http Get subscriber: %#v\n", s.nodeName)
+			sub := newSubject(REQHttpGet, s.nodeName)
+			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQHttpGet.Values, nil)
+			// fmt.Printf("*** %#v\n", proc)
+			go proc.spawnWorker(s)
+		}
 	}
 }
