@@ -6,6 +6,6 @@
         "method":"REQCliCommand",
         "timeout":10,
         "retries":3,
-        "methodTimeout": 2
+        "methodTimeout": 4
     }
 ]

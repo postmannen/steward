@@ -7,7 +7,7 @@ NodeName = "central"
 ProfilingPort = ""
 PromHostAndPort = ":2112"
 StartPubREQHello = 0
-SubscribersDataFolder = "./data"
+SubscribersDataFolder = "./var"
 
 [StartSubREQCliCommand]
   OK = true

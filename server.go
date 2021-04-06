@@ -175,13 +175,16 @@ func sendErrorLogMessage(newMessagesCh chan<- []subjectAndMessage, FromNode node
 // createErrorMsgContent will prepare a subject and message with the content
 // of the error
 func createErrorMsgContent(FromNode node, theError error) subjectAndMessage {
-	fmt.Printf(" --- Sending error message to central !!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+	// Add time stamp
+	er := fmt.Sprintf("%v, %v\n", time.Now().UTC(), theError.Error())
+
 	sam := subjectAndMessage{
 		Subject: newSubject(REQErrorLog, "errorCentral"),
 		Message: Message{
+			Label:    "errorLog",
 			ToNode:   "errorCentral",
 			FromNode: FromNode,
-			Data:     []string{theError.Error()},
+			Data:     []string{er},
 			Method:   REQErrorLog,
 		},
 	}

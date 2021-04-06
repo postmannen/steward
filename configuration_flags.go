@@ -132,7 +132,7 @@ func newConfigurationDefaults() Configuration {
 		DefaultMessageTimeout:    10,
 		DefaultMessageRetries:    1,
 		StartPubREQHello:         30,
-		SubscribersDataFolder:    "./data",
+		SubscribersDataFolder:    "./var",
 		CentralNodeName:          "",
 		StartSubREQErrorLog:      flagNodeSlice{Values: []node{}},
 		StartSubREQHello:         flagNodeSlice{OK: true, Values: []node{"*"}},
