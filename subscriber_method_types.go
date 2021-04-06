@@ -367,9 +367,12 @@ func (m methodREQPing) getKind() CommandOrEvent {
 func (m methodREQPing) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- PING REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 
-	// Prepare and queue for sending a new message with the output
-	// of the action executed.
-	newReplyMessage(proc, message, REQPong, []byte{})
+	go func() {
+		// Prepare and queue for sending a new message with the output
+		// of the action executed.
+		d := fmt.Sprintf("%v, ping reply sent from %v\n", time.Now().UTC(), message.ToNode)
+		newReplyMessage(proc, message, REQTextToLogFile, []byte(d))
+	}()
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
