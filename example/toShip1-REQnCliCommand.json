@@ -1,7 +1,7 @@
 [
     {
         "directory":"some-directory",
-        "fileExtension":"result",
+        "fileExtension":".result",
         "toNode": "ship1",
         "data": ["bash","-c","tree ../"],
         "method":"REQnCliCommand",
