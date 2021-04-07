@@ -111,7 +111,7 @@ func newProcess(natsConn *nats.Conn, processes *processes, toRingbufferCh chan<-
 // work with that come from the outside. An example can be handling
 // of metrics which the message have no notion of, but a procFunc
 // can have that wrapped in from when it was constructed.
-type procFunc func() error
+type procFunc func(ctx context.Context) error
 
 // The purpose of this function is to check if we should start a
 // publisher or subscriber process, where a process is a go routine
@@ -147,7 +147,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 			// Start the procFunc in it's own anonymous func so we are able
 			// to get the return error.
 			go func() {
-				err := p.procFunc()
+				err := p.procFunc(p.ctx)
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: procFunc failed: %v", err)
 					sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
@@ -167,7 +167,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 			// Start the procFunc in it's own anonymous func so we are able
 			// to get the return error.
 			go func() {
-				err := p.procFunc()
+				err := p.procFunc(p.ctx)
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: procFunc failed: %v", err)
 					sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)

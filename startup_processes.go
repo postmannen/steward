@@ -1,6 +1,7 @@
 package steward
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -53,11 +54,20 @@ func (s *server) ProcessesStart() {
 			// a handler are not able to hold state, and we need to hold the state
 			// of the nodes we've received hello's from in the sayHelloNodes map,
 			// which is the information we pass along to generate metrics.
-			proc.procFunc = func() error {
+			proc.procFunc = func(ctx context.Context) error {
 				sayHelloNodes := make(map[node]struct{})
 				for {
 					// Receive a copy of the message sent from the method handler.
-					m := <-proc.procFuncCh
+					var m Message
+
+					select {
+					case m = <-proc.procFuncCh:
+					case <-ctx.Done():
+						er := fmt.Errorf("info: stopped handleFunc for: %v", proc.subject.name())
+						sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+						return nil
+					}
+
 					fmt.Printf("--- DEBUG : procFunc call:kind=%v, Subject=%v, toNode=%v\n", proc.processKind, proc.subject, proc.subject.ToNode)
 
 					sayHelloNodes[m.FromNode] = struct{}{}
@@ -150,7 +160,8 @@ func (s *server) ProcessesStart() {
 
 		// Define the procFunc to be used for the process.
 		proc.procFunc = procFunc(
-			func() error {
+			func(ctx context.Context) error {
+				ticker := time.NewTicker(time.Second * time.Duration(s.configuration.StartPubREQHello))
 				for {
 					fmt.Printf("--- DEBUG : procFunc call:kind=%v, Subject=%v, toNode=%v\n", proc.processKind, proc.subject, proc.subject.ToNode)
 
@@ -169,7 +180,14 @@ func (s *server) ProcessesStart() {
 						log.Printf("error: ProcessesStart: %v\n", err)
 					}
 					proc.toRingbufferCh <- []subjectAndMessage{sam}
-					time.Sleep(time.Second * time.Duration(s.configuration.StartPubREQHello))
+
+					select {
+					case <-ticker.C:
+					case <-ctx.Done():
+						er := fmt.Errorf("info: stopped handleFunc for: %v", proc.subject.name())
+						sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+						return nil
+					}
 				}
 			})
 		go proc.spawnWorker(s.processes, s.natsConn)
