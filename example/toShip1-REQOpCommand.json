@@ -1,6 +1,7 @@
 [
     {
         "directory":"opcommand_logs",
+        "fileExtension": "log",
         "toNode": "ship1",
         "data": ["ps"],
         "method":"REQOpCommand",

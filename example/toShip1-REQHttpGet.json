@@ -1,7 +1,8 @@
 [
     {
-        "directory":"metrics/network/sniffer",
-        "toNode": "ship1",
+        "directory": "metrics/network/sniffer",
+        "fileExtension": "html",
+        "toNode": "ship2",
         "data": ["http://vg.no"],
         "method":"REQHttpGet",
         "timeout":10,

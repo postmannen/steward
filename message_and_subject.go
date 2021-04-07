@@ -11,11 +11,6 @@ import (
 // --- Message
 
 type Message struct {
-	// Directory is a string that can be used to create the
-	//directory structure when saving the result of some method.
-	// For example "syslog","metrics", or "metrics/mysensor"
-	// The type is typically used in the handler of a method.
-	Directory string `json:"directory" yaml:"directory"`
 	// The node to send the message to
 	ToNode node `json:"toNode" yaml:"toNode"`
 	// The Unique ID of the message
@@ -35,7 +30,15 @@ type Message struct {
 	RequestRetries int `json:"requestRetries" yaml:"requestRetries"`
 	// Timeout for long a process should be allowed to operate
 	MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
-
+	// Directory is a string that can be used to create the
+	//directory structure when saving the result of some method.
+	// For example "syslog","metrics", or "metrics/mysensor"
+	// The type is typically used in the handler of a method.
+	Directory string `json:"directory" yaml:"directory"`
+	// FileExtension is used to be able to set a wanted extension
+	// on a file being saved as the result of data being handled
+	// by a method handler.
+	FileExtension string `json:"fileExtension" yaml:"fileExtension"`
 	// PreviousMessage are used for example if a reply message is
 	// generated and we also need a copy of  thedetails of the the
 	// initial request message

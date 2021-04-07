@@ -1,6 +1,7 @@
 [
     {
         "directory": "random_text_log",
+        "fileExtension": "log",
         "toNode": "central",
         "data": ["some message sent from a ship for testing\n"],
         "commandOrEvent":"EventACK",
