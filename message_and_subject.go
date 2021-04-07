@@ -11,14 +11,11 @@ import (
 // --- Message
 
 type Message struct {
-	// Label is a word without white spaces that can be used to
-	// desribe what kind of service the message is for. For
-	// example syslog, web_log, prometheus_scraper, metrics.
-	// The intentention is that it can be used to add some extra
-	// information that can be used on the subscriber side to for
-	// example create specific folders using the Format name to
-	// logically group data recevied.
-	Label string `json:"label" yaml:"label"`
+	// Directory is a string that can be used to create the
+	//directory structure when saving the result of some method.
+	// For example "syslog","metrics", or "metrics/mysensor"
+	// The type is typically used in the handler of a method.
+	Directory string `json:"directory" yaml:"directory"`
 	// The node to send the message to
 	ToNode node `json:"toNode" yaml:"toNode"`
 	// The Unique ID of the message

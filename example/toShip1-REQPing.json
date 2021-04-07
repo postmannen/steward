@@ -1,6 +1,6 @@
 [
     {
-        "label": "ping",
+        "directory": "ping",
         "toNode": "ship1",
         "data": [""],
         "method":"REQPing",

@@ -277,7 +277,7 @@ Example JSON for appending a message of type command into the `socket` file
 ```json
 [
     {
-        "label":"cli-command-executed-result",
+        "directory":"cli-command-executed-result",
         "toNode": "ship1",
         "data": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",
@@ -293,7 +293,7 @@ To send specify more messages at once do
 ```json
 [
     {
-        "label":"cli-command-executed-result",
+        "directory":"cli-command-executed-result",
         "toNode": "ship1",
         "data": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",
@@ -302,7 +302,7 @@ To send specify more messages at once do
         "methodTimeout": 4
     },
     {
-        "label":"cli-command-executed-result",
+        "directory":"cli-command-executed-result",
         "toNode": "ship2",
         "data": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",
@@ -318,7 +318,7 @@ To send a message with custom timeout and amount of retries
 ```json
 [
     {
-        "label":"opcommand_logs",
+        "directory":"opcommand_logs",
         "toNode": "ship1",
         "data": ["ps"],
         "method":"REQOpCommand",

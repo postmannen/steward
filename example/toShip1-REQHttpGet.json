@@ -1,6 +1,6 @@
 [
     {
-        "label":"metrics/network/sniffer",
+        "directory":"metrics/network/sniffer",
         "toNode": "ship1",
         "data": ["http://vg.no"],
         "method":"REQHttpGet",

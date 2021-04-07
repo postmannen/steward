@@ -1,6 +1,6 @@
 [
     {
-        "label":"cli_command__result",
+        "directory":"cli_command__result",
         "toNode": "ship1",
         "data": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",

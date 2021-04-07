@@ -1,6 +1,6 @@
 [
     {
-        "label":"opcommand_logs",
+        "directory":"opcommand_logs",
         "toNode": "ship1",
         "data": ["ps"],
         "method":"REQOpCommand",
