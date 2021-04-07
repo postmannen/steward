@@ -92,7 +92,7 @@ func newSubject(method Method, node string) Subject {
 	ma := method.GetMethodsAvailable()
 	coe, ok := ma.methodhandlers[method]
 	if !ok {
-		log.Printf("error: no CommandOrEvent type specified for the method\n")
+		log.Printf("error: no CommandOrEvent type specified for the method: %v\n", method)
 		os.Exit(1)
 	}
 

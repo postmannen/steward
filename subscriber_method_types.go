@@ -215,7 +215,7 @@ func (m methodREQOpCommand) getKind() CommandOrEvent {
 // handler to run a CLI command with timeout context. The handler will
 // return the output of the command run back to the calling publisher
 // in the ack message.
-func (m methodREQOpCommand) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodREQOpCommand) handler(proc process, message Message, nodeName string) ([]byte, error) {
 	go func() {
 		out := []byte{}
 
@@ -232,6 +232,26 @@ func (m methodREQOpCommand) handler(proc process, message Message, node string) 
 			}
 			proc.processes.mu.Unlock()
 
+		case message.Data[0] == "startProc":
+			if len(message.Data) < 2 {
+				er := fmt.Errorf("error: startProc: no allowed publisher nodes specified: %v" + fmt.Sprint(message))
+				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				return
+			}
+
+			newMethod := Method(message.Data[1])
+
+			// We need to convert the []string to []node
+			aps := message.Data[2:]
+			var allowedPublishers []node
+			for _, v := range aps {
+				allowedPublishers = append(allowedPublishers, node(v))
+			}
+
+			sub := newSubject(newMethod, proc.configuration.NodeName)
+			procNew := newProcess(proc.natsConn, proc.processes, proc.toRingbufferCh, proc.configuration, sub, proc.errorCh, processKindSubscriber, allowedPublishers, nil)
+			go procNew.spawnWorker(proc.processes, proc.natsConn)
+
 		default:
 			er := fmt.Errorf("error: no such OpCommand specified: " + message.Data[0])
 			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
@@ -243,7 +263,7 @@ func (m methodREQOpCommand) handler(proc process, message Message, node string) 
 		newReplyMessage(proc, message, REQTextToLogFile, out)
 	}()
 
-	ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n", node, message.ID))
+	ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n", proc.node, message.ID))
 	return ackMsg, nil
 }
 

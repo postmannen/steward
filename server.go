@@ -277,9 +277,9 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 				log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 				sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
-				proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil, nil)
+				proc := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil, nil)
 				// fmt.Printf("*** %#v\n", proc)
-				proc.spawnWorker(s)
+				proc.spawnWorker(s.processes, s.natsConn)
 
 				// REMOVED:
 				//time.Sleep(time.Millisecond * 500)

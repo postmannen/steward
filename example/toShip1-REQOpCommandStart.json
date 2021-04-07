@@ -3,7 +3,7 @@
         "directory":"opcommand_logs",
         "fileExtension": ".log",
         "toNode": "ship2",
-        "data": ["ps"],
+        "data": ["startProc","REQHttpGet","central"],
         "method":"REQOpCommand",
         "timeout":3,
         "retries":3,

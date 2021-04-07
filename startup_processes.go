@@ -15,8 +15,8 @@ func (s *server) ProcessesStart() {
 	{
 		fmt.Printf("Starting REQOpCommand subscriber: %#v\n", s.nodeName)
 		sub := newSubject(REQOpCommand, s.nodeName)
-		proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
-		go proc.spawnWorker(s)
+		proc := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, []node{"*"}, nil)
+		go proc.spawnWorker(s.processes, s.natsConn)
 	}
 
 	// Start a subscriber for textLogging messages
@@ -24,9 +24,9 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting text logging subscriber: %#v\n", s.nodeName)
 			sub := newSubject(REQTextToLogFile, s.nodeName)
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQTextToLogFile.Values, nil)
+			proc := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQTextToLogFile.Values, nil)
 			// fmt.Printf("*** %#v\n", proc)
-			go proc.spawnWorker(s)
+			go proc.spawnWorker(s.processes, s.natsConn)
 		}
 	}
 
@@ -35,9 +35,9 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting text to file subscriber: %#v\n", s.nodeName)
 			sub := newSubject(REQTextToFile, s.nodeName)
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQTextToFile.Values, nil)
+			proc := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQTextToFile.Values, nil)
 			// fmt.Printf("*** %#v\n", proc)
-			go proc.spawnWorker(s)
+			go proc.spawnWorker(s.processes, s.natsConn)
 		}
 	}
 
@@ -46,7 +46,7 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting Hello subscriber: %#v\n", s.nodeName)
 			sub := newSubject(REQHello, s.nodeName)
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQHello.Values, nil)
+			proc := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQHello.Values, nil)
 			proc.procFuncCh = make(chan Message)
 
 			// The reason for running the say hello subscriber as a procFunc is that
@@ -72,7 +72,7 @@ func (s *server) ProcessesStart() {
 					}
 				}
 			}
-			go proc.spawnWorker(s)
+			go proc.spawnWorker(s.processes, s.natsConn)
 		}
 	}
 
@@ -81,8 +81,8 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting REQErrorLog subscriber: %#v\n", s.nodeName)
 			sub := newSubject(REQErrorLog, "errorCentral")
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQErrorLog.Values, nil)
-			go proc.spawnWorker(s)
+			proc := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQErrorLog.Values, nil)
+			go proc.spawnWorker(s.processes, s.natsConn)
 		}
 	}
 
@@ -91,8 +91,8 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting Ping Request subscriber: %#v\n", s.nodeName)
 			sub := newSubject(REQPing, s.nodeName)
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQPing.Values, nil)
-			go proc.spawnWorker(s)
+			proc := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQPing.Values, nil)
+			go proc.spawnWorker(s.processes, s.natsConn)
 		}
 	}
 
@@ -101,8 +101,8 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting Pong subscriber: %#v\n", s.nodeName)
 			sub := newSubject(REQPong, s.nodeName)
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQPong.Values, nil)
-			go proc.spawnWorker(s)
+			proc := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQPong.Values, nil)
+			go proc.spawnWorker(s.processes, s.natsConn)
 		}
 	}
 
@@ -111,8 +111,8 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting CLICommand Request subscriber: %#v\n", s.nodeName)
 			sub := newSubject(REQCliCommand, s.nodeName)
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQCliCommand.Values, nil)
-			go proc.spawnWorker(s)
+			proc := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQCliCommand.Values, nil)
+			go proc.spawnWorker(s.processes, s.natsConn)
 		}
 	}
 
@@ -121,8 +121,8 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting CLICommand Not Sequential Request subscriber: %#v\n", s.nodeName)
 			sub := newSubject(REQnCliCommand, s.nodeName)
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQnCliCommand.Values, nil)
-			go proc.spawnWorker(s)
+			proc := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQnCliCommand.Values, nil)
+			go proc.spawnWorker(s.processes, s.natsConn)
 		}
 	}
 
@@ -131,8 +131,8 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting Text To Console subscriber: %#v\n", s.nodeName)
 			sub := newSubject(REQTextToConsole, s.nodeName)
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQTextToConsole.Values, nil)
-			go proc.spawnWorker(s)
+			proc := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQTextToConsole.Values, nil)
+			go proc.spawnWorker(s.processes, s.natsConn)
 		}
 	}
 
@@ -146,7 +146,7 @@ func (s *server) ProcessesStart() {
 		fmt.Printf("Starting Hello Publisher: %#v\n", s.nodeName)
 
 		sub := newSubject(REQHello, s.configuration.CentralNodeName)
-		proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, []node{}, nil)
+		proc := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, []node{}, nil)
 
 		// Define the procFunc to be used for the process.
 		proc.procFunc = procFunc(
@@ -172,7 +172,7 @@ func (s *server) ProcessesStart() {
 					time.Sleep(time.Second * time.Duration(s.configuration.StartPubREQHello))
 				}
 			})
-		go proc.spawnWorker(s)
+		go proc.spawnWorker(s.processes, s.natsConn)
 	}
 
 	// Start a subscriber for Http Get Requests
@@ -180,9 +180,9 @@ func (s *server) ProcessesStart() {
 		{
 			fmt.Printf("Starting Http Get subscriber: %#v\n", s.nodeName)
 			sub := newSubject(REQHttpGet, s.nodeName)
-			proc := newProcess(s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQHttpGet.Values, nil)
+			proc := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindSubscriber, s.configuration.StartSubREQHttpGet.Values, nil)
 			// fmt.Printf("*** %#v\n", proc)
-			go proc.spawnWorker(s)
+			go proc.spawnWorker(s.processes, s.natsConn)
 		}
 	}
 }

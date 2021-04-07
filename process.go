@@ -58,11 +58,13 @@ type process struct {
 	toRingbufferCh chan<- []subjectAndMessage
 	// The structure who holds all processes information
 	processes *processes
+	// nats connection
+	natsConn *nats.Conn
 }
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func newProcess(processes *processes, toRingbufferCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, errCh chan errProcess, processKind processKind, allowedReceivers []node, procFunc func() error) process {
+func newProcess(natsConn *nats.Conn, processes *processes, toRingbufferCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, errCh chan errProcess, processKind processKind, allowedReceivers []node, procFunc func() error) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
 	processes.lastProcessID++
 
@@ -86,6 +88,7 @@ func newProcess(processes *processes, toRingbufferCh chan<- []subjectAndMessage,
 		toRingbufferCh:   toRingbufferCh,
 		configuration:    configuration,
 		processes:        processes,
+		natsConn:         natsConn,
 	}
 
 	return proc
@@ -108,7 +111,7 @@ type procFunc func() error
 //
 // It will give the process the next available ID, and also add the
 // process to the processes map in the server structure.
-func (p process) spawnWorker(s *server) {
+func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 	// We use the full name of the subject to identify a unique
 	// process. We can do that since a process can only handle
 	// one message queue.
@@ -121,9 +124,9 @@ func (p process) spawnWorker(s *server) {
 	}
 
 	// Add information about the new process to the started processes map.
-	s.processes.mu.Lock()
-	s.processes.active[pn] = p
-	s.processes.mu.Unlock()
+	procs.mu.Lock()
+	procs.active[pn] = p
+	procs.mu.Unlock()
 
 	// Start a publisher worker, which will start a go routine (process)
 	// That will take care of all the messages for the subject it owns.
@@ -143,7 +146,7 @@ func (p process) spawnWorker(s *server) {
 			}()
 		}
 
-		go p.publishMessages(s.natsConn, s.processes)
+		go p.publishMessages(natsConn, procs)
 	}
 
 	// Start a subscriber worker, which will start a go routine (process)
@@ -163,7 +166,7 @@ func (p process) spawnWorker(s *server) {
 			}()
 		}
 
-		p.subscribeMessages(s)
+		p.subscribeMessages()
 	}
 }
 
@@ -256,7 +259,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 // the state of the message being processed, and then reply back to the
 // correct sending process's reply, meaning so we ACK back to the correct
 // publisher.
-func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *nats.Msg, s *server) {
+func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *nats.Msg) {
 
 	message := Message{}
 
@@ -267,7 +270,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 	err := gobDec.Decode(&message)
 	if err != nil {
 		er := fmt.Errorf("error: gob decoding failed: %v", err)
-		sendErrorLogMessage(s.toRingbufferCh, node(thisNode), er)
+		sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
 	}
 
 	switch {
@@ -275,7 +278,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		mh, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.CommandOrEvent)
-			sendErrorLogMessage(s.toRingbufferCh, node(thisNode), er)
+			sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
 		}
 
 		out := []byte("not allowed from " + message.FromNode)
@@ -294,11 +297,11 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: failed to execute event: %v", err)
-				sendErrorLogMessage(s.toRingbufferCh, node(thisNode), er)
+				sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
 			}
 		} else {
 			er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
-			sendErrorLogMessage(s.toRingbufferCh, node(thisNode), er)
+			sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
 		}
 
 		// Send a confirmation message back to the publisher
@@ -308,7 +311,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		mf, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.CommandOrEvent)
-			sendErrorLogMessage(s.toRingbufferCh, node(thisNode), er)
+			sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
 		}
 
 		// Check if we are allowed to receive from that host
@@ -328,30 +331,30 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: failed to execute event: %v", err)
-				sendErrorLogMessage(s.toRingbufferCh, node(thisNode), er)
+				sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
 			}
 		} else {
 			er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
-			sendErrorLogMessage(s.toRingbufferCh, node(thisNode), er)
+			sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
 		}
 		// ---
 	default:
 		er := fmt.Errorf("info: did not find that specific type of command: %#v", p.subject.CommandOrEvent)
-		sendErrorLogMessage(s.toRingbufferCh, node(thisNode), er)
+		sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
 
 	}
 }
 
 // Subscribe will start up a Go routine under the hood calling the
 // callback function specified when a new message is received.
-func (p process) subscribeMessages(s *server) {
+func (p process) subscribeMessages() {
 	subject := string(p.subject.name())
-	_, err := s.natsConn.Subscribe(subject, func(msg *nats.Msg) {
+	_, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
 
 		// We start one handler per message received by using go routines here.
 		// This is for being able to reply back the current publisher who sent
 		// the message.
-		go p.subscriberHandler(s.natsConn, s.nodeName, msg, s)
+		go p.subscriberHandler(p.natsConn, p.configuration.NodeName, msg)
 	})
 	if err != nil {
 		log.Printf("error: Subscribe failed: %v\n", err)
