@@ -1,6 +1,6 @@
 [
     {
-        "label":"metrics/vg.no/annet/minside/",
+        "label":"metrics/network/sniffer",
         "toNode": "ship1",
         "data": ["http://vg.no"],
         "method":"REQHttpGet",

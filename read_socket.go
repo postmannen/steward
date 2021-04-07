@@ -104,7 +104,6 @@ func newSAM(m Message) (subjectAndMessage, error) {
 		ToNode:         string(m.ToNode),
 		CommandOrEvent: tmpH.getKind(),
 		Method:         m.Method,
-		Label:          m.Label,
 	}
 
 	sm := subjectAndMessage{

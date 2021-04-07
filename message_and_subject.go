@@ -82,9 +82,6 @@ type Subject struct {
 	// from routeMessagesToPublish in *server.
 	// This channel is only used for publishing processes.
 	messageCh chan Message
-	// Label, single word used to describe the data content. For example
-	// syslog, metrics, etc.
-	Label string
 }
 
 // newSubject will return a new variable of the type subject, and insert
