@@ -2,8 +2,8 @@
     {
         "directory":"opcommand_logs",
         "fileExtension": ".log",
-        "toNode": "ship1",
-        "data": ["ps"],
+        "toNode": "ship2",
+        "data": ["stopProc","REQHello","publisher"],
         "method":"REQOpCommand",
         "timeout":3,
         "retries":3,

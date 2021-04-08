@@ -2,7 +2,7 @@
     {
         "directory": "ping",
         "fileExtension":".ping.log",
-        "toNode": "ship2",
+        "toNode": "ship1",
         "data": [""],
         "method":"REQPing",
         "timeout":3,

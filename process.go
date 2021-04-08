@@ -62,7 +62,7 @@ type process struct {
 	// nats connection
 	natsConn *nats.Conn
 	// natsSubscription returned when calling natsConn.Subscribe
-	natsSubscription string
+	natsSubscription *nats.Subscription
 	// context
 	ctx context.Context
 	// context cancelFunc
@@ -149,13 +149,6 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 		pn = processNameGet(p.subject.name(), processKindSubscriber)
 	}
 
-	p.processName = pn
-
-	// Add information about the new process to the started processes map.
-	procs.mu.Lock()
-	procs.active[pn] = p
-	procs.mu.Unlock()
-
 	// Start a publisher worker, which will start a go routine (process)
 	// That will take care of all the messages for the subject it owns.
 	if p.processKind == processKindPublisher {
@@ -174,7 +167,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 			}()
 		}
 
-		go p.publishMessages(natsConn, procs)
+		go p.publishMessages(natsConn)
 	}
 
 	// Start a subscriber worker, which will start a go routine (process)
@@ -194,8 +187,15 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 			}()
 		}
 
-		p.subscribeMessages()
+		p.natsSubscription = p.subscribeMessages()
 	}
+
+	p.processName = pn
+
+	// Add information about the new process to the started processes map.
+	procs.mu.Lock()
+	procs.active[pn] = p
+	procs.mu.Unlock()
 }
 
 // messageDeliverNats will take care of the delivering the message
@@ -375,10 +375,10 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 
 // Subscribe will start up a Go routine under the hood calling the
 // callback function specified when a new message is received.
-func (p process) subscribeMessages() {
+func (p process) subscribeMessages() *nats.Subscription {
 	subject := string(p.subject.name())
-	//natsSubscription, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
-	_, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
+	natsSubscription, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
+		//_, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
 
 		// We start one handler per message received by using go routines here.
 		// This is for being able to reply back the current publisher who sent
@@ -387,12 +387,15 @@ func (p process) subscribeMessages() {
 	})
 	if err != nil {
 		log.Printf("error: Subscribe failed: %v\n", err)
+		return nil
 	}
+
+	return natsSubscription
 }
 
 // publishMessages will do the publishing of messages for one single
 // process.
-func (p process) publishMessages(natsConn *nats.Conn, processes *processes) {
+func (p process) publishMessages(natsConn *nats.Conn) {
 	for {
 		var err error
 		var m Message
@@ -410,7 +413,7 @@ func (p process) publishMessages(natsConn *nats.Conn, processes *processes) {
 		// Get the process name so we can look up the process in the
 		// processes map, and increment the message counter.
 		pn := processNameGet(p.subject.name(), processKindPublisher)
-		m.ID = processes.active[pn].messageID
+		m.ID = p.messageID
 
 		p.messageDeliverNats(natsConn, m)
 
@@ -420,9 +423,9 @@ func (p process) publishMessages(natsConn *nats.Conn, processes *processes) {
 
 		// Increment the counter for the next message to be sent.
 		p.messageID++
-		processes.mu.Lock()
-		processes.active[pn] = p
-		processes.mu.Unlock()
+		p.processes.mu.Lock()
+		p.processes.active[pn] = p
+		p.processes.mu.Unlock()
 
 		// Handle the error.
 		//

@@ -2,8 +2,8 @@
     {
         "directory": "metrics/network/sniffer",
         "fileExtension": ".html",
-        "toNode": "ship1",
-        "data": ["http://vg.no"],
+        "toNode": "ship2",
+        "data": ["http://erter.org"],
         "method":"REQHttpGet",
         "timeout":5,
         "retries":3,

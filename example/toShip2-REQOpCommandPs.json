@@ -2,7 +2,7 @@
     {
         "directory":"opcommand_logs",
         "fileExtension": ".log",
-        "toNode": "ship1",
+        "toNode": "ship2",
         "data": ["ps"],
         "method":"REQOpCommand",
         "timeout":3,

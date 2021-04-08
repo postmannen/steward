@@ -1,4 +1,2 @@
-2021-04-07 14:14:13.750212 +0000 UTC, error: subReply.NextMsg failed for node=ship2, subject=ship2.REQHttpGet.EventACK: nats: timeout
-2021-04-07 14:14:18.755501 +0000 UTC, error: subReply.NextMsg failed for node=ship2, subject=ship2.REQHttpGet.EventACK: nats: timeout
-2021-04-07 14:14:23.760201 +0000 UTC, error: subReply.NextMsg failed for node=ship2, subject=ship2.REQHttpGet.EventACK: nats: timeout
-2021-04-07 14:14:23.760319 +0000 UTC, info: max retries for message reached, breaking out: {ship2 5 [http://vg.no] REQHttpGet central 5 3 0 0 5 metrics/network/sniffer .html <nil> 0xc00042e240}
+2021-04-08 10:18:45.748974 +0000 UTC, info: canceling publisher: central.REQHello.EventNACK
+2021-04-08 10:18:46.252822 +0000 UTC, error: subscriberHandler: failed to execute event: open var/errorLog/central/errorCentral.REQErrorLog: permission denied

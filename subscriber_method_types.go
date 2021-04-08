@@ -253,8 +253,18 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			go procNew.spawnWorker(proc.processes, proc.natsConn)
 
 		case message.Data[0] == "stopProc":
-			// Data layout: OPCommand, Method, publisher/subscriber
-			if len(message.Data) < 3 {
+			fmt.Printf(" ** DEBUG 0: got stopProc\n")
+			// Data layout: OPCommand, Method, publisher/subscriber, receivingNode
+			//
+			// The processes can be either publishers or subscribers. The subject name
+			// are used within naming a process. Since the subject structure contains
+			// the node name of the node that will receive this message we also need
+			// specify it so we are able to delete the publisher processes, since a
+			// publisher process will have the name of the node to receive the message,
+			// and not just the local node name as with subscriber processes.
+			// receive the message we need to specify
+			if len(message.Data) < 4 {
+				fmt.Printf(`error: DEBUG: stopProc: not enough data values. want "<OPCommand>", "<Method>", "<publisher/subscriber>","<receiving nodeName>": %v` + fmt.Sprint(message))
 				er := fmt.Errorf(`error: stopProc: not enough data values. want "<OPCommand>", "<Method>", "<publisher/subscriber>": %v` + fmt.Sprint(message))
 				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 				return
@@ -267,23 +277,42 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 
 			toStopMethod := Method(message.Data[1])
 			pubOrSub := processKind(message.Data[2])
+			recevingNode := processKind(message.Data[3])
 			// ..check if valid
 
-			sub := newSubject(toStopMethod, proc.configuration.NodeName)
+			sub := newSubject(toStopMethod, string(recevingNode))
 			processName := processNameGet(sub.name(), pubOrSub)
 			// ..check if valid
+			fmt.Printf(" ** DEBUG1: processName: %v\n", processName)
 
+			fmt.Printf(" ** DEBUG1.1: Before mutex lock\n")
 			proc.processes.mu.Lock()
+			fmt.Printf(" ** DEBUG1.2: After mutex lock\n")
+
+			for k, v := range proc.processes.active {
+				fmt.Printf(" ** DEBUG1.3: MAP: k = %v, v = %v\n", k, v.processKind)
+			}
+
 			toStopProc, ok := proc.processes.active[processName]
+			fmt.Printf(" ** DEBUG2.1: toStopProc: %v\n", toStopProc)
 			if ok {
+				fmt.Printf(" ** DEBUG2.2: toStopProc: %v\n", toStopProc)
 				fmt.Printf(" ** STOP: processName: %v\n", processName)
 				fmt.Printf(" ** STOP: toStopProc: %v\n", toStopProc)
+				// Delete the process from the processes map
 				delete(proc.processes.active, processName)
+				// Stop started go routines that belong to the process.
 				toStopProc.ctxCancel()
+				// Stop subscribing for messages on the process's subject.
+				err := toStopProc.natsSubscription.Unsubscribe()
+				if err != nil {
+					log.Printf(" ** Error: failed to stop *nats.Subscription: %v\n", err)
+				}
 			}
 			proc.processes.mu.Unlock()
 
 		default:
+			fmt.Printf("error: no such OpCommand specified: " + message.Data[0])
 			er := fmt.Errorf("error: no such OpCommand specified: " + message.Data[0])
 			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 			return

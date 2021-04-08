@@ -184,6 +184,7 @@ func (s *server) ProcessesStart() {
 					select {
 					case <-ticker.C:
 					case <-ctx.Done():
+						fmt.Printf(" ** DEBUG: got <- ctx.Done\n")
 						er := fmt.Errorf("info: stopped handleFunc for: %v", proc.subject.name())
 						sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 						return nil
