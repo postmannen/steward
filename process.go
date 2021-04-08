@@ -61,10 +61,14 @@ type process struct {
 	processes *processes
 	// nats connection
 	natsConn *nats.Conn
+	// natsSubscription returned when calling natsConn.Subscribe
+	natsSubscription string
 	// context
 	ctx context.Context
 	// context cancelFunc
 	ctxCancel context.CancelFunc
+	// Process name
+	processName processName
 }
 
 // prepareNewProcess will set the the provided values and the default
@@ -113,6 +117,19 @@ func newProcess(natsConn *nats.Conn, processes *processes, toRingbufferCh chan<-
 // can have that wrapped in from when it was constructed.
 type procFunc func(ctx context.Context) error
 
+// stop will stop and remove the process from the active processes
+// map, and it will send a cancel signal on the ctx to stop all
+// running go routines that where started via this process.
+func (p process) stop() {
+	p.processes.mu.Lock()
+	_, ok := p.processes.active[p.processName]
+	if ok {
+		delete(p.processes.active, p.processName)
+		p.ctxCancel()
+	}
+	p.processes.mu.Unlock()
+}
+
 // The purpose of this function is to check if we should start a
 // publisher or subscriber process, where a process is a go routine
 // that will handle either sending or receiving messages on one
@@ -131,6 +148,8 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 	if p.processKind == processKindSubscriber {
 		pn = processNameGet(p.subject.name(), processKindSubscriber)
 	}
+
+	p.processName = pn
 
 	// Add information about the new process to the started processes map.
 	procs.mu.Lock()
@@ -358,6 +377,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 // callback function specified when a new message is received.
 func (p process) subscribeMessages() {
 	subject := string(p.subject.name())
+	//natsSubscription, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
 	_, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
 
 		// We start one handler per message received by using go routines here.

@@ -252,6 +252,37 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			procNew := newProcess(proc.natsConn, proc.processes, proc.toRingbufferCh, proc.configuration, sub, proc.errorCh, processKindSubscriber, allowedPublishers, nil)
 			go procNew.spawnWorker(proc.processes, proc.natsConn)
 
+		case message.Data[0] == "stopProc":
+			// Data layout: OPCommand, Method, publisher/subscriber
+			if len(message.Data) < 3 {
+				er := fmt.Errorf(`error: stopProc: not enough data values. want "<OPCommand>", "<Method>", "<publisher/subscriber>": %v` + fmt.Sprint(message))
+				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				return
+			}
+
+			// func (s Subject) name() subjectName {
+			//	return subjectName(fmt.Sprintf("%s.%s.%s", s.ToNode, s.Method, s.CommandOrEvent))''
+			//
+			// pn = processNameGet(p.subject.name(), processKindSubscriber)
+
+			toStopMethod := Method(message.Data[1])
+			pubOrSub := processKind(message.Data[2])
+			// ..check if valid
+
+			sub := newSubject(toStopMethod, proc.configuration.NodeName)
+			processName := processNameGet(sub.name(), pubOrSub)
+			// ..check if valid
+
+			proc.processes.mu.Lock()
+			toStopProc, ok := proc.processes.active[processName]
+			if ok {
+				fmt.Printf(" ** STOP: processName: %v\n", processName)
+				fmt.Printf(" ** STOP: toStopProc: %v\n", toStopProc)
+				delete(proc.processes.active, processName)
+				toStopProc.ctxCancel()
+			}
+			proc.processes.mu.Unlock()
+
 		default:
 			er := fmt.Errorf("error: no such OpCommand specified: " + message.Data[0])
 			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
