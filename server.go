@@ -131,7 +131,9 @@ func (s *server) Start() {
 	go s.readSocket(s.toRingbufferCh)
 
 	// Start up the predefined subscribers.
-	s.ProcessesStart()
+	sub := newSubject(REQInitial, s.nodeName)
+	p := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, "", []node{}, nil)
+	p.ProcessesStart()
 
 	time.Sleep(time.Second * 1)
 	s.processes.printProcessesMap()

@@ -52,6 +52,8 @@ type Method string
 // The constants that will be used throughout the system for
 // when specifying what kind of Method to send or work with.
 const (
+	// Initial method used to start other processes.
+	REQInitial Method = "REQInitial"
 	// Command for client operation request of the system. The op
 	// command to execute shall be given in the data field of the
 	// message as string value. For example "ps".
@@ -123,6 +125,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 	// Event, Used to communicate that an action has been performed.
 	ma := MethodsAvailable{
 		methodhandlers: map[Method]methodHandler{
+			REQInitial: methodREQInitial{
+				commandOrEvent: CommandACK,
+			},
 			REQOpCommand: methodREQOpCommand{
 				commandOrEvent: CommandACK,
 			},
@@ -175,6 +180,24 @@ func (m Method) getHandler(method Method) methodHandler {
 // The structure that works as a reference for all the methods and if
 // they are of the command or event type, and also if it is a ACK or
 // NACK message.
+
+// ----
+
+type methodREQInitial struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodREQInitial) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
+
+func (m methodREQInitial) handler(proc process, message Message, node string) ([]byte, error) {
+	// proc.procFuncCh <- message
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+// ----
 type MethodsAvailable struct {
 	methodhandlers map[Method]methodHandler
 }
