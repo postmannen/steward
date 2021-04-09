@@ -220,52 +220,89 @@ Right now the API for sending a message from one node to another node is by past
 The `method` is what defines what the event will do. The preconfigured methods are:
 
 ```go
-// Command for client operation request of the system. The op
-// command to execute shall be given in the data field of the
-// message as string value. For example "ps".
-REQOpCommand Method = "REQOpCommand"
-// Execute a CLI command in for example bash or cmd.
-// This is an event type, where a message will be sent to a
-// node with the command to execute and an ACK will be replied
-// if it was delivered succesfully. The output of the command
-// ran will be delivered back to the node where it was initiated
-// as a new message.
-// The data field is a slice of strings where the first string
-// value should be the command, and the following the arguments.
-REQCliCommand Method = "REQCliCommand"
-// Execute a CLI command in for example bash or cmd.
-// This is an event type, where a message will be sent to a
-// node with the command to execute and an ACK will be replied
-// if it was delivered succesfully. The output of the command
-// ran will be delivered back to the node where it was initiated
-// as a new message.
-// The NOSEQ method will process messages as they are recived,
-// and the reply back will be sent as soon as the process is
-// done. No order are preserved.
-// The data field is a slice of strings where the first string
-// value should be the command, and the following the arguments.
-REQnCliCommand Method = "REQnCliCommand"
-// Send text to be logged to the console.
-// The data field is a slice of strings where the first string
-// value should be the command, and the following the arguments.
-REQTextToConsole Method = "REQTextToConsole"
-// Send text logging to some host by appending the output to a
-// file, if the file do not exist we create it.
-// A file with the full subject+hostName will be created on
-// the receiving end.
-// The data field is a slice of strings where the values of the
-// slice will be written to the log file.
-REQTextToLogFile Method = "REQTextToLogFile"
-// Send Hello I'm here message.
-REQHello Method = "REQHello"
-// Error log methods to centralError node.
-REQErrorLog Method = "REQErrorLog"
-// Echo request will ask the subscriber for a
-// reply generated as a new message, and sent back to where
-// the initial request was made.
-REQPing Method = "REQPing"
-// Will generate a reply for a ECHORequest
-REQPong Method = "REQPong"
+// The node to send the message to
+ToNode node `json:"toNode" yaml:"toNode"`
+// The Unique ID of the message
+ID int `json:"id" yaml:"id"`
+// The actual data in the message
+Data []string `json:"data" yaml:"data"`
+// method, what is this message doing, etc. CLI, syslog, etc.
+Method   Method `json:"method" yaml:"method"`
+FromNode node
+// Normal Reply wait timeout
+Timeout int `json:"timeout" yaml:"timeout"`
+// Normal Resend retries
+Retries int `json:"retries" yaml:"retries"`
+// The timeout of the new message created via a request event.
+RequestTimeout int `json:"requestTimeout" yaml:"requestTimeout"`
+// The retries of the new message created via a request event.
+RequestRetries int `json:"requestRetries" yaml:"requestRetries"`
+// Timeout for long a process should be allowed to operate
+MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
+// Directory is a string that can be used to create the
+//directory structure when saving the result of some method.
+// For example "syslog","metrics", or "metrics/mysensor"
+// The type is typically used in the handler of a method.
+Directory string `json:"directory" yaml:"directory"`
+// FileExtension is used to be able to set a wanted extension
+// on a file being saved as the result of data being handled
+// by a method handler.
+FileExtension string `json:"fileExtension" yaml:"fileExtension"`
+// operation are used to give an opCmd and opArg's.
+Operation Operation `json:"operation"`
+// PreviousMessage are used for example if a reply message is
+// generated and we also need a copy of  thedetails of the the
+// initial request message.
+PreviousMessage *Message
+// done is used to signal when a message is fully processed.
+// This is used for signaling back to the ringbuffer that we are
+// done with processing a message, and the message can be removed
+// from the ringbuffer and into the time series log.
+done chan struct{}
+```
+
+The `Operation` field is a little bit special. This field is used with the `REQOpCommand` to specify what operation command to run, and also it's arguments.
+
+The current `operation`'s that are available are :
+
+To stop a process of a specific type on a node.
+
+```json
+...
+"method":"REQOpCommand",
+        "operation":{
+            "opCmd":"stopProc",
+            "opArg": {
+                "method": "REQHttpGet",
+                "kind": "subscriber",
+                "receivingNode": "ship2"
+            }
+        },
+...
+```
+
+To get a list of all running processes on a node.
+
+```json
+...
+"method":"REQOpCommand",
+        "operation":{
+            "opCmd":"ps"
+        },
+...
+```
+
+To start a process of a specified type on a node.
+
+```json
+"method":"REQOpCommand",
+        "operation":{
+            "opCmd":"startProc",
+            "opArg": {
+                "method": "REQHttpGet",
+                "allowedNodes": ["central","node1"]
+            }
+        },
 ```
 
 NB: Both the keys and the values used are case sensitive.
@@ -288,7 +325,7 @@ Example JSON for appending a message of type command into the `socket` file
 ]
 ```
 
-To send specify more messages at once do
+To specify more messages at once do
 
 ```json
 [
@@ -313,15 +350,72 @@ To send specify more messages at once do
 ]
 ```
 
-To send a message with custom timeout and amount of retries
+To send a Op Command message for process listing with custom timeout and amount of retries
 
 ```json
 [
     {
         "directory":"opcommand_logs",
-        "toNode": "ship1",
-        "data": ["ps"],
+        "fileExtension": ".log",
+        "toNode": "ship2",
+        "data": [],
         "method":"REQOpCommand",
+        "operation":{
+            "opCmd":"ps"
+        },
+        "timeout":3,
+        "retries":3,
+        "requestTimeout":3,
+        "requestRetries":3,
+        "MethodTimeout": 7
+    }
+]
+```
+
+To send and Op Command to stop a subscriber on a node
+
+```json
+[
+    {
+        "directory":"opcommand_logs",
+        "fileExtension": ".log",
+        "toNode": "ship2",
+        "data": [],
+        "method":"REQOpCommand",
+        "operation":{
+            "opCmd":"stopProc",
+            "opArg": {
+                "method": "REQHttpGet",
+                "kind": "subscriber",
+                "receivingNode": "ship2"
+            }
+        },
+        "timeout":3,
+        "retries":3,
+        "requestTimeout":3,
+        "requestRetries":3,
+        "MethodTimeout": 7
+    }
+]
+```
+
+To send and Op Command to start a subscriber on a node
+
+```json
+[
+    {
+        "directory":"opcommand_logs",
+        "fileExtension": ".log",
+        "toNode": "ship2",
+        "data": [],
+        "method":"REQOpCommand",
+        "operation":{
+            "opCmd":"startProc",
+            "opArg": {
+                "method": "REQHttpGet",
+                "allowedNodes": ["central","node1"]
+            }
+        },
         "timeout":3,
         "retries":3,
         "requestTimeout":3,
