@@ -69,6 +69,10 @@ type process struct {
 	ctxCancel context.CancelFunc
 	// Process name
 	processName processName
+
+	// startup holds the startup functions for starting up publisher
+	// or subscriber processes
+	startup startup
 }
 
 // prepareNewProcess will set the the provided values and the default

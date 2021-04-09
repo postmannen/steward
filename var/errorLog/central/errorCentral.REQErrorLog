@@ -1,2 +1,0 @@
-2021-04-08 10:18:45.748974 +0000 UTC, info: canceling publisher: central.REQHello.EventNACK
-2021-04-08 10:18:46.252822 +0000 UTC, error: subscriberHandler: failed to execute event: open var/errorLog/central/errorCentral.REQErrorLog: permission denied

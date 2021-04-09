@@ -275,6 +275,9 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			procNew := newProcess(proc.natsConn, proc.processes, proc.toRingbufferCh, proc.configuration, sub, proc.errorCh, processKindSubscriber, allowedPublishers, nil)
 			go procNew.spawnWorker(proc.processes, proc.natsConn)
 
+			er := fmt.Errorf("info: startProc: started %v on %v", sub, message.ToNode)
+			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+
 		case message.Data[0] == "stopProc":
 			fmt.Printf(" ** DEBUG 0: got stopProc\n")
 			// Data layout: OPCommand, Method, publisher/subscriber, receivingNode
@@ -333,6 +336,9 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 				}
 			}
 			proc.processes.mu.Unlock()
+
+			er := fmt.Errorf("info: stopProc: stoped %v on %v", sub, message.ToNode)
+			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 
 		default:
 			fmt.Printf("error: no such OpCommand specified: " + message.Data[0])

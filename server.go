@@ -130,7 +130,9 @@ func (s *server) Start() {
 	// Start the checking the input socket for new messages from operator.
 	go s.readSocket(s.toRingbufferCh)
 
-	// Start up the predefined subscribers.
+	// Start up the predefined subscribers. Since all the logic to handle
+	// processes are tied to the process struct, we need to create an
+	// initial process to start the rest.
 	sub := newSubject(REQInitial, s.nodeName)
 	p := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, "", []node{}, nil)
 	p.ProcessesStart()
@@ -183,11 +185,12 @@ func createErrorMsgContent(FromNode node, theError error) subjectAndMessage {
 	sam := subjectAndMessage{
 		Subject: newSubject(REQErrorLog, "errorCentral"),
 		Message: Message{
-			Directory: "errorLog",
-			ToNode:    "errorCentral",
-			FromNode:  FromNode,
-			Data:      []string{er},
-			Method:    REQErrorLog,
+			Directory:     "errorLog",
+			ToNode:        "errorCentral",
+			FromNode:      FromNode,
+			FileExtension: ".log",
+			Data:          []string{er},
+			Method:        REQErrorLog,
 		},
 	}
 
