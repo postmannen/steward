@@ -11,6 +11,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 type processName string
@@ -29,16 +30,20 @@ type processes struct {
 	mu sync.RWMutex
 	// The last processID created
 	lastProcessID int
-	// metrics channel
-	metricsCh chan metricType
+	//
+	promTotalProcesses prometheus.Gauge
 }
 
 // newProcesses will prepare and return a *processes
-func newProcesses(metricsCh chan metricType) *processes {
+func newProcesses(promRegistry *prometheus.Registry) *processes {
 	p := processes{
-		active:    make(map[processName]process),
-		metricsCh: metricsCh,
+		active: make(map[processName]process),
 	}
+
+	p.promTotalProcesses = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "total_running_processes",
+		Help: "The current number of total running processes",
+	})
 
 	return &p
 }
@@ -91,7 +96,7 @@ func NewServer(c *Configuration) (*server, error) {
 		nodeName:       c.NodeName,
 		natsConn:       conn,
 		netListener:    nl,
-		processes:      newProcesses(metrics.metricsCh),
+		processes:      newProcesses(metrics.promRegistry),
 		toRingbufferCh: make(chan []subjectAndMessage),
 		metrics:        metrics,
 	}
@@ -156,13 +161,7 @@ func (p *processes) printProcessesMap() {
 	}
 	p.mu.Unlock()
 
-	p.metricsCh <- metricType{
-		metric: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "total_running_processes",
-			Help: "The current number of total running processes",
-		}),
-		value: float64(len(p.active)),
-	}
+	p.promTotalProcesses.Set(float64(len(p.active)))
 
 	fmt.Println("--------------------------------------------------------------------------------------------")
 }

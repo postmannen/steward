@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 func (p process) ProcessesStart() {
@@ -186,6 +187,12 @@ func (s startup) subREQHello(p process) {
 	// which is the information we pass along to generate metrics.
 	proc.procFunc = func(ctx context.Context) error {
 		sayHelloNodes := make(map[node]struct{})
+
+		promHelloNodes := promauto.NewGauge(prometheus.GaugeOpts{
+			Name: "hello_nodes",
+			Help: "The current number of total nodes who have said hello",
+		})
+
 		for {
 			// Receive a copy of the message sent from the method handler.
 			var m Message
@@ -203,13 +210,7 @@ func (s startup) subREQHello(p process) {
 			sayHelloNodes[m.FromNode] = struct{}{}
 
 			// update the prometheus metrics
-			proc.processes.metricsCh <- metricType{
-				metric: prometheus.NewGauge(prometheus.GaugeOpts{
-					Name: "hello_nodes",
-					Help: "The current number of total nodes who have said hello",
-				}),
-				value: float64(len(sayHelloNodes)),
-			}
+			promHelloNodes.Set(float64(len(sayHelloNodes)))
 		}
 	}
 	go proc.spawnWorker(p.processes, p.natsConn)
