@@ -762,7 +762,7 @@ func (m methodREQnCliCommand) handler(proc process, message Message, node string
 
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
-			newReplyMessage(proc, message, REQTextToConsole, out)
+			newReplyMessage(proc, message, REQTextToLogFile, out)
 		}
 
 	}()
