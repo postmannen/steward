@@ -193,6 +193,12 @@ func (s startup) subREQHello(p process) {
 			Help: "The current number of total nodes who have said hello",
 		})
 
+		promHelloNodesNameVec := promauto.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "hello_nodes_name",
+			Help: "Name of the nodes who have said hello",
+		}, []string{"nodeName"},
+		)
+
 		for {
 			// Receive a copy of the message sent from the method handler.
 			var m Message
@@ -205,12 +211,13 @@ func (s startup) subREQHello(p process) {
 				return nil
 			}
 
-			// fmt.Printf("--- DEBUG : procFunc call:kind=%v, Subject=%v, toNode=%v\n", proc.processKind, proc.subject, proc.subject.ToNode)
-
+			// Add an entry for the node in the map
 			sayHelloNodes[m.FromNode] = struct{}{}
 
 			// update the prometheus metrics
 			promHelloNodes.Set(float64(len(sayHelloNodes)))
+			promHelloNodesNameVec.With(prometheus.Labels{"nodeName": string(m.FromNode)}).SetToCurrentTime()
+
 		}
 	}
 	go proc.spawnWorker(p.processes, p.natsConn)
