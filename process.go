@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // processKind are either kindSubscriber or kindPublisher, and are
@@ -152,6 +153,9 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 	if p.processKind == processKindSubscriber {
 		pn = processNameGet(p.subject.name(), processKindSubscriber)
 	}
+
+	processName := processNameGet(p.subject.name(), p.processKind)
+	p.processes.promProcessesVec.With(prometheus.Labels{"processName": string(processName)})
 
 	// Start a publisher worker, which will start a go routine (process)
 	// That will take care of all the messages for the subject it owns.

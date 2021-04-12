@@ -1,6 +1,6 @@
 [
     {
-        "directory": "metrics/network/sniffer",
+        "directory": "vg-sin-hjemmeside",
         "fileExtension": ".html",
         "toNode": "ship1",
         "data": ["http://vg.no"],

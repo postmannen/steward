@@ -43,6 +43,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Method is used to specify the actual function/method that
@@ -350,6 +352,9 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 				if err != nil {
 					log.Printf(" ** Error: failed to stop *nats.Subscription: %v\n", err)
 				}
+
+				// Remove the prometheus label
+				proc.processes.promProcessesVec.Delete(prometheus.Labels{"processName": string(processName)})
 
 				er := fmt.Errorf("info: stopProc: stoped %v on %v", sub, message.ToNode)
 				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)

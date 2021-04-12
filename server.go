@@ -32,6 +32,8 @@ type processes struct {
 	lastProcessID int
 	//
 	promTotalProcesses prometheus.Gauge
+	//
+	promProcessesVec *prometheus.GaugeVec
 }
 
 // newProcesses will prepare and return a *processes
@@ -44,6 +46,12 @@ func newProcesses(promRegistry *prometheus.Registry) *processes {
 		Name: "total_running_processes",
 		Help: "The current number of total running processes",
 	})
+
+	p.promProcessesVec = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "running_process",
+		Help: "Name of the running process",
+	}, []string{"processName"},
+	)
 
 	return &p
 }
