@@ -189,12 +189,12 @@ func (s startup) subREQHello(p process) {
 		sayHelloNodes := make(map[node]struct{})
 
 		promHelloNodes := promauto.NewGauge(prometheus.GaugeOpts{
-			Name: "hello_nodes",
+			Name: "hello_nodes_total",
 			Help: "The current number of total nodes who have said hello",
 		})
 
 		promHelloNodesNameVec := promauto.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "hello_nodes_name",
+			Name: "hello_node_last_hello",
 			Help: "Name of the nodes who have said hello",
 		}, []string{"nodeName"},
 		)
