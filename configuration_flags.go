@@ -107,7 +107,7 @@ type Configuration struct {
 	// Subscriber for text logging
 	StartSubREQToFileAppend flagNodeSlice
 	// Subscriber for writing to file
-	StartSubREQTextToFile flagNodeSlice
+	StartSubREQToFile flagNodeSlice
 	// Subscriber for Echo Request
 	StartSubREQPing flagNodeSlice
 	// Subscriber for Echo Reply
@@ -146,7 +146,7 @@ func newConfigurationDefaults() Configuration {
 		StartSubREQErrorLog:      flagNodeSlice{Values: []node{}},
 		StartSubREQHello:         flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubREQToFileAppend:  flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQTextToFile:    flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQToFile:        flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubREQPing:          flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubREQPong:          flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubREQCliCommand:    flagNodeSlice{OK: true, Values: []node{"*"}},
@@ -189,7 +189,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.Var(&c.StartSubREQErrorLog, "startSubREQErrorLog", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQHello, "startSubREQHello", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQToFileAppend, "startSubREQToFileAppend", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubREQTextToFile, "startSubREQTextToFile", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubREQToFile, "startSubREQToFile", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQPing, "startSubREQPing", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQPong, "startSubREQPong", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQCliCommand, "startSubREQCliCommand", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")

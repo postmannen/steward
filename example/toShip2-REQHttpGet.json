@@ -5,7 +5,7 @@
         "toNode": "ship2",
         "data": ["http://erter.org"],
         "method":"REQHttpGet",
-        "replyMethod":"REQTextToFile",
+        "replyMethod":"REQToFile",
         "timeout":5,
         "retries":3,
         "methodTimeout": 5

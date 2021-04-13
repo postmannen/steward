@@ -257,7 +257,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 					continue
 				case retryAttempts >= message.Retries:
 					// max retries reached
-					er := fmt.Errorf("info: max retries for message reached, breaking out: %v", message)
+					er := fmt.Errorf("info: max retries for message reached, check if node is up and running and if it got a subscriber for the given REQ type, breaking out: %v", message)
 					sendErrorLogMessage(p.toRingbufferCh, message.FromNode, er)
 					return
 

@@ -28,8 +28,8 @@ func (p process) ProcessesStart() {
 	}
 
 	// Start a subscriber for text to file messages
-	if p.configuration.StartSubREQTextToFile.OK {
-		p.startup.subREQTextToFile(p)
+	if p.configuration.StartSubREQToFile.OK {
+		p.startup.subREQToFile(p)
 	}
 
 	// Start a subscriber for Hello messages
@@ -227,10 +227,10 @@ func (s startup) subREQHello(p process) {
 	go proc.spawnWorker(p.processes, p.natsConn)
 }
 
-func (s startup) subREQTextToFile(p process) {
+func (s startup) subREQToFile(p process) {
 	fmt.Printf("Starting text to file subscriber: %#v\n", p.node)
-	sub := newSubject(REQTextToFile, string(p.node))
-	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQTextToFile.Values, nil)
+	sub := newSubject(REQToFile, string(p.node))
+	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQToFile.Values, nil)
 	// fmt.Printf("*** %#v\n", proc)
 	go proc.spawnWorker(p.processes, p.natsConn)
 }

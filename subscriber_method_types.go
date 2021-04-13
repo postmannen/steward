@@ -100,7 +100,7 @@ const (
 	// the receiving end.
 	// The data field is a slice of strings where the values of the
 	// slice will be written to the file.
-	REQTextToFile Method = "REQTextToFile"
+	REQToFile Method = "REQToFile"
 	// Send Hello I'm here message.
 	REQHello Method = "REQHello"
 	// Error log methods to centralError node.
@@ -149,7 +149,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQToFileAppend: methodREQToFileAppend{
 				commandOrEvent: EventACK,
 			},
-			REQTextToFile: methodREQTextToFile{
+			REQToFile: methodREQToFile{
 				commandOrEvent: EventACK,
 			},
 			REQHello: methodREQHello{
@@ -389,6 +389,11 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 // Create a new message for the reply containing the output of the
 // action executed put in outData, and put it on the ringbuffer to
 // be published.
+// The method to use for the reply message should initially be
+// specified within the first message as the replyMethod, and we will
+// pick up that value here, and use it as the method for the new
+// request message. If no replyMethod is set we default to the
+// REQToFileAppend method type.
 func newReplyMessage(proc process, message Message, outData []byte) {
 
 	// If no replyMethod is set we default to writing to writing to
@@ -481,15 +486,15 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 
 // -----
 
-type methodREQTextToFile struct {
+type methodREQToFile struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodREQTextToFile) getKind() CommandOrEvent {
+func (m methodREQToFile) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodREQTextToFile) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodREQToFile) handler(proc process, message Message, node string) ([]byte, error) {
 
 	// If it was a request type message we want to check what the initial messages
 	// method, so we can use that in creating the file name to store the data.
