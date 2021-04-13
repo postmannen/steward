@@ -18,8 +18,13 @@ type Message struct {
 	ID int `json:"id" yaml:"id"`
 	// The actual data in the message
 	Data []string `json:"data" yaml:"data"`
-	// method, what is this message doing, etc. CLI, syslog, etc.
-	Method   Method `json:"method" yaml:"method"`
+	// Method, what is this message doing, etc. CLI, syslog, etc.
+	Method Method `json:"method" yaml:"method"`
+	// ReplyMethod, is the method to use for the reply message.
+	// By default the reply method will be set to log to file, but
+	// you can override it setting your own here.
+	ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
+	// From what node the message originated
 	FromNode node
 	// Normal Reply wait timeout
 	Timeout int `json:"timeout" yaml:"timeout"`
