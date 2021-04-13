@@ -3,10 +3,12 @@
         "directory":"cli_command__result",
         "fileExtension": ".result",
         "toNode": "ship1",
-        "data": ["bash","-c","sleep 3 & tree ./"],
+        "data": ["bash","-c","sleep 5 & tree ./"],
         "method":"REQCliCommand",
-        "timeout":10,
+        "timeout":5,
         "retries":3,
-        "methodTimeout": 4
+        "replyTimeout":5,
+        "replyRetries":3,
+        "methodTimeout": 10
     }
 ]

@@ -14,8 +14,8 @@
         },
         "timeout":3,
         "retries":3,
-        "requestTimeout":3,
-        "requestRetries":3,
+        "replyTimeout":3,
+        "replyRetries":3,
         "MethodTimeout": 7
     }
 ]

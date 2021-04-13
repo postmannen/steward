@@ -1,7 +1,8 @@
 ship1/
 ship2/
 tmp/
-incommmingBuffer.db
+var/
+./incommmingBuffer.db
 store.log
 changes.md
 steward.sock

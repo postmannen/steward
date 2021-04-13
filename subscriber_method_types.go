@@ -397,8 +397,8 @@ func newReplyMessage(proc process, message Message, method Method, outData []byt
 		ToNode:  message.FromNode,
 		Data:    []string{string(outData)},
 		Method:  method,
-		Timeout: message.RequestTimeout,
-		Retries: message.RequestRetries,
+		Timeout: message.ReplyTimeout,
+		Retries: message.ReplyRetries,
 
 		// Put in a copy of the initial request message, so we can use it's properties if
 		// needed to for example create the file structure naming on the subscriber.
@@ -600,7 +600,7 @@ func (m methodREQErrorLog) handler(proc process, message Message, node string) (
 
 	// Open file and write data.
 	file := filepath.Join(folderTree, fileName)
-	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE, os.ModeAppend)
+	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, os.ModeAppend)
 	if err != nil {
 		log.Printf("error: methodEventTextLogging.handler: failed to open file: %v\n", err)
 		return nil, err

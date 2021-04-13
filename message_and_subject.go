@@ -31,9 +31,9 @@ type Message struct {
 	// Normal Resend retries
 	Retries int `json:"retries" yaml:"retries"`
 	// The timeout of the new message created via a request event.
-	RequestTimeout int `json:"requestTimeout" yaml:"requestTimeout"`
+	ReplyTimeout int `json:"replyTimeout" yaml:"replyTimeout"`
 	// The retries of the new message created via a request event.
-	RequestRetries int `json:"requestRetries" yaml:"requestRetries"`
+	ReplyRetries int `json:"replyRetries" yaml:"replyRetries"`
 	// Timeout for long a process should be allowed to operate
 	MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
 	// Directory is a string that can be used to create the
