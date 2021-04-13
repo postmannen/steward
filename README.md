@@ -117,15 +117,39 @@ TIP: Most likely the best way to control how the service should behave and what 
 
 ### Request Methods
 
+#### REQCliCommand / REQnCliCommand
+
 Run CLI command on a node. Linux/Windows/Mac/Docker-container or other.
+
+#### REQTailFile
 
 Tail log files on some node, and get the result sent back in a reply message.
 
+#### REQHttpGet
+
 Scrape web servers, and get the html sent back in a reply message.
+
+#### REQHello
 
 Get Hello messages from all running nodes.
 
+#### REQErrorLog
+
 Central error logger.
+
+### Request Methos used for reply messages
+
+#### REQToConsole
+
+Print the output of the reply message to the console.
+
+#### REQToFileAppend
+
+Append the output of the reply message to a log file specified with the `directory` and `fileExtension` fields.
+
+#### REQToFile
+
+Write the output of the reply message to a log file specified with the `directory` and `fileExtension` fields.
 
 ### Errors reporting
 
