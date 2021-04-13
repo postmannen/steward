@@ -122,19 +122,6 @@ func newProcess(natsConn *nats.Conn, processes *processes, toRingbufferCh chan<-
 // can have that wrapped in from when it was constructed.
 type procFunc func(ctx context.Context) error
 
-// stop will stop and remove the process from the active processes
-// map, and it will send a cancel signal on the ctx to stop all
-// running go routines that where started via this process.
-func (p process) stop() {
-	p.processes.mu.Lock()
-	_, ok := p.processes.active[p.processName]
-	if ok {
-		delete(p.processes.active, p.processName)
-		p.ctxCancel()
-	}
-	p.processes.mu.Unlock()
-}
-
 // The purpose of this function is to check if we should start a
 // publisher or subscriber process, where a process is a go routine
 // that will handle either sending or receiving messages on one

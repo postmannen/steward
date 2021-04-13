@@ -165,7 +165,7 @@ func (p *processes) printProcessesMap() {
 	fmt.Printf("*** Output of processes map :\n")
 	p.mu.Lock()
 	for _, v := range p.active {
-		fmt.Printf("* proc - : %v, id: %v, name: %v, allowed from: %v\n", v.processKind, v.processID, v.subject.name(), v.allowedReceivers)
+		log.Printf("* proc - : %v, id: %v, name: %v, allowed from: %v\n", v.processKind, v.processID, v.subject.name(), v.allowedReceivers)
 	}
 	p.mu.Unlock()
 
