@@ -454,7 +454,7 @@ func (m methodREQTextToLogFile) handler(proc process, message Message, node stri
 
 	// Open file and write data.
 	file := filepath.Join(folderTree, fileName)
-	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE, os.ModeAppend)
+	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, os.ModeAppend)
 	if err != nil {
 		log.Printf("error: methodEventTextLogging.handler: failed to open file: %v\n", err)
 		return nil, err

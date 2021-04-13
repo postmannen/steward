@@ -319,7 +319,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 			out, err = mh.handler(p, message, thisNode)
 
 			if err != nil {
-				er := fmt.Errorf("error: subscriberHandler: failed to execute event: %v", err)
+				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
 				sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
 			}
 		} else {
@@ -353,7 +353,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 			_, err := mf.handler(p, message, thisNode)
 
 			if err != nil {
-				er := fmt.Errorf("error: subscriberHandler: failed to execute event: %v", err)
+				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
 				sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
 			}
 		} else {
