@@ -115,6 +115,18 @@ If just getting back to standard default for all config options needed, then del
 
 TIP: Most likely the best way to control how the service should behave and what is started is to start Steward the first time so it creates the default config file. Then stop the service, edit the config file and change the defaults needed. Then start the service again.
 
+### Request Methods
+
+Run CLI command on a node. Linux/Windows/Mac/Docker-container or other.
+
+Tail log files on some node, and get the result sent back in a reply message.
+
+Scrape web servers, and get the html sent back in a reply message.
+
+Get Hello messages from all running nodes.
+
+Central error logger.
+
 ### Errors reporting
 
 - Report errors happening on some node in to central error handler.
@@ -136,7 +148,7 @@ clone the repository, then cd `./steward/cmd` and do `go build -o steward`, and 
 ### Options for running
 
 ```text
-  -brokerAddress string
+    -brokerAddress string
     the address of the message broker (default "127.0.0.1:4222")
   -centralNodeName string
     The name of the central node to receive messages published by this node (default "central")
@@ -160,11 +172,17 @@ clone the repository, then cd `./steward/cmd` and do `go build -o steward`, and 
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
   -startSubREQHello value
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
+  -startSubREQHttpGet value
+    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
   -startSubREQPing value
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
   -startSubREQPong value
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
+  -startSubREQTailFile value
+    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
   -startSubREQToConsole value
+    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
+  -startSubREQToFile value
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
   -startSubREQToFileAppend value
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
@@ -199,71 +217,44 @@ The start subscribers flags take a string value of which nodes that it will proc
 toNode
 // The actual data in the message
 data
-// method, what is this message doing, etc. CLI, syslog, etc.
+// Method, what is this message doing, etc. CLI, syslog, etc.
 method
-// Normal Reply wait timeout
+// ReplyMethod, is the method to use for the reply message.
+// By default the reply method will be set to log to file, but
+// you can override it setting your own here.
+replyMethod
+// Initial message Reply ACK wait timeout
 timeout
 // Normal Resend retries
 retries
-// The timeout of the new message created via a request event.
+// The ACK timeout of the new message created via a request event.
 replyTimeout
 // The retries of the new message created via a request event.
 replyRetries
-// Timeout for how long a process should be allowed to operate
+// Timeout for long a process should be allowed to operate
 methodTimeout
+// Directory is a string that can be used to create the
+//directory structure when saving the result of some method.
+// For example "syslog","metrics", or "metrics/mysensor"
+// The type is typically used in the handler of a method.
+directory
+// FileExtension is used to be able to set a wanted extension
+// on a file being saved as the result of data being handled
+// by a method handler.
+fileExtension
+// operation are used to give an opCmd and opArg's.
+operation
 ```
 
 ### How to send a Message
 
 Right now the API for sending a message from one node to another node is by pasting a structured JSON object into a file called `msg.pipe` living alongside the binary. This file will be watched continously, and when updated the content will be picked up, umarshaled, and if OK it will be sent a message to the node specified in the `toNode` field.
 
-The `method` is what defines what the event will do. The preconfigured methods are:
-
-```go
-// The node to send the message to
-ToNode node `json:"toNode" yaml:"toNode"`
-// The Unique ID of the message
-ID int `json:"id" yaml:"id"`
-// The actual data in the message
-Data []string `json:"data" yaml:"data"`
-// method, what is this message doing, etc. CLI, syslog, etc.
-Method   Method `json:"method" yaml:"method"`
-FromNode node
-// Normal Reply wait timeout
-Timeout int `json:"timeout" yaml:"timeout"`
-// Normal Resend retries
-Retries int `json:"retries" yaml:"retries"`
-// The timeout of the new message created via a request event.
-ReplyTimeout int `json:"replyTimeout" yaml:"replyTimeout"`
-// The retries of the new message created via a request event.
-ReplyRetries int `json:"replyRetries" yaml:"replyRetries"`
-// Timeout for long a process should be allowed to operate
-MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
-// Directory is a string that can be used to create the
-//directory structure when saving the result of some method.
-// For example "syslog","metrics", or "metrics/mysensor"
-// The type is typically used in the handler of a method.
-Directory string `json:"directory" yaml:"directory"`
-// FileExtension is used to be able to set a wanted extension
-// on a file being saved as the result of data being handled
-// by a method handler.
-FileExtension string `json:"fileExtension" yaml:"fileExtension"`
-// operation are used to give an opCmd and opArg's.
-Operation Operation `json:"operation"`
-// PreviousMessage are used for example if a reply message is
-// generated and we also need a copy of  thedetails of the the
-// initial request message.
-PreviousMessage *Message
-// done is used to signal when a message is fully processed.
-// This is used for signaling back to the ringbuffer that we are
-// done with processing a message, and the message can be removed
-// from the ringbuffer and into the time series log.
-done chan struct{}
-```
+The `method` is what defines what the event will do.
 
 The `Operation` field is a little bit special. This field is used with the `REQOpCommand` to specify what operation command to run, and also it's arguments.
 
-The current `operation`'s that are available are :
+#### The current `operation`'s that are available are
 
 To stop a process of a specific type on a node.
 
@@ -455,10 +446,6 @@ For CliCommand message to a node named "ship1" of type Command and it wants an A
 `ship1.REQCliCommand.CommandACK`
 
 ## TODO
-
-- Implement a log scraper method in `tail -f` style ?
-
-- Implement a web scraper method ?
 
 - Encryption between Node instances and brokers.
 
