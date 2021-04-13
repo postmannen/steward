@@ -272,14 +272,14 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 			pn := processNameGet(subjName, processKindPublisher)
 
 			s.processes.mu.Lock()
-			_, ok := s.processes.active[pn]
+			existingProc, ok := s.processes.active[pn]
 			s.processes.mu.Unlock()
 
 			// Are there already a process for that subject, put the
 			// message on that processes incomming message channel.
 			if ok {
 				log.Printf("info: processNewMessages: found the specific subject: %v\n", subjName)
-				s.processes.active[pn].subject.messageCh <- m
+				existingProc.subject.messageCh <- m
 
 				// If no process to handle the specific subject exist,
 				// the we create and spawn one.
@@ -293,9 +293,6 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 				// fmt.Printf("*** %#v\n", proc)
 				proc.spawnWorker(s.processes, s.natsConn)
 
-				// REMOVED:
-				//time.Sleep(time.Millisecond * 500)
-				//s.printProcessesMap()
 				// Now when the process is spawned we jump back to the redo: label,
 				// and send the message to that new process.
 				goto redo
