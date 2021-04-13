@@ -365,20 +365,20 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 				er := fmt.Errorf("info: stopProc: stoped %v on %v", sub, message.ToNode)
 				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 
-				newReplyMessage(proc, message, REQTextToLogFile, []byte(er.Error()))
+				newReplyMessage(proc, message, []byte(er.Error()))
 
 			} else {
 				er := fmt.Errorf("error: stopProc: did not find process to stop: %v on %v", sub, message.ToNode)
 				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 
-				newReplyMessage(proc, message, REQTextToLogFile, []byte(er.Error()))
+				newReplyMessage(proc, message, []byte(er.Error()))
 			}
 
 			proc.processes.mu.Unlock()
 
 		}
 
-		newReplyMessage(proc, message, REQTextToLogFile, out)
+		newReplyMessage(proc, message, out)
 	}()
 
 	ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n", proc.node, message.ID))
@@ -389,14 +389,20 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 // Create a new message for the reply containing the output of the
 // action executed put in outData, and put it on the ringbuffer to
 // be published.
-func newReplyMessage(proc process, message Message, method Method, outData []byte) {
+func newReplyMessage(proc process, message Message, outData []byte) {
+
+	// If no replyMethod is set we default to writing to writing to
+	// a log file.
+	if message.ReplyMethod == "" {
+		message.ReplyMethod = REQTextToLogFile
+	}
 	//--
 	// Create a new message for the reply, and put it on the
 	// ringbuffer to be published.
 	newMsg := Message{
 		ToNode:  message.FromNode,
 		Data:    []string{string(outData)},
-		Method:  method,
+		Method:  message.ReplyMethod,
 		Timeout: message.ReplyTimeout,
 		Retries: message.ReplyRetries,
 
@@ -638,7 +644,7 @@ func (m methodREQPing) handler(proc process, message Message, node string) ([]by
 		// Prepare and queue for sending a new message with the output
 		// of the action executed.
 		d := fmt.Sprintf("%v, ping reply sent from %v\n", time.Now().UTC(), message.ToNode)
-		newReplyMessage(proc, message, REQTextToLogFile, []byte(d))
+		newReplyMessage(proc, message, []byte(d))
 	}()
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -709,7 +715,7 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
-			newReplyMessage(proc, message, REQTextToLogFile, out)
+			newReplyMessage(proc, message, out)
 		}
 
 	}()
@@ -768,7 +774,7 @@ func (m methodREQnCliCommand) handler(proc process, message Message, node string
 
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
-			newReplyMessage(proc, message, REQTextToLogFile, out)
+			newReplyMessage(proc, message, out)
 		}
 
 	}()
@@ -861,7 +867,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
-			newReplyMessage(proc, message, REQTextToFile, out)
+			newReplyMessage(proc, message, out)
 		}
 
 	}()
@@ -918,7 +924,7 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 			case out := <-outCh:
 				// Prepare and queue for sending a new message with the output
 				// of the action executed.
-				newReplyMessage(proc, message, REQTextToLogFile, out)
+				newReplyMessage(proc, message, out)
 			}
 		}
 

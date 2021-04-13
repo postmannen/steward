@@ -4,6 +4,7 @@
         "fileExtension":".result",
         "toNode": "ship1",
         "data": ["bash","-c","tree ../"],
+        "replyMethod":"REQTextToLogFile",
         "method":"REQnCliCommand",
         "timeout":3,
         "retries":3,

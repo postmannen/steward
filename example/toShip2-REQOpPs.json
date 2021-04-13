@@ -8,6 +8,7 @@
         "operation":{
             "opCmd":"ps"
         },
+        "replyMethod":"REQTextToLogFile",
         "timeout":3,
         "retries":3,
         "replyTimeout":3,

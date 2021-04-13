@@ -5,6 +5,7 @@
         "toNode": "ship1",
         "data": ["http://vg.no"],
         "method":"REQHttpGet",
+        "replyMethod":"REQTextToFile",
         "timeout":5,
         "retries":3,
         "methodTimeout": 5

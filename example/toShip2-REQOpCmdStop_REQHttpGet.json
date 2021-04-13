@@ -13,6 +13,7 @@
                 "receivingNode": "ship2"
             }
         },
+        "replyMethod":"REQTextToLogFile",
         "timeout":3,
         "retries":3,
         "replyTimeout":3,
