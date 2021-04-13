@@ -12,7 +12,7 @@
                 "allowedNodes": ["central","node1"]
             }
         },
-        "replyMethod":"REQTextToLogFile",
+        "replyMethod":"REQToFileAppend",
         "timeout":3,
         "retries":3,
         "replyTimeout":3,

@@ -45,7 +45,7 @@ SubscribersDataFolder = "./var"
   OK = true
   Values = ["*"]
 
-[StartSubREQTextToLogFile]
+[StartSubREQToFileAppend]
   OK = true
   Values = ["*"]
 

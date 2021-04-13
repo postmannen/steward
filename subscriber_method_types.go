@@ -93,7 +93,7 @@ const (
 	// the receiving end.
 	// The data field is a slice of strings where the values of the
 	// slice will be written to the log file.
-	REQTextToLogFile Method = "REQTextToLogFile"
+	REQToFileAppend Method = "REQToFileAppend"
 	// Send text to some host by overwriting the existing content of
 	// the fileoutput to a file. If the file do not exist we create it.
 	// A file with the full subject+hostName will be created on
@@ -146,7 +146,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQTextToConsole: methodREQTextToConsole{
 				commandOrEvent: EventACK,
 			},
-			REQTextToLogFile: methodREQTextToLogFile{
+			REQToFileAppend: methodREQToFileAppend{
 				commandOrEvent: EventACK,
 			},
 			REQTextToFile: methodREQTextToFile{
@@ -335,7 +335,7 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			// publisher process will have the name of the node to receive the message,
 			// and not just the local node name as with subscriber processes.
 			// receive the message we need to specify
-			// Process name example: ship2.REQTextToLogFile.EventACK_subscriber
+			// Process name example: ship2.REQToFileAppend.EventACK_subscriber
 
 			sub := newSubject(arg.Method, string(arg.RecevingNode))
 			processName := processNameGet(sub.name(), arg.Kind)
@@ -394,7 +394,7 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 	// If no replyMethod is set we default to writing to writing to
 	// a log file.
 	if message.ReplyMethod == "" {
-		message.ReplyMethod = REQTextToLogFile
+		message.ReplyMethod = REQToFileAppend
 	}
 	//--
 	// Create a new message for the reply, and put it on the
@@ -420,15 +420,15 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 	//--
 }
 
-type methodREQTextToLogFile struct {
+type methodREQToFileAppend struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodREQTextToLogFile) getKind() CommandOrEvent {
+func (m methodREQToFileAppend) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodREQTextToLogFile) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodREQToFileAppend) handler(proc process, message Message, node string) ([]byte, error) {
 
 	// If it was a request type message we want to check what the initial messages
 	// method, so we can use that in creating the file name to store the data.

@@ -23,8 +23,8 @@ func (p process) ProcessesStart() {
 	}
 
 	// Start a subscriber for textLogging messages
-	if p.configuration.StartSubREQTextToLogFile.OK {
-		p.startup.subREQTextToLogFile(p)
+	if p.configuration.StartSubREQToFileAppend.OK {
+		p.startup.subREQToFileAppend(p)
 	}
 
 	// Start a subscriber for text to file messages
@@ -235,10 +235,10 @@ func (s startup) subREQTextToFile(p process) {
 	go proc.spawnWorker(p.processes, p.natsConn)
 }
 
-func (s startup) subREQTextToLogFile(p process) {
+func (s startup) subREQToFileAppend(p process) {
 	fmt.Printf("Starting text logging subscriber: %#v\n", p.node)
-	sub := newSubject(REQTextToLogFile, string(p.node))
-	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQTextToLogFile.Values, nil)
+	sub := newSubject(REQToFileAppend, string(p.node))
+	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQToFileAppend.Values, nil)
 	// fmt.Printf("*** %#v\n", proc)
 	go proc.spawnWorker(p.processes, p.natsConn)
 }
