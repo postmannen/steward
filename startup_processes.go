@@ -63,8 +63,8 @@ func (p process) ProcessesStart() {
 	}
 
 	// Start a subscriber for CLICommandReply messages
-	if p.configuration.StartSubREQTextToConsole.OK {
-		p.startup.subREQTextToConsole(p)
+	if p.configuration.StartSubREQToConsole.OK {
+		p.startup.subREQToConsole(p)
 	}
 
 	if p.configuration.StartPubREQHello != 0 {
@@ -137,10 +137,10 @@ func (s startup) pubREQHello(p process) {
 	go proc.spawnWorker(p.processes, p.natsConn)
 }
 
-func (s startup) subREQTextToConsole(p process) {
+func (s startup) subREQToConsole(p process) {
 	fmt.Printf("Starting Text To Console subscriber: %#v\n", p.node)
-	sub := newSubject(REQTextToConsole, string(p.node))
-	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQTextToConsole.Values, nil)
+	sub := newSubject(REQToConsole, string(p.node))
+	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQToConsole.Values, nil)
 	go proc.spawnWorker(p.processes, p.natsConn)
 }
 

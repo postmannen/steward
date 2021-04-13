@@ -86,7 +86,7 @@ const (
 	// Send text to be logged to the console.
 	// The data field is a slice of strings where the first string
 	// value should be the command, and the following the arguments.
-	REQTextToConsole Method = "REQTextToConsole"
+	REQToConsole Method = "REQToConsole"
 	// Send text logging to some host by appending the output to a
 	// file, if the file do not exist we create it.
 	// A file with the full subject+hostName will be created on
@@ -143,7 +143,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQnCliCommand: methodREQnCliCommand{
 				commandOrEvent: CommandACK,
 			},
-			REQTextToConsole: methodREQTextToConsole{
+			REQToConsole: methodREQToConsole{
 				commandOrEvent: EventACK,
 			},
 			REQToFileAppend: methodREQToFileAppend{
@@ -790,15 +790,15 @@ func (m methodREQnCliCommand) handler(proc process, message Message, node string
 
 // ---
 
-type methodREQTextToConsole struct {
+type methodREQToConsole struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodREQTextToConsole) getKind() CommandOrEvent {
+func (m methodREQToConsole) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-func (m methodREQTextToConsole) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodREQToConsole) handler(proc process, message Message, node string) ([]byte, error) {
 	fmt.Printf("<--- methodCLICommandReply: %v\n", message.Data)
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))

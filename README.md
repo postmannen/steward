@@ -164,7 +164,7 @@ clone the repository, then cd `./steward/cmd` and do `go build -o steward`, and 
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
   -startSubREQPong value
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubREQTextToConsole value
+  -startSubREQToConsole value
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
   -startSubREQToFileAppend value
     Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.

@@ -116,8 +116,8 @@ type Configuration struct {
 	StartSubREQCliCommand flagNodeSlice
 	// Subscriber for REQnCliCommand
 	StartSubREQnCliCommand flagNodeSlice
-	// Subscriber for REQTextToConsole
-	StartSubREQTextToConsole flagNodeSlice
+	// Subscriber for REQToConsole
+	StartSubREQToConsole flagNodeSlice
 	// Subscriber for REQHttpGet
 	StartSubREQHttpGet flagNodeSlice
 	// Subscriber for tailing log files
@@ -134,26 +134,26 @@ func NewConfiguration() *Configuration {
 // Default configuration
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
-		ConfigFolder:             "./etc",
-		BrokerAddress:            "127.0.0.1:4222",
-		ProfilingPort:            "",
-		PromHostAndPort:          "",
-		DefaultMessageTimeout:    10,
-		DefaultMessageRetries:    1,
-		StartPubREQHello:         30,
-		SubscribersDataFolder:    "./var",
-		CentralNodeName:          "",
-		StartSubREQErrorLog:      flagNodeSlice{Values: []node{}},
-		StartSubREQHello:         flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQToFileAppend:  flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQToFile:        flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQPing:          flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQPong:          flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQCliCommand:    flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQnCliCommand:   flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQTextToConsole: flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQHttpGet:       flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQTailFile:      flagNodeSlice{OK: true, Values: []node{"*"}},
+		ConfigFolder:            "./etc",
+		BrokerAddress:           "127.0.0.1:4222",
+		ProfilingPort:           "",
+		PromHostAndPort:         "",
+		DefaultMessageTimeout:   10,
+		DefaultMessageRetries:   1,
+		StartPubREQHello:        30,
+		SubscribersDataFolder:   "./var",
+		CentralNodeName:         "",
+		StartSubREQErrorLog:     flagNodeSlice{Values: []node{}},
+		StartSubREQHello:        flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQToFileAppend: flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQToFile:       flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQPing:         flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQPong:         flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQCliCommand:   flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQnCliCommand:  flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQToConsole:    flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQHttpGet:      flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQTailFile:     flagNodeSlice{OK: true, Values: []node{"*"}},
 	}
 	return c
 }
@@ -194,7 +194,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.Var(&c.StartSubREQPong, "startSubREQPong", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQCliCommand, "startSubREQCliCommand", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQnCliCommand, "startSubREQnCliCommand", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubREQTextToConsole, "startSubREQTextToConsole", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubREQToConsole, "startSubREQToConsole", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQHttpGet, "startSubREQHttpGet", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQTailFile, "startSubREQTailFile", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 

@@ -37,7 +37,7 @@ SubscribersDataFolder = "./var"
   OK = false
   Values = []
 
-[StartSubREQTextToConsole]
+[StartSubREQToConsole]
   OK = true
   Values = ["*"]
 
