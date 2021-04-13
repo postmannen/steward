@@ -44,6 +44,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/hpcloud/tail"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -112,6 +113,8 @@ const (
 	REQPong Method = "REQPong"
 	// Http Get
 	REQHttpGet Method = "REQHttpGet"
+	// Tail file
+	REQTailFile Method = "REQTailFile"
 )
 
 // The mapping of all the method constants specified, what type
@@ -162,6 +165,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				commandOrEvent: EventACK,
 			},
 			REQHttpGet: methodREQHttpGet{
+				commandOrEvent: EventACK,
+			},
+			REQTailFile: methodREQTailFile{
 				commandOrEvent: EventACK,
 			},
 		},
@@ -856,6 +862,64 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
 			newReplyMessage(proc, message, REQTextToFile, out)
+		}
+
+	}()
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+// --- methodREQTailFile
+
+type methodREQTailFile struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodREQTailFile) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
+
+// handler to run a tailing of files with timeout context. The handler will
+// return the output of the command run back to the calling publisher
+// as a new message.
+func (m methodREQTailFile) handler(proc process, message Message, node string) ([]byte, error) {
+	log.Printf("<--- CLICommand REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
+
+	go func() {
+		fp := message.Data[0]
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(message.MethodTimeout))
+
+		outCh := make(chan []byte)
+		t, err := tail.TailFile(fp, tail.Config{Follow: true})
+		if err != nil {
+			er := fmt.Errorf("error: tailFile: %v", err)
+			log.Printf("%v\n", er)
+			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+		}
+
+		go func() {
+			for line := range t.Lines {
+				outCh <- []byte(line.Text + "\n")
+			}
+		}()
+
+		for {
+			select {
+			case <-ctx.Done():
+				cancel()
+				// Close the lines channel so we exit the reading lines
+				// go routine.
+				close(t.Lines)
+				er := fmt.Errorf("error: method timed out %v", message)
+				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				return
+			case out := <-outCh:
+				// Prepare and queue for sending a new message with the output
+				// of the action executed.
+				newReplyMessage(proc, message, REQTextToLogFile, out)
+			}
 		}
 
 	}()

@@ -120,6 +120,8 @@ type Configuration struct {
 	StartSubREQTextToConsole flagNodeSlice
 	// Subscriber for REQHttpGet
 	StartSubREQHttpGet flagNodeSlice
+	// Subscriber for tailing log files
+	StartSubREQTailFile flagNodeSlice
 }
 
 // NewConfiguration will set a default Configuration,
@@ -151,6 +153,7 @@ func newConfigurationDefaults() Configuration {
 		StartSubREQnCliCommand:   flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubREQTextToConsole: flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubREQHttpGet:       flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQTailFile:      flagNodeSlice{OK: true, Values: []node{"*"}},
 	}
 	return c
 }
@@ -193,6 +196,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.Var(&c.StartSubREQnCliCommand, "startSubREQnCliCommand", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQTextToConsole, "startSubREQTextToConsole", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQHttpGet, "startSubREQHttpGet", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubREQTailFile, "startSubREQTailFile", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 
 	flag.Parse()
 

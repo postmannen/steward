@@ -75,6 +75,10 @@ func (p process) ProcessesStart() {
 	if p.configuration.StartSubREQHttpGet.OK {
 		p.startup.subREQHttpGet(p)
 	}
+
+	if p.configuration.StartSubREQTailFile.OK {
+		p.startup.subREQTailFile(p)
+	}
 }
 
 // ---------------------------------------------------------------------------------------
@@ -235,6 +239,14 @@ func (s startup) subREQTextToLogFile(p process) {
 	fmt.Printf("Starting text logging subscriber: %#v\n", p.node)
 	sub := newSubject(REQTextToLogFile, string(p.node))
 	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQTextToLogFile.Values, nil)
+	// fmt.Printf("*** %#v\n", proc)
+	go proc.spawnWorker(p.processes, p.natsConn)
+}
+
+func (s startup) subREQTailFile(p process) {
+	fmt.Printf("Starting tail log files subscriber: %#v\n", p.node)
+	sub := newSubject(REQTailFile, string(p.node))
+	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQTailFile.Values, nil)
 	// fmt.Printf("*** %#v\n", proc)
 	go proc.spawnWorker(p.processes, p.natsConn)
 }
