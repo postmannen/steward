@@ -7,13 +7,17 @@ Command And Control anything like Servers, Containers, VM's or other by creating
 ```json
 [
     {
-        "directory":"/var/steward/cli-command/executed-result",
+        "directory":"cli_command__result",
+        "fileExtension": ".result",
         "toNode": "ship1",
-        "data": ["bash","-c","sleep 3 & tree ./"],
+        "data": ["bash","-c","sleep 5 & tree ./"],
         "method":"REQCliCommand",
-        "ACKTimeout":10,
+        "replyMethod":"REQToFileAppend",
+        "ACKTimeout":5,
         "retries":3,
-        "methodTimeout": 4
+        "replyACKTimeout":5,
+        "replyRetries":3,
+        "methodTimeout": 10
     }
 ]
 ```
@@ -276,7 +280,7 @@ ACKTimeout
 // Normal Resend retries
 retries
 // The ACK timeout of the new message created via a request event.
-replyTimeout
+replyACKTimeout
 // The retries of the new message created via a request event.
 replyRetries
 // Timeout for long a process should be allowed to operate
@@ -404,7 +408,7 @@ To send a Op Command message for process listing with custom timeout and amount 
         },
         "ACKTimeout":3,
         "retries":3,
-        "replyTimeout":3,
+        "replyACKTimeout":3,
         "replyRetries":3,
         "MethodTimeout": 7
     }
@@ -431,7 +435,7 @@ To send and Op Command to stop a subscriber on a node
         },
         "ACKTimeout":3,
         "retries":3,
-        "replyTimeout":3,
+        "replyACKTimeout":3,
         "replyRetries":3,
         "MethodTimeout": 7
     }
@@ -457,7 +461,7 @@ To send and Op Command to start a subscriber on a node
         },
         "ACKTimeout":3,
         "retries":3,
-        "replyTimeout":3,
+        "replyACKTimeout":3,
         "replyRetries":3,
         "MethodTimeout": 7
     }

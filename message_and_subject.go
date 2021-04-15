@@ -31,7 +31,7 @@ type Message struct {
 	// Resend retries
 	Retries int `json:"retries" yaml:"retries"`
 	// The ACK timeout of the new message created via a request event.
-	ReplyTimeout int `json:"replyTimeout" yaml:"replyTimeout"`
+	ReplyACKTimeout int `json:"replyACKTimeout" yaml:"replyACKTimeout"`
 	// The retries of the new message created via a request event.
 	ReplyRetries int `json:"replyRetries" yaml:"replyRetries"`
 	// Timeout for long a process should be allowed to operate

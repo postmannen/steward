@@ -8,7 +8,7 @@
         "replyMethod":"REQToFileAppend",
         "ACKTimeout":5,
         "retries":3,
-        "replyTimeout":5,
+        "replyACKTimeout":5,
         "replyRetries":3,
         "methodTimeout": 10
     }

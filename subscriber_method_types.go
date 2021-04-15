@@ -408,7 +408,7 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 		ToNode:     message.FromNode,
 		Data:       []string{string(outData)},
 		Method:     message.ReplyMethod,
-		ACKTimeout: message.ReplyTimeout,
+		ACKTimeout: message.ReplyACKTimeout,
 		Retries:    message.ReplyRetries,
 
 		// Put in a copy of the initial request message, so we can use it's properties if
