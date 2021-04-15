@@ -2,9 +2,27 @@
 
 ## What is it ?
 
-Command And Control anything asynchronously.
+Command And Control anything like Servers, Containers, VM's or other by creating messages with methods who will describe what to do. Steward will then take the responsibility for delivering and executing the method with the given parameters defined within the message. A example of a message.
 
-Send shell commands to control your servers by passing a message that will have guaranteed delivery if/when the subsribing node is available. Or for example send logs or metrics from an end node back to a central log subscriber.
+```json
+[
+    {
+        "directory":"/var/steward/cli-command/executed-result",
+        "toNode": "ship1",
+        "data": ["bash","-c","sleep 3 & tree ./"],
+        "method":"REQCliCommand",
+        "timeout":10,
+        "retries":3,
+        "methodTimeout": 4
+    }
+]
+```
+
+If the receiver `toNode` is down when the message was sent, it will be retried until delivered within the criterias set for `timeouts` and `retries`.
+
+## Overview
+
+Send Shell Commands, HTTP Get, or Tail log files to control your servers by passing a message that will have guaranteed delivery if/when the subsribing node is available. Or for example send logs or metrics from an end node back to a central log subscriber. The result of the method executed will be delivered back to you from the node you sent it from.
 
 The idea is to build and use a pure message passing architecture for the commands back and forth from nodes, where delivery is guaranteed, and where all of the processes in the system are running concurrently so if something breaks or some process is slow it will not affect the handling and delivery of the other messages in the system.
 
@@ -14,7 +32,11 @@ A node can be a server running any host operating system, a container living in 
 
 ## Inspiration
 
-The idea for how to handle processes, messages and errors are based on Joe Armstrongs idea behind Erlang described in his Thesis <https://erlang.org/download/armstrong_thesis_2003.pdf>. This does not mean it is done in exactly the same way, but more on how I understood those ideas and implemented them using the Go programming language with NATS as the message broker to get a fully decoupled message passing system to handle processes.
+The idea for how to handle processes, messages and errors are based on Joe Armstrongs idea behind Erlang described in his Thesis <https://erlang.org/download/armstrong_thesis_2003.pdf>.
+
+Joe's documents describes how to build a system where everything is based and sending messages back and forth between processes in Erlang, and where everything is done concurrently. I used those ideas as inspiration for building a fully decoupled system to control servers or container based systems by passing  messages between processes asynchronously to execute methods, handle errors if they occur, and handle the retrying if something fails.
+
+Steward is written in programming language Go with NATS as the message broker.
 
 ## Why
 
@@ -26,7 +48,7 @@ In a pull setup an agent is installed at the Edge unit, and the configuration or
 
 In it's simplest form the idea about using an event driven system as the core for management of Edge units is that the sender/publisher are fully decoupled from the receiver/subscriber. We can get an acknowledge if a message is received or not, and with this functionality we will at all times know the current state of the receiving end. We can also add information in the ACK message if the command sent to the receiver was successful or not by appending the actual output of the command.
 
-## Overview
+## Publishing and Subscribing processes
 
 All parts of the system like processes, method handlers, messages, error handling are running concurrently.
 
@@ -42,9 +64,9 @@ If one process hangs on a long running message method it will not affect the res
 
 ### Subscriber
 
-- The subscriber will need to have a listener started on the wanted subject and allowed message from nodes specified to be able to receive messages.
+- The receiving end will need to have a subscriber process started on a specific subject and be allowed handle messages from the sending nodes to execute the method defined in the message.
 - When a message have been deserialized, it will lookup the correct handler for the method type specified within the message, and execute that handler.
-- If the output of the method called is supposed to be returned to the publiser it will do so, or else it will be finish, and pick up the next message in the queue.
+- If the output of the method called is supposed to be returned to the publiser it will do so by using the replyMethod specified, and pick up the next message in the queue.
 
 ### Logical structure
 
@@ -53,7 +75,7 @@ If one process hangs on a long running message method it will not affect the res
 ## Terminology
 
 - Node: Something with an operating system that have network available. This can be a server, a cloud instance, a container, or other.
-- Process: One message handler running in it's own thread with 1 subject for sending and 1 for reply.
+- Process: A message handler that knows how to handle messages of a given subject concurrently.
 - Message:
   - Command: Something to be executed on the message received. An example can be a shell command.
   - Event: Something that have happened. An example can be transfer of syslog data from a host.
@@ -64,9 +86,11 @@ If one process hangs on a long running message method it will not affect the res
 
 - By default the system guarantees that the order of the messages are handled by the subscriber in the order they where sent. So if a network link is down when the message is being sent, it will automatically be rescheduled at the specified interval with the given number of retries.
 
+These types of messages have method starting with `REQ<Method name>`
+
 ### Messages not in order
 
-- There have been implemented a special type `NOSEQ` which will allow messages to be handled within that process in a not sequential manner. This is handy for jobs that will run for a long time, and where other messages are not dependent on it's result.
+- There have been implemented a special method type `REQn<Method name>` which will allow messages to be handled within that process in a not sequential manner. This is handy for jobs that will run for a long time, and where other messages are not dependent on it's result.
 
 ### Error messages from nodes
 
@@ -272,7 +296,7 @@ operation
 
 ### How to send a Message
 
-Right now the API for sending a message from one node to another node is by pasting a structured JSON object into a file called `msg.pipe` living alongside the binary. This file will be watched continously, and when updated the content will be picked up, umarshaled, and if OK it will be sent a message to the node specified in the `toNode` field.
+Right now the API for sending a message from one node to another node is by pasting a structured JSON object into the socket file file called `steward.sock` living alongside the binary. This file will be read continously, and when updated the content will be picked up, umarshaled, and if OK it will be sent a message to the node specified in the `toNode` field.
 
 The `method` is what defines what the event will do.
 
@@ -329,7 +353,7 @@ Example JSON for appending a message of type command into the `socket` file
 ```json
 [
     {
-        "directory":"cli-command-executed-result",
+        "directory":"/var/steward/cli-command/executed-result",
         "toNode": "ship1",
         "data": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",
