@@ -124,8 +124,8 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 		}
 
 		// Check if message values for timers override default values
-		if v.Message.Timeout < 1 {
-			v.Message.Timeout = defaultMessageTimeout
+		if v.Message.ACKTimeout < 1 {
+			v.Message.ACKTimeout = defaultMessageTimeout
 		}
 		if v.Message.Retries < 1 {
 			v.Message.Retries = defaultMessageRetries

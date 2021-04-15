@@ -5,7 +5,7 @@
         "toNode": "ship2",
         "data": ["./test.log"],
         "method":"REQTailFile",
-        "timeout":5,
+        "ACKTimeout":5,
         "retries":3,
         "methodTimeout": 200
     }

@@ -405,11 +405,11 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 	// Create a new message for the reply, and put it on the
 	// ringbuffer to be published.
 	newMsg := Message{
-		ToNode:  message.FromNode,
-		Data:    []string{string(outData)},
-		Method:  message.ReplyMethod,
-		Timeout: message.ReplyTimeout,
-		Retries: message.ReplyRetries,
+		ToNode:     message.FromNode,
+		Data:       []string{string(outData)},
+		Method:     message.ReplyMethod,
+		ACKTimeout: message.ReplyTimeout,
+		Retries:    message.ReplyRetries,
 
 		// Put in a copy of the initial request message, so we can use it's properties if
 		// needed to for example create the file structure naming on the subscriber.

@@ -6,7 +6,7 @@
         "data": ["bash","-c","sleep 5 & tree ./"],
         "method":"REQCliCommand",
         "replyMethod":"REQToFileAppend",
-        "timeout":5,
+        "ACKTimeout":5,
         "retries":3,
         "replyTimeout":5,
         "replyRetries":3,

@@ -11,7 +11,7 @@ Command And Control anything like Servers, Containers, VM's or other by creating
         "toNode": "ship1",
         "data": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",
-        "timeout":10,
+        "ACKTimeout":10,
         "retries":3,
         "methodTimeout": 4
     }
@@ -272,7 +272,7 @@ method
 // you can override it setting your own here.
 replyMethod
 // Initial message Reply ACK wait timeout
-timeout
+ACKTimeout
 // Normal Resend retries
 retries
 // The ACK timeout of the new message created via a request event.
@@ -357,7 +357,7 @@ Example JSON for appending a message of type command into the `socket` file
         "toNode": "ship1",
         "data": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",
-        "timeout":10,
+        "ACKTimeout":10,
         "retries":3,
         "methodTimeout": 4
     }
@@ -373,7 +373,7 @@ To specify more messages at once do
         "toNode": "ship1",
         "data": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",
-        "timeout":10,
+        "ACKTimeout":10,
         "retries":3,
         "methodTimeout": 4
     },
@@ -382,7 +382,7 @@ To specify more messages at once do
         "toNode": "ship2",
         "data": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",
-        "timeout":10,
+        "ACKTimeout":10,
         "retries":3,
         "methodTimeout": 4
     }
@@ -402,7 +402,7 @@ To send a Op Command message for process listing with custom timeout and amount 
         "operation":{
             "opCmd":"ps"
         },
-        "timeout":3,
+        "ACKTimeout":3,
         "retries":3,
         "replyTimeout":3,
         "replyRetries":3,
@@ -429,7 +429,7 @@ To send and Op Command to stop a subscriber on a node
                 "receivingNode": "ship2"
             }
         },
-        "timeout":3,
+        "ACKTimeout":3,
         "retries":3,
         "replyTimeout":3,
         "replyRetries":3,
@@ -455,7 +455,7 @@ To send and Op Command to start a subscriber on a node
                 "allowedNodes": ["central","node1"]
             }
         },
-        "timeout":3,
+        "ACKTimeout":3,
         "retries":3,
         "replyTimeout":3,
         "replyRetries":3,

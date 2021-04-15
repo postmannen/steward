@@ -240,17 +240,17 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		// reply, and if it is not we don't wait here at all.
 		// fmt.Printf("info: messageDeliverNats: preparing to send message: %v\n", message)
 		if p.subject.CommandOrEvent == CommandACK || p.subject.CommandOrEvent == EventACK {
-			// Wait up until timeout specified for a reply,
+			// Wait up until ACKTimeout specified for a reply,
 			// continue and resend if noo reply received,
 			// or exit if max retries for the message reached.
-			msgReply, err := subReply.NextMsg(time.Second * time.Duration(message.Timeout))
+			msgReply, err := subReply.NextMsg(time.Second * time.Duration(message.ACKTimeout))
 			if err != nil {
 				er := fmt.Errorf("error: subReply.NextMsg failed for node=%v, subject=%v: %v", p.node, p.subject.name(), err)
 				sendErrorLogMessage(p.toRingbufferCh, message.FromNode, er)
 
 				// did not receive a reply, decide what to do..
 				retryAttempts++
-				fmt.Printf("Retry attempts:%v, retries: %v, timeout: %v\n", retryAttempts, message.Retries, message.Timeout)
+				fmt.Printf("Retry attempts:%v, retries: %v, ACKTimeout: %v\n", retryAttempts, message.Retries, message.ACKTimeout)
 				switch {
 				case message.Retries == 0:
 					// 0 indicates unlimited retries

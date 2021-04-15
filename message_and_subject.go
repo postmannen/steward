@@ -26,11 +26,11 @@ type Message struct {
 	ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
 	// From what node the message originated
 	FromNode node
-	// Normal Reply wait timeout
-	Timeout int `json:"timeout" yaml:"timeout"`
-	// Normal Resend retries
+	// ACKTimeout for waiting for an ack message
+	ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
+	// Resend retries
 	Retries int `json:"retries" yaml:"retries"`
-	// The timeout of the new message created via a request event.
+	// The ACK timeout of the new message created via a request event.
 	ReplyTimeout int `json:"replyTimeout" yaml:"replyTimeout"`
 	// The retries of the new message created via a request event.
 	ReplyRetries int `json:"replyRetries" yaml:"replyRetries"`

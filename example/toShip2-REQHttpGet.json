@@ -6,7 +6,7 @@
         "data": ["http://erter.org"],
         "method":"REQHttpGet",
         "replyMethod":"REQToFile",
-        "timeout":5,
+        "ACKTimeout":5,
         "retries":3,
         "methodTimeout": 5
     }
