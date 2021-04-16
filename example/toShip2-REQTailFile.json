@@ -3,10 +3,10 @@
         "directory": "./mine-tail-filer/",
         "fileExtension": ".log",
         "toNode": "ship2",
-        "data": ["./test.log"],
+        "data": ["/var/log/system.log"],
         "method":"REQTailFile",
         "ACKTimeout":5,
         "retries":3,
-        "methodTimeout": 200
+        "methodTimeout": 10
     }
 ]

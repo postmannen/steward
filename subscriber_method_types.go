@@ -900,10 +900,20 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 	go func() {
 		fp := message.Data[0]
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(message.MethodTimeout))
+		var ctx context.Context
+		var cancel context.CancelFunc
+
+		if message.MethodTimeout != 0 {
+			ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(message.MethodTimeout))
+		} else {
+			ctx, cancel = context.WithCancel(context.Background())
+		}
 
 		outCh := make(chan []byte)
-		t, err := tail.TailFile(fp, tail.Config{Follow: true})
+		t, err := tail.TailFile(fp, tail.Config{Follow: true, Location: &tail.SeekInfo{
+			Offset: 0,
+			Whence: os.SEEK_END,
+		}})
 		if err != nil {
 			er := fmt.Errorf("error: tailFile: %v", err)
 			log.Printf("%v\n", er)
@@ -922,8 +932,8 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 				cancel()
 				// Close the lines channel so we exit the reading lines
 				// go routine.
-				close(t.Lines)
-				er := fmt.Errorf("error: method timed out %v", message)
+				// close(t.Lines)
+				er := fmt.Errorf("info: method timeout reached, canceling: %v", message)
 				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 				return
 			case out := <-outCh:
