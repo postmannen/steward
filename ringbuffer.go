@@ -114,7 +114,7 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 
 		// Check if the command or event exists in commandOrEvent.go
 		if !coeAvailable.CheckIfExists(v.CommandOrEvent, v.Subject) {
-			er := fmt.Errorf("error: fillBuffer: the event or command type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v", coeAvailableValues)
+			er := fmt.Errorf("error: fillBuffer: the event or command type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v, where given: coe=%v, with subject=%v", coeAvailableValues, v.CommandOrEvent, v.Subject)
 			sendErrorLogMessage(r.newMessagesCh, node(r.nodeName), er)
 
 			fmt.Println()
