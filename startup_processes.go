@@ -16,7 +16,7 @@ func (p process) ProcessesStart() {
 
 	// Allways start an REQOpCommand subscriber
 	{
-		fmt.Printf("Starting REQOpCommand subscriber: %#v\n", p.node)
+		log.Printf("Starting REQOpCommand subscriber: %#v\n", p.node)
 		sub := newSubject(REQOpCommand, string(p.node))
 		proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, []node{node(p.configuration.CentralNodeName)}, nil)
 		go proc.spawnWorker(p.processes, p.natsConn)
@@ -87,7 +87,7 @@ type startup struct{}
 
 func (s startup) subREQHttpGet(p process) {
 
-	fmt.Printf("Starting Http Get subscriber: %#v\n", p.node)
+	log.Printf("Starting Http Get subscriber: %#v\n", p.node)
 	sub := newSubject(REQHttpGet, string(p.node))
 	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQHttpGet.Values, nil)
 	// fmt.Printf("*** %#v\n", proc)
@@ -96,7 +96,7 @@ func (s startup) subREQHttpGet(p process) {
 }
 
 func (s startup) pubREQHello(p process) {
-	fmt.Printf("Starting Hello Publisher: %#v\n", p.node)
+	log.Printf("Starting Hello Publisher: %#v\n", p.node)
 
 	sub := newSubject(REQHello, p.configuration.CentralNodeName)
 	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindPublisher, []node{}, nil)
@@ -127,7 +127,6 @@ func (s startup) pubREQHello(p process) {
 				select {
 				case <-ticker.C:
 				case <-ctx.Done():
-					fmt.Printf(" ** DEBUG: got <- ctx.Done\n")
 					er := fmt.Errorf("info: stopped handleFunc for: %v", proc.subject.name())
 					sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 					return nil
@@ -138,49 +137,49 @@ func (s startup) pubREQHello(p process) {
 }
 
 func (s startup) subREQToConsole(p process) {
-	fmt.Printf("Starting Text To Console subscriber: %#v\n", p.node)
+	log.Printf("Starting Text To Console subscriber: %#v\n", p.node)
 	sub := newSubject(REQToConsole, string(p.node))
 	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQToConsole.Values, nil)
 	go proc.spawnWorker(p.processes, p.natsConn)
 }
 
 func (s startup) subREQnCliCommand(p process) {
-	fmt.Printf("Starting CLICommand Not Sequential Request subscriber: %#v\n", p.node)
+	log.Printf("Starting CLICommand Not Sequential Request subscriber: %#v\n", p.node)
 	sub := newSubject(REQnCliCommand, string(p.node))
 	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQnCliCommand.Values, nil)
 	go proc.spawnWorker(p.processes, p.natsConn)
 }
 
 func (s startup) subREQCliCommand(p process) {
-	fmt.Printf("Starting CLICommand Request subscriber: %#v\n", p.node)
+	log.Printf("Starting CLICommand Request subscriber: %#v\n", p.node)
 	sub := newSubject(REQCliCommand, string(p.node))
 	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQCliCommand.Values, nil)
 	go proc.spawnWorker(p.processes, p.natsConn)
 }
 
 func (s startup) subREQPong(p process) {
-	fmt.Printf("Starting Pong subscriber: %#v\n", p.node)
+	log.Printf("Starting Pong subscriber: %#v\n", p.node)
 	sub := newSubject(REQPong, string(p.node))
 	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQPong.Values, nil)
 	go proc.spawnWorker(p.processes, p.natsConn)
 }
 
 func (s startup) subREQPing(p process) {
-	fmt.Printf("Starting Ping Request subscriber: %#v\n", p.node)
+	log.Printf("Starting Ping Request subscriber: %#v\n", p.node)
 	sub := newSubject(REQPing, string(p.node))
 	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQPing.Values, nil)
 	go proc.spawnWorker(p.processes, p.natsConn)
 }
 
 func (s startup) subREQErrorLog(p process) {
-	fmt.Printf("Starting REQErrorLog subscriber: %#v\n", p.node)
+	log.Printf("Starting REQErrorLog subscriber: %#v\n", p.node)
 	sub := newSubject(REQErrorLog, "errorCentral")
 	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQErrorLog.Values, nil)
 	go proc.spawnWorker(p.processes, p.natsConn)
 }
 
 func (s startup) subREQHello(p process) {
-	fmt.Printf("Starting Hello subscriber: %#v\n", p.node)
+	log.Printf("Starting Hello subscriber: %#v\n", p.node)
 	sub := newSubject(REQHello, string(p.node))
 	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQHello.Values, nil)
 	proc.procFuncCh = make(chan Message)
@@ -228,7 +227,7 @@ func (s startup) subREQHello(p process) {
 }
 
 func (s startup) subREQToFile(p process) {
-	fmt.Printf("Starting text to file subscriber: %#v\n", p.node)
+	log.Printf("Starting text to file subscriber: %#v\n", p.node)
 	sub := newSubject(REQToFile, string(p.node))
 	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQToFile.Values, nil)
 	// fmt.Printf("*** %#v\n", proc)
@@ -236,7 +235,7 @@ func (s startup) subREQToFile(p process) {
 }
 
 func (s startup) subREQToFileAppend(p process) {
-	fmt.Printf("Starting text logging subscriber: %#v\n", p.node)
+	log.Printf("Starting text logging subscriber: %#v\n", p.node)
 	sub := newSubject(REQToFileAppend, string(p.node))
 	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQToFileAppend.Values, nil)
 	// fmt.Printf("*** %#v\n", proc)
@@ -244,7 +243,7 @@ func (s startup) subREQToFileAppend(p process) {
 }
 
 func (s startup) subREQTailFile(p process) {
-	fmt.Printf("Starting tail log files subscriber: %#v\n", p.node)
+	log.Printf("Starting tail log files subscriber: %#v\n", p.node)
 	sub := newSubject(REQTailFile, string(p.node))
 	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQTailFile.Values, nil)
 	// fmt.Printf("*** %#v\n", proc)

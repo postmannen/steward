@@ -238,7 +238,7 @@ func (c *Configuration) ReadConfigFile() (Configuration, error) {
 		return Configuration{}, fmt.Errorf("error: decode toml file %v: %v", fp, err)
 	}
 
-	fmt.Printf("%+v\n", c)
+	// fmt.Printf("%+v\n", c)
 	return conf, nil
 }
 

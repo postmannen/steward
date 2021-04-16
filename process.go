@@ -227,7 +227,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		if err != nil {
 			er := fmt.Errorf("error: nc.SubscribeSync failed: failed to create reply message: %v", err)
 			// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
-			fmt.Printf("%v, waiting %ds before retrying\n", er, subscribeSyncTimer)
+			log.Printf("%v, waiting %ds before retrying\n", er, subscribeSyncTimer)
 			time.Sleep(time.Second * subscribeSyncTimer)
 			continue
 		}
@@ -237,7 +237,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		if err != nil {
 			er := fmt.Errorf("error: publish failed: %v", err)
 			// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
-			fmt.Printf("%v, waiting %ds before retrying\n", er, publishTimer)
+			log.Printf("%v, waiting %ds before retrying\n", er, publishTimer)
 			time.Sleep(time.Second * publishTimer)
 			continue
 		}
@@ -257,7 +257,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 
 				// did not receive a reply, decide what to do..
 				retryAttempts++
-				fmt.Printf("Retry attempts:%v, retries: %v, ACKTimeout: %v\n", retryAttempts, message.Retries, message.ACKTimeout)
+				log.Printf("Retry attempts:%v, retries: %v, ACKTimeout: %v\n", retryAttempts, message.Retries, message.ACKTimeout)
 				switch {
 				case message.Retries == 0:
 					// 0 indicates unlimited retries

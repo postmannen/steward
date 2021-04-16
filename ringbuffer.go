@@ -209,7 +209,7 @@ func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan sam
 			// REMOVE: Dump the whole KV store
 			err := r.printBucketContent(samValueBucket)
 			if err != nil {
-				fmt.Printf("* Error: dump of db failed: %v\n", err)
+				log.Printf("* Error: dump of db failed: %v\n", err)
 			}
 		}(v)
 
@@ -245,11 +245,10 @@ func (r *ringBuffer) dumpBucket(bucket string) ([]samDBValue, error) {
 			return samDBValues[i].ID > samDBValues[j].ID
 		})
 
-		fmt.Println("--------------------------K/V DUMP TO VARIABLE SORTED---------------------------")
 		for _, v := range samDBValues {
-			fmt.Printf("%#v\n", v)
+			log.Printf("info: k/v store: %#v\n", v)
 		}
-		fmt.Println("----------------------------------------------------------------------------------")
+
 		return nil
 	})
 
@@ -273,7 +272,7 @@ func (r *ringBuffer) printBucketContent(bucket string) error {
 			if err != nil {
 				log.Printf("error: printBucketContent json.Umarshal failed: %v\n", err)
 			}
-			fmt.Printf("k: %s, v: %v\n", k, vv)
+			log.Printf("k: %s, v: %v\n", k, vv)
 			return nil
 		})
 		fmt.Println("--")
@@ -314,7 +313,7 @@ func (r *ringBuffer) getIndexValue(indexBucket string) int {
 		log.Printf("error: getIndexValue: strconv.Atoi : %v\n", err)
 	}
 
-	fmt.Printf("ringBuffer.getIndexValue: got index value = %v\n", index)
+	// fmt.Printf("ringBuffer.getIndexValue: got index value = %v\n", index)
 
 	return index
 }

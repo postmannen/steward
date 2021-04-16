@@ -1,15 +1,15 @@
 [
     {
-        "directory":"cli_command__result",
+        "directory":"cli/command/result",
         "fileExtension": ".result",
         "toNode": "ship1",
-        "data": ["bash","-c","sleep 5 & tree ./"],
+        "data": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",
         "replyMethod":"REQToFileAppend",
         "ACKTimeout":5,
         "retries":1,
         "replyACKTimeout":5,
         "replyRetries":1,
-        "methodTimeout": 3
+        "methodTimeout": 5
     }
 ]
