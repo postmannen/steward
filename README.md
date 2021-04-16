@@ -1,8 +1,12 @@
 # steward
 
+How do you control or know the state of something that are either allways online or occasionally available online ? like Servers or IOT platforms where the link for reaching them can be a not-always-connected satellite, GSM, or even reliable fiber links that might fail ?
+
+The idea behind Steward is to help out with exactly that.
+
 ## What is it ?
 
-Command And Control anything like Servers, Containers, VM's or other by creating messages with methods who will describe what to do. Steward will then take the responsibility for delivering and executing the method with the given parameters defined within the message. A example of a message.
+Command And Control anything like Servers, Containers, VM's or others by creating and sending messages with methods who will describe what to do. Steward will then take the responsibility for making sure that the message are delivered to the receiver, and that the method specified are executed with the given parameters defined. An example of a message.
 
 ```json
 [
