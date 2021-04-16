@@ -95,7 +95,7 @@ func newProcess(natsConn *nats.Conn, processes *processes, toRingbufferCh chan<-
 	proc := process{
 		messageID:        0,
 		subject:          subject,
-		node:             node(subject.ToNode),
+		node:             node(configuration.NodeName),
 		processID:        processes.lastProcessID,
 		errorCh:          errCh,
 		processKind:      processKind,
@@ -246,7 +246,8 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 			msgReply, err := subReply.NextMsg(time.Second * time.Duration(message.ACKTimeout))
 			if err != nil {
 				er := fmt.Errorf("error: subReply.NextMsg failed for node=%v, subject=%v: %v", p.node, p.subject.name(), err)
-				sendErrorLogMessage(p.toRingbufferCh, message.FromNode, er)
+				// sendErrorLogMessage(p.toRingbufferCh, p.node, er)
+				log.Printf(" ** %v\n", er)
 
 				// did not receive a reply, decide what to do..
 				retryAttempts++
@@ -258,7 +259,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 				case retryAttempts >= message.Retries:
 					// max retries reached
 					er := fmt.Errorf("info: max retries for message reached, check if node is up and running and if it got a subscriber for the given REQ type, breaking out: %v", message)
-					sendErrorLogMessage(p.toRingbufferCh, message.FromNode, er)
+					sendErrorLogMessage(p.toRingbufferCh, p.node, er)
 					return
 
 				default:

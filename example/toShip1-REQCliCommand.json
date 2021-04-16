@@ -7,9 +7,9 @@
         "method":"REQCliCommand",
         "replyMethod":"REQToFileAppend",
         "ACKTimeout":5,
-        "retries":3,
+        "retries":1,
         "replyACKTimeout":5,
-        "replyRetries":3,
-        "methodTimeout": 10
+        "replyRetries":1,
+        "methodTimeout": 3
     }
 ]
