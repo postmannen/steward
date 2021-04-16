@@ -199,6 +199,9 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 	retryAttempts := 0
 
+	const publishTimer time.Duration = 5
+	const subscribeSyncTimer time.Duration = 5
+
 	for {
 		dataPayload, err := gobEncodeMessage(message)
 		if err != nil {
@@ -217,14 +220,15 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		}
 
 		// The SubscribeSync used in the subscriber, will get messages that
-		// are sent after it started subscribing, so we start a publisher
-		// that sends out a message every second.
+		// are sent after it started subscribing.
 		//
 		// Create a subscriber for the reply message.
 		subReply, err := natsConn.SubscribeSync(msg.Reply)
 		if err != nil {
 			er := fmt.Errorf("error: nc.SubscribeSync failed: failed to create reply message: %v", err)
-			sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
+			// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
+			fmt.Printf("%v, waiting %ds before retrying\n", er, subscribeSyncTimer)
+			time.Sleep(time.Second * subscribeSyncTimer)
 			continue
 		}
 
@@ -232,7 +236,9 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		err = natsConn.PublishMsg(msg)
 		if err != nil {
 			er := fmt.Errorf("error: publish failed: %v", err)
-			sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
+			// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
+			fmt.Printf("%v, waiting %ds before retrying\n", er, publishTimer)
+			time.Sleep(time.Second * publishTimer)
 			continue
 		}
 

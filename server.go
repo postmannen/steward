@@ -82,19 +82,21 @@ type server struct {
 func NewServer(c *Configuration) (*server, error) {
 	conn, err := nats.Connect(c.BrokerAddress, nil)
 	if err != nil {
-		log.Printf("error: nats.Connect failed: %v\n", err)
+		er := fmt.Errorf("error: nats.Connect failed: %v", err)
+		return nil, er
 	}
 
 	// Prepare the connection to the socket file
 	err = os.Remove("steward.sock")
 	if err != nil {
-		log.Printf("error: could not delete sock file: %v\n", err)
+		er := fmt.Errorf("error: could not delete sock file: %v", err)
+		return nil, er
 	}
 
 	nl, err := net.Listen("unix", "steward.sock")
 	if err != nil {
-		log.Printf("error: failed to open socket: %v\n", err)
-		os.Exit(1)
+		er := fmt.Errorf("error: failed to open socket: %v", err)
+		return nil, er
 	}
 
 	metrics := newMetrics(c.PromHostAndPort)
