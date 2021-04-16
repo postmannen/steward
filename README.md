@@ -246,7 +246,15 @@ clone the repository, then cd `./steward/cmd` and do `go build -o steward`, and 
 
 ### How to Run
 
+#### nats-server (the message broker)
+
 The broker for messaging is Nats-server from <https://nats.io>. Download, run it, and use the `-brokerAddress` flag on Steward to point to it.
+
+There is a lot of different variants of how you can setup and confiure Nats. Full mesh, leaf node, TLS, Authentication, and more. You can read more about how to configure the Nats broker called nats-server at <https://nats.io/>.
+
+Some example configuration for the nats-server are located in the `doc` folder in this repository.
+
+#### Steward
 
 On some central server which will act as your command and control server.
 
@@ -257,6 +265,14 @@ One the nodes out there
 `./steward --node="ship1"` & `./steward --node="ship1"` and so on.
 
 Use the `-help` flag to get all possibilities.
+
+A complete example to start a central node called `central`.
+
+`./steward --nodeName="central" --defaultMessageRetries=3 --defaultMessageTimeout=5 -subscribersDataFolder="./data" --centralNodeName="central" -startSubREQErrorLog="*" -subscribersDataFolder="./var" -brokerAddress="127.0.0.1:4222"`
+
+And start another node that will be managed via central.
+
+`./steward --nodeName="ship1" -startPubREQHello=200 --centralNodeName="central" -promHostAndPort=":12112" -brokerAddress="127.0.0.1:4222"`
 
 #### Start subscriber flags
 
@@ -468,6 +484,23 @@ To send and Op Command to start a subscriber on a node
 ]
 ```
 
+Tail a log file on a node, and save the result of the tail centrally at the directory specified.
+
+```json
+[
+    {
+        "directory": "./my/log/files/",
+        "fileExtension": ".log",
+        "toNode": "ship2",
+        "data": ["./test.log"],
+        "method":"REQTailFile",
+        "ACKTimeout":5,
+        "retries":3,
+        "methodTimeout": 200
+    }
+]
+```
+
 You can save the content to myfile.JSON and append it to the `socket` file.
 
 `nc -U ./steward.sock < example/toShip1-REQCliCommand.json`
@@ -499,12 +532,10 @@ For CliCommand message to a node named "ship1" of type Command and it wants an A
 
 ## TODO
 
-- Encryption between Node instances and brokers.
-
-- Authentication between node instances and brokers.
+- Implement a workflow request type that will allow steps to be executed, and rollback if something failed during execution.
 
 ## Disclaimer
 
-All code in this repository are to be concidered not-production-ready. The code are the attempt to concretize the idea of a purely async management system where the controlling unit is decoupled from the receiving unit, and that that we know the state of all the receiving units at all times.
+All code in this repository are to be concidered not-production-ready, and the use is at your own responsibility. The code are the attempt to concretize the idea of a purely async management system where the controlling unit is decoupled from the receiving unit, and that that we know the state of all the receiving units at all times.
 
 Also read the license file for further details.
