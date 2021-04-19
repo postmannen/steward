@@ -80,7 +80,12 @@ type server struct {
 
 // newServer will prepare and return a server type
 func NewServer(c *Configuration) (*server, error) {
-	conn, err := nats.Connect(c.BrokerAddress, nil)
+	var opt nats.Option
+	if c.RootCAPath != "" {
+		opt = nats.RootCAs(c.RootCAPath)
+	}
+
+	conn, err := nats.Connect(c.BrokerAddress, opt)
 	if err != nil {
 		er := fmt.Errorf("error: nats.Connect failed: %v", err)
 		return nil, er

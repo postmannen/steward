@@ -95,6 +95,8 @@ type Configuration struct {
 	SubscribersDataFolder string
 	// central node to receive messages published from nodes
 	CentralNodeName string
+	// Path to the certificate of the root CA
+	RootCAPath string
 
 	// Make the current node send hello messages to central at given interval in seconds
 	StartPubREQHello int
@@ -143,6 +145,7 @@ func newConfigurationDefaults() Configuration {
 		StartPubREQHello:        30,
 		SubscribersDataFolder:   "./var",
 		CentralNodeName:         "",
+		RootCAPath:              "",
 		StartSubREQErrorLog:     flagNodeSlice{Values: []node{}},
 		StartSubREQHello:        flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubREQToFileAppend: flagNodeSlice{OK: true, Values: []node{"*"}},
@@ -183,6 +186,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.IntVar(&c.DefaultMessageRetries, "defaultMessageRetries", fc.DefaultMessageRetries, "default amount of retries that will be done before a message is thrown away, and out of the system")
 	flag.StringVar(&c.SubscribersDataFolder, "subscribersDataFolder", fc.SubscribersDataFolder, "The data folder where subscribers are allowed to write their data if needed")
 	flag.StringVar(&c.CentralNodeName, "centralNodeName", fc.CentralNodeName, "The name of the central node to receive messages published by this node")
+	flag.StringVar(&c.RootCAPath, "rootCAPath", fc.RootCAPath, "If TLS, enter the path for where to find the root CA certificate")
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 
