@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"sync"
@@ -42,10 +43,25 @@ type ringBuffer struct {
 }
 
 // newringBuffer is a push/pop storage for values.
-func newringBuffer(size int, dbFileName string, nodeName node, newMessagesCh chan []subjectAndMessage) *ringBuffer {
-	db, err := bolt.Open(dbFileName, 0600, nil)
+func newringBuffer(c Configuration, size int, dbFileName string, nodeName node, newMessagesCh chan []subjectAndMessage) *ringBuffer {
+	// ---
+	// Check if socket folder exists, if not create it
+	if _, err := os.Stat(c.DatabaseFolder); os.IsNotExist(err) {
+		err := os.MkdirAll(c.DatabaseFolder, 0700)
+		if err != nil {
+			log.Printf("error: failed to create database directory %v: %v\n", c.DatabaseFolder, err)
+			os.Exit(1)
+		}
+	}
+
+	DatabaseFilepath := filepath.Join(c.DatabaseFolder, dbFileName)
+
+	// ---
+
+	db, err := bolt.Open(DatabaseFilepath, 0600, nil)
 	if err != nil {
 		log.Printf("error: failed to open db: %v\n", err)
+		os.Exit(1)
 	}
 	return &ringBuffer{
 		bufData:       make(chan samDBValue, size),

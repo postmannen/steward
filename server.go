@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -92,13 +93,26 @@ func NewServer(c *Configuration) (*server, error) {
 	}
 
 	// Prepare the connection to the socket file
-	err = os.Remove("steward.sock")
-	if err != nil {
-		er := fmt.Errorf("error: could not delete sock file: %v", err)
-		return nil, er
+
+	// Check if socket folder exists, if not create it
+	if _, err := os.Stat(c.SocketFolder); os.IsNotExist(err) {
+		err := os.MkdirAll(c.SocketFolder, 0700)
+		if err != nil {
+			return nil, fmt.Errorf("error: failed to create directory %v: %v", c.SocketFolder, err)
+		}
 	}
 
-	nl, err := net.Listen("unix", "steward.sock")
+	socketFilepath := filepath.Join(c.SocketFolder, "steward.sock")
+
+	if _, err := os.Stat(socketFilepath); !os.IsNotExist(err) {
+		err = os.Remove(socketFilepath)
+		if err != nil {
+			er := fmt.Errorf("error: could not delete sock file: %v", err)
+			return nil, er
+		}
+	}
+
+	nl, err := net.Listen("unix", socketFilepath)
 	if err != nil {
 		er := fmt.Errorf("error: failed to open socket: %v", err)
 		return nil, er
@@ -161,7 +175,7 @@ func (s *server) Start() {
 	s.processes.printProcessesMap()
 
 	// Start the processing of new messages from an input channel.
-	s.routeMessagesToProcess("./incommmingBuffer.db", s.toRingbufferCh)
+	s.routeMessagesToProcess("./incomingBuffer.db", s.toRingbufferCh)
 
 	select {}
 
@@ -224,7 +238,7 @@ func createErrorMsgContent(FromNode node, theError error) subjectAndMessage {
 func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subjectAndMessage) {
 	// Prepare and start a new ring buffer
 	const bufferSize int = 1000
-	rb := newringBuffer(bufferSize, dbFileName, node(s.nodeName), s.toRingbufferCh)
+	rb := newringBuffer(*s.configuration, bufferSize, dbFileName, node(s.nodeName), s.toRingbufferCh)
 	inCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValue)
 	// start the ringbuffer.
