@@ -102,9 +102,11 @@ type Configuration struct {
 	// Path to the certificate of the root CA
 	RootCAPath string
 
+	// Full path to the NKEY's seed file
+	NkeySeedFile string
+
 	// Make the current node send hello messages to central at given interval in seconds
 	StartPubREQHello int
-
 	// Start the central error logger.
 	// Takes a comma separated string of nodes to receive from or "*" for all nodes.
 	StartSubREQErrorLog flagNodeSlice
@@ -152,6 +154,7 @@ func newConfigurationDefaults() Configuration {
 		SubscribersDataFolder:   "./var",
 		CentralNodeName:         "",
 		RootCAPath:              "",
+		NkeySeedFile:            "",
 		StartSubREQErrorLog:     flagNodeSlice{Values: []node{}},
 		StartSubREQHello:        flagNodeSlice{OK: true, Values: []node{"*"}},
 		StartSubREQToFileAppend: flagNodeSlice{OK: true, Values: []node{"*"}},
@@ -195,6 +198,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.SubscribersDataFolder, "subscribersDataFolder", fc.SubscribersDataFolder, "The data folder where subscribers are allowed to write their data if needed")
 	flag.StringVar(&c.CentralNodeName, "centralNodeName", fc.CentralNodeName, "The name of the central node to receive messages published by this node")
 	flag.StringVar(&c.RootCAPath, "rootCAPath", fc.RootCAPath, "If TLS, enter the path for where to find the root CA certificate")
+	flag.StringVar(&c.NkeySeedFile, "nkeySeedFile", fc.NkeySeedFile, "The full path of the nkeys seed file")
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 
