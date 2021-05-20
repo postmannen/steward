@@ -86,6 +86,22 @@ func NewServer(c *Configuration) (*server, error) {
 		opt = nats.RootCAs(c.RootCAPath)
 	}
 
+	if c.NkeySeedFile != "" {
+		var err error
+		// fh, err := os.Open(c.NkeySeedFile)
+		// if err != nil {
+		// 	return nil, fmt.Errorf("error: failed to open nkey seed file: %v\n", err)
+		// }
+		// b, err := io.ReadAll(fh)
+		// if err != nil {
+		// 	return nil, fmt.Errorf("error: failed to read nkey seed file: %v\n", err)
+		// }
+		opt, err = nats.NkeyOptionFromSeed(c.NkeySeedFile)
+		if err != nil {
+			return nil, fmt.Errorf("error: failed to read nkey seed file: %v", err)
+		}
+	}
+
 	conn, err := nats.Connect(c.BrokerAddress, opt)
 	if err != nil {
 		er := fmt.Errorf("error: nats.Connect failed: %v", err)
@@ -98,7 +114,7 @@ func NewServer(c *Configuration) (*server, error) {
 	if _, err := os.Stat(c.SocketFolder); os.IsNotExist(err) {
 		err := os.MkdirAll(c.SocketFolder, 0700)
 		if err != nil {
-			return nil, fmt.Errorf("error: failed to create directory %v: %v", c.SocketFolder, err)
+			return nil, fmt.Errorf("error: failed to create socket folder directory %v: %v", c.SocketFolder, err)
 		}
 	}
 
@@ -138,7 +154,7 @@ func NewServer(c *Configuration) (*server, error) {
 		}
 		err := os.Mkdir(c.SubscribersDataFolder, 0700)
 		if err != nil {
-			return nil, fmt.Errorf("error: failed to create directory %v: %v", c.SubscribersDataFolder, err)
+			return nil, fmt.Errorf("error: failed to create data folder directory %v: %v", c.SubscribersDataFolder, err)
 		}
 
 		log.Printf("info: Creating subscribers data folder at %v\n", c.SubscribersDataFolder)

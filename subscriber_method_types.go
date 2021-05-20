@@ -457,7 +457,7 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
 		err := os.MkdirAll(folderTree, 0700)
 		if err != nil {
-			return nil, fmt.Errorf("error: failed to create directory %v: %v", folderTree, err)
+			return nil, fmt.Errorf("error: failed to create toFileAppend directory tree %v: %v", folderTree, err)
 		}
 
 		log.Printf("info: Creating subscribers data folder at %v\n", folderTree)
@@ -518,7 +518,7 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
 		err := os.MkdirAll(folderTree, 0700)
 		if err != nil {
-			return nil, fmt.Errorf("error: failed to create directory %v: %v", folderTree, err)
+			return nil, fmt.Errorf("error: failed to create toFile directory tree %v: %v", folderTree, err)
 		}
 
 		log.Printf("info: Creating subscribers data folder at %v\n", folderTree)
@@ -603,7 +603,7 @@ func (m methodREQErrorLog) handler(proc process, message Message, node string) (
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
 		err := os.MkdirAll(folderTree, 0700)
 		if err != nil {
-			return nil, fmt.Errorf("error: failed to create directory %v: %v", folderTree, err)
+			return nil, fmt.Errorf("error: failed to create errorLog directory tree %v: %v", folderTree, err)
 		}
 
 		log.Printf("info: Creating subscribers data folder at %v\n", folderTree)

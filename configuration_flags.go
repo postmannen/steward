@@ -264,7 +264,7 @@ func (c *Configuration) WriteConfigFile() error {
 	if _, err := os.Stat(c.ConfigFolder); os.IsNotExist(err) {
 		err := os.MkdirAll(c.ConfigFolder, 0700)
 		if err != nil {
-			return fmt.Errorf("error: failed to create directory %v: %v", c.ConfigFolder, err)
+			return fmt.Errorf("error: failed to create config directory %v: %v", c.ConfigFolder, err)
 		}
 	}
 
