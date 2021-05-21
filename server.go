@@ -102,7 +102,8 @@ func NewServer(c *Configuration) (*server, error) {
 		}
 	}
 
-	conn, err := nats.Connect(c.BrokerAddress, opt)
+	// Setting MaxReconnects to -1 which equals unlimited.
+	conn, err := nats.Connect(c.BrokerAddress, opt, nats.MaxReconnects(-1))
 	if err != nil {
 		er := fmt.Errorf("error: nats.Connect failed: %v", err)
 		return nil, er
