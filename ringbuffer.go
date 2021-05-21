@@ -103,11 +103,14 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 	// messages to the system.
 	// This is needed when the program have been restarted, and we need to check
 	// if there where previously unhandled messages that need to be handled first.
+
 	func() {
 		s, err := r.dumpBucket(samValueBucket)
 		if err != nil {
-			er := fmt.Errorf("error: fillBuffer: retreival of values from k/v store failed: %v", err)
-			sendErrorLogMessage(r.newMessagesCh, node(r.nodeName), er)
+			er := fmt.Errorf("error: fillBuffer: retreival of values from k/v store failed, probaly empty database so we don't have any previos entries in db: %v", err)
+			log.Printf("%v\n", er)
+			return
+			//sendErrorLogMessage(r.newMessagesCh, node(r.nodeName), er)
 		}
 
 		for _, v := range s {
@@ -329,7 +332,7 @@ func (r *ringBuffer) getIndexValue(indexBucket string) int {
 		log.Printf("error: getIndexValue: strconv.Atoi : %v\n", err)
 	}
 
-	// fmt.Printf("ringBuffer.getIndexValue: got index value = %v\n", index)
+	// fmt.Printf("\n**** ringBuffer.getIndexValue: got index value = %v\n\n", index)
 
 	return index
 }

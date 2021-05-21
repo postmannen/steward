@@ -150,7 +150,6 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 
 		// If there is a procFunc for the process, start it.
 		if p.procFunc != nil {
-
 			// Start the procFunc in it's own anonymous func so we are able
 			// to get the return error.
 			go func() {
@@ -411,7 +410,6 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 			sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
 			return
 		}
-
 		// Get the process name so we can look up the process in the
 		// processes map, and increment the message counter.
 		pn := processNameGet(p.subject.name(), processKindPublisher)
