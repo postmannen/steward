@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -102,13 +103,30 @@ func NewServer(c *Configuration) (*server, error) {
 		}
 	}
 
-	// Setting MaxReconnects to -1 which equals unlimited.
-	conn, err := nats.Connect(c.BrokerAddress, opt, nats.MaxReconnects(-1))
-	if err != nil {
-		er := fmt.Errorf("error: nats.Connect failed: %v", err)
-		return nil, er
-	}
+	// Connect to the nats server, and retry until succesful.
 
+	var conn *nats.Conn
+	const connRetryWait = 5
+
+	for {
+		var err error
+		// Setting MaxReconnects to -1 which equals unlimited.
+		conn, err = nats.Connect(c.BrokerAddress, opt, nats.MaxReconnects(-1))
+		// Nats use string types for errors, so we need to check the content of the error.
+		// If no servers where available, we loop and retry until succesful.
+		if err != nil {
+			if strings.Contains(err.Error(), "no servers available") {
+				log.Printf("error: could not connect, waiting 5 seconds, and retrying: %v\n", err)
+				time.Sleep(time.Duration(time.Second * connRetryWait))
+				continue
+			}
+
+			er := fmt.Errorf("error: nats.Connect failed: %v", err)
+			return nil, er
+		}
+
+		break
+	}
 	// Prepare the connection to the socket file
 
 	// Check if socket folder exists, if not create it
