@@ -2,9 +2,11 @@ ship1/
 ship2/
 ship3/
 central/
+ww.central/
 tmp/
 var/
 ./incommmingBuffer.db
 store.log
 changes.md
 steward.sock
+.gitignore

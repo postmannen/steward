@@ -111,7 +111,7 @@ func (s startup) pubREQHello(p process) {
 				d := fmt.Sprintf("Hello from %v\n", p.node)
 
 				m := Message{
-					ToNode:   "central",
+					ToNode:   node(p.configuration.CentralNodeName),
 					FromNode: node(p.node),
 					Data:     []string{d},
 					Method:   REQHello,
