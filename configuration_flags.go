@@ -142,7 +142,7 @@ func NewConfiguration() *Configuration {
 // Default configuration
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
-		ConfigFolder:            "./etc",
+		ConfigFolder:            "/usr/local/steward/etc/",
 		SocketFolder:            "./tmp",
 		DatabaseFolder:          "./var/lib",
 		BrokerAddress:           "127.0.0.1:4222",
@@ -176,9 +176,9 @@ func (c *Configuration) CheckFlags() error {
 	// Create an empty default config
 	var fc Configuration
 
-	// NB: Disabling the config file options for now.
 	// Read file config. Set system default if it can't find config file.
-	fc, err := c.ReadConfigFile()
+	configFolder := os.Getenv("CONFIGFOLDER")
+	fc, err := c.ReadConfigFile(configFolder)
 	if err != nil {
 		log.Printf("%v\n", err)
 		fc = newConfigurationDefaults()
@@ -186,7 +186,7 @@ func (c *Configuration) CheckFlags() error {
 
 	*c = fc
 
-	flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "folder who contains the config file. Defaults to ./etc/. If other folder is used this flag must be specified at startup.")
+	flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "Defaults to ./usr/local/steward/etc/. *NB* This flag is not used, if your config file are located somwhere else than default set the location in an env variable named CONFIGFOLDER")
 	flag.StringVar(&c.SocketFolder, "socketFolder", fc.SocketFolder, "folder who contains the socket file. Defaults to ./tmp/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.DatabaseFolder, "databaseFolder", fc.DatabaseFolder, "folder who contains the database file. Defaults to ./var/lib/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.NodeName, "nodeName", fc.NodeName, "some unique string to identify this Edge unit")
@@ -234,8 +234,8 @@ func (c *Configuration) CheckFlags() error {
 }
 
 // Reads the current config file from disk.
-func (c *Configuration) ReadConfigFile() (Configuration, error) {
-	fp := filepath.Join("./etc/", "config.toml")
+func (c *Configuration) ReadConfigFile(configFolder string) (Configuration, error) {
+	fp := filepath.Join(configFolder, "config.toml")
 
 	if _, err := os.Stat(fp); os.IsNotExist(err) {
 		return Configuration{}, fmt.Errorf("error: no config file found %v: %v", fp, err)
