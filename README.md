@@ -338,7 +338,8 @@ To stop a process of a specific type on a node.
             "opArg": {
                 "method": "REQHttpGet",
                 "kind": "subscriber",
-                "receivingNode": "ship2"
+                "receivingNode": "ship2",
+                "id":127
             }
         },
 ...
@@ -539,20 +540,6 @@ For CliCommand message to a node named "ship1" of type Command and it wants an A
 ### Workflow request type
 
 Implement a workflow request type that will allow steps to be executed, and rollback if something failed during execution.
-
-### Reply messages naming
-
-For reply messages, put the "reply" part at the end of the subject instead of the beginning.
-
-### Visualize the id of a process in the ps listing, and what they do
-
-Processes gets their name based on the REQ type of subject the belong to. If two processes who does the same thing is started they will get the same process name. 
-
-Change so processes also show the processID,and also possibly the data field it is working on, so it is possible to distinguish more processes for the same REQ type.
-
-Also maybe put in a timer for showing how long a process have been running.
-
-
 
 ## Disclaimer
 
