@@ -253,6 +253,7 @@ type OpCmdStopProc struct {
 	RecevingNode node        `json:"receivingNode"`
 	Method       Method      `json:"method"`
 	Kind         processKind `json:"kind"`
+	ID           int         `json:"id"`
 }
 
 // handler to run a CLI command with timeout context. The handler will
@@ -273,10 +274,13 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			proc.processes.mu.Lock()
 			// Loop the the processes map, and find all that is active to
 			// be returned in the reply message.
-			for _, v := range proc.processes.active {
-				s := fmt.Sprintf("%v, proc: %v, id: %v, name: %v, allowed from: %s\n", time.Now().UTC(), v.processKind, v.processID, v.subject.name(), v.allowedReceivers)
-				sb := []byte(s)
-				out = append(out, sb...)
+			for _, idMap := range proc.processes.active {
+				for _, v := range idMap {
+					s := fmt.Sprintf("%v, proc: %v, id: %v, name: %v, allowed from: %s\n", time.Now().UTC(), v.processKind, v.processID, v.subject.name(), v.allowedReceivers)
+					sb := []byte(s)
+					out = append(out, sb...)
+				}
+
 			}
 			proc.processes.mu.Unlock()
 
@@ -341,13 +345,28 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			processName := processNameGet(sub.name(), arg.Kind)
 			// fmt.Printf(" ** DEBUG1: processName: %v\n", processName)
 
+			// Check if the message contains an id.
+			err = func() error {
+				if arg.ID == 0 {
+					er := fmt.Errorf("error: stopProc: did not find process to stop: %v on %v", sub, message.ToNode)
+					return er
+				}
+				return nil
+			}()
+
+			if err != nil {
+				sendErrorLogMessage(proc.toRingbufferCh, proc.node, err)
+				log.Printf("%v\n", err)
+				return
+			}
+
 			proc.processes.mu.Lock()
 
 			// for k, v := range proc.processes.active {
 			// 	fmt.Printf(" ** DEBUG1.3: MAP: k = %v, v = %v\n", k, v.processKind)
 			// }
 
-			toStopProc, ok := proc.processes.active[processName]
+			toStopProc, ok := proc.processes.active[processName][arg.ID]
 			if ok {
 				// Delete the process from the processes map
 				delete(proc.processes.active, processName)

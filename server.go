@@ -27,7 +27,7 @@ func processNameGet(sn subjectName, pk processKind) processName {
 // processes holds all the information about running processes
 type processes struct {
 	// The active spawned processes
-	active map[processName]process
+	active map[processName]map[int]process
 	// mutex to lock the map
 	mu sync.RWMutex
 	// The last processID created
@@ -41,7 +41,7 @@ type processes struct {
 // newProcesses will prepare and return a *processes
 func newProcesses(promRegistry *prometheus.Registry) *processes {
 	p := processes{
-		active: make(map[processName]process),
+		active: make(map[processName]map[int]process),
 	}
 
 	p.promTotalProcesses = promauto.NewGauge(prometheus.GaugeOpts{
@@ -220,8 +220,10 @@ func (p *processes) printProcessesMap() {
 	fmt.Println("--------------------------------------------------------------------------------------------")
 	log.Printf("*** Output of processes map :\n")
 	p.mu.Lock()
-	for _, v := range p.active {
-		log.Printf("* proc - : %v, id: %v, name: %v, allowed from: %v\n", v.processKind, v.processID, v.subject.name(), v.allowedReceivers)
+	for _, vSub := range p.active {
+		for _, vID := range vSub {
+			log.Printf("* proc - : %v, id: %v, name: %v, allowed from: %v\n", vID.processKind, vID.processID, vID.subject.name(), vID.allowedReceivers)
+		}
 	}
 	p.mu.Unlock()
 
@@ -327,15 +329,22 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 			// DEBUG: fmt.Printf("** handleNewOperatorMessages: message: %v, ** subject: %#v\n", m, sam.Subject)
 			pn := processNameGet(subjName, processKindPublisher)
 
+			// Check if there is a map of type map[int]process registered
+			// for the processName, and if it exists then return it.
 			s.processes.mu.Lock()
-			existingProc, ok := s.processes.active[pn]
+			existingProcIDMap, ok := s.processes.active[pn]
 			s.processes.mu.Unlock()
 
-			// Are there already a process for that subject, put the
-			// message on that processes incomming message channel.
+			// If found a map above, range it, and are there already a process
+			// for that subject, put the message on that processes incomming
+			// message channel.
 			if ok {
-				log.Printf("info: processNewMessages: found the specific subject: %v\n", subjName)
-				existingProc.subject.messageCh <- m
+				s.processes.mu.Lock()
+				for _, existingProc := range existingProcIDMap {
+					log.Printf("info: processNewMessages: found the specific subject: %v\n", subjName)
+					existingProc.subject.messageCh <- m
+				}
+				s.processes.mu.Unlock()
 
 				// If no process to handle the specific subject exist,
 				// the we create and spawn one.

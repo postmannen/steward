@@ -189,8 +189,12 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 	p.processName = pn
 
 	// Add information about the new process to the started processes map.
+
+	idProcMap := make(map[int]process)
+	idProcMap[p.processID] = p
+
 	procs.mu.Lock()
-	procs.active[pn] = p
+	procs.active[pn] = idProcMap
 	procs.mu.Unlock()
 }
 
@@ -426,7 +430,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		// Increment the counter for the next message to be sent.
 		p.messageID++
 		p.processes.mu.Lock()
-		p.processes.active[pn] = p
+		p.processes.active[pn][p.processID] = p
 		p.processes.mu.Unlock()
 
 		// Handle the error.
