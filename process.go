@@ -213,8 +213,8 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 			Subject: string(p.subject.name()),
 			// Subject: fmt.Sprintf("%s.%s.%s", proc.node, "command", "CLICommandRequest"),
 			// Structure of the reply message are:
-			// reply.<nodename>.<message type>.<method>
-			Reply: fmt.Sprintf("reply.%s", p.subject.name()),
+			// <nodename>.<message type>.<method>.reply
+			Reply: fmt.Sprintf("%s.reply", p.subject.name()),
 			Data:  dataPayload,
 		}
 
