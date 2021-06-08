@@ -153,6 +153,14 @@ TIP: Most likely the best way to control how the service should behave and what 
 
 Run CLI command on a node. Linux/Windows/Mac/Docker-container or other.
 
+Will run the command given, and return the stdout output of the command when the command is done.
+
+#### REQnCliCommandCont
+
+Run CLI command on a node. Linux/Windows/Mac/Docker-container or other.
+
+Will run the command given, and return the stdout output of the command continously while the command runs.
+
 #### REQTailFile
 
 Tail log files on some node, and get the result sent back in a reply message.
@@ -367,6 +375,33 @@ To start a process of a specified type on a node.
                 "allowedNodes": ["central","node1"]
             }
         },
+```
+
+and another example
+
+```json
+[
+    {
+        "directory":"opcommand_logs",
+        "fileExtension": ".log",
+        "toNode": "ship2",
+        "data": [],
+        "method":"REQOpCommand",
+        "operation":{
+            "opCmd":"startProc",
+            "opArg": {
+                "method": "REQnCliCommandCont",
+                "allowedNodes": ["central"]
+            }
+        },
+        "replyMethod":"REQToFileAppend",
+        "ACKTimeout":3,
+        "retries":3,
+        "replyACKTimeout":3,
+        "replyRetries":3,
+        "MethodTimeout": 7
+    }
+]
 ```
 
 NB: Both the keys and the values used are case sensitive.

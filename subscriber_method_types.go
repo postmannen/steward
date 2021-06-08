@@ -33,6 +33,7 @@
 package steward
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -83,6 +84,11 @@ const (
 	// The data field is a slice of strings where the first string
 	// value should be the command, and the following the arguments.
 	REQnCliCommand Method = "REQnCliCommand"
+	// REQnCliCommandCont same as normal Cli command, but can be used
+	// when running a command that will take longer time and you want
+	// to send the output of the command continually back as it is
+	// generated, and not just when the command is finished.
+	REQnCliCommandCont Method = "REQnCliCommandCont"
 	// Send text to be logged to the console.
 	// The data field is a slice of strings where the first string
 	// value should be the command, and the following the arguments.
@@ -141,6 +147,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				commandOrEvent: CommandACK,
 			},
 			REQnCliCommand: methodREQnCliCommand{
+				commandOrEvent: CommandACK,
+			},
+			REQnCliCommandCont: methodREQnCliCommandCont{
 				commandOrEvent: CommandACK,
 			},
 			REQToConsole: methodREQToConsole{
@@ -962,6 +971,77 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 			}
 		}
 
+	}()
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+// ---
+
+// --- methodREQTailFile
+
+type methodREQnCliCommandCont struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodREQnCliCommandCont) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
+
+// handler to run a tailing of files with timeout context. The handler will
+// return the output of the command run back to the calling publisher
+// as a new message.
+func (m methodREQnCliCommandCont) handler(proc process, message Message, node string) ([]byte, error) {
+	log.Printf("<--- CLInCommandCont REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
+
+	// Execute the CLI command in it's own go routine, so we are able
+	// to return immediately with an ack reply that the message was
+	// received, and we create a new message to send back to the calling
+	// node for the out put of the actual command.
+	go func() {
+		c := message.Data[0]
+		a := message.Data[1:]
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(message.MethodTimeout))
+
+		outCh := make(chan []byte)
+
+		go func() {
+			cmd := exec.CommandContext(ctx, c, a...)
+
+			// Using cmd.StdoutPipe here so we are continuosly
+			// able to read the out put of the command.
+			outReader, err := cmd.StdoutPipe()
+			if err != nil {
+				log.Printf("error: %v\n", err)
+			}
+
+			if err := cmd.Start(); err != nil {
+				log.Printf("error: %v\n", err)
+			}
+
+			scanner := bufio.NewScanner(outReader)
+			for scanner.Scan() {
+				outCh <- []byte(scanner.Text() + "\n")
+			}
+
+		}()
+
+		// Check if context timer or command output were received.
+		for {
+			select {
+			case <-ctx.Done():
+				cancel()
+				er := fmt.Errorf("info: method timeout reached, canceling: %v", message)
+				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				return
+			case out := <-outCh:
+				// Prepare and queue for sending a new message with the output
+				// of the action executed.
+				newReplyMessage(proc, message, out)
+			}
+		}
 	}()
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
