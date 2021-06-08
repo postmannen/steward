@@ -9,4 +9,6 @@ var/
 store.log
 changes.md
 steward.sock
+ships/
 .gitignore
+testing_messages/
