@@ -142,6 +142,8 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 	}
 
 	processName := processNameGet(p.subject.name(), p.processKind)
+
+	// Add prometheus metrics for the process.
 	p.processes.promProcessesVec.With(prometheus.Labels{"processName": string(processName)})
 
 	// Start a publisher worker, which will start a go routine (process)
