@@ -299,7 +299,9 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 
 			err := json.Unmarshal(message.Operation.OpArg, &dst)
 			if err != nil {
-				log.Printf("error: outer unmarshal: %v\n", err)
+				er := fmt.Errorf("error: methodREQOpCommand startProc json.Umarshal failed : %v, message: %v", err, message)
+				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
 			}
 
 			// Assert it into the correct non pointer value.
@@ -310,12 +312,14 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			if len(arg.AllowedNodes) == 0 {
 				er := fmt.Errorf("error: startProc: no allowed publisher nodes specified: %v" + fmt.Sprint(message))
 				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
 				return
 			}
 
 			if arg.Method == "" {
 				er := fmt.Errorf("error: startProc: no method specified: %v" + fmt.Sprint(message))
 				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
 				return
 			}
 
@@ -333,7 +337,9 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 
 			err := json.Unmarshal(message.Operation.OpArg, &dst)
 			if err != nil {
-				log.Printf("error: outer unmarshal: %v\n", err)
+				er := fmt.Errorf("error: methodREQOpCommand stopProc json.Umarshal failed : %v, message: %v", err, message)
+				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
 			}
 
 			// Assert it into the correct non pointer value.
@@ -358,14 +364,16 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			err = func() error {
 				if arg.ID == 0 {
 					er := fmt.Errorf("error: stopProc: did not find process to stop: %v on %v", sub, message.ToNode)
+					sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 					return er
 				}
 				return nil
 			}()
 
 			if err != nil {
-				sendErrorLogMessage(proc.toRingbufferCh, proc.node, err)
-				log.Printf("%v\n", err)
+				er := fmt.Errorf("error: stopProc: err was not nil: %v : %v on %v", err, sub, message.ToNode)
+				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
 				return
 			}
 
@@ -384,20 +392,24 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 				// Stop subscribing for messages on the process's subject.
 				err := toStopProc.natsSubscription.Unsubscribe()
 				if err != nil {
-					log.Printf(" ** Error: failed to stop *nats.Subscription: %v\n", err)
+					er := fmt.Errorf("error: methodREQOpCommand, toStopProc, failed to stop nats.Subscription: %v, message: %v", err, message)
+					sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+					log.Printf("%v\n", er)
 				}
 
 				// Remove the prometheus label
 				proc.processes.promProcessesVec.Delete(prometheus.Labels{"processName": string(processName)})
 
-				er := fmt.Errorf("info: stopProc: stoped %v on %v", sub, message.ToNode)
+				er := fmt.Errorf("info: stopProc: stopped %v on %v", sub, message.ToNode)
 				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
 
 				newReplyMessage(proc, message, []byte(er.Error()))
 
 			} else {
-				er := fmt.Errorf("error: stopProc: did not find process to stop: %v on %v", sub, message.ToNode)
+				er := fmt.Errorf("error: stopProc: methodREQOpCommand, did not find process to stop: %v on %v", sub, message.ToNode)
 				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
 
 				newReplyMessage(proc, message, []byte(er.Error()))
 			}
@@ -447,7 +459,9 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 	nSAM, err := newSAM(newMsg)
 	if err != nil {
 		// In theory the system should drop the message before it reaches here.
-		log.Printf("error: %v: %v\n", message.Method, err)
+		er := fmt.Errorf("error: newReplyMessage : %v, message: %v", err, message)
+		sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+		log.Printf("%v\n", er)
 	}
 	proc.toRingbufferCh <- []subjectAndMessage{nSAM}
 	//--
@@ -485,7 +499,9 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
 		err := os.MkdirAll(folderTree, 0700)
 		if err != nil {
-			return nil, fmt.Errorf("error: failed to create toFileAppend directory tree %v: %v", folderTree, err)
+			er := fmt.Errorf("error: methodREQToFileAppend failed to create toFileAppend directory tree:%v, %v, message: %v", folderTree, err, message)
+			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+			log.Printf("%v\n", er)
 		}
 
 		log.Printf("info: Creating subscribers data folder at %v\n", folderTree)
@@ -495,7 +511,9 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 	file := filepath.Join(folderTree, fileName)
 	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, os.ModeAppend)
 	if err != nil {
-		log.Printf("error: methodEventTextLogging.handler: failed to open file: %v\n", err)
+		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to open file : %v, message: %v", err, message)
+		sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+		log.Printf("%v\n", er)
 		return nil, err
 	}
 	defer f.Close()
@@ -504,7 +522,9 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 		_, err := f.Write([]byte(d))
 		f.Sync()
 		if err != nil {
-			log.Printf("error: methodEventTextLogging.handler: failed to write to file: %v\n", err)
+			er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file : %v, message: %v", err, message)
+			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+			log.Printf("%v\n", er)
 		}
 	}
 
@@ -546,7 +566,11 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
 		err := os.MkdirAll(folderTree, 0700)
 		if err != nil {
-			return nil, fmt.Errorf("error: failed to create toFile directory tree %v: %v", folderTree, err)
+			er := fmt.Errorf("error: methodREQToFile failed to create toFile directory tree %v: %v, %v", folderTree, err, message)
+			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+			log.Printf("%v\n", er)
+
+			return nil, er
 		}
 
 		log.Printf("info: Creating subscribers data folder at %v\n", folderTree)
@@ -556,7 +580,9 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 	file := filepath.Join(folderTree, fileName)
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
 	if err != nil {
-		log.Printf("error: methodEventTextLogging.handler: failed to open file: %v\n", err)
+		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to open file: %v, %v", err, message)
+		sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+		log.Printf("%v\n", er)
 		return nil, err
 	}
 	defer f.Close()
@@ -565,7 +591,9 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 		_, err := f.Write([]byte(d))
 		f.Sync()
 		if err != nil {
-			log.Printf("error: methodEventTextLogging.handler: failed to write to file: %v\n", err)
+			er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file: %v, %v", err, message)
+			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+			log.Printf("%v\n", er)
 		}
 	}
 
@@ -733,7 +761,9 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 			cmd := exec.CommandContext(ctx, c, a...)
 			out, err := cmd.Output()
 			if err != nil {
-				log.Printf("error: %v\n", err)
+				er := fmt.Errorf("error: methodREQCliCommand: cmd.Output : %v, message: %v", err, message)
+				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
 			}
 			outCh <- out
 		}()
@@ -741,7 +771,7 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 		select {
 		case <-ctx.Done():
 			cancel()
-			er := fmt.Errorf("error: method timed out %v", message)
+			er := fmt.Errorf("error: methodREQCliCommand: method timed out %v", message)
 			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 		case out := <-outCh:
 			cancel()
@@ -792,7 +822,9 @@ func (m methodREQnCliCommand) handler(proc process, message Message, node string
 			cmd := exec.CommandContext(ctx, c, a...)
 			out, err := cmd.Output()
 			if err != nil {
-				log.Printf("error: %v\n", err)
+				er := fmt.Errorf("error: methodREQnCliCommand: cmd.Output : %v, message: %v", err, message)
+				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
 			}
 			outCh <- out
 		}()
@@ -800,7 +832,7 @@ func (m methodREQnCliCommand) handler(proc process, message Message, node string
 		select {
 		case <-ctx.Done():
 			cancel()
-			er := fmt.Errorf("error: method timed out %v", message)
+			er := fmt.Errorf("error: methodREQnCliCommand: method timed out %v", message)
 			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 		case out := <-outCh:
 			cancel()
@@ -858,7 +890,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
-			er := fmt.Errorf("error: NewRequest failed: %v, bailing out: %v", err, message)
+			er := fmt.Errorf("error: methodREQHttpGet: NewRequest failed: %v, bailing out: %v", err, message)
 			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 			cancel()
 			return
@@ -869,7 +901,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 		go func() {
 			resp, err := client.Do(req)
 			if err != nil {
-				er := fmt.Errorf("error: client.Do failed: %v, bailing out: %v", err, message)
+				er := fmt.Errorf("error: methodREQHttpGet: client.Do failed: %v, bailing out: %v", err, message)
 				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 				return
 			}
@@ -877,14 +909,16 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 
 			if resp.StatusCode != 200 {
 				cancel()
-				er := fmt.Errorf("error: not 200, where %#v, bailing out: %v", resp.StatusCode, message)
+				er := fmt.Errorf("error: methodREQHttpGet: not 200, where %#v, bailing out: %v", resp.StatusCode, message)
 				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 				return
 			}
 
 			b, err := io.ReadAll(resp.Body)
 			if err != nil {
-				log.Printf("error: ReadAll failed: %v\n", err)
+				er := fmt.Errorf("error: methodREQHttpGet: io.ReadAll failed : %v, message: %v", err, message)
+				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
 			}
 
 			outCh <- b
@@ -893,7 +927,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 		select {
 		case <-ctx.Done():
 			cancel()
-			er := fmt.Errorf("error: method timed out %v", message)
+			er := fmt.Errorf("error: methodREQHttpGet: method timed out %v", message)
 			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 		case out := <-outCh:
 			cancel()
@@ -943,7 +977,7 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 			Whence: os.SEEK_END,
 		}})
 		if err != nil {
-			er := fmt.Errorf("error: tailFile: %v", err)
+			er := fmt.Errorf("error: methodREQToTailFile: tailFile: %v", err)
 			log.Printf("%v\n", er)
 			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 		}
@@ -1014,11 +1048,18 @@ func (m methodREQnCliCommandCont) handler(proc process, message Message, node st
 			// able to read the out put of the command.
 			outReader, err := cmd.StdoutPipe()
 			if err != nil {
+				er := fmt.Errorf("error: methodREQnCliCommandCont: cmd.StdoutPipe failed : %v, message: %v", err, message)
+				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
+
 				log.Printf("error: %v\n", err)
 			}
 
 			if err := cmd.Start(); err != nil {
-				log.Printf("error: %v\n", err)
+				er := fmt.Errorf("error: methodREQnCliCommandCont: cmd.Start failed : %v, message: %v", err, message)
+				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
+
 			}
 
 			scanner := bufio.NewScanner(outReader)
@@ -1033,7 +1074,7 @@ func (m methodREQnCliCommandCont) handler(proc process, message Message, node st
 			select {
 			case <-ctx.Done():
 				cancel()
-				er := fmt.Errorf("info: method timeout reached, canceling: %v", message)
+				er := fmt.Errorf("info: methodREQnCliCommandCont: method timeout reached, canceling: %v", message)
 				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 				return
 			case out := <-outCh:

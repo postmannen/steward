@@ -177,7 +177,7 @@ Get Hello messages from all running nodes.
 
 Central error logger.
 
-### Request Methos used for reply messages
+### Request Methods used for reply messages
 
 #### REQToConsole
 
