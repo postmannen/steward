@@ -1,10 +1,12 @@
 package steward
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"os"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -36,53 +38,107 @@ func (s *Stew) Start() error {
 	return nil
 }
 
+// ---------------------------------------------------
+
 func console() error {
 	app := tview.NewApplication()
 
-	nodes1 := tview.NewList().ShowSecondaryText(false)
-	nodes1.SetBorder(true).SetTitle("nodes1")
+	nodeListForm := tview.NewList().ShowSecondaryText(false)
+	nodeListForm.SetBorder(true).SetTitle("nodes").SetTitleAlign(tview.AlignLeft)
+	inputCapture := func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEscape {
+			app.Stop()
+		}
 
-	form1 := tview.NewForm()
-	form1.SetBorder(true).SetTitle("form1").SetTitleAlign(tview.AlignLeft)
+		return event
+	}
+	nodeListForm.SetInputCapture(inputCapture)
 
-	nodes1.SetSelectedFunc(func(i int, pri string, sec string, ru rune) {
-		app.SetFocus(form1)
+	reqListForm := tview.NewList().ShowSecondaryText(false)
+	reqListForm.SetBorder(true).SetTitle("methods").SetTitleAlign(tview.AlignLeft)
+	reqFillForm := tview.NewForm()
+	reqFillForm.SetBorder(true).SetTitle("Request values").SetTitleAlign(tview.AlignLeft)
+
+	nodeListForm.SetSelectedFunc(func(i int, pri string, sec string, ru rune) {
+		app.SetFocus(reqListForm)
 	})
 
-	// Create a flex to hold the nodes lists
-	flex := tview.NewFlex().AddItem(nodes1, 0, 2, true).AddItem(form1, 0, 2, false)
+	// Create a flex layout.
+	flexContainer := tview.NewFlex().
+		AddItem(nodeListForm, 0, 1, true).
+		AddItem(reqListForm, 0, 1, false).
+		AddItem(reqFillForm, 0, 2, false)
 
-	ships := []string{"ship1", "ship2", "ship3"}
-
-	for _, v := range ships {
-		nodes1.AddItem(v, "", rune(0), nodesSelected(nodes1, form1, app))
+	// Get nodes from file.
+	nodes, err := getNodeNames("nodeslist.cfg")
+	if err != nil {
+		return err
 	}
 
-	if err := app.SetRoot(flex, true).Run(); err != nil {
+	// Selected func for node list.
+	selectedFuncNodes := func() {
+		var m Method
+		ma := m.GetMethodsAvailable()
+
+		// Select func to create the reqFillForm when req is selected in the reqListForm.
+		selectedFuncReqList := func() {
+			currentItem := reqListForm.GetCurrentItem()
+			currentItemText, _ := reqListForm.GetItemText(currentItem)
+			reqFillForm.AddButton(fmt.Sprintf("%v", currentItemText), nil)
+			reqFillForm.AddButton("back", func() {
+				reqFillForm.Clear(true)
+				app.SetFocus(reqListForm)
+			})
+
+			inputCapture := func(event *tcell.EventKey) *tcell.EventKey {
+				if event.Key() == tcell.KeyEscape {
+					app.SetFocus(nodeListForm)
+					reqFillForm.Clear(true)
+					reqListForm.Clear()
+				}
+
+				return event
+			}
+
+			reqFillForm.SetInputCapture(inputCapture)
+			app.SetFocus(reqFillForm)
+		}
+
+		// Add req items to the req list
+		for k := range ma.methodhandlers {
+			reqListForm.AddItem(string(k), "", rune(0), selectedFuncReqList)
+		}
+	}
+
+	// Add nodes to the node list form.
+	for _, v := range nodes {
+		nodeListForm.AddItem(v, "", rune(0), selectedFuncNodes)
+	}
+
+	if err := app.SetRoot(flexContainer, true).Run(); err != nil {
 		panic(err)
 	}
 
 	return nil
 }
 
-func nodesSelected(nodes1 *tview.List, form1 *tview.Form, app *tview.Application) func() {
-	shipsdb := map[string]string{
-		"ship1": "ship one",
-		"ship2": "ship two",
-		"ship3": "ship three",
+// getNodes will load all the node names from a file, and return a slice of
+// string values, each representing a unique node.
+func getNodeNames(filePath string) ([]string, error) {
+
+	fh, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("error: unable to open node file: %v", err)
+	}
+	defer fh.Close()
+
+	nodes := []string{}
+
+	scanner := bufio.NewScanner(fh)
+	for scanner.Scan() {
+		node := scanner.Text()
+		nodes = append(nodes, node)
 	}
 
-	f := func() {
-		index := nodes1.GetCurrentItem()
-		text, _ := nodes1.GetItemText(index)
-		form1.Clear(true)
-		// selected set to nil
-		form1.AddButton(fmt.Sprintf("%v", shipsdb[text]), nil)
-		form1.AddButton("back", func() {
-			form1.Clear(true)
-			app.SetFocus(nodes1)
-		})
-	}
-
-	return f
+	return nodes, nil
 }
