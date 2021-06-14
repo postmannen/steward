@@ -572,17 +572,23 @@ For CliCommand message to a node named "ship1" of type Command and it wants an A
 
 ## TODO
 
-- nACK messages like hello messages should not be stored in db for retry if failed.
+### nACK messages like hello messages should not be stored in db for retry if failed
 
-- Error message should also contain subject
+### Error message should also contain subject
   
-  ```log
-  2021-06-09 13:04:33.259759 +0000 UTC, info: toNode: ship1, fromNode: ww.central, method: REQOpCommand: max retries reached, check if node is up and running and if it got a subscriber for the given REQ type
-  ```
+```log
+2021-06-09 13:04:33.259759 +0000 UTC, info: toNode: ship1, fromNode: ww.central, method:REQOpCommand: max retries reached, check if node is up and running and if it got a subscriber forthe given REQ type
+```
+
+### Remove the message from log statements, and just point to the ID of the message instead
 
 ### Workflow request type
 
 Implement a workflow request type that will allow steps to be executed, and rollback if something failed during execution.
+
+### Add Op option the remove messages from the queue on nodes
+
+If messages have been sent, and not picked up by a node it might make sense to have some method to clear messages on a node. This could either be done by message ID, and/or time duration.
 
 ## Disclaimer
 
