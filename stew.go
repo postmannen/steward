@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"log"
 	"os"
+	"reflect"
+	"strconv"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -43,83 +45,131 @@ func (s *Stew) Start() error {
 func console() error {
 	app := tview.NewApplication()
 
-	nodeListForm := tview.NewList().ShowSecondaryText(false)
-	nodeListForm.SetBorder(true).SetTitle("nodes").SetTitleAlign(tview.AlignLeft)
-	inputCapture := func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyEscape {
-			app.Stop()
-		}
-
-		return event
-	}
-	nodeListForm.SetInputCapture(inputCapture)
-
-	reqListForm := tview.NewList().ShowSecondaryText(false)
-	reqListForm.SetBorder(true).SetTitle("methods").SetTitleAlign(tview.AlignLeft)
 	reqFillForm := tview.NewForm()
 	reqFillForm.SetBorder(true).SetTitle("Request values").SetTitleAlign(tview.AlignLeft)
 
-	nodeListForm.SetSelectedFunc(func(i int, pri string, sec string, ru rune) {
-		app.SetFocus(reqListForm)
-	})
-
 	// Create a flex layout.
 	flexContainer := tview.NewFlex().
-		AddItem(nodeListForm, 0, 1, true).
-		AddItem(reqListForm, 0, 1, false).
 		AddItem(reqFillForm, 0, 2, false)
 
-	// Get nodes from file.
-	nodes, err := getNodeNames("nodeslist.cfg")
-	if err != nil {
-		return err
-	}
+	drawFormREQ(reqFillForm, app)
 
-	// Selected func for node list.
-	selectedFuncNodes := func() {
-		var m Method
-		ma := m.GetMethodsAvailable()
-
-		// Select func to create the reqFillForm when req is selected in the reqListForm.
-		selectedFuncReqList := func() {
-			currentItem := reqListForm.GetCurrentItem()
-			currentItemText, _ := reqListForm.GetItemText(currentItem)
-			reqFillForm.AddButton(fmt.Sprintf("%v", currentItemText), nil)
-			reqFillForm.AddButton("back", func() {
-				reqFillForm.Clear(true)
-				app.SetFocus(reqListForm)
-			})
-
-			inputCapture := func(event *tcell.EventKey) *tcell.EventKey {
-				if event.Key() == tcell.KeyEscape {
-					app.SetFocus(nodeListForm)
-					reqFillForm.Clear(true)
-					reqListForm.Clear()
-				}
-
-				return event
-			}
-
-			reqFillForm.SetInputCapture(inputCapture)
-			app.SetFocus(reqFillForm)
-		}
-
-		// Add req items to the req list
-		for k := range ma.methodhandlers {
-			reqListForm.AddItem(string(k), "", rune(0), selectedFuncReqList)
-		}
-	}
-
-	// Add nodes to the node list form.
-	for _, v := range nodes {
-		nodeListForm.AddItem(v, "", rune(0), selectedFuncNodes)
-	}
-
-	if err := app.SetRoot(flexContainer, true).Run(); err != nil {
+	if err := app.SetRoot(flexContainer, true).SetFocus(reqFillForm).Run(); err != nil {
 		panic(err)
 	}
 
 	return nil
+}
+
+func drawFormREQ(reqFillForm *tview.Form, app *tview.Application) error {
+	m := Message{}
+
+	mRefVal := reflect.ValueOf(m)
+
+	for i := 0; i < mRefVal.NumField(); i++ {
+		var err error
+		values := []string{"1", "2"}
+
+		switch mRefVal.Type().Field(i).Name {
+		case "ToNode":
+			// Get nodes from file.
+			values, err = getNodeNames("nodeslist.cfg")
+			if err != nil {
+				return err
+			}
+			reqFillForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+		case "ID":
+		case "Data":
+			value := `"bash","-c","..."`
+			reqFillForm.AddInputField("Data", value, 30, nil, nil)
+		case "Method":
+			var m Method
+			ma := m.GetMethodsAvailable()
+			values := []string{}
+			for k := range ma.methodhandlers {
+				values = append(values, string(k))
+			}
+			reqFillForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+		case "ReplyMethod":
+			var m Method
+			ma := m.GetMethodsAvailable()
+			values := []string{}
+			for k := range ma.methodhandlers {
+				values = append(values, string(k))
+			}
+			reqFillForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+		case "FromNode":
+		case "ACKTimeout":
+
+			value := 30
+			reqFillForm.AddInputField("ACKTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+		case "Retries":
+			value := 1
+			reqFillForm.AddInputField("Retries", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+		case "ReplyACKTimeout":
+			value := 30
+			reqFillForm.AddInputField("ACKTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+		case "ReplyRetries":
+			value := 1
+			reqFillForm.AddInputField("ReplyRetries", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+		case "MethodTimeout":
+			value := 120
+			reqFillForm.AddInputField("MethodTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+		case "Directory":
+			value := "/some-dir/"
+			reqFillForm.AddInputField("Directory", value, 30, nil, nil)
+		case "FileExtension":
+			value := ".log"
+			reqFillForm.AddInputField("FileExtension", value, 30, nil, nil)
+		case "Operation":
+		case "PreviousMessage":
+		case "done":
+
+		default:
+			reqFillForm.AddDropDown("no definition "+mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+		}
+
+	}
+
+	reqFillForm.
+		AddButton("generate file", func() {
+			fh, err := os.Create("test.log")
+			if err != nil {
+				log.Fatalf("error: failed to create test.log file: %v\n", err)
+			}
+			defer fh.Close()
+
+			for i := 0; i < reqFillForm.GetFormItemCount(); i++ {
+				fi := reqFillForm.GetFormItem(i)
+
+				switch v := fi.(type) {
+				case *tview.InputField:
+					text := v.GetText()
+					fmt.Fprintf(fh, "%#v\n\n", text)
+				case *tview.DropDown:
+					label := v.GetLabel()
+					curOpt, text := v.GetCurrentOption()
+					fmt.Fprintf(fh, "%v,%v, %v\n\n", label, curOpt, text)
+				}
+
+				// fmt.Fprintf(fh, "%+v\n\n", reqFillForm.GetFormItem(i))
+			}
+		}).
+		AddButton("exit", func() {
+			app.Stop()
+		})
+
+	app.SetFocus(reqFillForm)
+
+	return nil
+}
+
+func validateInteger(text string, ch rune) bool {
+	if text == "-" {
+		return true
+	}
+	_, err := strconv.Atoi(text)
+	return err == nil
 }
 
 // getNodes will load all the node names from a file, and return a slice of
