@@ -2,12 +2,14 @@ package steward
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/rivo/tview"
 )
@@ -139,21 +141,81 @@ func drawFormREQ(reqFillForm *tview.Form, app *tview.Application) error {
 			}
 			defer fh.Close()
 
+			type msg struct {
+				// The node to send the message to
+				ToNode node `json:"toNode" yaml:"toNode"`
+				// The actual data in the message
+				Data []string `json:"data" yaml:"data"`
+				// Method, what is this message doing, etc. CLI, syslog, etc.
+				Method Method `json:"method" yaml:"method"`
+				// ReplyMethod, is the method to use for the reply message.
+				// By default the reply method will be set to log to file, but
+				// you can override it setting your own here.
+				ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
+				// From what node the message originated
+				FromNode node
+				// ACKTimeout for waiting for an ack message
+				ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
+				// Resend retries
+				Retries int `json:"retries" yaml:"retries"`
+				// The ACK timeout of the new message created via a request event.
+				ReplyACKTimeout int `json:"replyACKTimeout" yaml:"replyACKTimeout"`
+				// The retries of the new message created via a request event.
+				ReplyRetries int `json:"replyRetries" yaml:"replyRetries"`
+				// Timeout for long a process should be allowed to operate
+				MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
+				// Directory is a string that can be used to create the
+				//directory structure when saving the result of some method.
+				// For example "syslog","metrics", or "metrics/mysensor"
+				// The type is typically used in the handler of a method.
+				Directory string `json:"directory" yaml:"directory"`
+				// FileExtension is used to be able to set a wanted extension
+				// on a file being saved as the result of data being handled
+				// by a method handler.
+				FileExtension string `json:"fileExtension" yaml:"fileExtension"`
+			}
+			m := msg{}
+			// Loop trough all the form fields
 			for i := 0; i < reqFillForm.GetFormItemCount(); i++ {
 				fi := reqFillForm.GetFormItem(i)
+				label, value := getLabelAndValue(fi)
 
-				switch v := fi.(type) {
-				case *tview.InputField:
-					text := v.GetText()
-					fmt.Fprintf(fh, "%#v\n\n", text)
-				case *tview.DropDown:
-					label := v.GetLabel()
-					curOpt, text := v.GetCurrentOption()
-					fmt.Fprintf(fh, "%v,%v, %v\n\n", label, curOpt, text)
+				switch label {
+				case "ToNode":
+					m.ToNode = node(value)
+				case "Data":
+					sp := strings.Split(value, ",")
+					m.Data = sp
+				case "Method":
+					m.Method = Method(value)
+				case "ReplyMethod":
+					m.ReplyMethod = Method(value)
+				case "ACKTimeout":
+					v, _ := strconv.Atoi(value)
+					m.ACKTimeout = v
+				case "Retries":
+					v, _ := strconv.Atoi(value)
+					m.Retries = v
+				case "ReplyACKTimeout":
+					v, _ := strconv.Atoi(value)
+					m.ReplyACKTimeout = v
+				case "ReplyRetries":
+					v, _ := strconv.Atoi(value)
+					m.ReplyRetries = v
+				case "MethodTimeout":
+					v, _ := strconv.Atoi(value)
+					m.MethodTimeout = v
+				case "Directory":
+					m.Directory = value
+				case "FileExtension":
+					m.FileExtension = value
 				}
-
-				// fmt.Fprintf(fh, "%+v\n\n", reqFillForm.GetFormItem(i))
 			}
+			msgs := []msg{}
+			msgs = append(msgs, m)
+
+			jEnc := json.NewEncoder(fh)
+			jEnc.Encode(msgs)
 		}).
 		AddButton("exit", func() {
 			app.Stop()
@@ -162,6 +224,22 @@ func drawFormREQ(reqFillForm *tview.Form, app *tview.Application) error {
 	app.SetFocus(reqFillForm)
 
 	return nil
+}
+
+// Will return the Label And the text Value of a form field.
+func getLabelAndValue(fi tview.FormItem) (string, string) {
+	var label string
+	var value string
+	switch v := fi.(type) {
+	case *tview.InputField:
+		value = v.GetText()
+		label = v.GetLabel()
+	case *tview.DropDown:
+		label = v.GetLabel()
+		_, value = v.GetCurrentOption()
+	}
+
+	return label, value
 }
 
 func validateInteger(text string, ch rune) bool {
