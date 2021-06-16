@@ -63,6 +63,40 @@ func console() error {
 	return nil
 }
 
+type msg struct {
+	// The node to send the message to
+	ToNode node `json:"toNode" yaml:"toNode"`
+	// The actual data in the message
+	Data []string `json:"data" yaml:"data"`
+	// Method, what is this message doing, etc. CLI, syslog, etc.
+	Method Method `json:"method" yaml:"method"`
+	// ReplyMethod, is the method to use for the reply message.
+	// By default the reply method will be set to log to file, but
+	// you can override it setting your own here.
+	ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
+	// From what node the message originated
+	FromNode node
+	// ACKTimeout for waiting for an ack message
+	ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
+	// Resend retries
+	Retries int `json:"retries" yaml:"retries"`
+	// The ACK timeout of the new message created via a request event.
+	ReplyACKTimeout int `json:"replyACKTimeout" yaml:"replyACKTimeout"`
+	// The retries of the new message created via a request event.
+	ReplyRetries int `json:"replyRetries" yaml:"replyRetries"`
+	// Timeout for long a process should be allowed to operate
+	MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
+	// Directory is a string that can be used to create the
+	//directory structure when saving the result of some method.
+	// For example "syslog","metrics", or "metrics/mysensor"
+	// The type is typically used in the handler of a method.
+	Directory string `json:"directory" yaml:"directory"`
+	// FileExtension is used to be able to set a wanted extension
+	// on a file being saved as the result of data being handled
+	// by a method handler.
+	FileExtension string `json:"fileExtension" yaml:"fileExtension"`
+}
+
 func drawFormREQ(reqFillForm *tview.Form, app *tview.Application) error {
 	m := Message{}
 
@@ -141,39 +175,6 @@ func drawFormREQ(reqFillForm *tview.Form, app *tview.Application) error {
 			}
 			defer fh.Close()
 
-			type msg struct {
-				// The node to send the message to
-				ToNode node `json:"toNode" yaml:"toNode"`
-				// The actual data in the message
-				Data []string `json:"data" yaml:"data"`
-				// Method, what is this message doing, etc. CLI, syslog, etc.
-				Method Method `json:"method" yaml:"method"`
-				// ReplyMethod, is the method to use for the reply message.
-				// By default the reply method will be set to log to file, but
-				// you can override it setting your own here.
-				ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
-				// From what node the message originated
-				FromNode node
-				// ACKTimeout for waiting for an ack message
-				ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
-				// Resend retries
-				Retries int `json:"retries" yaml:"retries"`
-				// The ACK timeout of the new message created via a request event.
-				ReplyACKTimeout int `json:"replyACKTimeout" yaml:"replyACKTimeout"`
-				// The retries of the new message created via a request event.
-				ReplyRetries int `json:"replyRetries" yaml:"replyRetries"`
-				// Timeout for long a process should be allowed to operate
-				MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
-				// Directory is a string that can be used to create the
-				//directory structure when saving the result of some method.
-				// For example "syslog","metrics", or "metrics/mysensor"
-				// The type is typically used in the handler of a method.
-				Directory string `json:"directory" yaml:"directory"`
-				// FileExtension is used to be able to set a wanted extension
-				// on a file being saved as the result of data being handled
-				// by a method handler.
-				FileExtension string `json:"fileExtension" yaml:"fileExtension"`
-			}
 			m := msg{}
 			// Loop trough all the form fields
 			for i := 0; i < reqFillForm.GetFormItemCount(); i++ {
@@ -184,8 +185,24 @@ func drawFormREQ(reqFillForm *tview.Form, app *tview.Application) error {
 				case "ToNode":
 					m.ToNode = node(value)
 				case "Data":
+					// Split the comma separated string into a
+					// and remove the start and end ampersand.
 					sp := strings.Split(value, ",")
-					m.Data = sp
+					var data []string
+
+					for _, v := range sp {
+						pre := strings.HasPrefix(v, "\"")
+						if pre {
+							v = v[1:]
+						}
+						if strings.HasSuffix(v, "\"") {
+							v = strings.TrimSuffix(v, "\"")
+						}
+
+						data = append(data, v)
+					}
+
+					m.Data = data
 				case "Method":
 					m.Method = Method(value)
 				case "ReplyMethod":
@@ -226,7 +243,7 @@ func drawFormREQ(reqFillForm *tview.Form, app *tview.Application) error {
 	return nil
 }
 
-// Will return the Label And the text Value of a form field.
+// Will return the Label And the text Value of an input or dropdown form field.
 func getLabelAndValue(fi tview.FormItem) (string, string) {
 	var label string
 	var value string
@@ -242,6 +259,7 @@ func getLabelAndValue(fi tview.FormItem) (string, string) {
 	return label, value
 }
 
+// Check if number is int.
 func validateInteger(text string, ch rune) bool {
 	if text == "-" {
 		return true
@@ -249,6 +267,12 @@ func validateInteger(text string, ch rune) bool {
 	_, err := strconv.Atoi(text)
 	return err == nil
 }
+
+//// Check if slice of strings is ok
+//func validateStringSlice(text string, ch rune) bool {
+//
+//
+//}
 
 // getNodes will load all the node names from a file, and return a slice of
 // string values, each representing a unique node.
