@@ -137,9 +137,9 @@ func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Ap
 			reqFillForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		case "ReplyMethod":
 			var m Method
-			ma := m.GetMethodsAvailable()
+			rm := m.getReplyMethods()
 			values := []string{}
-			for k := range ma.methodhandlers {
+			for _, k := range rm {
 				values = append(values, string(k))
 			}
 			reqFillForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
@@ -279,12 +279,6 @@ func validateInteger(text string, ch rune) bool {
 	_, err := strconv.Atoi(text)
 	return err == nil
 }
-
-//// Check if slice of strings is ok
-//func validateStringSlice(text string, ch rune) bool {
-//
-//
-//}
 
 // getNodes will load all the node names from a file, and return a slice of
 // string values, each representing a unique node.

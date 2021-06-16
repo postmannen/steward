@@ -185,6 +185,12 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 	return ma
 }
 
+// Reply methods
+func (m Method) getReplyMethods() []Method {
+	rm := []Method{REQToConsole, REQToFile, REQToFileAppend}
+	return rm
+}
+
 // getHandler will check the methodsAvailable map, and return the
 // method handler for the method given
 // as input argument.
