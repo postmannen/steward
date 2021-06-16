@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rivo/tview"
 )
@@ -50,13 +51,21 @@ func console() error {
 	reqFillForm := tview.NewForm()
 	reqFillForm.SetBorder(true).SetTitle("Request values").SetTitleAlign(tview.AlignLeft)
 
+	logView := tview.NewTextView()
+	logView.SetBorder(true).SetTitle("Log/Status").SetTitleAlign(tview.AlignLeft)
+	logView.SetChangedFunc(func() {
+		app.Draw()
+	})
+
 	// Create a flex layout.
 	flexContainer := tview.NewFlex().
-		AddItem(reqFillForm, 0, 2, false)
+		SetDirection(tview.FlexRow).
+		AddItem(reqFillForm, 0, 10, false).
+		AddItem(logView, 0, 2, false)
 
-	drawFormREQ(reqFillForm, app)
+	drawFormREQ(reqFillForm, logView, app)
 
-	if err := app.SetRoot(flexContainer, true).SetFocus(reqFillForm).Run(); err != nil {
+	if err := app.SetRoot(flexContainer, true).SetFocus(reqFillForm).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
 
@@ -97,7 +106,7 @@ type msg struct {
 	FileExtension string `json:"fileExtension" yaml:"fileExtension"`
 }
 
-func drawFormREQ(reqFillForm *tview.Form, app *tview.Application) error {
+func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Application) error {
 	m := Message{}
 
 	mRefVal := reflect.ValueOf(m)
@@ -136,7 +145,6 @@ func drawFormREQ(reqFillForm *tview.Form, app *tview.Application) error {
 			reqFillForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		case "FromNode":
 		case "ACKTimeout":
-
 			value := 30
 			reqFillForm.AddInputField("ACKTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "Retries":
@@ -188,16 +196,20 @@ func drawFormREQ(reqFillForm *tview.Form, app *tview.Application) error {
 					// Split the comma separated string into a
 					// and remove the start and end ampersand.
 					sp := strings.Split(value, ",")
+
 					var data []string
 
 					for _, v := range sp {
+						// Check if format is correct, return if not.
 						pre := strings.HasPrefix(v, "\"")
-						if pre {
-							v = v[1:]
+						suf := strings.HasSuffix(v, "\"")
+						if !pre || !suf {
+							fmt.Fprintf(logForm, "%v : error: malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+							return
 						}
-						if strings.HasSuffix(v, "\"") {
-							v = strings.TrimSuffix(v, "\"")
-						}
+						// Remove leading and ending ampersand.
+						v = v[1:]
+						v = strings.TrimSuffix(v, "\"")
 
 						data = append(data, v)
 					}
