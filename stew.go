@@ -99,8 +99,6 @@ type msg struct {
 	// you can override it setting your own here.
 	ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
 	// From what node the message originated
-	FromNode node
-	// ACKTimeout for waiting for an ack message
 	ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
 	// Resend retries
 	Retries int `json:"retries" yaml:"retries"`
@@ -119,6 +117,8 @@ type msg struct {
 	// on a file being saved as the result of data being handled
 	// by a method handler.
 	FileExtension string `json:"fileExtension" yaml:"fileExtension"`
+	// operation are used to give an opCmd and opArg's.
+	Operation *Operation `json:"operation,omitempty"`
 }
 
 // Will check and compare all the fields of the main message struct
@@ -159,7 +159,7 @@ func checkFieldsMsg() error {
 			switch stewardRefVal.Type().Field(i).Name {
 			case "ID":
 				// Not used in message template.
-			case "Operation":
+			case "FromNode":
 				// Not used in message template.
 			case "PreviousMessage":
 				// Not used in message template.
@@ -238,6 +238,9 @@ func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Ap
 		case "FileExtension":
 			value := ".log"
 			reqFillForm.AddInputField("FileExtension", value, 30, nil, nil)
+		case "Operation":
+			values := []string{"todo"}
+			reqFillForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 
 		default:
 			// Add a no definition fields to the form if a a field within the
@@ -312,6 +315,8 @@ func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Ap
 					m.Directory = value
 				case "FileExtension":
 					m.FileExtension = value
+				case "Operation":
+					m.Operation = nil
 				default:
 					fmt.Fprintf(logForm, "%v : error: did not find case defenition for how to handle the \"%v\" within the switch statement\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), label)
 				}

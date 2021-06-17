@@ -48,7 +48,7 @@ type Message struct {
 	// operation are used to give an opCmd and opArg's.
 	Operation Operation `json:"operation"`
 	// PreviousMessage are used for example if a reply message is
-	// generated and we also need a copy of  thedetails of the the
+	// generated and we also need a copy of  the details of the the
 	// initial request message.
 	PreviousMessage *Message
 
