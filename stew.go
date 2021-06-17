@@ -46,6 +46,16 @@ func (s *Stew) Start() error {
 // ---------------------------------------------------
 
 func console() error {
+	// Check that the message struct used within stew are up to date, and
+	// consistent with the fields used in the main Steward message file.
+	// If it throws an error here we need to update the msg struct type,
+	// or add a case for the field to except.
+	err := checkFieldsMsg()
+	if err != nil {
+		log.Printf("%v\n", err)
+		os.Exit(1)
+	}
+
 	app := tview.NewApplication()
 
 	reqFillForm := tview.NewForm()
@@ -72,6 +82,11 @@ func console() error {
 	return nil
 }
 
+// Creating a copy of the real Message struct here to use within the
+// field specification, but without the control kind of fields from
+// the original to avoid changing them to pointer values in the main
+// struct which would be needed when json marshaling to omit those
+// empty fields.
 type msg struct {
 	// The node to send the message to
 	ToNode node `json:"toNode" yaml:"toNode"`
@@ -106,11 +121,70 @@ type msg struct {
 	FileExtension string `json:"fileExtension" yaml:"fileExtension"`
 }
 
+// Will check and compare all the fields of the main message struct
+// used in Steward, and the message struct used in Stew that they are
+// equal.
+// If they are not equal an error will be returned to the user with
+// the name of the field that was missing in the Stew message struct.
+//
+// Some of the fields in the Steward Message struct are used by the
+// system for control, and not needed when creating an initial message
+// template, and we can add case statements for those fields below
+// that we do not wan't to check.
+func checkFieldsMsg() error {
+	stewardM := Message{}
+	stewM := msg{}
+
+	stewardRefVal := reflect.ValueOf(stewardM)
+	stewRefVal := reflect.ValueOf(stewM)
+
+	// Loop trough all the fields of the Message struct, and create
+	// a an input field or dropdown selector for each field.
+	// If a field of the struct is not defined below, it will be
+	// created a "no defenition" element, so it we can easily spot
+	// Message fields who miss an item in the form.
+	for i := 0; i < stewardRefVal.NumField(); i++ {
+		found := false
+
+		for ii := 0; ii < stewRefVal.NumField(); ii++ {
+			if stewardRefVal.Type().Field(i).Name == stewRefVal.Type().Field(ii).Name {
+				found = true
+				break
+			}
+		}
+
+		// Case statements for the fields we don't care about for
+		// the message template.
+		if !found {
+			switch stewardRefVal.Type().Field(i).Name {
+			case "ID":
+				// Not used in message template.
+			case "Operation":
+				// Not used in message template.
+			case "PreviousMessage":
+				// Not used in message template.
+			case "done":
+				// Not used in message template.
+			default:
+				return fmt.Errorf("error: %v within the steward Message struct were not found in the stew msg struct", stewardRefVal.Type().Field(i).Name)
+
+			}
+		}
+	}
+
+	return nil
+}
+
 func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Application) error {
-	m := Message{}
+	m := msg{}
 
 	mRefVal := reflect.ValueOf(m)
 
+	// Loop trough all the fields of the Message struct, and create
+	// a an input field or dropdown selector for each field.
+	// If a field of the struct is not defined below, it will be
+	// created a "no defenition" element, so it we can easily spot
+	// Message fields who miss an item in the form.
 	for i := 0; i < mRefVal.NumField(); i++ {
 		var err error
 		values := []string{"1", "2"}
@@ -143,7 +217,6 @@ func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Ap
 				values = append(values, string(k))
 			}
 			reqFillForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
-		case "FromNode":
 		case "ACKTimeout":
 			value := 30
 			reqFillForm.AddInputField("ACKTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
@@ -165,19 +238,20 @@ func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Ap
 		case "FileExtension":
 			value := ".log"
 			reqFillForm.AddInputField("FileExtension", value, 30, nil, nil)
-		case "Operation":
-		case "PreviousMessage":
-		case "done":
 
 		default:
-			reqFillForm.AddDropDown("no definition "+mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+			// Add a no definition fields to the form if a a field within the
+			// struct were missing an action above, so we can easily detect
+			// if there is missing a case action for one of the struct fields.
+			reqFillForm.AddDropDown("error: no case for: "+mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		}
 
 	}
 
 	reqFillForm.
+		// Add a generate button, which when pressed will loop trouug
 		AddButton("generate file", func() {
-			fh, err := os.Create("test.log")
+			fh, err := os.Create("message.json")
 			if err != nil {
 				log.Fatalf("error: failed to create test.log file: %v\n", err)
 			}
@@ -238,6 +312,8 @@ func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Ap
 					m.Directory = value
 				case "FileExtension":
 					m.FileExtension = value
+				default:
+					fmt.Fprintf(logForm, "%v : error: did not find case defenition for how to handle the \"%v\" within the switch statement\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), label)
 				}
 			}
 			msgs := []msg{}
