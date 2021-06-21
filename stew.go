@@ -178,13 +178,44 @@ func checkFieldsMsg() error {
 func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Application) error {
 	m := msg{}
 
-	mRefVal := reflect.ValueOf(m)
+	// opCmdItems := map[string]tview.FormItem{}
+	// OpCmd
+	//	 Method
+	//   AllowedNodes
+
+	type procItem struct {
+		label    string
+		formItem tview.FormItem
+	}
+
+	startProcItems := func() []procItem {
+		procItems := []procItem{}
+
+		var m Method
+		ma := m.GetMethodsAvailable()
+		values := []string{}
+		for k := range ma.methodhandlers {
+			values = append(values, string(k))
+		}
+		// reqFillForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+		dn := tview.NewDropDown()
+		dn.SetLabel("Method").SetOptions(values, nil)
+		procItems = append(procItems, procItem{label: "Method", formItem: dn})
+
+		inp := tview.NewInputField()
+		inp.SetLabel("AllowedNodes")
+		procItems = append(procItems, procItem{label: "AllowedNodes", formItem: inp})
+
+		return procItems
+	}()
 
 	// Loop trough all the fields of the Message struct, and create
 	// a an input field or dropdown selector for each field.
 	// If a field of the struct is not defined below, it will be
 	// created a "no defenition" element, so it we can easily spot
 	// Message fields who miss an item in the form.
+	mRefVal := reflect.ValueOf(m)
+
 	for i := 0; i < mRefVal.NumField(); i++ {
 		var err error
 		values := []string{"1", "2"}
@@ -239,8 +270,30 @@ func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Ap
 			value := ".log"
 			reqFillForm.AddInputField("FileExtension", value, 30, nil, nil)
 		case "Operation":
-			values := []string{"todo"}
-			reqFillForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+			values := []string{"ps", "startProc", "stopProc"}
+			selectedFunc := func(option string, optionIndex int) {
+				switch option {
+				case "ps":
+					// No elements to be drawn for ps
+				case "startProc":
+					fi := reqFillForm.GetFormItemByLabel("startProc")
+					if fi != nil {
+						in := reqFillForm.GetFormItemIndex("startProc")
+						reqFillForm.RemoveFormItem(in)
+					}
+
+					for _, v := range startProcItems {
+						reqFillForm.AddFormItem(v.formItem)
+					}
+
+				case "stopProc":
+
+				default:
+					fmt.Fprintf(logForm, "%v: error: missing menu item for %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), option)
+				}
+			}
+
+			reqFillForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, selectedFunc).SetItemPadding(1)
 
 		default:
 			// Add a no definition fields to the form if a a field within the
