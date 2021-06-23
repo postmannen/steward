@@ -35,7 +35,8 @@ func NewStew() (*Stew, error) {
 }
 
 func (s *Stew) Start() error {
-	err := console()
+	c := newConsole()
+	err := c.start()
 	if err != nil {
 		return fmt.Errorf("error: console failed: %v", err)
 	}
@@ -44,81 +45,53 @@ func (s *Stew) Start() error {
 }
 
 // ---------------------------------------------------
+type console struct {
+	flex    *tview.Flex
+	msgForm *tview.Form
+	logForm *tview.TextView
+	app     *tview.Application
+}
 
-func console() error {
+func newConsole() *console {
+	c := console{}
+	c.app = tview.NewApplication()
+
+	c.msgForm = tview.NewForm()
+	c.msgForm.SetBorder(true).SetTitle("Request values").SetTitleAlign(tview.AlignLeft)
+
+	c.logForm = tview.NewTextView()
+	c.logForm.SetBorder(true).SetTitle("Log/Status").SetTitleAlign(tview.AlignLeft)
+	c.logForm.SetChangedFunc(func() {
+		c.app.Draw()
+	})
+
+	// Create a flex layout.
+	c.flex = tview.NewFlex().
+		SetDirection(tview.FlexRow).
+		AddItem(c.msgForm, 0, 10, false).
+		AddItem(c.logForm, 0, 2, false)
+	return &c
+}
+
+// Will start the console.
+func (c *console) start() error {
 	// Check that the message struct used within stew are up to date, and
 	// consistent with the fields used in the main Steward message file.
 	// If it throws an error here we need to update the msg struct type,
 	// or add a case for the field to except.
-	err := checkFieldsMsg()
+	err := compareMsgAndMessage()
 	if err != nil {
 		log.Printf("%v\n", err)
 		os.Exit(1)
 	}
 
-	app := tview.NewApplication()
+	c.drawMsgForm()
 
-	reqFillForm := tview.NewForm()
-	reqFillForm.SetBorder(true).SetTitle("Request values").SetTitleAlign(tview.AlignLeft)
-
-	logView := tview.NewTextView()
-	logView.SetBorder(true).SetTitle("Log/Status").SetTitleAlign(tview.AlignLeft)
-	logView.SetChangedFunc(func() {
-		app.Draw()
-	})
-
-	// Create a flex layout.
-	flexContainer := tview.NewFlex().
-		SetDirection(tview.FlexRow).
-		AddItem(reqFillForm, 0, 10, false).
-		AddItem(logView, 0, 2, false)
-
-	drawFormREQ(reqFillForm, logView, app)
-
-	if err := app.SetRoot(flexContainer, true).SetFocus(reqFillForm).EnableMouse(true).Run(); err != nil {
+	if err := c.app.SetRoot(c.flex, true).SetFocus(c.msgForm).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
 
 	return nil
-}
-
-// Creating a copy of the real Message struct here to use within the
-// field specification, but without the control kind of fields from
-// the original to avoid changing them to pointer values in the main
-// struct which would be needed when json marshaling to omit those
-// empty fields.
-type msg struct {
-	// The node to send the message to
-	ToNode node `json:"toNode" yaml:"toNode"`
-	// The actual data in the message
-	Data []string `json:"data" yaml:"data"`
-	// Method, what is this message doing, etc. CLI, syslog, etc.
-	Method Method `json:"method" yaml:"method"`
-	// ReplyMethod, is the method to use for the reply message.
-	// By default the reply method will be set to log to file, but
-	// you can override it setting your own here.
-	ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
-	// From what node the message originated
-	ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
-	// Resend retries
-	Retries int `json:"retries" yaml:"retries"`
-	// The ACK timeout of the new message created via a request event.
-	ReplyACKTimeout int `json:"replyACKTimeout" yaml:"replyACKTimeout"`
-	// The retries of the new message created via a request event.
-	ReplyRetries int `json:"replyRetries" yaml:"replyRetries"`
-	// Timeout for long a process should be allowed to operate
-	MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
-	// Directory is a string that can be used to create the
-	//directory structure when saving the result of some method.
-	// For example "syslog","metrics", or "metrics/mysensor"
-	// The type is typically used in the handler of a method.
-	Directory string `json:"directory" yaml:"directory"`
-	// FileExtension is used to be able to set a wanted extension
-	// on a file being saved as the result of data being handled
-	// by a method handler.
-	FileExtension string `json:"fileExtension" yaml:"fileExtension"`
-	// operation are used to give an opCmd and opArg's.
-	Operation *Operation `json:"operation,omitempty"`
 }
 
 // Will check and compare all the fields of the main message struct
@@ -131,18 +104,14 @@ type msg struct {
 // system for control, and not needed when creating an initial message
 // template, and we can add case statements for those fields below
 // that we do not wan't to check.
-func checkFieldsMsg() error {
-	stewardM := Message{}
-	stewM := msg{}
+func compareMsgAndMessage() error {
+	stewardMessage := Message{}
+	stewMsg := msg{}
 
-	stewardRefVal := reflect.ValueOf(stewardM)
-	stewRefVal := reflect.ValueOf(stewM)
+	stewardRefVal := reflect.ValueOf(stewardMessage)
+	stewRefVal := reflect.ValueOf(stewMsg)
 
-	// Loop trough all the fields of the Message struct, and create
-	// a an input field or dropdown selector for each field.
-	// If a field of the struct is not defined below, it will be
-	// created a "no defenition" element, so it we can easily spot
-	// Message fields who miss an item in the form.
+	// Loop trough all the fields of the Message struct.
 	for i := 0; i < stewardRefVal.NumField(); i++ {
 		found := false
 
@@ -175,45 +144,20 @@ func checkFieldsMsg() error {
 	return nil
 }
 
-func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Application) error {
+func (c *console) drawMsgForm() error {
 	m := msg{}
-
-	// opCmdItems := map[string]tview.FormItem{}
-	// OpCmd
-	//	 Method
-	//   AllowedNodes
-
-	type procItem struct {
-		label    string
-		formItem tview.FormItem
-	}
-
-	startProcItems := func() []procItem {
-		procItems := []procItem{}
-
-		var m Method
-		ma := m.GetMethodsAvailable()
-		values := []string{}
-		for k := range ma.methodhandlers {
-			values = append(values, string(k))
-		}
-		// reqFillForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
-		dn := tview.NewDropDown()
-		dn.SetLabel("Method").SetOptions(values, nil)
-		procItems = append(procItems, procItem{label: "Method", formItem: dn})
-
-		inp := tview.NewInputField()
-		inp.SetLabel("AllowedNodes")
-		procItems = append(procItems, procItem{label: "AllowedNodes", formItem: inp})
-
-		return procItems
-	}()
 
 	// Loop trough all the fields of the Message struct, and create
 	// a an input field or dropdown selector for each field.
 	// If a field of the struct is not defined below, it will be
 	// created a "no defenition" element, so it we can easily spot
 	// Message fields who miss an item in the form.
+	//
+	// INFO: The reason that reflect are being used here is to have
+	// a simple way of detecting that we are creating form fields
+	// for all the fields in the struct. If we have forgot'en one
+	// it will create a "no case" field in the console, to easily
+	// detect that a struct field are missing a defenition below.
 	mRefVal := reflect.ValueOf(m)
 
 	for i := 0; i < mRefVal.NumField(); i++ {
@@ -227,11 +171,11 @@ func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Ap
 			if err != nil {
 				return err
 			}
-			reqFillForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+			c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		case "ID":
 		case "Data":
 			value := `"bash","-c","..."`
-			reqFillForm.AddInputField("Data", value, 30, nil, nil)
+			c.msgForm.AddInputField("Data", value, 30, nil, nil)
 		case "Method":
 			var m Method
 			ma := m.GetMethodsAvailable()
@@ -239,7 +183,7 @@ func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Ap
 			for k := range ma.methodhandlers {
 				values = append(values, string(k))
 			}
-			reqFillForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+			c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		case "ReplyMethod":
 			var m Method
 			rm := m.getReplyMethods()
@@ -247,66 +191,196 @@ func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Ap
 			for _, k := range rm {
 				values = append(values, string(k))
 			}
-			reqFillForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+			c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		case "ACKTimeout":
 			value := 30
-			reqFillForm.AddInputField("ACKTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			c.msgForm.AddInputField("ACKTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "Retries":
 			value := 1
-			reqFillForm.AddInputField("Retries", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			c.msgForm.AddInputField("Retries", fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "ReplyACKTimeout":
 			value := 30
-			reqFillForm.AddInputField("ACKTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			c.msgForm.AddInputField("ACKTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "ReplyRetries":
 			value := 1
-			reqFillForm.AddInputField("ReplyRetries", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			c.msgForm.AddInputField("ReplyRetries", fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "MethodTimeout":
 			value := 120
-			reqFillForm.AddInputField("MethodTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			c.msgForm.AddInputField("MethodTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "Directory":
 			value := "/some-dir/"
-			reqFillForm.AddInputField("Directory", value, 30, nil, nil)
+			c.msgForm.AddInputField("Directory", value, 30, nil, nil)
 		case "FileExtension":
 			value := ".log"
-			reqFillForm.AddInputField("FileExtension", value, 30, nil, nil)
+			c.msgForm.AddInputField("FileExtension", value, 30, nil, nil)
 		case "Operation":
+			// Prepare the selectedFunc that will be triggered for the operations
+			// when a field in the dropdown is selected.
+			// This selectedFunc will generate the sub fields of the selected
+			// operation, and will also remove any previously drawn operation
+			// sub fields from the current form.
 			values := []string{"ps", "startProc", "stopProc"}
 			selectedFunc := func(option string, optionIndex int) {
+
+				// Prepare the map structure that knows what tview items the
+				// operation should contain.
+				// Then we can pick from this map later, to know what fields
+				// to draw, and also which fields to delete if another operation
+				// is selected from the dropdown.
+
+				type formItem struct {
+					label    string
+					formItem tview.FormItem
+				}
+
+				operationFormItems := map[string][]formItem{}
+
+				operationFormItems["ps"] = nil
+
+				operationFormItems["startProc"] = func() []formItem {
+					formItems := []formItem{}
+
+					// Get values values to be used for the "Method" dropdown.
+					var m Method
+					ma := m.GetMethodsAvailable()
+					values := []string{}
+					for k := range ma.methodhandlers {
+						values = append(values, string(k))
+					}
+
+					// Create the individual form items, and append them to the
+					// formItems slice.
+					{
+						label := "startProc Method"
+						item := tview.NewDropDown()
+						item.SetLabel(label).SetOptions(values, nil)
+						formItems = append(formItems, formItem{label: label, formItem: item})
+					}
+					{
+						label := "startProc AllowedNodes"
+						item := tview.NewInputField()
+						item.SetLabel(label).SetFieldWidth(30)
+						formItems = append(formItems, formItem{label: label, formItem: item})
+					}
+
+					return formItems
+				}()
+
+				operationFormItems["stopProc"] = func() []formItem {
+					formItems := []formItem{}
+
+					// RecevingNode node        `json:"receivingNode"`
+					// Method       Method      `json:"method"`
+					// Kind         processKind `json:"kind"`
+					// ID           int         `json:"id"`
+
+					// Get nodes from file.
+					values, err = getNodeNames("nodeslist.cfg")
+					if err != nil {
+						fmt.Fprintf(c.logForm, "%v: error: unable to get nodes\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+						return nil
+					}
+
+					{
+						label := "stopProc ToNode"
+						item := tview.NewDropDown()
+						item.SetLabel(label).SetOptions(values, nil)
+						formItems = append(formItems, formItem{label: label, formItem: item})
+
+					}
+
+					// Get values values to be used for the "Method" dropdown.
+					var m Method
+					ma := m.GetMethodsAvailable()
+					values := []string{}
+					for k := range ma.methodhandlers {
+						values = append(values, string(k))
+					}
+
+					// Create the individual form items, and append them to the
+					// formItems slice.
+					{
+						label := "stopProc Method"
+						item := tview.NewDropDown()
+						item.SetLabel(label).SetOptions(values, nil)
+						formItems = append(formItems, formItem{label: label, formItem: item})
+
+					}
+
+					processKind := []string{"publisher", "subscriber"}
+
+					{
+						label := "stopProc processKind"
+						item := tview.NewDropDown()
+						item.SetLabel(label).SetOptions(processKind, nil)
+						formItems = append(formItems, formItem{label: label, formItem: item})
+
+					}
+
+					{
+						label := "stopProc ID"
+						item := tview.NewInputField()
+						item.SetLabel(label).SetFieldWidth(30)
+						formItems = append(formItems, formItem{label: label, formItem: item})
+					}
+
+					return formItems
+				}()
+
+				itemDraw := func(label string) {
+					// Delete previously drawn sub operation form items.
+					for _, vSlice := range operationFormItems {
+						for _, v := range vSlice {
+							i := c.msgForm.GetFormItemIndex(v.label)
+							if i > -1 {
+								c.msgForm.RemoveFormItem(i)
+							}
+						}
+					}
+
+					// Get and draw the form items to the form.
+					formItems := operationFormItems[label]
+					for _, v := range formItems {
+						c.msgForm.AddFormItem(v.formItem)
+					}
+				}
+
 				switch option {
 				case "ps":
-					// No elements to be drawn for ps
+					// No elements to be drawn for ps, so we're doing nothing here.
 				case "startProc":
-					fi := reqFillForm.GetFormItemByLabel("startProc")
-					if fi != nil {
-						in := reqFillForm.GetFormItemIndex("startProc")
-						reqFillForm.RemoveFormItem(in)
-					}
-
-					for _, v := range startProcItems {
-						reqFillForm.AddFormItem(v.formItem)
-					}
-
+					itemDraw("startProc")
 				case "stopProc":
-
+					itemDraw("stopProc")
 				default:
-					fmt.Fprintf(logForm, "%v: error: missing menu item for %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), option)
+					fmt.Fprintf(c.logForm, "%v: error: missing menu item for %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), option)
 				}
 			}
 
-			reqFillForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, selectedFunc).SetItemPadding(1)
+			c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, selectedFunc).SetItemPadding(1)
 
 		default:
 			// Add a no definition fields to the form if a a field within the
 			// struct were missing an action above, so we can easily detect
 			// if there is missing a case action for one of the struct fields.
-			reqFillForm.AddDropDown("error: no case for: "+mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+			c.msgForm.AddDropDown("error: no case for: "+mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		}
 
 	}
 
-	reqFillForm.
-		// Add a generate button, which when pressed will loop trouug
+	// Add Buttons below the message fields. Like Generate and Exit.
+	c.msgForm.
+		// Add a generate button, which when pressed will loop through all the
+		// message form items, and if found fill the value into a msg struct,
+		// and at last write it to a file.
+		//
+		// TODO: Should also add a write directly to socket here.
 		AddButton("generate file", func() {
+			// ---
+			opCmdStartProc := OpCmdStartProc{}
+			opCmdStopProc := OpCmdStopProc{}
+			// ---
+
 			fh, err := os.Create("message.json")
 			if err != nil {
 				log.Fatalf("error: failed to create test.log file: %v\n", err)
@@ -315,8 +389,8 @@ func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Ap
 
 			m := msg{}
 			// Loop trough all the form fields
-			for i := 0; i < reqFillForm.GetFormItemCount(); i++ {
-				fi := reqFillForm.GetFormItem(i)
+			for i := 0; i < c.msgForm.GetFormItemCount(); i++ {
+				fi := c.msgForm.GetFormItem(i)
 				label, value := getLabelAndValue(fi)
 
 				switch label {
@@ -334,7 +408,7 @@ func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Ap
 						pre := strings.HasPrefix(v, "\"")
 						suf := strings.HasSuffix(v, "\"")
 						if !pre || !suf {
-							fmt.Fprintf(logForm, "%v : error: malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+							fmt.Fprintf(c.logForm, "%v : error: malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
 							return
 						}
 						// Remove leading and ending ampersand.
@@ -369,9 +443,48 @@ func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Ap
 				case "FileExtension":
 					m.FileExtension = value
 				case "Operation":
-					m.Operation = nil
+					// We need to check what type of operation it is, and pick
+					// the correct struct type, and fill it with values
+					switch value {
+					case "ps":
+						//TODO
+					case "startProc":
+						m.Operation = &opCmdStartProc
+						fmt.Fprintf(c.logForm, "startProc: m: %#v\n", m)
+					case "stopProc":
+						m.Operation = &opCmdStopProc
+						fmt.Fprintf(c.logForm, "stopproc: m: %#v\n", m)
+					default:
+						m.Operation = nil
+					}
+				case "startProc Method":
+					opCmdStartProc.Method = Method(value)
+					fmt.Fprintf(c.logForm, "startProc Method: m: %#v\n", m)
+				case "startProc AllowedNodes":
+					// Split the comma separated string into a
+					// and remove the start and end ampersand.
+					sp := strings.Split(value, ",")
+
+					var allowedNodes []node
+
+					for _, v := range sp {
+						// Check if format is correct, return if not.
+						pre := strings.HasPrefix(v, "\"")
+						suf := strings.HasSuffix(v, "\"")
+						if !pre || !suf {
+							fmt.Fprintf(c.logForm, "%v : error: malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+							return
+						}
+						// Remove leading and ending ampersand.
+						v = v[1:]
+						v = strings.TrimSuffix(v, "\"")
+
+						allowedNodes = append(allowedNodes, node(v))
+					}
+
+					opCmdStartProc.AllowedNodes = allowedNodes
 				default:
-					fmt.Fprintf(logForm, "%v : error: did not find case defenition for how to handle the \"%v\" within the switch statement\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), label)
+					fmt.Fprintf(c.logForm, "%v : error: did not find case defenition for how to handle the \"%v\" within the switch statement\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), label)
 				}
 			}
 			msgs := []msg{}
@@ -380,11 +493,13 @@ func drawFormREQ(reqFillForm *tview.Form, logForm *tview.TextView, app *tview.Ap
 			jEnc := json.NewEncoder(fh)
 			jEnc.Encode(msgs)
 		}).
+
+		// Add exit button.
 		AddButton("exit", func() {
-			app.Stop()
+			c.app.Stop()
 		})
 
-	app.SetFocus(reqFillForm)
+	c.app.SetFocus(c.msgForm)
 
 	return nil
 }
@@ -433,4 +548,45 @@ func getNodeNames(filePath string) ([]string, error) {
 	}
 
 	return nodes, nil
+}
+
+// -----------------------
+
+// Creating a copy of the real Message struct here to use within the
+// field specification, but without the control kind of fields from
+// the original to avoid changing them to pointer values in the main
+// struct which would be needed when json marshaling to omit those
+// empty fields.
+type msg struct {
+	// The node to send the message to
+	ToNode node `json:"toNode" yaml:"toNode"`
+	// The actual data in the message
+	Data []string `json:"data" yaml:"data"`
+	// Method, what is this message doing, etc. CLI, syslog, etc.
+	Method Method `json:"method" yaml:"method"`
+	// ReplyMethod, is the method to use for the reply message.
+	// By default the reply method will be set to log to file, but
+	// you can override it setting your own here.
+	ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
+	// From what node the message originated
+	ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
+	// Resend retries
+	Retries int `json:"retries" yaml:"retries"`
+	// The ACK timeout of the new message created via a request event.
+	ReplyACKTimeout int `json:"replyACKTimeout" yaml:"replyACKTimeout"`
+	// The retries of the new message created via a request event.
+	ReplyRetries int `json:"replyRetries" yaml:"replyRetries"`
+	// Timeout for long a process should be allowed to operate
+	MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
+	// Directory is a string that can be used to create the
+	//directory structure when saving the result of some method.
+	// For example "syslog","metrics", or "metrics/mysensor"
+	// The type is typically used in the handler of a method.
+	Directory string `json:"directory" yaml:"directory"`
+	// FileExtension is used to be able to set a wanted extension
+	// on a file being saved as the result of data being handled
+	// by a method handler.
+	FileExtension string `json:"fileExtension" yaml:"fileExtension"`
+	// operation are used to give an opCmd and opArg's.
+	Operation interface{} `json:"operation,omitempty"`
 }
