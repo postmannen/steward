@@ -3,6 +3,7 @@ module github.com/RaaLabs/steward
 go 1.15
 
 require (
+	github.com/gdamore/tcell/v2 v2.3.3
 	github.com/hpcloud/tail v1.0.0
 	github.com/nats-io/jwt v1.2.2 // indirect
 	github.com/nats-io/nats-server/v2 v2.1.9 // indirect

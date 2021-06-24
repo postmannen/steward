@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -46,30 +47,44 @@ func (s *Stew) Start() error {
 
 // ---------------------------------------------------
 type console struct {
-	flex    *tview.Flex
-	msgForm *tview.Form
-	logForm *tview.TextView
-	app     *tview.Application
+	flex          *tview.Flex
+	msgInputForm  *tview.Form
+	msgOutputForm *tview.Form
+	logForm       *tview.TextView
+	app           *tview.Application
 }
 
 func newConsole() *console {
 	c := console{}
 	c.app = tview.NewApplication()
 
-	c.msgForm = tview.NewForm()
-	c.msgForm.SetBorder(true).SetTitle("Request values").SetTitleAlign(tview.AlignLeft)
+	c.msgInputForm = tview.NewForm()
+	c.msgInputForm.SetBorder(true).SetTitle("Request values").SetTitleAlign(tview.AlignLeft)
+
+	c.msgOutputForm = tview.NewForm()
+	c.msgOutputForm.SetBorder(true).SetTitle("Message output").SetTitleAlign(tview.AlignLeft)
 
 	c.logForm = tview.NewTextView()
 	c.logForm.SetBorder(true).SetTitle("Log/Status").SetTitleAlign(tview.AlignLeft)
 	c.logForm.SetChangedFunc(func() {
+		// Will cause the log window to be redrawn as soon as
+		// new output are detected.
 		c.app.Draw()
 	})
 
 	// Create a flex layout.
-	c.flex = tview.NewFlex().
-		SetDirection(tview.FlexRow).
-		AddItem(c.msgForm, 0, 10, false).
-		AddItem(c.logForm, 0, 2, false)
+	//
+	// First create the outer flex layout.
+	c.flex = tview.NewFlex().SetDirection(tview.FlexRow).
+		// Add the top windows with columns.
+		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
+			AddItem(c.msgInputForm, 0, 10, false).
+			AddItem(c.msgOutputForm, 0, 10, false),
+			0, 10, false).
+		// Add the bottom log window.
+		AddItem(tview.NewFlex().
+			AddItem(c.logForm, 0, 2, false),
+			0, 2, false)
 	return &c
 }
 
@@ -87,7 +102,7 @@ func (c *console) start() error {
 
 	c.drawMsgForm()
 
-	if err := c.app.SetRoot(c.flex, true).SetFocus(c.msgForm).EnableMouse(true).Run(); err != nil {
+	if err := c.app.SetRoot(c.flex, true).SetFocus(c.msgInputForm).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
 
@@ -171,11 +186,17 @@ func (c *console) drawMsgForm() error {
 			if err != nil {
 				return err
 			}
-			c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+
+			item := tview.NewDropDown()
+			item.SetLabelColor(tcell.ColorIndianRed)
+			item.SetLabel(mRefVal.Type().Field(i).Name).SetOptions(values, nil)
+			c.msgInputForm.AddFormItem(item)
+			//c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		case "ID":
+			// This value is automatically assigned by steward.
 		case "Data":
 			value := `"bash","-c","..."`
-			c.msgForm.AddInputField("Data", value, 30, nil, nil)
+			c.msgInputForm.AddInputField("Data", value, 30, nil, nil)
 		case "Method":
 			var m Method
 			ma := m.GetMethodsAvailable()
@@ -183,7 +204,7 @@ func (c *console) drawMsgForm() error {
 			for k := range ma.methodhandlers {
 				values = append(values, string(k))
 			}
-			c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+			c.msgInputForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		case "ReplyMethod":
 			var m Method
 			rm := m.getReplyMethods()
@@ -191,28 +212,28 @@ func (c *console) drawMsgForm() error {
 			for _, k := range rm {
 				values = append(values, string(k))
 			}
-			c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+			c.msgInputForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		case "ACKTimeout":
 			value := 30
-			c.msgForm.AddInputField("ACKTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			c.msgInputForm.AddInputField("ACKTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "Retries":
 			value := 1
-			c.msgForm.AddInputField("Retries", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			c.msgInputForm.AddInputField("Retries", fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "ReplyACKTimeout":
 			value := 30
-			c.msgForm.AddInputField("ACKTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			c.msgInputForm.AddInputField("ACKTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "ReplyRetries":
 			value := 1
-			c.msgForm.AddInputField("ReplyRetries", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			c.msgInputForm.AddInputField("ReplyRetries", fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "MethodTimeout":
 			value := 120
-			c.msgForm.AddInputField("MethodTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			c.msgInputForm.AddInputField("MethodTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "Directory":
 			value := "/some-dir/"
-			c.msgForm.AddInputField("Directory", value, 30, nil, nil)
+			c.msgInputForm.AddInputField("Directory", value, 30, nil, nil)
 		case "FileExtension":
 			value := ".log"
-			c.msgForm.AddInputField("FileExtension", value, 30, nil, nil)
+			c.msgInputForm.AddInputField("FileExtension", value, 30, nil, nil)
 		case "Operation":
 			// Prepare the selectedFunc that will be triggered for the operations
 			// when a field in the dropdown is selected.
@@ -253,13 +274,13 @@ func (c *console) drawMsgForm() error {
 					{
 						label := "startProc Method"
 						item := tview.NewDropDown()
-						item.SetLabel(label).SetOptions(values, nil)
+						item.SetLabel(label).SetOptions(values, nil).SetLabelWidth(25)
 						formItems = append(formItems, formItem{label: label, formItem: item})
 					}
 					{
 						label := "startProc AllowedNodes"
 						item := tview.NewInputField()
-						item.SetLabel(label).SetFieldWidth(30)
+						item.SetLabel(label).SetFieldWidth(30).SetLabelWidth(25)
 						formItems = append(formItems, formItem{label: label, formItem: item})
 					}
 
@@ -284,7 +305,7 @@ func (c *console) drawMsgForm() error {
 					{
 						label := "stopProc ToNode"
 						item := tview.NewDropDown()
-						item.SetLabel(label).SetOptions(values, nil)
+						item.SetLabel(label).SetOptions(values, nil).SetLabelWidth(25)
 						formItems = append(formItems, formItem{label: label, formItem: item})
 
 					}
@@ -302,7 +323,7 @@ func (c *console) drawMsgForm() error {
 					{
 						label := "stopProc Method"
 						item := tview.NewDropDown()
-						item.SetLabel(label).SetOptions(values, nil)
+						item.SetLabel(label).SetOptions(values, nil).SetLabelWidth(25)
 						formItems = append(formItems, formItem{label: label, formItem: item})
 
 					}
@@ -312,7 +333,7 @@ func (c *console) drawMsgForm() error {
 					{
 						label := "stopProc processKind"
 						item := tview.NewDropDown()
-						item.SetLabel(label).SetOptions(processKind, nil)
+						item.SetLabel(label).SetOptions(processKind, nil).SetLabelWidth(25)
 						formItems = append(formItems, formItem{label: label, formItem: item})
 
 					}
@@ -320,7 +341,7 @@ func (c *console) drawMsgForm() error {
 					{
 						label := "stopProc ID"
 						item := tview.NewInputField()
-						item.SetLabel(label).SetFieldWidth(30)
+						item.SetLabel(label).SetFieldWidth(30).SetLabelWidth(25)
 						formItems = append(formItems, formItem{label: label, formItem: item})
 					}
 
@@ -331,9 +352,9 @@ func (c *console) drawMsgForm() error {
 					// Delete previously drawn sub operation form items.
 					for _, vSlice := range operationFormItems {
 						for _, v := range vSlice {
-							i := c.msgForm.GetFormItemIndex(v.label)
+							i := c.msgInputForm.GetFormItemIndex(v.label)
 							if i > -1 {
-								c.msgForm.RemoveFormItem(i)
+								c.msgInputForm.RemoveFormItem(i)
 							}
 						}
 					}
@@ -341,13 +362,13 @@ func (c *console) drawMsgForm() error {
 					// Get and draw the form items to the form.
 					formItems := operationFormItems[label]
 					for _, v := range formItems {
-						c.msgForm.AddFormItem(v.formItem)
+						c.msgInputForm.AddFormItem(v.formItem)
 					}
 				}
 
 				switch option {
 				case "ps":
-					// No elements to be drawn for ps, so we're doing nothing here.
+					itemDraw("ps")
 				case "startProc":
 					itemDraw("startProc")
 				case "stopProc":
@@ -357,19 +378,19 @@ func (c *console) drawMsgForm() error {
 				}
 			}
 
-			c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, selectedFunc).SetItemPadding(1)
+			c.msgInputForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, selectedFunc).SetItemPadding(1)
 
 		default:
 			// Add a no definition fields to the form if a a field within the
 			// struct were missing an action above, so we can easily detect
 			// if there is missing a case action for one of the struct fields.
-			c.msgForm.AddDropDown("error: no case for: "+mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+			c.msgInputForm.AddDropDown("error: no case for: "+mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		}
 
 	}
 
 	// Add Buttons below the message fields. Like Generate and Exit.
-	c.msgForm.
+	c.msgInputForm.
 		// Add a generate button, which when pressed will loop through all the
 		// message form items, and if found fill the value into a msg struct,
 		// and at last write it to a file.
@@ -389,8 +410,8 @@ func (c *console) drawMsgForm() error {
 
 			m := msg{}
 			// Loop trough all the form fields
-			for i := 0; i < c.msgForm.GetFormItemCount(); i++ {
-				fi := c.msgForm.GetFormItem(i)
+			for i := 0; i < c.msgInputForm.GetFormItemCount(); i++ {
+				fi := c.msgInputForm.GetFormItem(i)
 				label, value := getLabelAndValue(fi)
 
 				switch label {
@@ -499,7 +520,7 @@ func (c *console) drawMsgForm() error {
 			c.app.Stop()
 		})
 
-	c.app.SetFocus(c.msgForm)
+	c.app.SetFocus(c.msgInputForm)
 
 	return nil
 }
