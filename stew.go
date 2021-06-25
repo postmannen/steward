@@ -49,7 +49,7 @@ func (s *Stew) Start() error {
 type console struct {
 	flex          *tview.Flex
 	msgInputForm  *tview.Form
-	msgOutputForm *tview.Form
+	msgOutputForm *tview.TextView
 	logForm       *tview.TextView
 	app           *tview.Application
 }
@@ -61,8 +61,13 @@ func newConsole() *console {
 	c.msgInputForm = tview.NewForm()
 	c.msgInputForm.SetBorder(true).SetTitle("Request values").SetTitleAlign(tview.AlignLeft)
 
-	c.msgOutputForm = tview.NewForm()
+	c.msgOutputForm = tview.NewTextView()
 	c.msgOutputForm.SetBorder(true).SetTitle("Message output").SetTitleAlign(tview.AlignLeft)
+	c.msgOutputForm.SetChangedFunc(func() {
+		// Will cause the log window to be redrawn as soon as
+		// new output are detected.
+		c.app.Draw()
+	})
 
 	c.logForm = tview.NewTextView()
 	c.logForm.SetBorder(true).SetTitle("Log/Status").SetTitleAlign(tview.AlignLeft)
@@ -396,17 +401,20 @@ func (c *console) drawMsgForm() error {
 		// and at last write it to a file.
 		//
 		// TODO: Should also add a write directly to socket here.
-		AddButton("generate file", func() {
+		AddButton("generate to console", func() {
 			// ---
 			opCmdStartProc := OpCmdStartProc{}
 			opCmdStopProc := OpCmdStopProc{}
 			// ---
 
-			fh, err := os.Create("message.json")
-			if err != nil {
-				log.Fatalf("error: failed to create test.log file: %v\n", err)
-			}
-			defer fh.Close()
+			// fh, err := os.Create("message.json")
+			// if err != nil {
+			// 	log.Fatalf("error: failed to create test.log file: %v\n", err)
+			// }
+			// defer fh.Close()
+
+			c.msgOutputForm.Clear()
+			fh := c.msgOutputForm
 
 			m := msg{}
 			// Loop trough all the form fields
@@ -416,6 +424,11 @@ func (c *console) drawMsgForm() error {
 
 				switch label {
 				case "ToNode":
+					if value == "" {
+						fmt.Fprintf(c.logForm, "%v : error: missing ToNode \n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+						return
+					}
+
 					m.ToNode = node(value)
 				case "Data":
 					// Split the comma separated string into a
@@ -429,7 +442,7 @@ func (c *console) drawMsgForm() error {
 						pre := strings.HasPrefix(v, "\"")
 						suf := strings.HasSuffix(v, "\"")
 						if !pre || !suf {
-							fmt.Fprintf(c.logForm, "%v : error: malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+							fmt.Fprintf(c.logForm, "%v : error: missing or malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
 							return
 						}
 						// Remove leading and ending ampersand.
@@ -471,16 +484,17 @@ func (c *console) drawMsgForm() error {
 						//TODO
 					case "startProc":
 						m.Operation = &opCmdStartProc
-						fmt.Fprintf(c.logForm, "startProc: m: %#v\n", m)
 					case "stopProc":
 						m.Operation = &opCmdStopProc
-						fmt.Fprintf(c.logForm, "stopproc: m: %#v\n", m)
 					default:
 						m.Operation = nil
 					}
 				case "startProc Method":
+					if value == "" {
+						fmt.Fprintf(c.logForm, "%v : error: missing startProc Method\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+						return
+					}
 					opCmdStartProc.Method = Method(value)
-					fmt.Fprintf(c.logForm, "startProc Method: m: %#v\n", m)
 				case "startProc AllowedNodes":
 					// Split the comma separated string into a
 					// and remove the start and end ampersand.
@@ -490,7 +504,7 @@ func (c *console) drawMsgForm() error {
 
 					for _, v := range sp {
 						// Check if format is correct, return if not.
-						pre := strings.HasPrefix(v, "\"")
+						pre := strings.HasPrefix(v, "\"") || !strings.HasPrefix(v, ",") || !strings.HasPrefix(v, "\",") || !strings.HasPrefix(v, ",\"")
 						suf := strings.HasSuffix(v, "\"")
 						if !pre || !suf {
 							fmt.Fprintf(c.logForm, "%v : error: malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
@@ -511,8 +525,15 @@ func (c *console) drawMsgForm() error {
 			msgs := []msg{}
 			msgs = append(msgs, m)
 
-			jEnc := json.NewEncoder(fh)
-			jEnc.Encode(msgs)
+			msgsIndented, err := json.MarshalIndent(msgs, "", "    ")
+			if err != nil {
+				fmt.Fprintf(c.logForm, "%v : error: jsonIndent failed: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
+			}
+
+			_, err = fh.Write(msgsIndented)
+			if err != nil {
+				fmt.Fprintf(c.logForm, "%v : error: write to fh failed: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
+			}
 		}).
 
 		// Add exit button.
