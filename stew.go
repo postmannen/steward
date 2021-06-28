@@ -178,13 +178,16 @@ func (c *console) drawMsgForm() error {
 	// for all the fields in the struct. If we have forgot'en one
 	// it will create a "no case" field in the console, to easily
 	// detect that a struct field are missing a defenition below.
+
 	mRefVal := reflect.ValueOf(m)
 
 	for i := 0; i < mRefVal.NumField(); i++ {
 		var err error
 		values := []string{"1", "2"}
 
-		switch mRefVal.Type().Field(i).Name {
+		fieldName := mRefVal.Type().Field(i).Name
+
+		switch fieldName {
 		case "ToNode":
 			// Get nodes from file.
 			values, err = getNodeNames("nodeslist.cfg")
@@ -194,14 +197,14 @@ func (c *console) drawMsgForm() error {
 
 			item := tview.NewDropDown()
 			item.SetLabelColor(tcell.ColorIndianRed)
-			item.SetLabel(mRefVal.Type().Field(i).Name).SetOptions(values, nil)
+			item.SetLabel(fieldName).SetOptions(values, nil)
 			c.msgInputForm.AddFormItem(item)
 			//c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		case "ID":
 			// This value is automatically assigned by steward.
 		case "Data":
 			value := `"bash","-c","..."`
-			c.msgInputForm.AddInputField("Data", value, 30, nil, nil)
+			c.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
 		case "Method":
 			var m Method
 			ma := m.GetMethodsAvailable()
@@ -209,7 +212,7 @@ func (c *console) drawMsgForm() error {
 			for k := range ma.methodhandlers {
 				values = append(values, string(k))
 			}
-			c.msgInputForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+			c.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 		case "ReplyMethod":
 			var m Method
 			rm := m.getReplyMethods()
@@ -217,28 +220,28 @@ func (c *console) drawMsgForm() error {
 			for _, k := range rm {
 				values = append(values, string(k))
 			}
-			c.msgInputForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+			c.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 		case "ACKTimeout":
 			value := 30
-			c.msgInputForm.AddInputField("ACKTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			c.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "Retries":
 			value := 1
-			c.msgInputForm.AddInputField("Retries", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			c.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "ReplyACKTimeout":
 			value := 30
-			c.msgInputForm.AddInputField("ACKTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			c.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "ReplyRetries":
 			value := 1
-			c.msgInputForm.AddInputField("ReplyRetries", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			c.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "MethodTimeout":
 			value := 120
-			c.msgInputForm.AddInputField("MethodTimeout", fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			c.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "Directory":
 			value := "/some-dir/"
-			c.msgInputForm.AddInputField("Directory", value, 30, nil, nil)
+			c.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
 		case "FileExtension":
 			value := ".log"
-			c.msgInputForm.AddInputField("FileExtension", value, 30, nil, nil)
+			c.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
 		case "Operation":
 			// Prepare the selectedFunc that will be triggered for the operations
 			// when a field in the dropdown is selected.
@@ -275,7 +278,7 @@ func (c *console) drawMsgForm() error {
 					}
 
 					// Create the individual form items, and append them to the
-					// formItems slice.
+					// formItems slice to be drawn later.
 					{
 						label := "startProc Method"
 						item := tview.NewDropDown()
@@ -383,13 +386,13 @@ func (c *console) drawMsgForm() error {
 				}
 			}
 
-			c.msgInputForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, selectedFunc).SetItemPadding(1)
+			c.msgInputForm.AddDropDown(fieldName, values, 0, selectedFunc).SetItemPadding(1)
 
 		default:
 			// Add a no definition fields to the form if a a field within the
 			// struct were missing an action above, so we can easily detect
 			// if there is missing a case action for one of the struct fields.
-			c.msgInputForm.AddDropDown("error: no case for: "+mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+			c.msgInputForm.AddDropDown("error: no case for: "+fieldName, values, 0, nil).SetItemPadding(1)
 		}
 
 	}
