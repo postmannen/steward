@@ -31,7 +31,7 @@ type process struct {
 	subject Subject
 	// Put a node here to be able know the node a process is at.
 	// NB: Might not be needed later on.
-	node node
+	node Node
 	// The processID for the current process
 	processID int
 	// errorCh is the same channel the errorKernel uses to
@@ -42,7 +42,7 @@ type process struct {
 	errorCh     chan errProcess
 	processKind processKind
 	// Who are we allowed to receive from ?
-	allowedReceivers map[node]struct{}
+	allowedReceivers map[Node]struct{}
 	// methodsAvailable
 	methodsAvailable MethodsAvailable
 	// Helper or service function that can do some kind of work
@@ -78,12 +78,12 @@ type process struct {
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func newProcess(natsConn *nats.Conn, processes *processes, toRingbufferCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, errCh chan errProcess, processKind processKind, allowedReceivers []node, procFunc func() error) process {
+func newProcess(natsConn *nats.Conn, processes *processes, toRingbufferCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, errCh chan errProcess, processKind processKind, allowedReceivers []Node, procFunc func() error) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
 	processes.lastProcessID++
 
 	// make the slice of allowedReceivers into a map value for easy lookup.
-	m := make(map[node]struct{})
+	m := make(map[Node]struct{})
 	for _, a := range allowedReceivers {
 		m[a] = struct{}{}
 	}
@@ -95,7 +95,7 @@ func newProcess(natsConn *nats.Conn, processes *processes, toRingbufferCh chan<-
 	proc := process{
 		messageID:        0,
 		subject:          subject,
-		node:             node(configuration.NodeName),
+		node:             Node(configuration.NodeName),
 		processID:        processes.lastProcessID,
 		errorCh:          errCh,
 		processKind:      processKind,
@@ -158,7 +158,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 				err := p.procFunc(p.ctx)
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: procFunc failed: %v", err)
-					sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
+					sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
 				}
 			}()
 		}
@@ -178,7 +178,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 				err := p.procFunc(p.ctx)
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: procFunc failed: %v", err)
-					sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
+					sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
 				}
 			}()
 		}
@@ -211,7 +211,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		dataPayload, err := gobEncodeMessage(message)
 		if err != nil {
 			er := fmt.Errorf("error: createDataPayload: %v", err)
-			sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
+			sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
 			continue
 		}
 
@@ -305,7 +305,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 	err := gobDec.Decode(&message)
 	if err != nil {
 		er := fmt.Errorf("error: gob decoding failed: %v", err)
-		sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
+		sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
 	}
 
 	switch {
@@ -313,7 +313,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		mh, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.CommandOrEvent)
-			sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
+			sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
 		}
 
 		out := []byte("not allowed from " + message.FromNode)
@@ -332,11 +332,11 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-				sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
+				sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
 			}
 		} else {
 			er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
-			sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
+			sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
 		}
 
 		// Send a confirmation message back to the publisher
@@ -346,7 +346,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		mf, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.CommandOrEvent)
-			sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
+			sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
 		}
 
 		// Check if we are allowed to receive from that host
@@ -366,16 +366,16 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-				sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
+				sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
 			}
 		} else {
 			er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
-			sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
+			sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
 		}
 		// ---
 	default:
 		er := fmt.Errorf("info: did not find that specific type of command: %#v", p.subject.CommandOrEvent)
-		sendErrorLogMessage(p.toRingbufferCh, node(thisNode), er)
+		sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
 
 	}
 }
@@ -413,7 +413,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		case m = <-p.subject.messageCh:
 		case <-p.ctx.Done():
 			er := fmt.Errorf("info: canceling publisher: %v", p.subject.name())
-			sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
+			sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
 			return
 		}
 		// Get the process name so we can look up the process in the

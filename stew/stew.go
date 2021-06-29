@@ -14,6 +14,8 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+
+	"github.com/RaaLabs/steward"
 )
 
 type Stew struct {
@@ -125,7 +127,7 @@ func (p *pageMessage) start() error {
 // template, and we can add case statements for those fields below
 // that we do not wan't to check.
 func compareMsgAndMessage() error {
-	stewardMessage := Message{}
+	stewardMessage := steward.Message{}
 	stewMsg := msg{}
 
 	stewardRefVal := reflect.ValueOf(stewardMessage)
@@ -206,16 +208,16 @@ func (p *pageMessage) drawMsgForm() error {
 			value := `"bash","-c","..."`
 			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
 		case "Method":
-			var m Method
+			var m steward.Method
 			ma := m.GetMethodsAvailable()
 			values := []string{}
-			for k := range ma.methodhandlers {
+			for k := range ma.Methodhandlers {
 				values = append(values, string(k))
 			}
 			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 		case "ReplyMethod":
-			var m Method
-			rm := m.getReplyMethods()
+			var m steward.Method
+			rm := m.GetReplyMethods()
 			values := []string{}
 			for _, k := range rm {
 				values = append(values, string(k))
@@ -270,10 +272,10 @@ func (p *pageMessage) drawMsgForm() error {
 					formItems := []formItem{}
 
 					// Get values values to be used for the "Method" dropdown.
-					var m Method
+					var m steward.Method
 					ma := m.GetMethodsAvailable()
 					values := []string{}
-					for k := range ma.methodhandlers {
+					for k := range ma.Methodhandlers {
 						values = append(values, string(k))
 					}
 
@@ -319,10 +321,10 @@ func (p *pageMessage) drawMsgForm() error {
 					}
 
 					// Get values values to be used for the "Method" dropdown.
-					var m Method
+					var m steward.Method
 					ma := m.GetMethodsAvailable()
 					values := []string{}
-					for k := range ma.methodhandlers {
+					for k := range ma.Methodhandlers {
 						values = append(values, string(k))
 					}
 
@@ -406,8 +408,8 @@ func (p *pageMessage) drawMsgForm() error {
 		// TODO: Should also add a write directly to socket here.
 		AddButton("generate to console", func() {
 			// ---
-			opCmdStartProc := OpCmdStartProc{}
-			opCmdStopProc := OpCmdStopProc{}
+			opCmdStartProc := steward.OpCmdStartProc{}
+			opCmdStopProc := steward.OpCmdStopProc{}
 			// ---
 
 			// fh, err := os.Create("message.json")
@@ -432,7 +434,7 @@ func (p *pageMessage) drawMsgForm() error {
 						return
 					}
 
-					m.ToNode = node(value)
+					m.ToNode = steward.Node(value)
 				case "Data":
 					// Split the comma separated string into a
 					// and remove the start and end ampersand.
@@ -457,9 +459,9 @@ func (p *pageMessage) drawMsgForm() error {
 
 					m.Data = data
 				case "Method":
-					m.Method = Method(value)
+					m.Method = steward.Method(value)
 				case "ReplyMethod":
-					m.ReplyMethod = Method(value)
+					m.ReplyMethod = steward.Method(value)
 				case "ACKTimeout":
 					v, _ := strconv.Atoi(value)
 					m.ACKTimeout = v
@@ -497,13 +499,13 @@ func (p *pageMessage) drawMsgForm() error {
 						fmt.Fprintf(p.logForm, "%v : error: missing startProc Method\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
 						return
 					}
-					opCmdStartProc.Method = Method(value)
+					opCmdStartProc.Method = steward.Method(value)
 				case "startProc AllowedNodes":
 					// Split the comma separated string into a
 					// and remove the start and end ampersand.
 					sp := strings.Split(value, ",")
 
-					var allowedNodes []node
+					var allowedNodes []steward.Node
 
 					for _, v := range sp {
 						// Check if format is correct, return if not.
@@ -517,7 +519,7 @@ func (p *pageMessage) drawMsgForm() error {
 						v = v[1:]
 						v = strings.TrimSuffix(v, "\"")
 
-						allowedNodes = append(allowedNodes, node(v))
+						allowedNodes = append(allowedNodes, steward.Node(v))
 					}
 
 					opCmdStartProc.AllowedNodes = allowedNodes
@@ -604,15 +606,15 @@ func getNodeNames(filePath string) ([]string, error) {
 // empty fields.
 type msg struct {
 	// The node to send the message to
-	ToNode node `json:"toNode" yaml:"toNode"`
+	ToNode steward.Node `json:"toNode" yaml:"toNode"`
 	// The actual data in the message
 	Data []string `json:"data" yaml:"data"`
 	// Method, what is this message doing, etc. CLI, syslog, etc.
-	Method Method `json:"method" yaml:"method"`
+	Method steward.Method `json:"method" yaml:"method"`
 	// ReplyMethod, is the method to use for the reply message.
 	// By default the reply method will be set to log to file, but
 	// you can override it setting your own here.
-	ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
+	ReplyMethod steward.Method `json:"replyMethod" yaml:"replyMethod"`
 	// From what node the message originated
 	ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
 	// Resend retries

@@ -17,14 +17,14 @@ func (s *server) readSocket(toRingbufferCh chan []subjectAndMessage) {
 		conn, err := s.netListener.Accept()
 		if err != nil {
 			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
-			sendErrorLogMessage(toRingbufferCh, node(s.nodeName), er)
+			sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
 		}
 
 		b := make([]byte, 65535)
 		_, err = conn.Read(b)
 		if err != nil {
 			er := fmt.Errorf("error: failed to read data from socket: %v", err)
-			sendErrorLogMessage(toRingbufferCh, node(s.nodeName), er)
+			sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
 			continue
 		}
 
@@ -34,7 +34,7 @@ func (s *server) readSocket(toRingbufferCh chan []subjectAndMessage) {
 		sam, err := convertBytesToSAM(b)
 		if err != nil {
 			er := fmt.Errorf("error: malformed json: %v", err)
-			sendErrorLogMessage(toRingbufferCh, node(s.nodeName), er)
+			sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
 			continue
 		}
 
@@ -42,7 +42,7 @@ func (s *server) readSocket(toRingbufferCh chan []subjectAndMessage) {
 
 			// Fill in the value for the FromNode field, so the receiver
 			// can check this field to know where it came from.
-			sam[i].Message.FromNode = node(s.nodeName)
+			sam[i].Message.FromNode = Node(s.nodeName)
 		}
 
 		// Send the SAM struct to be picked up by the ring buffer.

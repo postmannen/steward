@@ -18,7 +18,7 @@ func (p process) ProcessesStart() {
 	{
 		log.Printf("Starting REQOpCommand subscriber: %#v\n", p.node)
 		sub := newSubject(REQOpCommand, string(p.node))
-		proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, []node{node(p.configuration.CentralNodeName)}, nil)
+		proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, []Node{Node(p.configuration.CentralNodeName)}, nil)
 		go proc.spawnWorker(p.processes, p.natsConn)
 	}
 
@@ -99,7 +99,7 @@ func (s startup) pubREQHello(p process) {
 	log.Printf("Starting Hello Publisher: %#v\n", p.node)
 
 	sub := newSubject(REQHello, p.configuration.CentralNodeName)
-	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindPublisher, []node{}, nil)
+	proc := newProcess(p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindPublisher, []Node{}, nil)
 
 	// Define the procFunc to be used for the process.
 	proc.procFunc = procFunc(
@@ -111,8 +111,8 @@ func (s startup) pubREQHello(p process) {
 				d := fmt.Sprintf("Hello from %v\n", p.node)
 
 				m := Message{
-					ToNode:   node(p.configuration.CentralNodeName),
-					FromNode: node(p.node),
+					ToNode:   Node(p.configuration.CentralNodeName),
+					FromNode: Node(p.node),
 					Data:     []string{d},
 					Method:   REQHello,
 				}
@@ -189,7 +189,7 @@ func (s startup) subREQHello(p process) {
 	// of the nodes we've received hello's from in the sayHelloNodes map,
 	// which is the information we pass along to generate metrics.
 	proc.procFunc = func(ctx context.Context) error {
-		sayHelloNodes := make(map[node]struct{})
+		sayHelloNodes := make(map[Node]struct{})
 
 		promHelloNodes := promauto.NewGauge(prometheus.GaugeOpts{
 			Name: "hello_nodes_total",

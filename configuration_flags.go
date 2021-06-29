@@ -24,7 +24,7 @@ import (
 type flagNodeSlice struct {
 	value  string
 	OK     bool
-	Values []node
+	Values []Node
 }
 
 // String method
@@ -60,17 +60,17 @@ func (f *flagNodeSlice) Parse() error {
 	if split[0] == "RST" {
 		f.OK = false
 		f.value = ""
-		f.Values = []node{}
+		f.Values = []Node{}
 		return nil
 	}
 
 	fv := f.value
 	sp := strings.Split(fv, ",")
 	f.OK = true
-	f.Values = []node{}
+	f.Values = []Node{}
 
 	for _, v := range sp {
-		f.Values = append(f.Values, node(v))
+		f.Values = append(f.Values, Node(v))
 	}
 	return nil
 }
@@ -155,17 +155,17 @@ func newConfigurationDefaults() Configuration {
 		CentralNodeName:         "",
 		RootCAPath:              "",
 		NkeySeedFile:            "",
-		StartSubREQErrorLog:     flagNodeSlice{Values: []node{}},
-		StartSubREQHello:        flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQToFileAppend: flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQToFile:       flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQPing:         flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQPong:         flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQCliCommand:   flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQnCliCommand:  flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQToConsole:    flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQHttpGet:      flagNodeSlice{OK: true, Values: []node{"*"}},
-		StartSubREQTailFile:     flagNodeSlice{OK: true, Values: []node{"*"}},
+		StartSubREQErrorLog:     flagNodeSlice{Values: []Node{}},
+		StartSubREQHello:        flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQToFileAppend: flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQToFile:       flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQPing:         flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQPong:         flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQCliCommand:   flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQnCliCommand:  flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQToConsole:    flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQHttpGet:      flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQTailFile:     flagNodeSlice{OK: true, Values: []Node{"*"}},
 	}
 	return c
 }

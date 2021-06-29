@@ -13,7 +13,7 @@ import (
 
 type Message struct {
 	// The node to send the message to
-	ToNode node `json:"toNode" yaml:"toNode"`
+	ToNode Node `json:"toNode" yaml:"toNode"`
 	// The Unique ID of the message
 	ID int `json:"id" yaml:"id"`
 	// The actual data in the message
@@ -25,7 +25,7 @@ type Message struct {
 	// you can override it setting your own here.
 	ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
 	// From what node the message originated
-	FromNode node
+	FromNode Node
 	// ACKTimeout for waiting for an ack message
 	ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
 	// Resend retries
@@ -83,7 +83,7 @@ func gobEncodeMessage(m Message) ([]byte, error) {
 
 // --- Subject
 
-type node string
+type Node string
 
 // subject contains the representation of a subject to be used with one
 // specific process
@@ -107,7 +107,7 @@ type Subject struct {
 func newSubject(method Method, node string) Subject {
 	// Get the CommandOrEvent type for the Method.
 	ma := method.GetMethodsAvailable()
-	coe, ok := ma.methodhandlers[method]
+	coe, ok := ma.Methodhandlers[method]
 	if !ok {
 		log.Printf("error: no CommandOrEvent type specified for the method: %v\n", method)
 		os.Exit(1)

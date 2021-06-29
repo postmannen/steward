@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/RaaLabs/steward"
+	steward "github.com/RaaLabs/steward/stew"
 )
 
 func main() {

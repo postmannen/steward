@@ -136,7 +136,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 	// Command, Used to make a request to perform an action
 	// Event, Used to communicate that an action has been performed.
 	ma := MethodsAvailable{
-		methodhandlers: map[Method]methodHandler{
+		Methodhandlers: map[Method]methodHandler{
 			REQInitial: methodREQInitial{
 				commandOrEvent: CommandACK,
 			},
@@ -186,7 +186,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 }
 
 // Reply methods
-func (m Method) getReplyMethods() []Method {
+func (m Method) GetReplyMethods() []Method {
 	rm := []Method{REQToConsole, REQToFile, REQToFileAppend}
 	return rm
 }
@@ -196,7 +196,7 @@ func (m Method) getReplyMethods() []Method {
 // as input argument.
 func (m Method) getHandler(method Method) methodHandler {
 	ma := m.GetMethodsAvailable()
-	mh := ma.methodhandlers[method]
+	mh := ma.Methodhandlers[method]
 
 	return mh
 }
@@ -223,14 +223,14 @@ func (m methodREQInitial) handler(proc process, message Message, node string) ([
 
 // ----
 type MethodsAvailable struct {
-	methodhandlers map[Method]methodHandler
+	Methodhandlers map[Method]methodHandler
 }
 
 // Check if exists will check if the Method is defined. If true the bool
 // value will be set to true, and the methodHandler function for that type
 // will be returned.
 func (ma MethodsAvailable) CheckIfExists(m Method) (methodHandler, bool) {
-	mFunc, ok := ma.methodhandlers[m]
+	mFunc, ok := ma.Methodhandlers[m]
 	if ok {
 		// fmt.Printf("******THE TOPIC EXISTS: %v******\n", m)
 		return mFunc, true
@@ -261,11 +261,11 @@ func (m methodREQOpCommand) getKind() CommandOrEvent {
 
 type OpCmdStartProc struct {
 	Method       Method `json:"method"`
-	AllowedNodes []node `json:"allowedNodes"`
+	AllowedNodes []Node `json:"allowedNodes"`
 }
 
 type OpCmdStopProc struct {
-	RecevingNode node        `json:"receivingNode"`
+	RecevingNode Node        `json:"receivingNode"`
 	Method       Method      `json:"method"`
 	Kind         processKind `json:"kind"`
 	ID           int         `json:"id"`

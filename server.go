@@ -203,7 +203,7 @@ func (s *server) Start() {
 	// processes are tied to the process struct, we need to create an
 	// initial process to start the rest.
 	sub := newSubject(REQInitial, s.nodeName)
-	p := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, "", []node{}, nil)
+	p := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, "", []Node{}, nil)
 	p.ProcessesStart()
 
 	time.Sleep(time.Second * 1)
@@ -234,7 +234,7 @@ func (p *processes) printProcessesMap() {
 
 // sendErrorMessage will put the error message directly on the channel that is
 // read by the nats publishing functions.
-func sendErrorLogMessage(newMessagesCh chan<- []subjectAndMessage, FromNode node, theError error) {
+func sendErrorLogMessage(newMessagesCh chan<- []subjectAndMessage, FromNode Node, theError error) {
 	// NB: Adding log statement here for more visuality during development.
 	log.Printf("%v\n", theError)
 	sam := createErrorMsgContent(FromNode, theError)
@@ -243,7 +243,7 @@ func sendErrorLogMessage(newMessagesCh chan<- []subjectAndMessage, FromNode node
 
 // createErrorMsgContent will prepare a subject and message with the content
 // of the error
-func createErrorMsgContent(FromNode node, theError error) subjectAndMessage {
+func createErrorMsgContent(FromNode Node, theError error) subjectAndMessage {
 	// Add time stamp
 	er := fmt.Sprintf("%v, %v\n", time.Now().UTC(), theError.Error())
 
@@ -275,7 +275,7 @@ func createErrorMsgContent(FromNode node, theError error) subjectAndMessage {
 func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subjectAndMessage) {
 	// Prepare and start a new ring buffer
 	const bufferSize int = 1000
-	rb := newringBuffer(*s.configuration, bufferSize, dbFileName, node(s.nodeName), s.toRingbufferCh)
+	rb := newringBuffer(*s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.toRingbufferCh)
 	inCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValue)
 	// start the ringbuffer.
@@ -308,12 +308,12 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 			// Check if the format of the message is correct.
 			if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
 				er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
-				sendErrorLogMessage(s.toRingbufferCh, node(s.nodeName), er)
+				sendErrorLogMessage(s.toRingbufferCh, Node(s.nodeName), er)
 				continue
 			}
 			if !coeAvailable.CheckIfExists(sam.Subject.CommandOrEvent, sam.Subject) {
 				er := fmt.Errorf("error: routeMessagesToProcess: the command or event do not exist, message dropped: %v", sam.Message.Method)
-				sendErrorLogMessage(s.toRingbufferCh, node(s.nodeName), er)
+				sendErrorLogMessage(s.toRingbufferCh, Node(s.nodeName), er)
 
 				continue
 			}
