@@ -36,7 +36,7 @@ func NewStew() (*Stew, error) {
 }
 
 func (s *Stew) Start() error {
-	c := newConsole()
+	c := newPageMessage()
 	err := c.start()
 	if err != nil {
 		return fmt.Errorf("error: console failed: %v", err)
@@ -46,7 +46,7 @@ func (s *Stew) Start() error {
 }
 
 // ---------------------------------------------------
-type console struct {
+type pageMessage struct {
 	flex          *tview.Flex
 	msgInputForm  *tview.Form
 	msgOutputForm *tview.TextView
@@ -54,47 +54,47 @@ type console struct {
 	app           *tview.Application
 }
 
-func newConsole() *console {
-	c := console{}
-	c.app = tview.NewApplication()
+func newPageMessage() *pageMessage {
+	p := pageMessage{}
+	p.app = tview.NewApplication()
 
-	c.msgInputForm = tview.NewForm()
-	c.msgInputForm.SetBorder(true).SetTitle("Request values").SetTitleAlign(tview.AlignLeft)
+	p.msgInputForm = tview.NewForm()
+	p.msgInputForm.SetBorder(true).SetTitle("Request values").SetTitleAlign(tview.AlignLeft)
 
-	c.msgOutputForm = tview.NewTextView()
-	c.msgOutputForm.SetBorder(true).SetTitle("Message output").SetTitleAlign(tview.AlignLeft)
-	c.msgOutputForm.SetChangedFunc(func() {
+	p.msgOutputForm = tview.NewTextView()
+	p.msgOutputForm.SetBorder(true).SetTitle("Message output").SetTitleAlign(tview.AlignLeft)
+	p.msgOutputForm.SetChangedFunc(func() {
 		// Will cause the log window to be redrawn as soon as
 		// new output are detected.
-		c.app.Draw()
+		p.app.Draw()
 	})
 
-	c.logForm = tview.NewTextView()
-	c.logForm.SetBorder(true).SetTitle("Log/Status").SetTitleAlign(tview.AlignLeft)
-	c.logForm.SetChangedFunc(func() {
+	p.logForm = tview.NewTextView()
+	p.logForm.SetBorder(true).SetTitle("Log/Status").SetTitleAlign(tview.AlignLeft)
+	p.logForm.SetChangedFunc(func() {
 		// Will cause the log window to be redrawn as soon as
 		// new output are detected.
-		c.app.Draw()
+		p.app.Draw()
 	})
 
 	// Create a flex layout.
 	//
 	// First create the outer flex layout.
-	c.flex = tview.NewFlex().SetDirection(tview.FlexRow).
+	p.flex = tview.NewFlex().SetDirection(tview.FlexRow).
 		// Add the top windows with columns.
 		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
-			AddItem(c.msgInputForm, 0, 10, false).
-			AddItem(c.msgOutputForm, 0, 10, false),
+			AddItem(p.msgInputForm, 0, 10, false).
+			AddItem(p.msgOutputForm, 0, 10, false),
 			0, 10, false).
 		// Add the bottom log window.
 		AddItem(tview.NewFlex().
-			AddItem(c.logForm, 0, 2, false),
+			AddItem(p.logForm, 0, 2, false),
 			0, 2, false)
-	return &c
+	return &p
 }
 
 // Will start the console.
-func (c *console) start() error {
+func (p *pageMessage) start() error {
 	// Check that the message struct used within stew are up to date, and
 	// consistent with the fields used in the main Steward message file.
 	// If it throws an error here we need to update the msg struct type,
@@ -105,9 +105,9 @@ func (c *console) start() error {
 		os.Exit(1)
 	}
 
-	c.drawMsgForm()
+	p.drawMsgForm()
 
-	if err := c.app.SetRoot(c.flex, true).SetFocus(c.msgInputForm).EnableMouse(true).Run(); err != nil {
+	if err := p.app.SetRoot(p.flex, true).SetFocus(p.msgInputForm).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
 
@@ -164,7 +164,7 @@ func compareMsgAndMessage() error {
 	return nil
 }
 
-func (c *console) drawMsgForm() error {
+func (p *pageMessage) drawMsgForm() error {
 	m := msg{}
 
 	// Loop trough all the fields of the Message struct, and create
@@ -198,13 +198,13 @@ func (c *console) drawMsgForm() error {
 			item := tview.NewDropDown()
 			item.SetLabelColor(tcell.ColorIndianRed)
 			item.SetLabel(fieldName).SetOptions(values, nil)
-			c.msgInputForm.AddFormItem(item)
+			p.msgInputForm.AddFormItem(item)
 			//c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		case "ID":
 			// This value is automatically assigned by steward.
 		case "Data":
 			value := `"bash","-c","..."`
-			c.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
+			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
 		case "Method":
 			var m Method
 			ma := m.GetMethodsAvailable()
@@ -212,7 +212,7 @@ func (c *console) drawMsgForm() error {
 			for k := range ma.methodhandlers {
 				values = append(values, string(k))
 			}
-			c.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
+			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 		case "ReplyMethod":
 			var m Method
 			rm := m.getReplyMethods()
@@ -220,28 +220,28 @@ func (c *console) drawMsgForm() error {
 			for _, k := range rm {
 				values = append(values, string(k))
 			}
-			c.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
+			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 		case "ACKTimeout":
 			value := 30
-			c.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "Retries":
 			value := 1
-			c.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "ReplyACKTimeout":
 			value := 30
-			c.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "ReplyRetries":
 			value := 1
-			c.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "MethodTimeout":
 			value := 120
-			c.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
+			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "Directory":
 			value := "/some-dir/"
-			c.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
+			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
 		case "FileExtension":
 			value := ".log"
-			c.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
+			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
 		case "Operation":
 			// Prepare the selectedFunc that will be triggered for the operations
 			// when a field in the dropdown is selected.
@@ -306,7 +306,7 @@ func (c *console) drawMsgForm() error {
 					// Get nodes from file.
 					values, err = getNodeNames("nodeslist.cfg")
 					if err != nil {
-						fmt.Fprintf(c.logForm, "%v: error: unable to get nodes\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+						fmt.Fprintf(p.logForm, "%v: error: unable to get nodes\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
 						return nil
 					}
 
@@ -360,9 +360,9 @@ func (c *console) drawMsgForm() error {
 					// Delete previously drawn sub operation form items.
 					for _, vSlice := range operationFormItems {
 						for _, v := range vSlice {
-							i := c.msgInputForm.GetFormItemIndex(v.label)
+							i := p.msgInputForm.GetFormItemIndex(v.label)
 							if i > -1 {
-								c.msgInputForm.RemoveFormItem(i)
+								p.msgInputForm.RemoveFormItem(i)
 							}
 						}
 					}
@@ -370,7 +370,7 @@ func (c *console) drawMsgForm() error {
 					// Get and draw the form items to the form.
 					formItems := operationFormItems[label]
 					for _, v := range formItems {
-						c.msgInputForm.AddFormItem(v.formItem)
+						p.msgInputForm.AddFormItem(v.formItem)
 					}
 				}
 
@@ -382,23 +382,23 @@ func (c *console) drawMsgForm() error {
 				case "stopProc":
 					itemDraw("stopProc")
 				default:
-					fmt.Fprintf(c.logForm, "%v: error: missing menu item for %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), option)
+					fmt.Fprintf(p.logForm, "%v: error: missing menu item for %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), option)
 				}
 			}
 
-			c.msgInputForm.AddDropDown(fieldName, values, 0, selectedFunc).SetItemPadding(1)
+			p.msgInputForm.AddDropDown(fieldName, values, 0, selectedFunc).SetItemPadding(1)
 
 		default:
 			// Add a no definition fields to the form if a a field within the
 			// struct were missing an action above, so we can easily detect
 			// if there is missing a case action for one of the struct fields.
-			c.msgInputForm.AddDropDown("error: no case for: "+fieldName, values, 0, nil).SetItemPadding(1)
+			p.msgInputForm.AddDropDown("error: no case for: "+fieldName, values, 0, nil).SetItemPadding(1)
 		}
 
 	}
 
 	// Add Buttons below the message fields. Like Generate and Exit.
-	c.msgInputForm.
+	p.msgInputForm.
 		// Add a generate button, which when pressed will loop through all the
 		// message form items, and if found fill the value into a msg struct,
 		// and at last write it to a file.
@@ -416,19 +416,19 @@ func (c *console) drawMsgForm() error {
 			// }
 			// defer fh.Close()
 
-			c.msgOutputForm.Clear()
-			fh := c.msgOutputForm
+			p.msgOutputForm.Clear()
+			fh := p.msgOutputForm
 
 			m := msg{}
 			// Loop trough all the form fields
-			for i := 0; i < c.msgInputForm.GetFormItemCount(); i++ {
-				fi := c.msgInputForm.GetFormItem(i)
+			for i := 0; i < p.msgInputForm.GetFormItemCount(); i++ {
+				fi := p.msgInputForm.GetFormItem(i)
 				label, value := getLabelAndValue(fi)
 
 				switch label {
 				case "ToNode":
 					if value == "" {
-						fmt.Fprintf(c.logForm, "%v : error: missing ToNode \n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+						fmt.Fprintf(p.logForm, "%v : error: missing ToNode \n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
 						return
 					}
 
@@ -445,7 +445,7 @@ func (c *console) drawMsgForm() error {
 						pre := strings.HasPrefix(v, "\"")
 						suf := strings.HasSuffix(v, "\"")
 						if !pre || !suf {
-							fmt.Fprintf(c.logForm, "%v : error: missing or malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+							fmt.Fprintf(p.logForm, "%v : error: missing or malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
 							return
 						}
 						// Remove leading and ending ampersand.
@@ -494,7 +494,7 @@ func (c *console) drawMsgForm() error {
 					}
 				case "startProc Method":
 					if value == "" {
-						fmt.Fprintf(c.logForm, "%v : error: missing startProc Method\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+						fmt.Fprintf(p.logForm, "%v : error: missing startProc Method\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
 						return
 					}
 					opCmdStartProc.Method = Method(value)
@@ -510,7 +510,7 @@ func (c *console) drawMsgForm() error {
 						pre := strings.HasPrefix(v, "\"") || !strings.HasPrefix(v, ",") || !strings.HasPrefix(v, "\",") || !strings.HasPrefix(v, ",\"")
 						suf := strings.HasSuffix(v, "\"")
 						if !pre || !suf {
-							fmt.Fprintf(c.logForm, "%v : error: malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+							fmt.Fprintf(p.logForm, "%v : error: malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
 							return
 						}
 						// Remove leading and ending ampersand.
@@ -522,7 +522,7 @@ func (c *console) drawMsgForm() error {
 
 					opCmdStartProc.AllowedNodes = allowedNodes
 				default:
-					fmt.Fprintf(c.logForm, "%v : error: did not find case defenition for how to handle the \"%v\" within the switch statement\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), label)
+					fmt.Fprintf(p.logForm, "%v : error: did not find case defenition for how to handle the \"%v\" within the switch statement\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), label)
 				}
 			}
 			msgs := []msg{}
@@ -530,21 +530,21 @@ func (c *console) drawMsgForm() error {
 
 			msgsIndented, err := json.MarshalIndent(msgs, "", "    ")
 			if err != nil {
-				fmt.Fprintf(c.logForm, "%v : error: jsonIndent failed: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
+				fmt.Fprintf(p.logForm, "%v : error: jsonIndent failed: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
 			}
 
 			_, err = fh.Write(msgsIndented)
 			if err != nil {
-				fmt.Fprintf(c.logForm, "%v : error: write to fh failed: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
+				fmt.Fprintf(p.logForm, "%v : error: write to fh failed: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
 			}
 		}).
 
 		// Add exit button.
 		AddButton("exit", func() {
-			c.app.Stop()
+			p.app.Stop()
 		})
 
-	c.app.SetFocus(c.msgInputForm)
+	p.app.SetFocus(p.msgInputForm)
 
 	return nil
 }
