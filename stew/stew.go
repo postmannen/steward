@@ -48,21 +48,23 @@ func (s *Stew) Start() error {
 		return event
 	})
 
-	//info := tview.NewTextView().
-	//	SetDynamicColors(true).
-	//	SetRegions(true).
-	//	SetWrap(false)
+	info := tview.NewTextView().
+		SetDynamicColors(true).
+		SetRegions(true).
+		SetWrap(false)
+
+	fmt.Fprintf(info, "apekatt")
 
 	slide := messageSlide(app)
 
 	pages.AddPage("message", slide, true, true)
 
 	// Create the main layout.
-	layout := tview.NewFlex().
-		SetDirection(tview.FlexRow).
-		AddItem(pages, 0, 1, true).
-		//AddItem(info, 1, 1, false).
-		SetBorder(true)
+	layout := tview.NewFlex()
+	layout.SetBorder(true)
+	layout.SetDirection(tview.FlexRow).
+		AddItem(pages, 0, 10, true).
+		AddItem(info, 1, 1, false)
 
 	if err := app.SetRoot(layout, true).EnableMouse(true).Run(); err != nil {
 		panic(err)
