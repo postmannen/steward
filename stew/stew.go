@@ -37,7 +37,10 @@ func (s *Stew) Start() error {
 
 	slide := messageSlide(app)
 
-	if err := app.SetRoot(slide, true).EnableMouse(true).Run(); err != nil {
+	pages := tview.NewPages()
+	pages.AddPage("message", slide, true, true)
+
+	if err := app.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
 
