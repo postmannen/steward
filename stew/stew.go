@@ -38,10 +38,10 @@ func (s *Stew) Start() error {
 
 	app := tview.NewApplication()
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyCtrlN {
-			pages.SwitchToPage("message")
+		if event.Key() == tcell.KeyF1 {
+			pages.SwitchToPage("info")
 			return nil
-		} else if event.Key() == tcell.KeyCtrlP {
+		} else if event.Key() == tcell.KeyF2 {
 			pages.SwitchToPage("message")
 			return nil
 		}
@@ -53,11 +53,11 @@ func (s *Stew) Start() error {
 		SetRegions(true).
 		SetWrap(false)
 
-	fmt.Fprintf(info, "apekatt")
+	fmt.Fprintf(info, " F1 info  ")
+	fmt.Fprintf(info, " F2 message  ")
 
-	slide := messageSlide(app)
-
-	pages.AddPage("message", slide, true, true)
+	pages.AddPage("info", infoSlide(app), true, true)
+	pages.AddPage("message", messageSlide(app), true, false)
 
 	// Create the main layout.
 	layout := tview.NewFlex()
