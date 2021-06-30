@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
 	"github.com/RaaLabs/steward"
@@ -33,14 +34,37 @@ func NewStew() (*Stew, error) {
 }
 
 func (s *Stew) Start() error {
+	pages := tview.NewPages()
+
 	app := tview.NewApplication()
+	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyCtrlN {
+			pages.SwitchToPage("message")
+			return nil
+		} else if event.Key() == tcell.KeyCtrlP {
+			pages.SwitchToPage("message")
+			return nil
+		}
+		return event
+	})
+
+	//info := tview.NewTextView().
+	//	SetDynamicColors(true).
+	//	SetRegions(true).
+	//	SetWrap(false)
 
 	slide := messageSlide(app)
 
-	pages := tview.NewPages()
 	pages.AddPage("message", slide, true, true)
 
-	if err := app.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
+	// Create the main layout.
+	layout := tview.NewFlex().
+		SetDirection(tview.FlexRow).
+		AddItem(pages, 0, 1, true).
+		//AddItem(info, 1, 1, false).
+		SetBorder(true)
+
+	if err := app.SetRoot(layout, true).EnableMouse(true).Run(); err != nil {
 		panic(err)
 	}
 
