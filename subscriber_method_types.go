@@ -121,6 +121,8 @@ const (
 	REQHttpGet Method = "REQHttpGet"
 	// Tail file
 	REQTailFile Method = "REQTailFile"
+	// Write to steward socket
+	REQToSocket Method = "REQToSocket"
 )
 
 // The mapping of all the method constants specified, what type
@@ -179,6 +181,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQTailFile: methodREQTailFile{
 				commandOrEvent: EventACK,
 			},
+			REQToSocket: methodREQToSocket{
+				commandOrEvent: EventACK,
+			},
 		},
 	}
 
@@ -189,7 +194,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 // the Stew client for knowing what of the req types are generally
 // used as reply methods.
 func (m Method) GetReplyMethods() []Method {
-	rm := []Method{REQToConsole, REQToFile, REQToFileAppend}
+	rm := []Method{REQToConsole, REQToFile, REQToFileAppend, REQToSocket}
 	return rm
 }
 
@@ -1096,3 +1101,26 @@ func (m methodREQnCliCommandCont) handler(proc process, message Message, node st
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
 }
+
+// ---
+
+type methodREQToSocket struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodREQToSocket) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
+
+func (m methodREQToSocket) handler(proc process, message Message, node string) ([]byte, error) {
+
+	for _, d := range message.Data {
+		// Write the data to the socket here.
+		fmt.Printf("Info: Data to write to socket: %v\n", d)
+	}
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+// ----
