@@ -185,7 +185,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 	return ma
 }
 
-// Reply methods
+// Reply methods. The slice generated here is primarily used within
+// the Stew client for knowing what of the req types are generally
+// used as reply methods.
 func (m Method) GetReplyMethods() []Method {
 	rm := []Method{REQToConsole, REQToFile, REQToFileAppend}
 	return rm

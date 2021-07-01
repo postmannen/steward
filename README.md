@@ -78,7 +78,7 @@ If one process hangs on a long running message method it will not affect the res
 
 ### Logical structure
 
-![overview](steward.svg)
+![overview](doc/steward.svg)
 
 ## Terminology
 
