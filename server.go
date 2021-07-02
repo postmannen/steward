@@ -2,6 +2,7 @@
 package steward
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -62,6 +63,10 @@ func newProcesses(promRegistry *prometheus.Registry) *processes {
 // server is the structure that will hold the state about spawned
 // processes on a local instance.
 type server struct {
+	// The main background context
+	ctx context.Context
+	// The CancelFunc for the main context
+	ctxCancelFunc context.CancelFunc
 	// Configuration options used for running the server
 	configuration *Configuration
 	// The nats connection to the broker
@@ -85,6 +90,8 @@ type server struct {
 
 // newServer will prepare and return a server type
 func NewServer(c *Configuration) (*server, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	var opt nats.Option
 	if c.RootCAPath != "" {
 		opt = nats.RootCAs(c.RootCAPath)
@@ -102,6 +109,7 @@ func NewServer(c *Configuration) (*server, error) {
 		// }
 		opt, err = nats.NkeyOptionFromSeed(c.NkeySeedFile)
 		if err != nil {
+			cancel()
 			return nil, fmt.Errorf("error: failed to read nkey seed file: %v", err)
 		}
 	}
@@ -125,6 +133,7 @@ func NewServer(c *Configuration) (*server, error) {
 			}
 
 			er := fmt.Errorf("error: nats.Connect failed: %v", err)
+			cancel()
 			return nil, er
 		}
 
@@ -136,6 +145,7 @@ func NewServer(c *Configuration) (*server, error) {
 	if _, err := os.Stat(c.SocketFolder); os.IsNotExist(err) {
 		err := os.MkdirAll(c.SocketFolder, 0700)
 		if err != nil {
+			cancel()
 			return nil, fmt.Errorf("error: failed to create socket folder directory %v: %v", c.SocketFolder, err)
 		}
 	}
@@ -146,6 +156,7 @@ func NewServer(c *Configuration) (*server, error) {
 		err = os.Remove(socketFilepath)
 		if err != nil {
 			er := fmt.Errorf("error: could not delete sock file: %v", err)
+			cancel()
 			return nil, er
 		}
 	}
@@ -153,6 +164,7 @@ func NewServer(c *Configuration) (*server, error) {
 	nl, err := net.Listen("unix", socketFilepath)
 	if err != nil {
 		er := fmt.Errorf("error: failed to open socket: %v", err)
+		cancel()
 		return nil, er
 	}
 
@@ -164,6 +176,7 @@ func NewServer(c *Configuration) (*server, error) {
 	if _, err := os.Stat(c.SocketFolder); os.IsNotExist(err) {
 		err := os.MkdirAll(c.SocketFolder, 0700)
 		if err != nil {
+			cancel()
 			return nil, fmt.Errorf("error: failed to create socket folder directory %v: %v", c.SocketFolder, err)
 		}
 	}
@@ -174,6 +187,7 @@ func NewServer(c *Configuration) (*server, error) {
 		err = os.Remove(stewSocketFilepath)
 		if err != nil {
 			er := fmt.Errorf("error: could not delete stew.sock file: %v", err)
+			cancel()
 			return nil, er
 		}
 	}
@@ -181,6 +195,7 @@ func NewServer(c *Configuration) (*server, error) {
 	stewNL, err := net.Listen("unix", stewSocketFilepath)
 	if err != nil {
 		er := fmt.Errorf("error: failed to open stew socket: %v", err)
+		cancel()
 		return nil, er
 	}
 
@@ -189,6 +204,8 @@ func NewServer(c *Configuration) (*server, error) {
 	metrics := newMetrics(c.PromHostAndPort)
 
 	s := &server{
+		ctx:                 ctx,
+		ctxCancelFunc:       cancel,
 		configuration:       c,
 		nodeName:            c.NodeName,
 		natsConn:            conn,
@@ -250,8 +267,8 @@ func (s *server) Start() {
 	// processes are tied to the process struct, we need to create an
 	// initial process to start the rest.
 	sub := newSubject(REQInitial, s.nodeName)
-	p := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, "", []Node{}, nil)
-	p.ProcessesStart()
+	p := newProcess(s.ctx, s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, "", []Node{}, nil)
+	p.ProcessesStart(s.ctx)
 
 	time.Sleep(time.Second * 1)
 	s.processes.printProcessesMap()
@@ -268,7 +285,7 @@ func (s *server) Start() {
 	//Block until we receive a signal
 	sig := <-sigCh
 	fmt.Printf("Got exit signal, terminating all processes, %v\n", sig)
-	return
+	s.ctxCancelFunc()
 
 }
 
@@ -410,7 +427,7 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 				log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 				sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
-				proc := newProcess(s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil, nil)
+				proc := newProcess(s.ctx, s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil, nil)
 				// fmt.Printf("*** %#v\n", proc)
 				proc.spawnWorker(s.processes, s.natsConn)
 

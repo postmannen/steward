@@ -338,7 +338,7 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 
 			// Create the process and start it.
 			sub := newSubject(arg.Method, proc.configuration.NodeName)
-			procNew := newProcess(proc.natsConn, proc.processes, proc.toRingbufferCh, proc.configuration, sub, proc.errorCh, processKindSubscriber, arg.AllowedNodes, nil)
+			procNew := newProcess(proc.ctx, proc.natsConn, proc.processes, proc.toRingbufferCh, proc.configuration, sub, proc.errorCh, processKindSubscriber, arg.AllowedNodes, nil)
 			go procNew.spawnWorker(proc.processes, proc.natsConn)
 
 			er := fmt.Errorf("info: startProc: started id: %v, subject: %v: node: %v", procNew.processID, sub, message.ToNode)
@@ -766,7 +766,7 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 		c := message.Data[0]
 		a := message.Data[1:]
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(message.MethodTimeout))
+		ctx, cancel := context.WithTimeout(proc.ctx, time.Second*time.Duration(message.MethodTimeout))
 
 		outCh := make(chan []byte)
 
@@ -827,7 +827,7 @@ func (m methodREQnCliCommand) handler(proc process, message Message, node string
 		c := message.Data[0]
 		a := message.Data[1:]
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(message.MethodTimeout))
+		ctx, cancel := context.WithTimeout(proc.ctx, time.Second*time.Duration(message.MethodTimeout))
 
 		outCh := make(chan []byte)
 
@@ -899,7 +899,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 			Timeout: time.Second * 5,
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(message.MethodTimeout))
+		ctx, cancel := context.WithTimeout(proc.ctx, time.Second*time.Duration(message.MethodTimeout))
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
@@ -979,9 +979,9 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 		var cancel context.CancelFunc
 
 		if message.MethodTimeout != 0 {
-			ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(message.MethodTimeout))
+			ctx, cancel = context.WithTimeout(proc.ctx, time.Second*time.Duration(message.MethodTimeout))
 		} else {
-			ctx, cancel = context.WithCancel(context.Background())
+			ctx, cancel = context.WithCancel(proc.ctx)
 		}
 
 		outCh := make(chan []byte)
@@ -1050,7 +1050,7 @@ func (m methodREQnCliCommandCont) handler(proc process, message Message, node st
 		c := message.Data[0]
 		a := message.Data[1:]
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(message.MethodTimeout))
+		ctx, cancel := context.WithTimeout(proc.ctx, time.Second*time.Duration(message.MethodTimeout))
 
 		outCh := make(chan []byte)
 

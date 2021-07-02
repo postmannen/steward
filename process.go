@@ -78,7 +78,7 @@ type process struct {
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func newProcess(natsConn *nats.Conn, processes *processes, toRingbufferCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, errCh chan errProcess, processKind processKind, allowedReceivers []Node, procFunc func() error) process {
+func newProcess(ctx context.Context, natsConn *nats.Conn, processes *processes, toRingbufferCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, errCh chan errProcess, processKind processKind, allowedReceivers []Node, procFunc func() error) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
 	processes.lastProcessID++
 
@@ -88,7 +88,7 @@ func newProcess(natsConn *nats.Conn, processes *processes, toRingbufferCh chan<-
 		m[a] = struct{}{}
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 
 	var method Method
 
