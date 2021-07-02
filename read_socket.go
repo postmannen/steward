@@ -14,7 +14,7 @@ func (s *server) readSocket(toRingbufferCh chan []subjectAndMessage) {
 
 	// Loop, and wait for new connections.
 	for {
-		conn, err := s.netListener.Accept()
+		conn, err := s.StewardSockListener.Accept()
 		if err != nil {
 			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
 			sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
@@ -50,6 +50,11 @@ func (s *server) readSocket(toRingbufferCh chan []subjectAndMessage) {
 
 		conn.Close()
 	}
+}
+
+// TODO: Create the writer go routine for this socket.
+func (s *server) writeStewSocket(toStewSocketCh []byte) {
+	//s.StewSockListener
 }
 
 type subjectAndMessage struct {
