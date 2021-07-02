@@ -75,7 +75,7 @@ func newringBuffer(c Configuration, size int, dbFileName string, nodeName Node, 
 // start will process incomming messages through the inCh,
 // put the messages on a buffered channel
 // and deliver messages out when requested on the outCh.
-func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan samDBValue, defaultMessageTimeout int, defaultMessageRetries int) {
+func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan samDBValueAndDelivered, defaultMessageTimeout int, defaultMessageRetries int) {
 
 	// Starting both writing and reading in separate go routines so we
 	// can write and read concurrently.
@@ -196,7 +196,7 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 // one by one. The messages will be delivered on the outCh, and it will wait
 // until a signal is received on the done channel before it continues with the
 // next message.
-func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan samDBValue) {
+func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan samDBValueAndDelivered) {
 	// Range over the buffer of messages to pass on to processes.
 	for v := range r.bufData {
 		// Create a done channel per message. A process started by the
@@ -211,8 +211,24 @@ func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan sam
 		// error with an individual message occurs.
 		go func(v samDBValue) {
 			v.Data.Message.done = make(chan struct{})
-			outCh <- v
 
+			sd := samDBValueAndDelivered{
+				samDBValue: v,
+				delivered:  make(chan struct{}),
+			}
+
+			outCh <- sd
+			// Just to confirm here that the message was picked up, to know if the
+			// the read process have stalled or not.
+			// For now it will not do anything,
+			select {
+			case <-sd.delivered:
+				// OK.
+			case <-time.After(time.Second * 5):
+				// Testing with a timeout here to figure out if messages are stuck
+				// waiting for done signal.
+				log.Printf("Error: *** message %v seems to be stuck, did not receive delivered signal from reading process\n", v.ID)
+			}
 			// Listen on the done channel here , so a go routine handling the
 			// message will be able to signal back here that the message have
 			// been processed, and that we then can delete it out of the K/V Store.

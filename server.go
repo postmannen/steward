@@ -289,14 +289,20 @@ func (s *server) Start() {
 	// Adding a safety function here so we can make sure that all processes
 	// are stopped after a given time if the context cancelation below hangs.
 	defer func() {
-		time.Sleep(time.Second * 20)
+		time.Sleep(time.Second * 0)
 		log.Printf("error: doing a non graceful shutdown of all processes..\n")
 		os.Exit(1)
 	}()
 
-	// TODO: The cancelation of all gracefully do not work, so adding a sleep here
+	// TODO: The cancelation of all gracefully do not work as expected since it
+	// seems to hang on terminating somewhere. Meanwhile adding a sleep here
 	// to be sure that the defered exit above are run before this cancelFunc.
-	time.Sleep(time.Second * 0)
+	//
+	// NOTE: The system are built to handle non graceful shutdowns since it keeps
+	// the state if the messages received have been processed or not, so it is not
+	// deeply needed to implement this.
+	// But still.. Need to look into this.
+	time.Sleep(time.Second * 10)
 	s.ctxCancelFunc()
 	fmt.Printf(" *** Done: ctxCancelFunc()\n")
 
@@ -348,7 +354,7 @@ func createErrorMsgContent(FromNode Node, theError error) subjectAndMessage {
 	return sam
 }
 
-type samDBValueAndDeliveredCh struct {
+type samDBValueAndDelivered struct {
 	samDBValue samDBValue
 	delivered  chan struct{}
 }
@@ -368,7 +374,7 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 	const bufferSize int = 1000
 	rb := newringBuffer(*s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.toRingbufferCh)
 	inCh := make(chan subjectAndMessage)
-	ringBufferOutCh := make(chan samDBValue)
+	ringBufferOutCh := make(chan samDBValueAndDelivered)
 	// start the ringbuffer.
 	rb.start(inCh, ringBufferOutCh, s.configuration.DefaultMessageTimeout, s.configuration.DefaultMessageRetries)
 
@@ -395,7 +401,9 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 
 	go func() {
 		for samTmp := range ringBufferOutCh {
-			sam := samTmp.Data
+			samTmp.delivered <- struct{}{}
+
+			sam := samTmp.samDBValue.Data
 			// Check if the format of the message is correct.
 			if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
 				er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
