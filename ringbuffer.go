@@ -216,8 +216,15 @@ func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan sam
 			// Listen on the done channel here , so a go routine handling the
 			// message will be able to signal back here that the message have
 			// been processed, and that we then can delete it out of the K/V Store.
-			<-v.Data.done
-			log.Printf("info: processBufferMessages: done with message, deleting key from bucket, %v\n", v.ID)
+
+			select {
+			case <-v.Data.done:
+				log.Printf("info: processBufferMessages: done with message, deleting key from bucket, %v\n", v.ID)
+				// case <-time.After(time.Second * 3):
+				// 	// Testing with a timeout here to figure out if messages are stuck
+				// 	// waiting for done signal.
+				// 	fmt.Printf(" *** Ingo: message %v seems to be stuck, dropping message\n", v.ID)
+			}
 
 			// Since we are now done with the specific message we can delete
 			// it out of the K/V Store.

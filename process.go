@@ -413,7 +413,8 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		case m = <-p.subject.messageCh:
 		case <-p.ctx.Done():
 			er := fmt.Errorf("info: canceling publisher: %v", p.subject.name())
-			sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
+			//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
+			log.Printf("%v\n", er)
 			return
 		}
 		// Get the process name so we can look up the process in the

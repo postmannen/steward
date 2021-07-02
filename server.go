@@ -289,14 +289,14 @@ func (s *server) Start() {
 	// Adding a safety function here so we can make sure that all processes
 	// are stopped after a given time if the context cancelation below hangs.
 	defer func() {
-		//time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 20)
 		log.Printf("error: doing a non graceful shutdown of all processes..\n")
 		os.Exit(1)
 	}()
 
 	// TODO: The cancelation of all gracefully do not work, so adding a sleep here
 	// to be sure that the defered exit above are run before this cancelFunc.
-	time.Sleep(time.Second * 2)
+	time.Sleep(time.Second * 0)
 	s.ctxCancelFunc()
 	fmt.Printf(" *** Done: ctxCancelFunc()\n")
 
@@ -346,6 +346,11 @@ func createErrorMsgContent(FromNode Node, theError error) subjectAndMessage {
 	}
 
 	return sam
+}
+
+type samDBValueAndDeliveredCh struct {
+	samDBValue samDBValue
+	delivered  chan struct{}
 }
 
 // routeMessagesToProcess takes a database name and an input channel as
