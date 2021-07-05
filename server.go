@@ -288,7 +288,7 @@ func (s *server) Start() {
 
 	// Adding a safety function here so we can make sure that all processes
 	// are stopped after a given time if the context cancelation below hangs.
-	defer func() {
+	func() {
 		time.Sleep(time.Second * 0)
 		log.Printf("error: doing a non graceful shutdown of all processes..\n")
 		os.Exit(1)
@@ -354,9 +354,12 @@ func createErrorMsgContent(FromNode Node, theError error) subjectAndMessage {
 	return sam
 }
 
+// Contains the sam value as it is used in the state DB, and also a
+// delivered function to be called when this message is picked up, so
+// we can control if messages gets stale at some point.
 type samDBValueAndDelivered struct {
 	samDBValue samDBValue
-	delivered  chan struct{}
+	delivered  func()
 }
 
 // routeMessagesToProcess takes a database name and an input channel as
@@ -401,7 +404,7 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 
 	go func() {
 		for samTmp := range ringBufferOutCh {
-			samTmp.delivered <- struct{}{}
+			samTmp.delivered()
 
 			sam := samTmp.samDBValue.Data
 			// Check if the format of the message is correct.

@@ -211,10 +211,15 @@ func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan sam
 		// error with an individual message occurs.
 		go func(v samDBValue) {
 			v.Data.Message.done = make(chan struct{})
+			delivredCh := make(chan struct{})
 
+			// Prepare the structure with the data, and a function that can
+			// be called when the data is received for signaling back.
 			sd := samDBValueAndDelivered{
 				samDBValue: v,
-				delivered:  make(chan struct{}),
+				delivered: func() {
+					delivredCh <- struct{}{}
+				},
 			}
 
 			outCh <- sd
@@ -222,7 +227,7 @@ func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan sam
 			// the read process have stalled or not.
 			// For now it will not do anything,
 			select {
-			case <-sd.delivered:
+			case <-delivredCh:
 				// OK.
 			case <-time.After(time.Second * 5):
 				// Testing with a timeout here to figure out if messages are stuck
