@@ -258,17 +258,87 @@ clone the repository, then cd `./steward/cmd` and do `go build -o steward`, and 
 
 ### How to Run
 
+#### Nkey Authentication
+
+Nkey's can be used for authentication, and you use the `nkeySeedFile` flag to specify the seed file to use.
+
 #### nats-server (the message broker)
 
 The broker for messaging is Nats-server from <https://nats.io>. Download, run it, and use the `-brokerAddress` flag on Steward to point to it.
 
 There is a lot of different variants of how you can setup and confiure Nats. Full mesh, leaf node, TLS, Authentication, and more. You can read more about how to configure the Nats broker called nats-server at <https://nats.io/>.
 
-Some example configuration for the nats-server are located in the `doc` folder in this repository.
+##### Server config with nkey authentication
+
+```config
+port: 4222
+tls {
+  cert_file: "/Users/bt/tmp/autocert/ww.steward.raalabs.tech/ww.steward.raalabs.tech.crt"
+  key_file: "/Users/bt/tmp/autocert/ww.steward.raalabs.tech/ww.steward.raalabs.tech.key"
+}
+
+
+authorization: {
+    users = [
+        {
+            # central
+            nkey: <USER_NKEY_HERE>
+            permissions: {
+                publish: {
+      allow: ["ww.>","errorCentral.>"]
+    }
+            subscribe: {
+      allow: ["ww.>","errorCentral.>"]
+    }
+            }
+        }
+        {
+            # mixer
+            nkey: <USER_NKEY_HERE>
+            permissions: {
+                publish: {
+                        allow: ["central.>"]
+                }
+                subscribe: {
+                        allow: ["central.>","mixer.>"]
+                }
+            }
+        }
+        {
+            # node10
+            nkey: <USER_NKEY_HERE>
+            permissions: {
+                publish: {
+                        allow: ["ww.central.>","errorCentral.>","ww.morningconductor.>"]
+                }
+                subscribe: {
+                        allow: ["ww.central.>","ww.morningconductor.>"]
+                }
+            }
+        }
+    ]
+}
+```
+
+The official docs for nkeys can be found here <https://docs.nats.io/nats-server/configuration/securing_nats/auth_intro/nkey_auth>.
+
+Generate private (seed) and public (user) key pair:
+
+`nk -gen user -pubout`
+
+Generate a public (user) key from a private (seed) key file called `seed.txt`.
+
+`nk -inkey seed.txt -pubout > user.txt`
+
+More example configurations for the nats-server are located in the `doc` folder in this repository.
 
 #### Steward
 
-On some central server which will act as your command and control server.
+To set the location of the config folder other than default, you should use the ENV variable `CONFIGFOLDER`.
+
+`env CONFIGFOLDER=./etc/ ./steward --node="central"`
+
+Using default configfolder location on some central server which will act as your command and control server.
 
 `./steward --node="central"`
 

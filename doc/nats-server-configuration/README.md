@@ -1,5 +1,67 @@
 # Nats-Server configuration
 
+## Server config with nkey authentication
+
+```config
+port: 4222
+tls {
+  cert_file: "/Users/bt/tmp/autocert/ww.steward.raalabs.tech/ww.steward.raalabs.tech.crt"
+  key_file: "/Users/bt/tmp/autocert/ww.steward.raalabs.tech/ww.steward.raalabs.tech.key"
+}
+
+
+authorization: {
+    users = [
+        {
+            # central
+            nkey: <USER_NKEY_HERE>
+            permissions: {
+                publish: {
+			allow: ["ww.>","errorCentral.>"]
+		}
+            subscribe: {
+			allow: ["ww.>","errorCentral.>"]
+		}
+            }
+        }
+        {
+            # mixer
+            nkey: <USER_NKEY_HERE>
+            permissions: {
+                publish: {
+                        allow: ["central.>"]
+                }
+                subscribe: {
+                        allow: ["central.>","mixer.>"]
+                }
+            }
+        }
+        {
+            # node10
+            nkey: <USER_NKEY_HERE>
+            permissions: {
+                publish: {
+                        allow: ["ww.central.>","errorCentral.>","ww.morningconductor.>"]
+                }
+                subscribe: {
+                        allow: ["ww.central.>","ww.morningconductor.>"]
+                }
+            }
+        }
+    ]
+}
+```
+
+The official docs for nkeys can be found here <https://docs.nats.io/nats-server/configuration/securing_nats/auth_intro/nkey_auth>.
+
+Generate private (seed) and public (user) key pair:
+
+`nk -gen user -pubout`
+
+Generate a public (user) key from a private (seed) key file called `seed.txt`.
+
+`nk -inkey seed.txt -pubout > user.txt`
+
 ## Leafnode config
 
 Nats-server version need to be greater than v2+ for leafnode functionality.
