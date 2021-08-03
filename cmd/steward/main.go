@@ -32,7 +32,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	go s.Start()
-
-	select {}
+	s.Start()
 }
