@@ -239,7 +239,7 @@ func NewServer(c *Configuration) (*server, error) {
 // if there is publisher process for a given message subject, and
 // not exist it will spawn one.
 func (s *server) Start() {
-	// Stop main context last when exits.
+	// Stop main server context last when exits.
 	defer func() {
 		s.ctxCancelFunc()
 		log.Printf("info: stopping the main server context with ctxCancelFunc()\n")
@@ -309,27 +309,17 @@ func (s *server) Start() {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt)
 
-	//Block until we receive a signal
+	//Block and wait for CTRL+C
 	sig := <-sigCh
 	fmt.Printf("Got exit signal, terminating all processes, %v\n", sig)
 
 	// Adding a safety function here so we can make sure that all processes
-	// are stopped after a given time if the context cancelation below hangs.
+	// are stopped after a given time if the context cancelation hangs.
 	go func() {
 		time.Sleep(time.Second * 10)
 		log.Printf("error: doing a non graceful shutdown of all processes..\n")
 		os.Exit(1)
 	}()
-
-	// TODO: The cancelation of all gracefully do not work as expected since it
-	// seems to hang on terminating somewhere. Meanwhile adding a sleep here
-	// to be sure that the defered exit above are run before this cancelFunc.
-	//
-	// NOTE: The system are built to handle non graceful shutdowns since it keeps
-	// the state if the messages received have been processed or not, so it is not
-	// deeply needed to implement this.
-	// But still.. Need to look into this.
-	//time.Sleep(time.Second * 10)
 }
 
 func (p *processes) printProcessesMap() {
