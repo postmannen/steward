@@ -129,7 +129,7 @@ func (s startup) pubREQHello(p process) {
 				select {
 				case <-ticker.C:
 				case <-ctx.Done():
-					er := fmt.Errorf("info: stopped handleFunc for: pub%v", proc.subject.name())
+					er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
 					// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 					log.Printf("%v\n", er)
 					return nil
@@ -212,7 +212,7 @@ func (s startup) subREQHello(p process) {
 			select {
 			case m = <-proc.procFuncCh:
 			case <-ctx.Done():
-				er := fmt.Errorf("info: stopped handleFunc for: sub%v", proc.subject.name())
+				er := fmt.Errorf("info: stopped handleFunc for: subscriber %v", proc.subject.name())
 				// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 				log.Printf("%v\n", er)
 				return nil
