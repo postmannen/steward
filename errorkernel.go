@@ -8,6 +8,7 @@
 package steward
 
 import (
+	"context"
 	"fmt"
 	"log"
 )
@@ -41,51 +42,59 @@ func newErrorKernel() *errorKernel {
 // process if it should continue or not based not based on how severe
 // the error where. This should be right after sending the error
 // sending in the process.
-func (e *errorKernel) startErrorKernel(newMessagesCh chan<- []subjectAndMessage) {
+func (e *errorKernel) start(ctx context.Context, newMessagesCh chan<- []subjectAndMessage) error {
 	// NOTE: For now it will just print the error messages to the
 	// console.
-	go func() {
 
-		for {
-			er := <-e.errorCh
-
-			// We should be able to handle each error individually and
-			// also concurrently, so the handler is started in it's
-			// own go routine
-			go func() {
-				// NOTE: Here we should check the severity of the error,
-				// and also possibly the the error-state of the process
-				// that fails, so we can decide if we should stop and
-				// start a new process to replace to old one, or if we
-				// should just kill the process and send message back to
-				// the operator....or other ?
-				//
-				// Just print the error, and tell the process to continue
-
-				// log.Printf("*** error_kernel: %#v, type=%T\n", er, er)
-				log.Printf("TESTING, we received and error from the process, but we're telling the process back to continue\n")
-
-				// // TESTING: Creating an error message to send to errorCentral
-				// fmt.Printf(" --- Sending error message to central !!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
-				// sam := subjectAndMessage{
-				// 	Subject: Subject{
-				// 		ToNode:         "errorCentral",
-				// 		CommandOrEvent: EventNACK,
-				// 		Method:         ErrorLog,
-				// 	},
-				// 	Message: Message{
-				// 		ToNode:         "errorCentral",
-				// 		Data:           []string{"some tull here .............."},
-				// 		CommandOrEvent: EventNACK,
-				// 		Method:         ErrorLog,
-				// 	},
-				// }
-				// newMessagesCh <- []subjectAndMessage{sam}
-
-				er.errorActionCh <- errActionContinue
-			}()
+	for {
+		var er errProcess
+		select {
+		case er = <-e.errorCh:
+		case <-ctx.Done():
+			return fmt.Errorf("info: stopping errorKernel")
 		}
-	}()
+
+		// We should be able to handle each error individually and
+		// also concurrently, so the handler is started in it's
+		// own go routine
+		go func() {
+			// NOTE: Here we should check the severity of the error,
+			// and also possibly the the error-state of the process
+			// that fails, so we can decide if we should stop and
+			// start a new process to replace to old one, or if we
+			// should just kill the process and send message back to
+			// the operator....or other ?
+			//
+			// Just print the error, and tell the process to continue
+
+			// log.Printf("*** error_kernel: %#v, type=%T\n", er, er)
+			log.Printf("TESTING, we received and error from the process, but we're telling the process back to continue\n")
+
+			// // TESTING: Creating an error message to send to errorCentral
+			// fmt.Printf(" --- Sending error message to central !!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+			// sam := subjectAndMessage{
+			// 	Subject: Subject{
+			// 		ToNode:         "errorCentral",
+			// 		CommandOrEvent: EventNACK,
+			// 		Method:         ErrorLog,
+			// 	},
+			// 	Message: Message{
+			// 		ToNode:         "errorCentral",
+			// 		Data:           []string{"some tull here .............."},
+			// 		CommandOrEvent: EventNACK,
+			// 		Method:         ErrorLog,
+			// 	},
+			// }
+			// newMessagesCh <- []subjectAndMessage{sam}
+
+			select {
+			case er.errorActionCh <- errActionContinue:
+			case <-ctx.Done():
+				log.Printf("info: errorKernel: got ctx.Done, will stop waiting for errAction\n")
+				return
+			}
+		}()
+	}
 }
 
 type errorAction int

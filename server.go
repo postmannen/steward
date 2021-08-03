@@ -239,10 +239,25 @@ func NewServer(c *Configuration) (*server, error) {
 // if there is publisher process for a given message subject, and
 // not exist it will spawn one.
 func (s *server) Start() {
+	// Stop main context last when exits.
+	defer func() {
+		s.ctxCancelFunc()
+		log.Printf("info: stopping the main server context with ctxCancelFunc()\n")
+	}()
 	// Start the error kernel that will do all the error handling
 	// not done within a process.
-	s.errorKernel = newErrorKernel()
-	s.errorKernel.startErrorKernel(s.toRingbufferCh)
+	{
+		s.errorKernel = newErrorKernel()
+		ctx, cancel := context.WithCancel(s.ctx)
+
+		go func() {
+			err := s.errorKernel.start(ctx, s.toRingbufferCh)
+			if err != nil {
+				log.Printf("%v\n", err)
+			}
+		}()
+		defer cancel()
+	}
 
 	// Start collecting the metrics
 	go s.startMetrics()
@@ -266,15 +281,20 @@ func (s *server) Start() {
 	// Start up the predefined subscribers. Since all the logic to handle
 	// processes are tied to the process struct, we need to create an
 	// initial process to start the rest.
-	sub := newSubject(REQInitial, s.nodeName)
-	p := newProcess(s.ctx, s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, "", []Node{}, nil)
-	p.ProcessesStart(s.ctx)
+	{
+		ctx, cancel := context.WithCancel(s.ctx)
+		sub := newSubject(REQInitial, s.nodeName)
+		p := newProcess(ctx, s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, "", []Node{}, nil)
+		p.ProcessesStart(ctx)
 
-	time.Sleep(time.Second * 1)
-	s.processes.printProcessesMap()
+		time.Sleep(time.Second * 1)
+		s.processes.printProcessesMap()
 
-	// Start the processing of new messages from an input channel.
-	s.routeMessagesToProcess("./incomingBuffer.db", s.toRingbufferCh)
+		// Start the processing of new messages from an input channel.
+		s.routeMessagesToProcess("./incomingBuffer.db", s.toRingbufferCh)
+
+		defer cancel()
+	}
 
 	// Set up channel on which to send signal notifications.
 	// We must use a buffered channel or risk missing the signal
@@ -303,9 +323,6 @@ func (s *server) Start() {
 	// deeply needed to implement this.
 	// But still.. Need to look into this.
 	//time.Sleep(time.Second * 10)
-	s.ctxCancelFunc()
-	fmt.Printf(" *** Done: ctxCancelFunc()\n")
-
 }
 
 func (p *processes) printProcessesMap() {
