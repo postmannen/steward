@@ -288,8 +288,8 @@ func (s *server) Start() {
 
 	// Adding a safety function here so we can make sure that all processes
 	// are stopped after a given time if the context cancelation below hangs.
-	func() {
-		time.Sleep(time.Second * 0)
+	go func() {
+		time.Sleep(time.Second * 5)
 		log.Printf("error: doing a non graceful shutdown of all processes..\n")
 		os.Exit(1)
 	}()
@@ -302,7 +302,7 @@ func (s *server) Start() {
 	// the state if the messages received have been processed or not, so it is not
 	// deeply needed to implement this.
 	// But still.. Need to look into this.
-	time.Sleep(time.Second * 10)
+	//time.Sleep(time.Second * 10)
 	s.ctxCancelFunc()
 	fmt.Printf(" *** Done: ctxCancelFunc()\n")
 
