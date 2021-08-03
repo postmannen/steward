@@ -245,7 +245,7 @@ func (s *server) Start() {
 		log.Printf("info: stopping the main server context with ctxCancelFunc()\n")
 	}()
 	// Start the error kernel that will do all the error handling
-	// not done within a process.
+	// that is not done within a process.
 	{
 		s.errorKernel = newErrorKernel()
 		ctx, cancel := context.WithCancel(s.ctx)
@@ -260,7 +260,14 @@ func (s *server) Start() {
 	}
 
 	// Start collecting the metrics
-	go s.startMetrics()
+
+	go func() {
+		err := s.startMetrics()
+		if err != nil {
+			log.Printf("%v\n", err)
+			os.Exit(1)
+		}
+	}()
 
 	// Start the checking the input socket for new messages from operator.
 	go s.readSocket(s.toRingbufferCh)
@@ -309,7 +316,7 @@ func (s *server) Start() {
 	// Adding a safety function here so we can make sure that all processes
 	// are stopped after a given time if the context cancelation below hangs.
 	go func() {
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 10)
 		log.Printf("error: doing a non graceful shutdown of all processes..\n")
 		os.Exit(1)
 	}()
