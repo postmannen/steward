@@ -244,24 +244,22 @@ func (s *server) Start() {
 		s.ctxCancelFunc()
 		log.Printf("info: stopping the main server context with ctxCancelFunc()\n")
 	}()
+
 	// Start the error kernel that will do all the error handling
 	// that is not done within a process.
-	{
-		s.errorKernel = newErrorKernel(s.ctx)
-
-		go func() {
-			err := s.errorKernel.start(s.toRingbufferCh)
-			if err != nil {
-				log.Printf("%v\n", err)
-			}
-		}()
-		defer s.errorKernel.stop()
-	}
-
-	// Start collecting the metrics
+	s.errorKernel = newErrorKernel(s.ctx)
 
 	go func() {
-		err := s.startMetrics()
+		err := s.errorKernel.start(s.toRingbufferCh)
+		if err != nil {
+			log.Printf("%v\n", err)
+		}
+	}()
+	defer s.errorKernel.stop()
+
+	// Start collecting the metrics
+	go func() {
+		err := s.metrics.start()
 		if err != nil {
 			log.Printf("%v\n", err)
 			os.Exit(1)
