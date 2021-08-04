@@ -23,12 +23,19 @@ type errorKernel struct {
 
 	// errorCh is used to report errors from a process
 	errorCh chan errProcess
+
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // newErrorKernel will initialize and return a new error kernel
-func newErrorKernel() *errorKernel {
+func newErrorKernel(ctx context.Context) *errorKernel {
+	ctxC, cancel := context.WithCancel(ctx)
+
 	return &errorKernel{
 		errorCh: make(chan errProcess, 2),
+		ctx:     ctxC,
+		cancel:  cancel,
 	}
 }
 
@@ -42,7 +49,7 @@ func newErrorKernel() *errorKernel {
 // process if it should continue or not based not based on how severe
 // the error where. This should be right after sending the error
 // sending in the process.
-func (e *errorKernel) start(ctx context.Context, newMessagesCh chan<- []subjectAndMessage) error {
+func (e *errorKernel) start(newMessagesCh chan<- []subjectAndMessage) error {
 	// NOTE: For now it will just print the error messages to the
 	// console.
 
@@ -50,7 +57,7 @@ func (e *errorKernel) start(ctx context.Context, newMessagesCh chan<- []subjectA
 		var er errProcess
 		select {
 		case er = <-e.errorCh:
-		case <-ctx.Done():
+		case <-e.ctx.Done():
 			return fmt.Errorf("info: stopping errorKernel")
 		}
 
@@ -89,12 +96,16 @@ func (e *errorKernel) start(ctx context.Context, newMessagesCh chan<- []subjectA
 
 			select {
 			case er.errorActionCh <- errActionContinue:
-			case <-ctx.Done():
+			case <-e.ctx.Done():
 				log.Printf("info: errorKernel: got ctx.Done, will stop waiting for errAction\n")
 				return
 			}
 		}()
 	}
+}
+
+func (e *errorKernel) stop() {
+	e.cancel()
 }
 
 type errorAction int

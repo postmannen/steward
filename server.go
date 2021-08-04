@@ -247,16 +247,15 @@ func (s *server) Start() {
 	// Start the error kernel that will do all the error handling
 	// that is not done within a process.
 	{
-		s.errorKernel = newErrorKernel()
-		ctx, cancel := context.WithCancel(s.ctx)
+		s.errorKernel = newErrorKernel(s.ctx)
 
 		go func() {
-			err := s.errorKernel.start(ctx, s.toRingbufferCh)
+			err := s.errorKernel.start(s.toRingbufferCh)
 			if err != nil {
 				log.Printf("%v\n", err)
 			}
 		}()
-		defer cancel()
+		defer s.errorKernel.stop()
 	}
 
 	// Start collecting the metrics
