@@ -522,7 +522,7 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 
 	// Open file and write data.
 	file := filepath.Join(folderTree, fileName)
-	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, os.ModeAppend)
+	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
 	if err != nil {
 		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to open file : %v, message: %v", err, message)
 		sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)

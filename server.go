@@ -76,9 +76,9 @@ type server struct {
 	// The nats connection to the broker
 	natsConn *nats.Conn
 	// net listener for communicating via the steward socket
-	StewardSockListener net.Listener
+	StewardSocket net.Listener
 	// net listener for the communication with Stew
-	StewSockListener net.Listener
+	StewSocket net.Listener
 	// processes holds all the information about running processes
 	processes *processes
 	// The name of the node
@@ -155,7 +155,6 @@ func NewServer(c *Configuration) (*server, error) {
 	}
 
 	socketFilepath := filepath.Join(c.SocketFolder, "steward.sock")
-
 	if _, err := os.Stat(socketFilepath); !os.IsNotExist(err) {
 		err = os.Remove(socketFilepath)
 		if err != nil {
@@ -166,6 +165,7 @@ func NewServer(c *Configuration) (*server, error) {
 	}
 
 	nl, err := net.Listen("unix", socketFilepath)
+
 	if err != nil {
 		er := fmt.Errorf("error: failed to open socket: %v", err)
 		cancel()
@@ -208,16 +208,16 @@ func NewServer(c *Configuration) (*server, error) {
 	metrics := newMetrics(c.PromHostAndPort)
 
 	s := &server{
-		ctx:                 ctx,
-		ctxCancelFunc:       cancel,
-		configuration:       c,
-		nodeName:            c.NodeName,
-		natsConn:            conn,
-		StewardSockListener: nl,
-		StewSockListener:    stewNL,
-		processes:           newProcesses(metrics.promRegistry),
-		toRingbufferCh:      make(chan []subjectAndMessage),
-		metrics:             metrics,
+		ctx:            ctx,
+		ctxCancelFunc:  cancel,
+		configuration:  c,
+		nodeName:       c.NodeName,
+		natsConn:       conn,
+		StewardSocket:  nl,
+		StewSocket:     stewNL,
+		processes:      newProcesses(metrics.promRegistry),
+		toRingbufferCh: make(chan []subjectAndMessage),
+		metrics:        metrics,
 	}
 
 	// Create the default data folder for where subscribers should
@@ -266,19 +266,6 @@ func (s *server) Start() {
 	// Start the checking the input socket for new messages from operator.
 	go s.readSocket(s.toRingbufferCh)
 
-	// Delete the socket file when the program exits.
-	defer func() {
-		socketFilepath := filepath.Join(s.configuration.SocketFolder, "steward.sock")
-
-		if _, err := os.Stat(socketFilepath); !os.IsNotExist(err) {
-			err = os.Remove(socketFilepath)
-			if err != nil {
-				er := fmt.Errorf("error: could not delete sock file: %v", err)
-				log.Printf("%v\n", er)
-			}
-		}
-	}()
-
 	// Start up the predefined subscribers. Since all the logic to handle
 	// processes are tied to the process struct, we need to create an
 	// initial process to start the rest.
@@ -297,6 +284,10 @@ func (s *server) Start() {
 
 // Will stop all processes started during startup.
 func (s *server) Stop() {
+	// TODO: Add done sync functionality within the
+	// stop functions so we get a confirmation that
+	// all processes actually are stopped.
+
 	// Stop the started pub/sub message processes.
 	s.ctxSubscribersCancelFunc()
 	log.Printf("info: stopped all subscribers\n")
@@ -308,6 +299,18 @@ func (s *server) Stop() {
 	// Stop the main context.
 	s.ctxCancelFunc()
 	log.Printf("info: stopped the main context\n")
+
+	// Delete the socket file when the program exits.
+	socketFilepath := filepath.Join(s.configuration.SocketFolder, "steward.sock")
+
+	if _, err := os.Stat(socketFilepath); !os.IsNotExist(err) {
+		err = os.Remove(socketFilepath)
+		if err != nil {
+			er := fmt.Errorf("error: could not delete sock file: %v", err)
+			log.Printf("%v\n", er)
+		}
+	}
+
 }
 
 func (p *processes) printProcessesMap() {

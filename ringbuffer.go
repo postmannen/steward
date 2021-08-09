@@ -107,7 +107,7 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 	func() {
 		s, err := r.dumpBucket(samValueBucket)
 		if err != nil {
-			er := fmt.Errorf("info: fillBuffer: retreival of values from k/v store failed, probaly empty database, and no previos entries in db to process: %v", err)
+			er := fmt.Errorf("info: fillBuffer: retreival of values from k/v store failed, probaly empty database, and no previous entries in db to process: %v", err)
 			log.Printf("%v\n", er)
 			return
 			//sendErrorLogMessage(r.newMessagesCh, node(r.nodeName), er)

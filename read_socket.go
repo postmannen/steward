@@ -14,7 +14,7 @@ func (s *server) readSocket(toRingbufferCh chan []subjectAndMessage) {
 
 	// Loop, and wait for new connections.
 	for {
-		conn, err := s.StewardSockListener.Accept()
+		conn, err := s.StewardSocket.Accept()
 		if err != nil {
 			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
 			sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
