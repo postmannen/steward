@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"time"
 
 	_ "net/http/pprof"
 
@@ -32,5 +35,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	s.Start()
+	// Start up the server
+	go s.Start()
+
+	// Wait for ctrl+c to stop the server.
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt)
+
+	// Block and wait for CTRL+C
+	sig := <-sigCh
+	fmt.Printf("Got exit signal, terminating all processes, %v\n", sig)
+
+	// Adding a safety function here so we can make sure that all processes
+	// are stopped after a given time if the context cancelation hangs.
+	go func() {
+		time.Sleep(time.Second * 10)
+		log.Printf("error: doing a non graceful shutdown of all processes..\n")
+		os.Exit(1)
+	}()
+
+	// Stop all processes.
+	s.Stop()
 }

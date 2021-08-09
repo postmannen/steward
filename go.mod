@@ -7,7 +7,7 @@ require (
 	github.com/hpcloud/tail v1.0.0
 	github.com/klauspost/compress v1.13.2 // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect
-	github.com/nats-io/nats-server/v2 v2.3.3 // indirect
+	github.com/nats-io/nats-server/v2 v2.3.4
 	github.com/nats-io/nats.go v1.11.1-0.20210623165838-4b75fc59ae30
 	github.com/pelletier/go-toml v1.8.1
 	github.com/prometheus/client_golang v1.9.0

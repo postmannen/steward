@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -68,6 +67,10 @@ type server struct {
 	ctx context.Context
 	// The CancelFunc for the main context
 	ctxCancelFunc context.CancelFunc
+	// The context for the subscriber processes
+	ctxSubscribers context.Context
+	// The cancelFun for the subscribers
+	ctxSubscribersCancelFunc context.CancelFunc
 	// Configuration options used for running the server
 	configuration *Configuration
 	// The nats connection to the broker
@@ -240,12 +243,6 @@ func NewServer(c *Configuration) (*server, error) {
 // if there is publisher process for a given message subject, and
 // not exist it will spawn one.
 func (s *server) Start() {
-	// Stop main server context last when exits.
-	defer func() {
-		s.ctxCancelFunc()
-		log.Printf("info: stopping the main server context with ctxCancelFunc()\n")
-	}()
-
 	// Start the error kernel that will do all the error handling
 	// that is not done within a process.
 	s.errorKernel = newErrorKernel(s.ctx)
@@ -256,7 +253,6 @@ func (s *server) Start() {
 			log.Printf("%v\n", err)
 		}
 	}()
-	defer s.errorKernel.stop()
 
 	// Start collecting the metrics
 	go func() {
@@ -286,38 +282,32 @@ func (s *server) Start() {
 	// Start up the predefined subscribers. Since all the logic to handle
 	// processes are tied to the process struct, we need to create an
 	// initial process to start the rest.
-	{
-		ctx, cancel := context.WithCancel(s.ctx)
-		sub := newSubject(REQInitial, s.nodeName)
-		p := newProcess(ctx, s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, "", []Node{}, nil)
-		p.ProcessesStart(ctx)
+	s.ctxSubscribers, s.ctxSubscribersCancelFunc = context.WithCancel(s.ctx)
+	sub := newSubject(REQInitial, s.nodeName)
+	p := newProcess(s.ctxSubscribers, s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, "", []Node{}, nil)
+	p.ProcessesStart(s.ctxSubscribers)
 
-		time.Sleep(time.Second * 1)
-		s.processes.printProcessesMap()
+	time.Sleep(time.Second * 1)
+	s.processes.printProcessesMap()
 
-		// Start the processing of new messages from an input channel.
-		s.routeMessagesToProcess("./incomingBuffer.db", s.toRingbufferCh)
+	// Start the processing of new messages from an input channel.
+	s.routeMessagesToProcess("./incomingBuffer.db", s.toRingbufferCh)
 
-		defer cancel()
-	}
+}
 
-	// Set up channel on which to send signal notifications.
-	// We must use a buffered channel or risk missing the signal
-	// if we're not ready to receive when the signal is sent.
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt)
+// Will stop all processes started during startup.
+func (s *server) Stop() {
+	// Stop the started pub/sub message processes.
+	s.ctxSubscribersCancelFunc()
+	log.Printf("info: stopped all subscribers\n")
 
-	//Block and wait for CTRL+C
-	sig := <-sigCh
-	fmt.Printf("Got exit signal, terminating all processes, %v\n", sig)
+	// Stop the errorKernel.
+	s.errorKernel.stop()
+	log.Printf("info: stopped the errorKernel\n")
 
-	// Adding a safety function here so we can make sure that all processes
-	// are stopped after a given time if the context cancelation hangs.
-	go func() {
-		time.Sleep(time.Second * 10)
-		log.Printf("error: doing a non graceful shutdown of all processes..\n")
-		os.Exit(1)
-	}()
+	// Stop the main context.
+	s.ctxCancelFunc()
+	log.Printf("info: stopped the main context\n")
 }
 
 func (p *processes) printProcessesMap() {
