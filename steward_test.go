@@ -44,6 +44,8 @@ func TestSteward(t *testing.T) {
 
 	s.Start()
 
+	s.Stop()
+
 	// Shutdown services
 	ns.Shutdown()
 
