@@ -40,7 +40,8 @@ type processes struct {
 	promProcessesVec *prometheus.GaugeVec
 }
 
-// newProcesses will prepare and return a *processes
+// newProcesses will prepare and return a *processes which
+// is map containing all the currently running processes.
 func newProcesses(promRegistry *prometheus.Registry) *processes {
 	p := processes{
 		active: make(map[processName]map[int]process),
