@@ -1,3 +1,7 @@
+// Package functionality tests for Steward.
+//
+// To turn on the normal logging functionality during tests, use:
+// go test -logging=true
 package steward
 
 import (
@@ -14,6 +18,7 @@ import (
 	natsserver "github.com/nats-io/nats-server/v2/server"
 )
 
+// Set the default logging functionality of the package to false.
 var logging = flag.Bool("logging", false, "set to true to enable the normal logger of the package")
 
 // Test the overall functionality of Steward.
@@ -30,8 +35,8 @@ func TestStewardServer(t *testing.T) {
 
 	// Start Steward instance
 	// ---------------------------------------
-	tempdir := t.TempDir()
-
+	// tempdir := t.TempDir()
+	tempdir := "./tmp"
 	conf := &Configuration{
 		SocketFolder:          filepath.Join(tempdir, "tmp"),
 		DatabaseFolder:        filepath.Join(tempdir, "var/lib"),
@@ -42,10 +47,13 @@ func TestStewardServer(t *testing.T) {
 		DefaultMessageRetries: 1,
 		DefaultMessageTimeout: 3,
 
-		StartSubREQCliCommand:   flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQnCliCommand:  flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQCliCommand:  flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQnCliCommand: flagNodeSlice{OK: true, Values: []Node{"*"}},
+		// StartSubREQnCliCommandCont:  flagNodeSlice{OK: true, Values: []Node{"*"}},
 		StartSubREQErrorLog:     flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQToFile:       flagNodeSlice{OK: true, Values: []Node{"*"}},
 		StartSubREQToFileAppend: flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQHello:        flagNodeSlice{OK: true, Values: []Node{"*"}},
 	}
 	s, err := NewServer(conf)
 	if err != nil {
@@ -56,9 +64,22 @@ func TestStewardServer(t *testing.T) {
 	// Run the message tests
 	//
 	// ---------------------------------------
+
 	checkREQOpCommandTest(conf, t)
 	checkREQCliCommandTest(conf, t)
 	checkREQnCliCommandTest(conf, t)
+	// checkREQnCliCommandContTest(conf, t)
+	// checkREQToConsoleTest(conf, t), NB: No tests will be made for console ouput.
+	// checkREQToFileAppendTest(conf, t), NB: Already tested via others
+	// checkREQToFileTest(conf, t), NB: Already tested via others
+	checkREQHelloTest(conf, t)
+	// checkREQErrorLogTest(conf, t)
+	// checkREQPingTest(conf, t)
+	// checkREQPongTest(conf, t)
+	// checkREQHttpGetTest(conf, t)
+	// checkREQTailFileTest(conf, t)
+	// checkREQToSocketTest(conf, t)
+
 	// ---------------------------------------
 
 	s.Stop()
@@ -77,7 +98,7 @@ func checkREQOpCommandTest(conf *Configuration, t *testing.T) {
 			"operation":{
 				"opCmd":"ps"
 			},
-			"replyMethod":"REQToFileAppend",
+			"replyMethod":"REQToFile",
 			"ACKTimeout":3,
 			"retries":3,
 			"replyACKTimeout":3,
@@ -139,17 +160,42 @@ func checkREQnCliCommandTest(conf *Configuration, t *testing.T) {
 
 }
 
+// Sending of Hello.
+func checkREQHelloTest(conf *Configuration, t *testing.T) {
+	m := `[
+		{
+			"directory":"commands-executed",
+			"fileExtension":".result",
+			"toNode": "central",
+			"data": [],
+			"method":"REQHello"
+		}
+	]`
+
+	writeToSocketTest(conf, m, t)
+
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQHello.result")
+	findStringInFileTest("Received hello from", resultFile, conf, t)
+
+}
+
+// ----------------------------------------------------------------------------
+// Helper functions for tests
+// ----------------------------------------------------------------------------
+
 // Check if a file contains the given string.
 func findStringInFileTest(want string, fileName string, conf *Configuration, t *testing.T) {
 	// Wait n seconds for the results file to be created
-	for i := 0; i <= 30; i++ {
+	n := 5
+
+	for i := 0; i <= n; i++ {
 		_, err := os.Stat(fileName)
 		if os.IsNotExist(err) {
 			time.Sleep(time.Millisecond * 500)
 			continue
 		}
 
-		if os.IsNotExist(err) && i >= 20 {
+		if os.IsNotExist(err) && i >= n {
 			t.Fatalf(" * failed: no result file created for request within the given time\n")
 		}
 	}

@@ -624,8 +624,39 @@ func (m methodREQHello) getKind() CommandOrEvent {
 }
 
 func (m methodREQHello) handler(proc process, message Message, node string) ([]byte, error) {
+	data := fmt.Sprintf("Received hello from %#v\n", message.FromNode)
 
-	log.Printf("<--- Received hello from %#v\n", message.FromNode)
+	// --------------------------
+	fileName := fmt.Sprintf("%v.%v%v", message.FromNode, message.Method, message.FileExtension)
+	folderTree := filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.ToNode))
+
+	// Check if folder structure exist, if not create it.
+	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
+		err := os.MkdirAll(folderTree, 0700)
+		if err != nil {
+			return nil, fmt.Errorf("error: failed to create errorLog directory tree %v: %v", folderTree, err)
+		}
+
+		log.Printf("info: Creating subscribers data folder at %v\n", folderTree)
+	}
+
+	// Open file and write data.
+	file := filepath.Join(folderTree, fileName)
+	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
+
+	if err != nil {
+		log.Printf("error: methodEventTextLogging.handler: failed to open file: %v\n", err)
+		return nil, err
+	}
+	defer f.Close()
+
+	_, err = f.Write([]byte(data))
+	f.Sync()
+	if err != nil {
+		log.Printf("error: methodEventTextLogging.handler: failed to write to file: %v\n", err)
+	}
+
+	// --------------------------
 
 	// send the message to the procFuncCh which is running alongside the process
 	// and can hold registries and handle special things for an individual process.
