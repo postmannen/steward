@@ -314,7 +314,6 @@ func (s *server) Stop() {
 }
 
 func (p *processes) printProcessesMap() {
-	fmt.Println("--------------------------------------------------------------------------------------------")
 	log.Printf("*** Output of processes map :\n")
 	p.mu.Lock()
 	for _, vSub := range p.active {
@@ -326,7 +325,6 @@ func (p *processes) printProcessesMap() {
 
 	p.promTotalProcesses.Set(float64(len(p.active)))
 
-	fmt.Println("--------------------------------------------------------------------------------------------")
 }
 
 // sendErrorMessage will put the error message directly on the channel that is
