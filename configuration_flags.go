@@ -130,6 +130,8 @@ type Configuration struct {
 	StartSubREQHttpGet flagNodeSlice
 	// Subscriber for tailing log files
 	StartSubREQTailFile flagNodeSlice
+	// Subscriber for continously delivery of output from cli commands.
+	StartSubREQnCliCommandCont flagNodeSlice
 }
 
 // NewConfiguration will set a default Configuration,
@@ -142,30 +144,31 @@ func NewConfiguration() *Configuration {
 // Default configuration
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
-		ConfigFolder:            "/usr/local/steward/etc/",
-		SocketFolder:            "./tmp",
-		DatabaseFolder:          "./var/lib",
-		BrokerAddress:           "127.0.0.1:4222",
-		ProfilingPort:           "",
-		PromHostAndPort:         "",
-		DefaultMessageTimeout:   10,
-		DefaultMessageRetries:   1,
-		StartPubREQHello:        30,
-		SubscribersDataFolder:   "./var",
-		CentralNodeName:         "",
-		RootCAPath:              "",
-		NkeySeedFile:            "",
-		StartSubREQErrorLog:     flagNodeSlice{Values: []Node{}},
-		StartSubREQHello:        flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQToFileAppend: flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQToFile:       flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQPing:         flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQPong:         flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQCliCommand:   flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQnCliCommand:  flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQToConsole:    flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQHttpGet:      flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQTailFile:     flagNodeSlice{OK: true, Values: []Node{"*"}},
+		ConfigFolder:               "/usr/local/steward/etc/",
+		SocketFolder:               "./tmp",
+		DatabaseFolder:             "./var/lib",
+		BrokerAddress:              "127.0.0.1:4222",
+		ProfilingPort:              "",
+		PromHostAndPort:            "",
+		DefaultMessageTimeout:      10,
+		DefaultMessageRetries:      1,
+		StartPubREQHello:           30,
+		SubscribersDataFolder:      "./var",
+		CentralNodeName:            "",
+		RootCAPath:                 "",
+		NkeySeedFile:               "",
+		StartSubREQErrorLog:        flagNodeSlice{Values: []Node{}},
+		StartSubREQHello:           flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQToFileAppend:    flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQToFile:          flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQPing:            flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQPong:            flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQCliCommand:      flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQnCliCommand:     flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQToConsole:       flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQHttpGet:         flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQTailFile:        flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQnCliCommandCont: flagNodeSlice{OK: true, Values: []Node{"*"}},
 	}
 	return c
 }
@@ -213,6 +216,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.Var(&c.StartSubREQToConsole, "startSubREQToConsole", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQHttpGet, "startSubREQHttpGet", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 	flag.Var(&c.StartSubREQTailFile, "startSubREQTailFile", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.Var(&c.StartSubREQnCliCommandCont, "startSubREQnCliCommandCont", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
 
 	flag.Parse()
 

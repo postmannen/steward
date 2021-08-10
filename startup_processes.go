@@ -80,6 +80,10 @@ func (p process) ProcessesStart(ctx context.Context) {
 		p.startup.subREQTailFile(p)
 	}
 
+	if p.configuration.StartSubREQnCliCommandCont.OK {
+		p.startup.subREQnCliCommandCont(p)
+	}
+
 	p.startup.subREQToSocket(p)
 }
 
@@ -250,6 +254,14 @@ func (s startup) subREQToFileAppend(p process) {
 func (s startup) subREQTailFile(p process) {
 	log.Printf("Starting tail log files subscriber: %#v\n", p.node)
 	sub := newSubject(REQTailFile, string(p.node))
+	proc := newProcess(p.ctx, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQTailFile.Values, nil)
+	// fmt.Printf("*** %#v\n", proc)
+	go proc.spawnWorker(p.processes, p.natsConn)
+}
+
+func (s startup) subREQnCliCommandCont(p process) {
+	log.Printf("Starting cli command with continous delivery: %#v\n", p.node)
+	sub := newSubject(REQnCliCommandCont, string(p.node))
 	proc := newProcess(p.ctx, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, p.configuration.StartSubREQTailFile.Values, nil)
 	// fmt.Printf("*** %#v\n", proc)
 	go proc.spawnWorker(p.processes, p.natsConn)

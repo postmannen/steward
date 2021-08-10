@@ -47,13 +47,17 @@ func TestStewardServer(t *testing.T) {
 		DefaultMessageRetries: 1,
 		DefaultMessageTimeout: 3,
 
-		StartSubREQCliCommand:  flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQnCliCommand: flagNodeSlice{OK: true, Values: []Node{"*"}},
-		// StartSubREQnCliCommandCont:  flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQErrorLog:     flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQToFile:       flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQToFileAppend: flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQHello:        flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQCliCommand:      flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQnCliCommand:     flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQnCliCommandCont: flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQToConsole:       flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQToFileAppend:    flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQToFile:          flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQHello:           flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQErrorLog:        flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQHttpGet:         flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQTailFile:        flagNodeSlice{OK: true, Values: []Node{"*"}},
+		// StartSubREQToSocket:		flagNodeSlice{OK: true, Values: []Node{"*"}},
 	}
 	s, err := NewServer(conf)
 	if err != nil {
@@ -68,7 +72,7 @@ func TestStewardServer(t *testing.T) {
 	checkREQOpCommandTest(conf, t)
 	checkREQCliCommandTest(conf, t)
 	checkREQnCliCommandTest(conf, t)
-	// checkREQnCliCommandContTest(conf, t)
+	checkREQnCliCommandContTest(conf, t)
 	// checkREQToConsoleTest(conf, t), NB: No tests will be made for console ouput.
 	// checkREQToFileAppendTest(conf, t), NB: Already tested via others
 	// checkREQToFileTest(conf, t), NB: Already tested via others
@@ -156,6 +160,29 @@ func checkREQnCliCommandTest(conf *Configuration, t *testing.T) {
 	writeToSocketTest(conf, m, t)
 
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQnCliCommand.result")
+	findStringInFileTest("apekatt", resultFile, conf, t)
+
+}
+
+// The non-sequential sending of CLI Commands.
+func checkREQnCliCommandContTest(conf *Configuration, t *testing.T) {
+	m := `[
+		{
+			"directory":"commands-executed",
+			"fileExtension":".result",
+			"toNode": "central",
+			"data": ["bash","-c","echo apekatt && sleep 5 && echo gris"],
+			"replyMethod":"REQToFileAppend",
+			"method":"REQnCliCommandCont",
+			"ACKTimeout":3,
+			"retries":3,
+			"methodTimeout": 5
+		}
+	]`
+
+	writeToSocketTest(conf, m, t)
+
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQnCliCommandCont.result")
 	findStringInFileTest("apekatt", resultFile, conf, t)
 
 }

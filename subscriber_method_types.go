@@ -1067,9 +1067,10 @@ func (m methodREQnCliCommandCont) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-// handler to run a tailing of files with timeout context. The handler will
-// return the output of the command run back to the calling publisher
-// as a new message.
+// Handler to run REQnCliCommandCont, which is the same as normal
+// Cli command, but can be used when running a command that will take
+// longer time and you want to send the output of the command continually
+// back as it is generated, and not just when the command is finished.
 func (m methodREQnCliCommandCont) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- CLInCommandCont REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 
