@@ -28,11 +28,7 @@ type server struct {
 	// The main background context
 	ctx context.Context
 	// The CancelFunc for the main context
-	ctxCancelFunc context.CancelFunc
-	// The context for the subscriber processes
-	ctxSubscribers context.Context
-	// The cancelFun for the subscribers
-	ctxSubscribersCancelFunc context.CancelFunc
+	cancel context.CancelFunc
 	// Configuration options used for running the server
 	configuration *Configuration
 	// The nats connection to the broker
@@ -56,6 +52,7 @@ type server struct {
 
 // newServer will prepare and return a server type
 func NewServer(c *Configuration) (*server, error) {
+	// Set up the main background context.
 	ctx, cancel := context.WithCancel(context.Background())
 
 	var opt nats.Option
@@ -65,14 +62,7 @@ func NewServer(c *Configuration) (*server, error) {
 
 	if c.NkeySeedFile != "" {
 		var err error
-		// fh, err := os.Open(c.NkeySeedFile)
-		// if err != nil {
-		// 	return nil, fmt.Errorf("error: failed to open nkey seed file: %v\n", err)
-		// }
-		// b, err := io.ReadAll(fh)
-		// if err != nil {
-		// 	return nil, fmt.Errorf("error: failed to read nkey seed file: %v\n", err)
-		// }
+
 		opt, err = nats.NkeyOptionFromSeed(c.NkeySeedFile)
 		if err != nil {
 			cancel()
@@ -105,6 +95,7 @@ func NewServer(c *Configuration) (*server, error) {
 
 		break
 	}
+
 	// Prepare the connection to the  Steward socket file
 
 	// Check if socket folder exists, if not create it
@@ -116,6 +107,7 @@ func NewServer(c *Configuration) (*server, error) {
 		}
 	}
 
+	// Just as an extra check we eventually delete any existing Steward socket files if found.
 	socketFilepath := filepath.Join(c.SocketFolder, "steward.sock")
 	if _, err := os.Stat(socketFilepath); !os.IsNotExist(err) {
 		err = os.Remove(socketFilepath)
@@ -126,8 +118,8 @@ func NewServer(c *Configuration) (*server, error) {
 		}
 	}
 
+	// Open the socket.
 	nl, err := net.Listen("unix", socketFilepath)
-
 	if err != nil {
 		er := fmt.Errorf("error: failed to open socket: %v", err)
 		cancel()
@@ -149,6 +141,7 @@ func NewServer(c *Configuration) (*server, error) {
 
 	stewSocketFilepath := filepath.Join(c.SocketFolder, "stew.sock")
 
+	// Just as an extra check we eventually delete any existing Stew socket files if found.
 	if _, err := os.Stat(stewSocketFilepath); !os.IsNotExist(err) {
 		err = os.Remove(stewSocketFilepath)
 		if err != nil {
@@ -171,13 +164,13 @@ func NewServer(c *Configuration) (*server, error) {
 
 	s := &server{
 		ctx:            ctx,
-		ctxCancelFunc:  cancel,
+		cancel:         cancel,
 		configuration:  c,
 		nodeName:       c.NodeName,
 		natsConn:       conn,
 		StewardSocket:  nl,
 		StewSocket:     stewNL,
-		processes:      newProcesses(metrics.promRegistry),
+		processes:      newProcesses(ctx, metrics.promRegistry),
 		toRingbufferCh: make(chan []subjectAndMessage),
 		metrics:        metrics,
 	}
@@ -232,9 +225,10 @@ func (s *server) Start() {
 	//
 	// Since all the logic to handle processes are tied to the process
 	// struct, we need to create an initial process to start the rest.
-	s.ctxSubscribers, s.ctxSubscribersCancelFunc = context.WithCancel(s.ctx)
+	//
+	// NB: The context of the initial process are set in processes.Start.
 	sub := newSubject(REQInitial, s.nodeName)
-	p := newProcess(s.ctxSubscribers, s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, "", []Node{}, nil)
+	p := newProcess(context.TODO(), s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, "", []Node{}, nil)
 	// Start all wanted subscriber processes.
 	s.processes.Start(p)
 
@@ -253,7 +247,7 @@ func (s *server) Stop() {
 	// all processes actually are stopped.
 
 	// Stop the started pub/sub message processes.
-	s.ctxSubscribersCancelFunc()
+	s.processes.Stop()
 	log.Printf("info: stopped all subscribers\n")
 
 	// Stop the errorKernel.
@@ -261,7 +255,7 @@ func (s *server) Stop() {
 	log.Printf("info: stopped the errorKernel\n")
 
 	// Stop the main context.
-	s.ctxCancelFunc()
+	s.cancel()
 	log.Printf("info: stopped the main context\n")
 
 	// Delete the socket file when the program exits.
@@ -274,20 +268,6 @@ func (s *server) Stop() {
 			log.Printf("%v\n", er)
 		}
 	}
-
-}
-
-func (p *processes) printProcessesMap() {
-	log.Printf("*** Output of processes map :\n")
-	p.mu.Lock()
-	for _, vSub := range p.active {
-		for _, vID := range vSub {
-			log.Printf("* proc - : %v, id: %v, name: %v, allowed from: %v\n", vID.processKind, vID.processID, vID.subject.name(), vID.allowedReceivers)
-		}
-	}
-	p.mu.Unlock()
-
-	p.promTotalProcesses.Set(float64(len(p.active)))
 
 }
 

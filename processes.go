@@ -13,6 +13,10 @@ import (
 
 // processes holds all the information about running processes
 type processes struct {
+	// The main context for subscriber processes.
+	ctx context.Context
+	// cancel func to send cancel signal to the subscriber processes context.
+	cancel context.CancelFunc
 	// The active spawned processes
 	active map[processName]map[int]process
 	// mutex to lock the map
@@ -27,10 +31,16 @@ type processes struct {
 
 // newProcesses will prepare and return a *processes which
 // is map containing all the currently running processes.
-func newProcesses(promRegistry *prometheus.Registry) *processes {
+func newProcesses(ctx context.Context, promRegistry *prometheus.Registry) *processes {
 	p := processes{
 		active: make(map[processName]map[int]process),
 	}
+
+	// Prepare the main context for the subscribers.
+	ctx, cancel := context.WithCancel(ctx)
+
+	p.ctx = ctx
+	p.cancel = cancel
 
 	p.promTotalProcesses = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "total_running_processes",
@@ -50,6 +60,8 @@ func newProcesses(promRegistry *prometheus.Registry) *processes {
 // Takes an initial process as it's input. All processes
 // will be tied to this single process's context.
 func (p *processes) Start(proc process) {
+	// Set the context for the initial process.
+	proc.ctx = p.ctx
 
 	// --- Subscriber services that can be started via flags
 
@@ -124,6 +136,11 @@ func (p *processes) Start(proc process) {
 	}
 
 	proc.startup.subREQToSocket(proc)
+}
+
+// Stop all subscriber processes.
+func (p *processes) Stop() {
+	p.cancel()
 }
 
 // ---------------------------------------------------------------------------------------
@@ -313,4 +330,21 @@ func (s startup) subREQToSocket(p process) {
 	proc := newProcess(p.ctx, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, []Node{"*"}, nil)
 	// fmt.Printf("*** %#v\n", proc)
 	go proc.spawnWorker(p.processes, p.natsConn)
+}
+
+// ---------------------------------------------------------------
+
+// Print the content of the processes map.
+func (p *processes) printProcessesMap() {
+	log.Printf("*** Output of processes map :\n")
+	p.mu.Lock()
+	for _, vSub := range p.active {
+		for _, vID := range vSub {
+			log.Printf("* proc - : %v, id: %v, name: %v, allowed from: %v\n", vID.processKind, vID.processID, vID.subject.name(), vID.allowedReceivers)
+		}
+	}
+	p.mu.Unlock()
+
+	p.promTotalProcesses.Set(float64(len(p.active)))
+
 }
