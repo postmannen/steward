@@ -9,12 +9,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/nats-io/nats.go"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 type processName string
@@ -23,41 +20,6 @@ type processName string
 func processNameGet(sn subjectName, pk processKind) processName {
 	pn := fmt.Sprintf("%s_%s", sn, pk)
 	return processName(pn)
-}
-
-// processes holds all the information about running processes
-type processes struct {
-	// The active spawned processes
-	active map[processName]map[int]process
-	// mutex to lock the map
-	mu sync.RWMutex
-	// The last processID created
-	lastProcessID int
-	//
-	promTotalProcesses prometheus.Gauge
-	//
-	promProcessesVec *prometheus.GaugeVec
-}
-
-// newProcesses will prepare and return a *processes which
-// is map containing all the currently running processes.
-func newProcesses(promRegistry *prometheus.Registry) *processes {
-	p := processes{
-		active: make(map[processName]map[int]process),
-	}
-
-	p.promTotalProcesses = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "total_running_processes",
-		Help: "The current number of total running processes",
-	})
-
-	p.promProcessesVec = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "running_process",
-		Help: "Name of the running process",
-	}, []string{"processName"},
-	)
-
-	return &p
 }
 
 // server is the structure that will hold the state about spawned
@@ -266,13 +228,15 @@ func (s *server) Start() {
 	// Start the checking the input socket for new messages from operator.
 	go s.readSocket(s.toRingbufferCh)
 
-	// Start up the predefined subscribers. Since all the logic to handle
-	// processes are tied to the process struct, we need to create an
-	// initial process to start the rest.
+	// Start up the predefined subscribers.
+	//
+	// Since all the logic to handle processes are tied to the process
+	// struct, we need to create an initial process to start the rest.
 	s.ctxSubscribers, s.ctxSubscribersCancelFunc = context.WithCancel(s.ctx)
 	sub := newSubject(REQInitial, s.nodeName)
 	p := newProcess(s.ctxSubscribers, s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, "", []Node{}, nil)
-	p.ProcessesStart(s.ctxSubscribers)
+	// Start all wanted subscriber processes.
+	s.processes.Start(p)
 
 	time.Sleep(time.Second * 1)
 	s.processes.printProcessesMap()
