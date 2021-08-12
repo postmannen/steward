@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -77,18 +78,24 @@ func TestStewardServer(t *testing.T) {
 	// checkREQToFileAppendTest(conf, t), NB: Already tested via others
 	// checkREQToFileTest(conf, t), NB: Already tested via others
 	checkREQHelloTest(conf, t)
-	// checkREQErrorLogTest(conf, t)
+	checkREQErrorLogTest(conf, t)
 	// checkREQPingTest(conf, t)
 	// checkREQPongTest(conf, t)
-	// checkREQHttpGetTest(conf, t)
+	checkREQHttpGetTest(conf, t)
 	// checkREQTailFileTest(conf, t)
 	// checkREQToSocketTest(conf, t)
+
+	checkErrorKernelJSONtest(conf, t)
 
 	// ---------------------------------------
 
 	s.Stop()
 
 }
+
+// ----------------------------------------------------------------------------
+// Check REQ types
+// ----------------------------------------------------------------------------
 
 // Testing op (operator) Commands.
 func checkREQOpCommandTest(conf *Configuration, t *testing.T) {
@@ -205,6 +212,84 @@ func checkREQHelloTest(conf *Configuration, t *testing.T) {
 	findStringInFileTest("Received hello from", resultFile, conf, t)
 
 }
+
+func checkREQErrorLogTest(conf *Configuration, t *testing.T) {
+	m := `[
+		{
+			"directory": "errorLog",
+			"fileExtension":".result",
+			"toNode": "errorCentral",
+			"data": ["some error"],
+			"method": "REQErrorLog"
+		}
+	]`
+
+	writeToSocketTest(conf, m, t)
+
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "central", "errorCentral.REQErrorLog.result")
+	findStringInFileTest("some error", resultFile, conf, t)
+
+}
+
+// ---
+
+func checkREQHttpGetTest(conf *Configuration, t *testing.T) {
+	// Web server for testing.
+	{
+		h := func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("web page content"))
+		}
+		http.HandleFunc("/", h)
+
+		go func() {
+			http.ListenAndServe(":10080", nil)
+		}()
+	}
+
+	m := `[
+		{
+			"directory": "httpget",
+			"fileExtension":".result",
+			"toNode": "central",
+			"data": ["http://127.0.0.1:10080/"],
+			"method": "REQHttpGet",
+			"replyMethod":"REQToFile",
+        	"ACKTimeout":5,
+        	"methodTimeout": 5
+		}
+	]`
+
+	writeToSocketTest(conf, m, t)
+
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "httpget", "central", "central.REQHttpGet.result")
+	findStringInFileTest("web page content", resultFile, conf, t)
+
+}
+
+// ------- Functionality tests.
+
+// Check errorKernel
+func checkErrorKernelJSONtest(conf *Configuration, t *testing.T) {
+	m := `[
+		{
+			"directory": "some dir",
+			"fileExtension":"someext",
+			"toNode": "somenode",
+			"data": ["some data"],
+			"method": "REQErrorLog"
+		missing brace here.....
+	]`
+
+	writeToSocketTest(conf, m, t)
+
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "central", "errorCentral.REQErrorLog.log")
+	findStringInFileTest("error: malformed json", resultFile, conf, t)
+
+}
+
+// ----------------------------------------------------------------------------
+// Check functionality
+// ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
 // Helper functions for tests
