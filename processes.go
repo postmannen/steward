@@ -27,6 +27,8 @@ type processes struct {
 	promTotalProcesses prometheus.Gauge
 	//
 	promProcessesVec *prometheus.GaugeVec
+	// Waitgroup to keep track of all the processes started
+	wg sync.WaitGroup
 }
 
 // newProcesses will prepare and return a *processes which
@@ -69,7 +71,7 @@ func (p *processes) Start(proc process) {
 	{
 		log.Printf("Starting REQOpCommand subscriber: %#v\n", proc.node)
 		sub := newSubject(REQOpCommand, string(proc.node))
-		proc := newProcess(proc.ctx, proc.natsConn, proc.processes, proc.toRingbufferCh, proc.configuration, sub, proc.errorCh, processKindSubscriber, []Node{Node(proc.configuration.CentralNodeName)}, nil)
+		proc := newProcess(proc.ctx, proc.natsConn, p, proc.toRingbufferCh, proc.configuration, sub, proc.errorCh, processKindSubscriber, []Node{Node(proc.configuration.CentralNodeName)}, nil)
 		go proc.spawnWorker(proc.processes, proc.natsConn)
 	}
 
