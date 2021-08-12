@@ -142,7 +142,12 @@ func (p *processes) Start(proc process) {
 
 // Stop all subscriber processes.
 func (p *processes) Stop() {
+	log.Printf("info: canceling all subscriber processes...\n")
+	fmt.Printf("* DEBUG: %v\n", p.wg)
 	p.cancel()
+	p.wg.Wait()
+	log.Printf("info: done canceling all subscriber processes.\n")
+
 }
 
 // ---------------------------------------------------------------------------------------
