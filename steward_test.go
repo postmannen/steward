@@ -5,6 +5,7 @@
 package steward
 
 import (
+	"encoding/json"
 	"flag"
 	"io"
 	"log"
@@ -82,7 +83,7 @@ func TestStewardServer(t *testing.T) {
 	// checkREQPingTest(conf, t)
 	// checkREQPongTest(conf, t)
 	checkREQHttpGetTest(conf, t)
-	// checkREQTailFileTest(conf, t)
+	checkREQTailFileTest(conf, t)
 	// checkREQToSocketTest(conf, t)
 
 	checkErrorKernelJSONtest(conf, t)
@@ -231,8 +232,6 @@ func checkREQErrorLogTest(conf *Configuration, t *testing.T) {
 
 }
 
-// ---
-
 func checkREQHttpGetTest(conf *Configuration, t *testing.T) {
 	// Web server for testing.
 	{
@@ -263,6 +262,56 @@ func checkREQHttpGetTest(conf *Configuration, t *testing.T) {
 
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "httpget", "central", "central.REQHttpGet.result")
 	findStringInFileTest("web page content", resultFile, conf, t)
+
+}
+
+// ---
+
+func checkREQTailFileTest(conf *Configuration, t *testing.T) {
+	// // Create a file with some content.
+	// fh, err := os.Create("test.file")
+	// if err != nil {
+	// 	t.Fatalf(" * failed: unable to open temporary file: %v\n", err)
+	// }
+	// defer fh.Close()
+	//
+	// for i := 1; i <= 10; i++ {
+	// 	_, err = fh.Write([]byte("some file content"))
+	// 	if err != nil {
+	// 		t.Fatalf(" * failed: writing to temporary file: %v\n", err)
+	// 	}
+	// 	time.Sleep(time.Millisecond * 500)
+	// }
+	//
+	// wd, err := os.Getwd()
+	// if err != nil {
+	// 	t.Fatalf(" * failed: getting current working directory: %v\n", err)
+	// }
+	//
+	// file := filepath.Join(wd, "test.file")
+
+	s := Message{
+		Directory:     "tail-files",
+		FileExtension: ".result",
+		ToNode:        "central",
+		Data:          []string{"/var/log/system.log"},
+		Method:        REQTailFile,
+		ACKTimeout:    3,
+		Retries:       2,
+		MethodTimeout: 10,
+	}
+
+	sJSON, err := json.Marshal(s)
+	if err != nil {
+		t.Fatalf(" * failed: json marshaling of message: %v: %v\n", sJSON, err)
+	}
+
+	writeToSocketTest(conf, string(sJSON), t)
+
+	time.Sleep(time.Second * 5)
+
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "tail-files", "central", "central.REQTailFile.result")
+	findStringInFileTest("some file content", resultFile, conf, t)
 
 }
 

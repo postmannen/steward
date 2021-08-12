@@ -851,7 +851,7 @@ func (m methodREQnCliCommand) getKind() CommandOrEvent {
 // and the reply back will be sent as soon as the process is
 // done. No order are preserved.
 func (m methodREQnCliCommand) handler(proc process, message Message, node string) ([]byte, error) {
-	log.Printf("<--- CLICommand REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
+	log.Printf("<--- nCLICommand REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 
 	// Execute the CLI command in it's own go routine, so we are able
 	// to return immediately with an ack reply that the messag was
@@ -1025,7 +1025,7 @@ func (m methodREQTailFile) getKind() CommandOrEvent {
 // return the output of the command run back to the calling publisher
 // as a new message.
 func (m methodREQTailFile) handler(proc process, message Message, node string) ([]byte, error) {
-	log.Printf("<--- CLICommand REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
+	log.Printf("<--- TailFile REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -1078,6 +1078,7 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 				return
 			case out := <-outCh:
+
 				// Prepare and queue for sending a new message with the output
 				// of the action executed.
 				newReplyMessage(proc, message, out)
@@ -1091,9 +1092,6 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 }
 
 // ---
-
-// --- methodREQTailFile
-
 type methodREQnCliCommandCont struct {
 	commandOrEvent CommandOrEvent
 }
