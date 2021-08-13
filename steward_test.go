@@ -129,6 +129,7 @@ func checkREQOpCommandTest(conf *Configuration, t *testing.T) {
 		t.Fatalf("%v\n", err)
 	}
 
+	t.Logf(" [SUCCESS]	: checkREQOpCommandTest\n")
 }
 
 // Sending of CLI Commands.
@@ -155,6 +156,7 @@ func checkREQCliCommandTest(conf *Configuration, t *testing.T) {
 		t.Fatalf("%v\n", err)
 	}
 
+	t.Logf(" [SUCCESS]	: checkREQCliCommandTest\n")
 }
 
 // The non-sequential sending of CLI Commands.
@@ -181,6 +183,7 @@ func checkREQnCliCommandTest(conf *Configuration, t *testing.T) {
 		t.Fatalf("%v\n", err)
 	}
 
+	t.Logf(" [SUCCESS]	: checkREQnCliCommandTest\n")
 }
 
 // The non-sequential sending of CLI Commands.
@@ -207,6 +210,7 @@ func checkREQnCliCommandContTest(conf *Configuration, t *testing.T) {
 		t.Fatalf("%v\n", err)
 	}
 
+	t.Logf(" [SUCCESS]	: checkREQnCliCommandContTest\n")
 }
 
 // Sending of Hello.
@@ -229,6 +233,7 @@ func checkREQHelloTest(conf *Configuration, t *testing.T) {
 		t.Fatalf("%v\n", err)
 	}
 
+	t.Logf(" [SUCCESS]	: checkREQHelloTest\n")
 }
 
 func checkREQErrorLogTest(conf *Configuration, t *testing.T) {
@@ -250,6 +255,7 @@ func checkREQErrorLogTest(conf *Configuration, t *testing.T) {
 		t.Fatalf("%v\n", err)
 	}
 
+	t.Logf(" [SUCCESS]	: checkREQErrorLogTest\n")
 }
 
 func checkREQHttpGetTest(conf *Configuration, t *testing.T) {
@@ -286,6 +292,7 @@ func checkREQHttpGetTest(conf *Configuration, t *testing.T) {
 		t.Fatalf("%v\n", err)
 	}
 
+	t.Logf(" [SUCCESS]	: checkREQHttpGetTest\n")
 }
 
 // ---
@@ -300,8 +307,8 @@ func checkREQTailFileTest(conf *Configuration, t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// Write content to the file with specified intervals.
 	go func() {
-		time.Sleep(time.Second * 2)
 		for i := 1; i <= 10; i++ {
 			_, err = fh.Write([]byte("some file content\n"))
 			if err != nil {
@@ -310,6 +317,7 @@ func checkREQTailFileTest(conf *Configuration, t *testing.T) {
 			fh.Sync()
 			time.Sleep(time.Millisecond * 500)
 
+			// Check if we've received a done, else default to continuing.
 			select {
 			case <-ctx.Done():
 				return
@@ -343,15 +351,32 @@ func checkREQTailFileTest(conf *Configuration, t *testing.T) {
 	`
 	writeToSocketTest(conf, s, t)
 
-	time.Sleep(time.Second * 5)
-	cancel()
+	// time.Sleep(time.Second * 5)
 
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "tail-files", "central", "central.REQTailFile.result")
+
+	// Wait n times for result file to be created.
+	n := 5
+	for i := 0; i <= n; i++ {
+		_, err := os.Stat(resultFile)
+		if os.IsNotExist(err) {
+			time.Sleep(time.Millisecond * 1000)
+			continue
+		}
+
+		if os.IsNotExist(err) && i >= n {
+			t.Fatalf(" * failed: no result file created for request within the given time\n")
+		}
+	}
+
+	cancel()
+
 	_, err = findStringInFileTest("some file content", resultFile, conf, t)
 	if err != nil {
 		t.Fatalf("%v\n", err)
 	}
 
+	t.Logf(" [SUCCESS]	: checkREQTailFileTest\n")
 }
 
 // ------- Functionality tests.
@@ -409,13 +434,13 @@ func checkErrorKernelMalformedJSONtest(conf *Configuration, t *testing.T) {
 			}
 
 			if found {
+				t.Logf(" [SUCCESS]	: checkErrorKernelMalformedJSONtest\n")
 				return
 			}
 		case <-ticker.C:
 			t.Fatalf(" * failed: did not get an update in the errorKernel log file\n")
 		}
 	}
-
 }
 
 // ----------------------------------------------------------------------------
