@@ -73,20 +73,20 @@ func TestStewardServer(t *testing.T) {
 	//
 	// ---------------------------------------
 
-	// checkREQOpCommandTest(conf, t)
-	// checkREQCliCommandTest(conf, t)
-	// checkREQnCliCommandTest(conf, t)
-	// checkREQnCliCommandContTest(conf, t)
-	// // checkREQToConsoleTest(conf, t), NB: No tests will be made for console ouput.
-	// // checkREQToFileAppendTest(conf, t), NB: Already tested via others
-	// // checkREQToFileTest(conf, t), NB: Already tested via others
-	// checkREQHelloTest(conf, t)
-	// checkREQErrorLogTest(conf, t)
-	// // checkREQPingTest(conf, t)
-	// // checkREQPongTest(conf, t)
-	// checkREQHttpGetTest(conf, t)
-	// checkREQTailFileTest(conf, t)
-	// // checkREQToSocketTest(conf, t)
+	checkREQOpCommandTest(conf, t)
+	checkREQCliCommandTest(conf, t)
+	checkREQnCliCommandTest(conf, t)
+	checkREQnCliCommandContTest(conf, t)
+	// checkREQToConsoleTest(conf, t), NB: No tests will be made for console ouput.
+	// checkREQToFileAppendTest(conf, t), NB: Already tested via others
+	// checkREQToFileTest(conf, t), NB: Already tested via others
+	checkREQHelloTest(conf, t)
+	checkREQErrorLogTest(conf, t)
+	// checkREQPingTest(conf, t)
+	// checkREQPongTest(conf, t)
+	checkREQHttpGetTest(conf, t)
+	checkREQTailFileTest(conf, t)
+	// checkREQToSocketTest(conf, t)
 
 	checkErrorKernelMalformedJSONtest(conf, t)
 
@@ -124,7 +124,10 @@ func checkREQOpCommandTest(conf *Configuration, t *testing.T) {
 	writeToSocketTest(conf, m, t)
 
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQOpCommand.result")
-	findStringInFileTest("central.REQOpCommand.CommandACK", resultFile, conf, t)
+	_, err := findStringInFileTest("central.REQOpCommand.CommandACK", resultFile, conf, t)
+	if err != nil {
+		t.Fatalf("%v\n", err)
+	}
 
 }
 
@@ -147,7 +150,10 @@ func checkREQCliCommandTest(conf *Configuration, t *testing.T) {
 	writeToSocketTest(conf, m, t)
 
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQCliCommand.result")
-	findStringInFileTest("apekatt", resultFile, conf, t)
+	_, err := findStringInFileTest("apekatt", resultFile, conf, t)
+	if err != nil {
+		t.Fatalf("%v\n", err)
+	}
 
 }
 
@@ -170,7 +176,10 @@ func checkREQnCliCommandTest(conf *Configuration, t *testing.T) {
 	writeToSocketTest(conf, m, t)
 
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQnCliCommand.result")
-	findStringInFileTest("apekatt", resultFile, conf, t)
+	_, err := findStringInFileTest("apekatt", resultFile, conf, t)
+	if err != nil {
+		t.Fatalf("%v\n", err)
+	}
 
 }
 
@@ -193,7 +202,10 @@ func checkREQnCliCommandContTest(conf *Configuration, t *testing.T) {
 	writeToSocketTest(conf, m, t)
 
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQnCliCommandCont.result")
-	findStringInFileTest("apekatt", resultFile, conf, t)
+	_, err := findStringInFileTest("apekatt", resultFile, conf, t)
+	if err != nil {
+		t.Fatalf("%v\n", err)
+	}
 
 }
 
@@ -212,7 +224,10 @@ func checkREQHelloTest(conf *Configuration, t *testing.T) {
 	writeToSocketTest(conf, m, t)
 
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQHello.result")
-	findStringInFileTest("Received hello from", resultFile, conf, t)
+	_, err := findStringInFileTest("Received hello from", resultFile, conf, t)
+	if err != nil {
+		t.Fatalf("%v\n", err)
+	}
 
 }
 
@@ -230,7 +245,10 @@ func checkREQErrorLogTest(conf *Configuration, t *testing.T) {
 	writeToSocketTest(conf, m, t)
 
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "central", "errorCentral.REQErrorLog.result")
-	findStringInFileTest("some error", resultFile, conf, t)
+	_, err := findStringInFileTest("some error", resultFile, conf, t)
+	if err != nil {
+		t.Fatalf("%v\n", err)
+	}
 
 }
 
@@ -263,7 +281,10 @@ func checkREQHttpGetTest(conf *Configuration, t *testing.T) {
 	writeToSocketTest(conf, m, t)
 
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "httpget", "central", "central.REQHttpGet.result")
-	findStringInFileTest("web page content", resultFile, conf, t)
+	_, err := findStringInFileTest("web page content", resultFile, conf, t)
+	if err != nil {
+		t.Fatalf("%v\n", err)
+	}
 
 }
 
@@ -326,7 +347,10 @@ func checkREQTailFileTest(conf *Configuration, t *testing.T) {
 	cancel()
 
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "tail-files", "central", "central.REQTailFile.result")
-	findStringInFileTest("some file content", resultFile, conf, t)
+	_, err = findStringInFileTest("some file content", resultFile, conf, t)
+	if err != nil {
+		t.Fatalf("%v\n", err)
+	}
 
 }
 
@@ -370,15 +394,26 @@ func checkErrorKernelMalformedJSONtest(conf *Configuration, t *testing.T) {
 	// We wait 5 seconds for an update, or else we fail.
 	ticker := time.NewTicker(time.Second * 5)
 
-	select {
-	case <-chUpdated:
-		// We got an update, so we continue to check if we find the string we're
-		// looking for.
-		time.Sleep(time.Second * 2)
-		fmt.Println("################# GOT UPDATE")
-		findStringInFileTest("error: malformed json", resultFile, conf, t)
-	case <-ticker.C:
-		t.Fatalf(" * failed: did not get an update in the errorKernel log file\n")
+	for {
+		select {
+		case <-chUpdated:
+			// We got an update, so we continue to check if we find the string we're
+			// looking for.
+			found, err := findStringInFileTest("error: malformed json", resultFile, conf, t)
+			if !found && err != nil {
+				t.Fatalf("%v\n", err)
+			}
+
+			if !found && err == nil {
+				continue
+			}
+
+			if found {
+				return
+			}
+		case <-ticker.C:
+			t.Fatalf(" * failed: did not get an update in the errorKernel log file\n")
+		}
 	}
 
 }
@@ -427,7 +462,7 @@ func checkFileUpdated(fileRealPath string, fileUpdated chan bool) {
 }
 
 // Check if a file contains the given string.
-func findStringInFileTest(want string, fileName string, conf *Configuration, t *testing.T) {
+func findStringInFileTest(want string, fileName string, conf *Configuration, t *testing.T) (bool, error) {
 	// Wait n seconds for the results file to be created
 	n := 5
 
@@ -439,23 +474,25 @@ func findStringInFileTest(want string, fileName string, conf *Configuration, t *
 		}
 
 		if os.IsNotExist(err) && i >= n {
-			t.Fatalf(" * failed: no result file created for request within the given time\n")
+			return false, fmt.Errorf(" * failed: no result file created for request within the given time\n")
 		}
 	}
 
 	fh, err := os.Open(fileName)
 	if err != nil {
-		t.Fatalf(" * failed: could not open result file: %v\n", err)
+		return false, fmt.Errorf(" * failed: could not open result file: %v\n", err)
 	}
 
 	result, err := io.ReadAll(fh)
 	if err != nil {
-		t.Fatalf(" * failed: could not read result file: %v\n", err)
+		return false, fmt.Errorf(" * failed: could not read result file: %v\n", err)
 	}
 
 	if !strings.Contains(string(result), want) {
-		t.Fatalf(" * failed: did not find expexted word `%v` in result file ", want)
+		return false, nil
 	}
+
+	return true, nil
 }
 
 // Write message to socket for testing purposes.
