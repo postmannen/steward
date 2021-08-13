@@ -5,8 +5,9 @@
 package steward
 
 import (
-	"encoding/json"
+	"context"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -17,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	natsserver "github.com/nats-io/nats-server/v2/server"
 )
 
@@ -71,22 +73,22 @@ func TestStewardServer(t *testing.T) {
 	//
 	// ---------------------------------------
 
-	checkREQOpCommandTest(conf, t)
-	checkREQCliCommandTest(conf, t)
-	checkREQnCliCommandTest(conf, t)
-	checkREQnCliCommandContTest(conf, t)
-	// checkREQToConsoleTest(conf, t), NB: No tests will be made for console ouput.
-	// checkREQToFileAppendTest(conf, t), NB: Already tested via others
-	// checkREQToFileTest(conf, t), NB: Already tested via others
-	checkREQHelloTest(conf, t)
-	checkREQErrorLogTest(conf, t)
-	// checkREQPingTest(conf, t)
-	// checkREQPongTest(conf, t)
-	checkREQHttpGetTest(conf, t)
-	checkREQTailFileTest(conf, t)
-	// checkREQToSocketTest(conf, t)
+	// checkREQOpCommandTest(conf, t)
+	// checkREQCliCommandTest(conf, t)
+	// checkREQnCliCommandTest(conf, t)
+	// checkREQnCliCommandContTest(conf, t)
+	// // checkREQToConsoleTest(conf, t), NB: No tests will be made for console ouput.
+	// // checkREQToFileAppendTest(conf, t), NB: Already tested via others
+	// // checkREQToFileTest(conf, t), NB: Already tested via others
+	// checkREQHelloTest(conf, t)
+	// checkREQErrorLogTest(conf, t)
+	// // checkREQPingTest(conf, t)
+	// // checkREQPongTest(conf, t)
+	// checkREQHttpGetTest(conf, t)
+	// checkREQTailFileTest(conf, t)
+	// // checkREQToSocketTest(conf, t)
 
-	checkErrorKernelJSONtest(conf, t)
+	checkErrorKernelMalformedJSONtest(conf, t)
 
 	// ---------------------------------------
 
@@ -268,47 +270,60 @@ func checkREQHttpGetTest(conf *Configuration, t *testing.T) {
 // ---
 
 func checkREQTailFileTest(conf *Configuration, t *testing.T) {
-	// // Create a file with some content.
-	// fh, err := os.Create("test.file")
-	// if err != nil {
-	// 	t.Fatalf(" * failed: unable to open temporary file: %v\n", err)
-	// }
-	// defer fh.Close()
-	//
-	// for i := 1; i <= 10; i++ {
-	// 	_, err = fh.Write([]byte("some file content"))
-	// 	if err != nil {
-	// 		t.Fatalf(" * failed: writing to temporary file: %v\n", err)
-	// 	}
-	// 	time.Sleep(time.Millisecond * 500)
-	// }
-	//
-	// wd, err := os.Getwd()
-	// if err != nil {
-	// 	t.Fatalf(" * failed: getting current working directory: %v\n", err)
-	// }
-	//
-	// file := filepath.Join(wd, "test.file")
-
-	s := Message{
-		Directory:     "tail-files",
-		FileExtension: ".result",
-		ToNode:        "central",
-		Data:          []string{"/var/log/system.log"},
-		Method:        REQTailFile,
-		ACKTimeout:    3,
-		Retries:       2,
-		MethodTimeout: 10,
-	}
-
-	sJSON, err := json.Marshal(s)
+	// Create a file with some content.
+	fh, err := os.OpenFile("test.file", os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
 	if err != nil {
-		t.Fatalf(" * failed: json marshaling of message: %v: %v\n", sJSON, err)
+		t.Fatalf(" * failed: unable to open temporary file: %v\n", err)
+	}
+	defer fh.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		time.Sleep(time.Second * 2)
+		for i := 1; i <= 10; i++ {
+			_, err = fh.Write([]byte("some file content\n"))
+			if err != nil {
+				fmt.Printf(" * failed: writing to temporary file: %v\n", err)
+			}
+			fh.Sync()
+			time.Sleep(time.Millisecond * 500)
+
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				// no done received, we're continuing.
+			}
+
+		}
+	}()
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf(" * failed: getting current working directory: %v\n", err)
 	}
 
-	writeToSocketTest(conf, string(sJSON), t)
+	file := filepath.Join(wd, "test.file")
+
+	s := `
+	[
+		{
+			"directory": "tail-files",
+			"fileExtension": ".result",
+			"toNode": "central",
+			"data": ["` + file + `"],
+			"method":"REQTailFile",
+			"ACKTimeout":5,
+			"retries":3,
+			"methodTimeout": 10
+		}
+	]
+	`
+	writeToSocketTest(conf, s, t)
 
 	time.Sleep(time.Second * 5)
+	cancel()
 
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "tail-files", "central", "central.REQTailFile.result")
 	findStringInFileTest("some file content", resultFile, conf, t)
@@ -318,7 +333,10 @@ func checkREQTailFileTest(conf *Configuration, t *testing.T) {
 // ------- Functionality tests.
 
 // Check errorKernel
-func checkErrorKernelJSONtest(conf *Configuration, t *testing.T) {
+func checkErrorKernelMalformedJSONtest(conf *Configuration, t *testing.T) {
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "central", "errorCentral.REQErrorLog.log")
+
+	// JSON message with error, missing brace.
 	m := `[
 		{
 			"directory": "some dir",
@@ -331,8 +349,37 @@ func checkErrorKernelJSONtest(conf *Configuration, t *testing.T) {
 
 	writeToSocketTest(conf, m, t)
 
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "central", "errorCentral.REQErrorLog.log")
-	findStringInFileTest("error: malformed json", resultFile, conf, t)
+	// Wait n times for error file to be created.
+	n := 5
+	for i := 0; i <= n; i++ {
+		_, err := os.Stat(resultFile)
+		if os.IsNotExist(err) {
+			time.Sleep(time.Millisecond * 1000)
+			continue
+		}
+
+		if os.IsNotExist(err) && i >= n {
+			t.Fatalf(" * failed: no result file created for request within the given time\n")
+		}
+	}
+
+	// Start checking if the result file is being updated.
+	chUpdated := make(chan bool)
+	go checkFileUpdated(resultFile, chUpdated)
+
+	// We wait 5 seconds for an update, or else we fail.
+	ticker := time.NewTicker(time.Second * 5)
+
+	select {
+	case <-chUpdated:
+		// We got an update, so we continue to check if we find the string we're
+		// looking for.
+		time.Sleep(time.Second * 2)
+		fmt.Println("################# GOT UPDATE")
+		findStringInFileTest("error: malformed json", resultFile, conf, t)
+	case <-ticker.C:
+		t.Fatalf(" * failed: did not get an update in the errorKernel log file\n")
+	}
 
 }
 
@@ -343,6 +390,41 @@ func checkErrorKernelJSONtest(conf *Configuration, t *testing.T) {
 // ----------------------------------------------------------------------------
 // Helper functions for tests
 // ----------------------------------------------------------------------------
+
+// Check if file are getting updated with new content.
+func checkFileUpdated(fileRealPath string, fileUpdated chan bool) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Println("Failed fsnotify.NewWatcher")
+		return
+	}
+	defer watcher.Close()
+
+	done := make(chan bool)
+	go func() {
+		//Give a true value to updated so it reads the file the first time.
+		fileUpdated <- true
+		for {
+			select {
+			case event := <-watcher.Events:
+				log.Println("event:", event)
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					log.Println("modified file:", event.Name)
+					//testing with an update chan to get updates
+					fileUpdated <- true
+				}
+			case err := <-watcher.Errors:
+				log.Println("error:", err)
+			}
+		}
+	}()
+
+	err = watcher.Add(fileRealPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	<-done
+}
 
 // Check if a file contains the given string.
 func findStringInFileTest(want string, fileName string, conf *Configuration, t *testing.T) {

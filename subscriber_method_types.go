@@ -1057,9 +1057,10 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 		go func() {
 			defer proc.processes.wg.Done()
 
-			for line := range t.Lines {
+			for {
 				select {
-				case outCh <- []byte(line.Text + "\n"):
+				case line := <-t.Lines:
+					outCh <- []byte(line.Text + "\n")
 				case <-ctx.Done():
 					return
 				}
@@ -1076,6 +1077,7 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 				// close(t.Lines)
 				er := fmt.Errorf("info: method timeout reached, canceling: %v", message)
 				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+
 				return
 			case out := <-outCh:
 
