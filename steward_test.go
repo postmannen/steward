@@ -63,36 +63,47 @@ func TestStewardServer(t *testing.T) {
 		StartSubREQTailFile:        flagNodeSlice{OK: true, Values: []Node{"*"}},
 		// StartSubREQToSocket:		flagNodeSlice{OK: true, Values: []Node{"*"}},
 	}
-	s, err := NewServer(conf)
+	stewardServer, err := NewServer(conf)
 	if err != nil {
 		t.Fatalf(" * failed: could not start the Steward instance %v\n", err)
 	}
-	s.Start()
+	stewardServer.Start()
 
 	// Run the message tests
 	//
 	// ---------------------------------------
 
-	checkREQOpCommandTest(conf, t)
-	checkREQCliCommandTest(conf, t)
-	checkREQnCliCommandTest(conf, t)
-	checkREQnCliCommandContTest(conf, t)
-	// checkREQToConsoleTest(conf, t), NB: No tests will be made for console ouput.
-	// checkREQToFileAppendTest(conf, t), NB: Already tested via others
-	// checkREQToFileTest(conf, t), NB: Already tested via others
-	checkREQHelloTest(conf, t)
-	checkREQErrorLogTest(conf, t)
-	// checkREQPingTest(conf, t)
-	// checkREQPongTest(conf, t)
-	checkREQHttpGetTest(conf, t)
-	checkREQTailFileTest(conf, t)
-	// checkREQToSocketTest(conf, t)
+	type testFunc func(*Configuration, *testing.T) error
 
-	checkErrorKernelMalformedJSONtest(conf, t)
+	// Specify all the test funcs to run in the slice.
+	funcs := []testFunc{
+		checkREQOpCommandTest,
+		checkREQCliCommandTest,
+		checkREQnCliCommandTest,
+		checkREQnCliCommandContTest,
+		// checkREQToConsoleTest(conf, t), NB: No tests will be made for console ouput.
+		// checkREQToFileAppendTest(conf, t), NB: Already tested via others
+		// checkREQToFileTest(conf, t), NB: Already tested via others
+		checkREQHelloTest,
+		checkREQErrorLogTest,
+		// checkREQPingTest(conf, t)
+		// checkREQPongTest(conf, t)
+		checkREQHttpGetTest,
+		checkREQTailFileTest,
+		// checkREQToSocketTest(conf, t)
 
+		checkErrorKernelMalformedJSONtest,
+	}
+
+	for _, f := range funcs {
+		err := f(conf, t)
+		if err != nil {
+			t.Errorf("%v\n", err)
+		}
+	}
 	// ---------------------------------------
 
-	s.Stop()
+	stewardServer.Stop()
 
 }
 
@@ -101,7 +112,7 @@ func TestStewardServer(t *testing.T) {
 // ----------------------------------------------------------------------------
 
 // Testing op (operator) Commands.
-func checkREQOpCommandTest(conf *Configuration, t *testing.T) {
+func checkREQOpCommandTest(conf *Configuration, t *testing.T) error {
 	m := `[
 		{
 			"directory":"commands-executed",
@@ -126,14 +137,15 @@ func checkREQOpCommandTest(conf *Configuration, t *testing.T) {
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQOpCommand.result")
 	_, err := findStringInFileTest("central.REQOpCommand.CommandACK", resultFile, conf, t)
 	if err != nil {
-		t.Fatalf("%v\n", err)
+		return fmt.Errorf(" [FAILED]	: checkREQOpCommandTest: %v", err)
 	}
 
 	t.Logf(" [SUCCESS]	: checkREQOpCommandTest\n")
+	return nil
 }
 
 // Sending of CLI Commands.
-func checkREQCliCommandTest(conf *Configuration, t *testing.T) {
+func checkREQCliCommandTest(conf *Configuration, t *testing.T) error {
 	m := `[
 		{
 			"directory":"commands-executed",
@@ -153,14 +165,15 @@ func checkREQCliCommandTest(conf *Configuration, t *testing.T) {
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQCliCommand.result")
 	_, err := findStringInFileTest("apekatt", resultFile, conf, t)
 	if err != nil {
-		t.Fatalf("%v\n", err)
+		return fmt.Errorf(" [FAILED]	: checkREQCliCommandTest: %v", err)
 	}
 
 	t.Logf(" [SUCCESS]	: checkREQCliCommandTest\n")
+	return nil
 }
 
 // The non-sequential sending of CLI Commands.
-func checkREQnCliCommandTest(conf *Configuration, t *testing.T) {
+func checkREQnCliCommandTest(conf *Configuration, t *testing.T) error {
 	m := `[
 		{
 			"directory":"commands-executed",
@@ -180,14 +193,15 @@ func checkREQnCliCommandTest(conf *Configuration, t *testing.T) {
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQnCliCommand.result")
 	_, err := findStringInFileTest("apekatt", resultFile, conf, t)
 	if err != nil {
-		t.Fatalf("%v\n", err)
+		return fmt.Errorf(" [FAILED]	: checkREQnCliCommandTest: %v", err)
 	}
 
 	t.Logf(" [SUCCESS]	: checkREQnCliCommandTest\n")
+	return nil
 }
 
 // The non-sequential sending of CLI Commands.
-func checkREQnCliCommandContTest(conf *Configuration, t *testing.T) {
+func checkREQnCliCommandContTest(conf *Configuration, t *testing.T) error {
 	m := `[
 		{
 			"directory":"commands-executed",
@@ -207,14 +221,15 @@ func checkREQnCliCommandContTest(conf *Configuration, t *testing.T) {
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQnCliCommandCont.result")
 	_, err := findStringInFileTest("apekatt", resultFile, conf, t)
 	if err != nil {
-		t.Fatalf("%v\n", err)
+		return fmt.Errorf(" [FAILED]	: checkREQnCliCommandContTest: %v", err)
 	}
 
 	t.Logf(" [SUCCESS]	: checkREQnCliCommandContTest\n")
+	return nil
 }
 
 // Sending of Hello.
-func checkREQHelloTest(conf *Configuration, t *testing.T) {
+func checkREQHelloTest(conf *Configuration, t *testing.T) error {
 	m := `[
 		{
 			"directory":"commands-executed",
@@ -230,13 +245,14 @@ func checkREQHelloTest(conf *Configuration, t *testing.T) {
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQHello.result")
 	_, err := findStringInFileTest("Received hello from", resultFile, conf, t)
 	if err != nil {
-		t.Fatalf("%v\n", err)
+		return fmt.Errorf(" [FAILED]	: checkREQHelloTest: %v", err)
 	}
 
 	t.Logf(" [SUCCESS]	: checkREQHelloTest\n")
+	return nil
 }
 
-func checkREQErrorLogTest(conf *Configuration, t *testing.T) {
+func checkREQErrorLogTest(conf *Configuration, t *testing.T) error {
 	m := `[
 		{
 			"directory": "errorLog",
@@ -252,13 +268,14 @@ func checkREQErrorLogTest(conf *Configuration, t *testing.T) {
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "central", "errorCentral.REQErrorLog.result")
 	_, err := findStringInFileTest("some error", resultFile, conf, t)
 	if err != nil {
-		t.Fatalf("%v\n", err)
+		return fmt.Errorf(" [FAILED]	: checkREQErrorLogTest: %v", err)
 	}
 
 	t.Logf(" [SUCCESS]	: checkREQErrorLogTest\n")
+	return nil
 }
 
-func checkREQHttpGetTest(conf *Configuration, t *testing.T) {
+func checkREQHttpGetTest(conf *Configuration, t *testing.T) error {
 	// Web server for testing.
 	{
 		h := func(w http.ResponseWriter, r *http.Request) {
@@ -289,19 +306,20 @@ func checkREQHttpGetTest(conf *Configuration, t *testing.T) {
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "httpget", "central", "central.REQHttpGet.result")
 	_, err := findStringInFileTest("web page content", resultFile, conf, t)
 	if err != nil {
-		t.Fatalf("%v\n", err)
+		return fmt.Errorf(" [FAILED]	: checkREQHttpGetTest: %v", err)
 	}
 
 	t.Logf(" [SUCCESS]	: checkREQHttpGetTest\n")
+	return nil
 }
 
 // ---
 
-func checkREQTailFileTest(conf *Configuration, t *testing.T) {
+func checkREQTailFileTest(conf *Configuration, t *testing.T) error {
 	// Create a file with some content.
 	fh, err := os.OpenFile("test.file", os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
 	if err != nil {
-		t.Fatalf(" * failed: unable to open temporary file: %v\n", err)
+		return fmt.Errorf(" * failed: unable to open temporary file: %v", err)
 	}
 	defer fh.Close()
 
@@ -330,7 +348,8 @@ func checkREQTailFileTest(conf *Configuration, t *testing.T) {
 
 	wd, err := os.Getwd()
 	if err != nil {
-		t.Fatalf(" * failed: getting current working directory: %v\n", err)
+		cancel()
+		return fmt.Errorf(" [FAILED]	: checkREQTailFileTest: : getting current working directory: %v", err)
 	}
 
 	file := filepath.Join(wd, "test.file")
@@ -365,7 +384,8 @@ func checkREQTailFileTest(conf *Configuration, t *testing.T) {
 		}
 
 		if os.IsNotExist(err) && i >= n {
-			t.Fatalf(" * failed: no result file created for request within the given time\n")
+			cancel()
+			return fmt.Errorf(" [FAILED]	: checkREQTailFileTest:  no result file created for request within the given time")
 		}
 	}
 
@@ -373,16 +393,19 @@ func checkREQTailFileTest(conf *Configuration, t *testing.T) {
 
 	_, err = findStringInFileTest("some file content", resultFile, conf, t)
 	if err != nil {
-		t.Fatalf("%v\n", err)
+		return fmt.Errorf(" [FAILED]	: checkREQTailFileTest: %v", err)
 	}
 
 	t.Logf(" [SUCCESS]	: checkREQTailFileTest\n")
+	return nil
 }
 
-// ------- Functionality tests.
+// ----------------------------------------------------------------------------
+// Functionality checks
+// ----------------------------------------------------------------------------
 
 // Check errorKernel
-func checkErrorKernelMalformedJSONtest(conf *Configuration, t *testing.T) {
+func checkErrorKernelMalformedJSONtest(conf *Configuration, t *testing.T) error {
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "central", "errorCentral.REQErrorLog.log")
 
 	// JSON message with error, missing brace.
@@ -408,7 +431,7 @@ func checkErrorKernelMalformedJSONtest(conf *Configuration, t *testing.T) {
 		}
 
 		if os.IsNotExist(err) && i >= n {
-			t.Fatalf(" * failed: no result file created for request within the given time\n")
+			return fmt.Errorf(" [FAILED]	: checkErrorKernelMalformedJSONtest: no result file created for request within the given time")
 		}
 	}
 
@@ -426,7 +449,7 @@ func checkErrorKernelMalformedJSONtest(conf *Configuration, t *testing.T) {
 			// looking for.
 			found, err := findStringInFileTest("error: malformed json", resultFile, conf, t)
 			if !found && err != nil {
-				t.Fatalf("%v\n", err)
+				return fmt.Errorf(" [FAILED]	: checkErrorKernelMalformedJSONtest: %v", err)
 			}
 
 			if !found && err == nil {
@@ -434,18 +457,14 @@ func checkErrorKernelMalformedJSONtest(conf *Configuration, t *testing.T) {
 			}
 
 			if found {
-				t.Logf(" [SUCCESS]	: checkErrorKernelMalformedJSONtest\n")
-				return
+				t.Logf(" [SUCCESS]	: checkErrorKernelMalformedJSONtest")
+				return nil
 			}
 		case <-ticker.C:
-			t.Fatalf(" * failed: did not get an update in the errorKernel log file\n")
+			return fmt.Errorf(" * failed: did not get an update in the errorKernel log file")
 		}
 	}
 }
-
-// ----------------------------------------------------------------------------
-// Check functionality
-// ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
 // Helper functions for tests
@@ -505,12 +524,12 @@ func findStringInFileTest(want string, fileName string, conf *Configuration, t *
 
 	fh, err := os.Open(fileName)
 	if err != nil {
-		return false, fmt.Errorf(" * failed: could not open result file: %v\n", err)
+		return false, fmt.Errorf(" * failed: could not open result file: %v", err)
 	}
 
 	result, err := io.ReadAll(fh)
 	if err != nil {
-		return false, fmt.Errorf(" * failed: could not read result file: %v\n", err)
+		return false, fmt.Errorf(" * failed: could not read result file: %v", err)
 	}
 
 	if !strings.Contains(string(result), want) {
