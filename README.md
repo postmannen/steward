@@ -32,29 +32,29 @@ If the receiver `toNode` is down when the message was sent, it will be retried u
 
 Send Shell Commands, HTTP Get, or Tail log files to control your servers by passing a message that will have guaranteed delivery if/when the subsribing node is available. Or for example send logs or metrics from an end node back to a central log subscriber. The result of the method executed will be delivered back to you from the node you sent it from.
 
-The idea is to build and use a pure message passing architecture for the commands back and forth from nodes, where delivery is guaranteed, and where all of the processes in the system are running concurrently so if something breaks or some process is slow it will not affect the handling and delivery of the other messages in the system.
+Steward uses Nats as message passing architecture for the commands back and forth from nodes, where delivery is guaranteed, and where all of the processes in the system are running concurrently so if something breaks or some process is slow it will not affect the handling and delivery of the other messages in the system.
 
-By default the system guarantees that the order of the messages are handled by the subscriber in the order they where sent. There have also been implemented a special type `NOSEQ` which will allow messages to be handled within that process in a not sequential manner. This is handy for jobs that will run for a long time, and where other messages are not dependent on it's result.
+By default the system guarantees that the order of the messages are handled by the subscriber in the order they where sent. There have also been implemented a special type `NOSEQ` which will allow messages within that process to be handles in a not sequential manner. This is handy for jobs that will run for a long time, and where other messages are not dependent on it's result.
 
-A node can be a server running any host operating system, a container living in the cloud somewhere, a rapsberry pi, or something else that needs to be controlled that have an operating system installed  . The message passing backend used is <https://nats.io>
+A node can be a server running any host operating system, a container living in the cloud somewhere, a rapsberry pi, or something else that needs to be controlled that have an operating system installed.
 
 ## Inspiration
 
 The idea for how to handle processes, messages and errors are based on Joe Armstrongs idea behind Erlang described in his Thesis <https://erlang.org/download/armstrong_thesis_2003.pdf>.
 
-Joe's documents describes how to build a system where everything is based and sending messages back and forth between processes in Erlang, and where everything is done concurrently. I used those ideas as inspiration for building a fully decoupled system to control servers or container based systems by passing  messages between processes asynchronously to execute methods, handle errors if they occur, and handle the retrying if something fails.
+Joe's documents describes how to build a system where everything is based on sending messages back and forth between processes in Erlang, and where everything is done concurrently. I used those ideas as inspiration for building a fully concurrent system to control servers or container based systems by passing  messages between processes asynchronously to execute methods, handle errors if they occur, or handle the retrying if something fails.
 
 Steward is written in programming language Go with NATS as the message broker.
 
 ## Why
 
-With existing solutions there is often either a push or a pull kind of setup.
+With existing solutions there is often either a push or a pull kind of setup to control the nodes.
 
 In a push setup the commands to be executed is pushed to the receiver, but if a command fails because for example a broken network link it is up to you as an administrator to detect those failures and retry them at a later time until it is executed successfully.
 
 In a pull setup an agent is installed at the Edge unit, and the configuration or commands to execute locally are pulled from a central repository. With this kind of setup you can be pretty certain that sometime in the future the node will reach it's desired state, but you don't know when. And if you want to know the current state you will need to have some second service which gives you that information.
 
-In it's simplest form the idea about using an event driven system as the core for management of Edge units is that the sender/publisher are fully decoupled from the receiver/subscriber. We can get an acknowledge if a message is received or not, and with this functionality we will at all times know the current state of the receiving end. We can also add information in the ACK message if the command sent to the receiver was successful or not by appending the actual output of the command.
+In it's simplest form the idea about using an event driven system as the core for management of Edge units is that the sender/publisher are fully decoupled from the receiver/subscriber. We can get an acknowledge if a message is received or not, and with this functionality we will at all times know the current state of the receiving end.
 
 ## Publishing and Subscribing processes
 
@@ -64,9 +64,9 @@ If one process hangs on a long running message method it will not affect the res
 
 ### Publisher
 
-- A message in valid format is appended to the in pipe.
+- A message in valid format is appended to the in socket.
 - The message is picked up by the system and put on a FIFO ringbuffer.
-- The method type of the message is checked, a subject is created based on the content of the message,  and a process to handle that message type for that specific receiving node is started if it does not exist.
+- The method type of the message is checked, a subject is created based on the content of the message,  and a publisher process to handle the message type for that specific receiving node is started if it does not exist.
 - The message is then serialized to binary format, and sent to the subscriber on the receiving node.
 - If the message is expected to be ACK'ed by the subcriber then the publisher will wait for an ACK if the message was delivered. If an ACK was not received within the defined timeout the message will be resent. The amount of retries are defined within the message.
 
@@ -106,11 +106,11 @@ These types of messages have method starting with `REQ<Method name>`
 
 ### Message handling and threads
 
-- The handling of all messages is done by spawning up a process for the handling the message in it's own thread. This allows us to individually down to the message level keep the state for each message both in regards to ACK's, error handling, send retries, and rerun of a method for a message if the first run was not successful.
+- The handling of all messages is done by spawning up a process for handling the message in it's own thread. This allows us to individually down to the message level keep the state for each message both in regards to ACK's, error handling, send retries, and rerun of a method for a message if the first run was not successful.
 
 - Processes for handling messages on a host can be restarted upon failure, or asked to just terminate and send a message back to the operator that something have gone seriously wrong. This is right now just partially implemented to test that the concept works.
 
-- Processes on the publishing node for handling incomming messages for new nodes will automatically be spawned when needed if it does not already exist.
+- Publisher Processes on a node for handling new messages for new nodes will automatically be spawned when needed if it does not already exist.
 
 - Publishing processes will potentially be able to send to all nodes. It is the subscribing nodes who will limit from where and what they will receive from.
 
@@ -149,11 +149,17 @@ TIP: Most likely the best way to control how the service should behave and what 
 
 ### Request Methods
 
-#### REQCliCommand / REQnCliCommand
+#### REQCliCommand
 
 Run CLI command on a node. Linux/Windows/Mac/Docker-container or other.
 
 Will run the command given, and return the stdout output of the command when the command is done.
+
+#### REQnCliCommand
+
+Run CLI command on a node. Linux/Windows/Mac/Docker-container or other.
+
+Will run the command given without the execution order guarantee, and return the stdout output of the command when the command is done.
 
 #### REQnCliCommandCont
 
@@ -163,7 +169,7 @@ Will run the command given, and return the stdout output of the command continou
 
 #### REQTailFile
 
-Tail log files on some node, and get the result sent back in a reply message.
+Tail log files on some node, and get the result for each new line read sent back in a reply message until timeout is reached.
 
 #### REQHttpGet
 
@@ -398,7 +404,7 @@ operation
 
 ### How to send a Message
 
-Right now the API for sending a message from one node to another node is by pasting a structured JSON object into the socket file file called `steward.sock` living alongside the binary. This file will be read continously, and when updated the content will be picked up, umarshaled, and if OK it will be sent a message to the node specified in the `toNode` field.
+The API for sending a message from one node to another node is by pasting a structured JSON object into the socket file file called `steward.sock` which by default lives in the `./tmp` directory. This file will be read continously, and when updated the content will be picked up, umarshaled, and if OK it will be sent a message to the node specified in the `toNode` field.
 
 The `method` is what defines what the event will do.
 
