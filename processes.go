@@ -38,11 +38,13 @@ func newProcesses(ctx context.Context, promRegistry *prometheus.Registry) *proce
 		active: make(map[processName]map[int]process),
 	}
 
-	// Prepare the main context for the subscribers.
+	// Prepare the parent context for the subscribers.
 	ctx, cancel := context.WithCancel(ctx)
 
 	p.ctx = ctx
 	p.cancel = cancel
+
+	// Register the metrics for the process.
 
 	p.promTotalProcesses = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "total_running_processes",

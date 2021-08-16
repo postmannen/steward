@@ -28,6 +28,7 @@ func newMetrics(hostAndPort string) *metrics {
 	return &m
 }
 
+// Start the http interface for Prometheus metrics.
 func (m *metrics) start() error {
 
 	//http.Handle("/metrics", promhttp.Handler())

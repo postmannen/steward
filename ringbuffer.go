@@ -1,12 +1,11 @@
 // Info: The idea about the ring buffer is that we have a FIFO
 // buffer where we store all incomming messages requested by
-// operators. Each message processed will also be stored in a DB.
-//
-// Idea: All incomming messages should be handled from the in-memory
-// buffered channel, but when they are put on the buffer they should
-// also be written to the DB with a handled flag set to false.
-// When a message have left the buffer the handled flag should be
-// set to true.
+// operators.
+// Each message in process or waiting to be processed will be
+// stored in a DB. When the processing of a given message is
+// done it will be removed from the state db, and an entry will
+// made in the persistent message log.
+
 package steward
 
 import (
@@ -33,16 +32,23 @@ type samDBValue struct {
 
 // ringBuffer holds the data of the buffer,
 type ringBuffer struct {
-	bufData            chan samDBValue
-	db                 *bolt.DB
+	// In memory buffer for the messages.
+	bufData chan samDBValue
+	// The database to use.
+	db *bolt.DB
+	// The current number of items in the database.
 	totalMessagesIndex int
 	mu                 sync.Mutex
-	permStore          chan string
-	nodeName           Node
-	newMessagesCh      chan []subjectAndMessage
+	// The channel to send messages that have been processed,
+	// and we want to store it in the permanent message log.
+	permStore chan string
+	// Name of node.
+	nodeName Node
+	// New messages to the system to be put into the ring buffer.
+	newMessagesCh chan []subjectAndMessage
 }
 
-// newringBuffer is a push/pop storage for values.
+// newringBuffer returns a push/pop storage for values.
 func newringBuffer(c Configuration, size int, dbFileName string, nodeName Node, newMessagesCh chan []subjectAndMessage) *ringBuffer {
 	// ---
 	// Check if socket folder exists, if not create it
@@ -128,7 +134,7 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 	}
 
 	// Check for incomming messages. These are typically comming from
-	// the go routine who reads msg.pipe.
+	// the go routine who reads the socket.
 	for v := range inCh {
 
 		// Check if the command or event exists in commandOrEvent.go
@@ -166,7 +172,7 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 
 		js, err := json.Marshal(samV)
 		if err != nil {
-			er := fmt.Errorf("error:fillBuffer gob encoding samValue: %v", err)
+			er := fmt.Errorf("error:fillBuffer: json marshaling: %v", err)
 			sendErrorLogMessage(r.newMessagesCh, Node(r.nodeName), er)
 		}
 
@@ -207,7 +213,7 @@ func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan sam
 
 		// We start the actual processing of an individual message here within
 		// it's own go routine. Reason is that we don't want to block other
-		// messages being blocked while waiting for the done signal, or if an
+		// messages to be processed while waiting for the done signal, or if an
 		// error with an individual message occurs.
 		go func(v samDBValue) {
 			v.Data.Message.done = make(chan struct{})
@@ -230,6 +236,7 @@ func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan sam
 			case <-delivredCh:
 				// OK.
 			case <-time.After(time.Second * 5):
+				// TODO: Check out if more logic should be made here if messages are stuck etc.
 				// Testing with a timeout here to figure out if messages are stuck
 				// waiting for done signal.
 				log.Printf("Error: *** message %v seems to be stuck, did not receive delivered signal from reading process\n", v.ID)
@@ -306,7 +313,7 @@ func (r *ringBuffer) dumpBucket(bucket string) ([]samDBValue, error) {
 	return samDBValues, err
 }
 
-// printBuckerContent will print out all they keys and values in the
+// printBucketContent will print out all they keys and values in the
 // specified bucket.
 func (r *ringBuffer) printBucketContent(bucket string) error {
 	err := r.db.View(func(tx *bolt.Tx) error {
@@ -363,10 +370,10 @@ func (r *ringBuffer) getIndexValue(indexBucket string) int {
 	return index
 }
 
-// dbView will look up a specific value for a key in a bucket in a DB.
+// dbView will look up and return a specific value if it exists for a key in a bucket in a DB.
 func (r *ringBuffer) dbView(db *bolt.DB, bucket string, key string) ([]byte, error) {
 	var value []byte
-	//View is a help function to get values out of the database.
+	// View is a help function to get values out of the database.
 	err := db.View(func(tx *bolt.Tx) error {
 		//Open a bucket to get key's and values from.
 		bu := tx.Bucket([]byte(bucket))
@@ -429,9 +436,6 @@ func (r *ringBuffer) startPermanentStore() {
 		if err != nil {
 			log.Printf("error:failed to write entry: %v\n", err)
 		}
-
-		// REMOVED: time
-		// time.Sleep(time.Second * 1)
 	}
 
 }

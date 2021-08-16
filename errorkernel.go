@@ -1,9 +1,9 @@
 // The error kernel shall handle errors for a given process.
-// This will be cases where the process itself where unable
+// This will be cases where the process itself were unable
 // to handle the error on it's own, and we might need to
 // restart the process, or send a message back to the operator
-// that the action which the message where supposed to trigger,
-// or that an event where unable to be processed.
+// that the action which the message where supposed to trigger
+// failed, or that an event where unable to be processed.
 
 package steward
 

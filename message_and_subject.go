@@ -61,6 +61,7 @@ type Message struct {
 
 // ---
 
+// operation are used to specify opCmd and opArg's.
 type Operation struct {
 	OpCmd string          `json:"opCmd"`
 	OpArg json.RawMessage `json:"opArg"`
@@ -69,7 +70,7 @@ type Operation struct {
 // ---
 
 // gobEncodePayload will encode the message structure into gob
-// binary format.
+// binary format before putting it into a nats message.
 func gobEncodeMessage(m Message) ([]byte, error) {
 	var buf bytes.Buffer
 	gobEnc := gob.NewEncoder(&buf)
@@ -83,12 +84,13 @@ func gobEncodeMessage(m Message) ([]byte, error) {
 
 // --- Subject
 
+// Node is the type definition for the node who receive or send a message.
 type Node string
 
 // subject contains the representation of a subject to be used with one
 // specific process
 type Subject struct {
-	// node, the name of the node
+	// node, the name of the node to receive the message.
 	ToNode string `json:"node" yaml:"toNode"`
 	// messageType, command/event
 	CommandOrEvent CommandOrEvent `json:"commandOrEvent" yaml:"commandOrEvent"`
@@ -124,6 +126,7 @@ func newSubject(method Method, node string) Subject {
 // subjectName is the complete representation of a subject
 type subjectName string
 
+// Return a value of the subjectName for the subject as used with nats subject.
 func (s Subject) name() subjectName {
 	return subjectName(fmt.Sprintf("%s.%s.%s", s.ToNode, s.Method, s.CommandOrEvent))
 }

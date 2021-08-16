@@ -57,7 +57,7 @@ type Method string
 // The constants that will be used throughout the system for
 // when specifying what kind of Method to send or work with.
 const (
-	// Initial method used to start other processes.
+	// Initial parent method used to start other processes.
 	REQInitial Method = "REQInitial"
 	// Command for client operation request of the system. The op
 	// command to execute shall be given in the data field of the
@@ -136,7 +136,7 @@ const (
 func (m Method) GetMethodsAvailable() MethodsAvailable {
 
 	// Command, Used to make a request to perform an action
-	// Event, Used to communicate that an action has been performed.
+	// Event, Used to communicate that something have happened.
 	ma := MethodsAvailable{
 		Methodhandlers: map[Method]methodHandler{
 			REQInitial: methodREQInitial{
@@ -214,6 +214,7 @@ func (m Method) getHandler(method Method) methodHandler {
 
 // ----
 
+// Initial parent method used to start other processes.
 type methodREQInitial struct {
 	commandOrEvent CommandOrEvent
 }
@@ -229,6 +230,9 @@ func (m methodREQInitial) handler(proc process, message Message, node string) ([
 }
 
 // ----
+
+// MethodsAvailable holds a map of all the different method types and the
+// associated handler to that method type.
 type MethodsAvailable struct {
 	Methodhandlers map[Method]methodHandler
 }
@@ -247,10 +251,51 @@ func (ma MethodsAvailable) CheckIfExists(m Method) (methodHandler, bool) {
 	}
 }
 
+// Create a new message for the reply containing the output of the
+// action executed put in outData, and put it on the ringbuffer to
+// be published.
+// The method to use for the reply message should initially be
+// specified within the first message as the replyMethod, and we will
+// pick up that value here, and use it as the method for the new
+// request message. If no replyMethod is set we default to the
+// REQToFileAppend method type.
+func newReplyMessage(proc process, message Message, outData []byte) {
+
+	// If no replyMethod is set we default to writing to writing to
+	// a log file.
+	if message.ReplyMethod == "" {
+		message.ReplyMethod = REQToFileAppend
+	}
+
+	// Create a new message for the reply, and put it on the
+	// ringbuffer to be published.
+	newMsg := Message{
+		ToNode:     message.FromNode,
+		Data:       []string{string(outData)},
+		Method:     message.ReplyMethod,
+		ACKTimeout: message.ReplyACKTimeout,
+		Retries:    message.ReplyRetries,
+
+		// Put in a copy of the initial request message, so we can use it's properties if
+		// needed to for example create the file structure naming on the subscriber.
+		PreviousMessage: &message,
+	}
+
+	nSAM, err := newSAM(newMsg)
+	if err != nil {
+		// In theory the system should drop the message before it reaches here.
+		er := fmt.Errorf("error: newReplyMessage : %v, message: %v", err, message)
+		sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+		log.Printf("%v\n", er)
+	}
+	proc.toRingbufferCh <- []subjectAndMessage{nSAM}
+}
+
 // ------------------------------------------------------------
 // Subscriber method handlers
 // ------------------------------------------------------------
 
+// The methodHandler interface.
 type methodHandler interface {
 	handler(proc process, message Message, node string) ([]byte, error)
 	getKind() CommandOrEvent
@@ -310,7 +355,7 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			proc.processes.mu.Unlock()
 
 		case "startProc":
-			// Set the interface type dst to &OpStart.
+			// Set the empty interface type dst to &OpStart.
 			dst = &OpCmdStartProc{}
 
 			err := json.Unmarshal(message.Operation.OpArg, &dst)
@@ -361,8 +406,8 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			// Assert it into the correct non pointer value.
 			arg := *dst.(*OpCmdStopProc)
 
-			// Based on the arg values received in the message we create can
-			// create a processName structure as used in naming the real processes.
+			// Based on the arg values received in the message we create a
+			// processName structure as used in naming the real processes.
 			// We can then use this processName to get the real values for the
 			// actual process we want to stop.
 			sub := newSubject(arg.Method, string(arg.RecevingNode))
@@ -387,6 +432,7 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 
 			proc.processes.mu.Lock()
 
+			// Remove the process from the processes active map if found.
 			toStopProc, ok := proc.processes.active[processName][arg.ID]
 			if ok {
 				// Delete the process from the processes map
@@ -429,47 +475,7 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 	return ackMsg, nil
 }
 
-//--
-// Create a new message for the reply containing the output of the
-// action executed put in outData, and put it on the ringbuffer to
-// be published.
-// The method to use for the reply message should initially be
-// specified within the first message as the replyMethod, and we will
-// pick up that value here, and use it as the method for the new
-// request message. If no replyMethod is set we default to the
-// REQToFileAppend method type.
-func newReplyMessage(proc process, message Message, outData []byte) {
-
-	// If no replyMethod is set we default to writing to writing to
-	// a log file.
-	if message.ReplyMethod == "" {
-		message.ReplyMethod = REQToFileAppend
-	}
-	//--
-	// Create a new message for the reply, and put it on the
-	// ringbuffer to be published.
-	newMsg := Message{
-		ToNode:     message.FromNode,
-		Data:       []string{string(outData)},
-		Method:     message.ReplyMethod,
-		ACKTimeout: message.ReplyACKTimeout,
-		Retries:    message.ReplyRetries,
-
-		// Put in a copy of the initial request message, so we can use it's properties if
-		// needed to for example create the file structure naming on the subscriber.
-		PreviousMessage: &message,
-	}
-
-	nSAM, err := newSAM(newMsg)
-	if err != nil {
-		// In theory the system should drop the message before it reaches here.
-		er := fmt.Errorf("error: newReplyMessage : %v, message: %v", err, message)
-		sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-		log.Printf("%v\n", er)
-	}
-	proc.toRingbufferCh <- []subjectAndMessage{nSAM}
-	//--
-}
+//----
 
 type methodREQToFileAppend struct {
 	commandOrEvent CommandOrEvent
@@ -479,6 +485,7 @@ func (m methodREQToFileAppend) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
+// Handle appending data to file.
 func (m methodREQToFileAppend) handler(proc process, message Message, node string) ([]byte, error) {
 
 	// If it was a request type message we want to check what the initial messages
@@ -546,6 +553,8 @@ func (m methodREQToFile) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
+// Handle writing to a file. Will truncate any existing data if the file did already
+// exist.
 func (m methodREQToFile) handler(proc process, message Message, node string) ([]byte, error) {
 
 	// If it was a request type message we want to check what the initial messages
@@ -614,10 +623,10 @@ func (m methodREQHello) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
+// Handler for receiving hello messages.
 func (m methodREQHello) handler(proc process, message Message, node string) ([]byte, error) {
 	data := fmt.Sprintf("Received hello from %#v\n", message.FromNode)
 
-	// --------------------------
 	fileName := fmt.Sprintf("%v.%v%v", message.FromNode, message.Method, message.FileExtension)
 	folderTree := filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.ToNode))
 
@@ -667,10 +676,9 @@ func (m methodREQErrorLog) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
+// Handle the writing of error logs.
 func (m methodREQErrorLog) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- Received error from: %v, containing: %v", message.FromNode, message.Data)
-
-	// --
 
 	// If it was a request type message we want to check what the initial messages
 	// method, so we can use that in creating the file name to store the data.
@@ -719,8 +727,6 @@ func (m methodREQErrorLog) handler(proc process, message Message, node string) (
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
-
-	// --
 }
 
 // ---
@@ -733,7 +739,9 @@ func (m methodREQPing) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
+// Handle receving a ping.
 func (m methodREQPing) handler(proc process, message Message, node string) ([]byte, error) {
+	// TODO: Replace this with an append to file on receival.
 	log.Printf("<--- PING REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 
 	proc.processes.wg.Add(1)
@@ -759,7 +767,9 @@ func (m methodREQPong) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
+// Handle receiving a pong.
 func (m methodREQPong) handler(proc process, message Message, node string) ([]byte, error) {
+	// TODO: Replace this with an append to file on receival.
 	log.Printf("<--- ECHO Reply received from: %v, containing: %v", message.FromNode, message.Data)
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -916,6 +926,7 @@ func (m methodREQToConsole) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
+// Handler to write directly to console.
 func (m methodREQToConsole) handler(proc process, message Message, node string) ([]byte, error) {
 	fmt.Printf("<--- methodCLICommandReply: %v\n", message.Data)
 
@@ -933,7 +944,7 @@ func (m methodREQHttpGet) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-// handler to run a Http Get.
+// handler to do a Http Get.
 func (m methodREQHttpGet) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- REQHttpGet received from: %v, containing: %v", message.FromNode, message.Data)
 
@@ -1190,6 +1201,8 @@ func (m methodREQToSocket) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
+// TODO:
+// Handler to write to unix socket file.
 func (m methodREQToSocket) handler(proc process, message Message, node string) ([]byte, error) {
 
 	for _, d := range message.Data {

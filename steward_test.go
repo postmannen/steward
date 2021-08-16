@@ -40,6 +40,8 @@ func TestStewardServer(t *testing.T) {
 	// Start Steward instance
 	// ---------------------------------------
 	// tempdir := t.TempDir()
+
+	// Create the config to run a steward instance.
 	tempdir := "./tmp"
 	conf := &Configuration{
 		SocketFolder:          filepath.Join(tempdir, "tmp"),
@@ -200,7 +202,7 @@ func checkREQnCliCommandTest(conf *Configuration, t *testing.T) error {
 	return nil
 }
 
-// The non-sequential sending of CLI Commands.
+// The continous non-sequential sending of CLI Commands.
 func checkREQnCliCommandContTest(conf *Configuration, t *testing.T) error {
 	m := `[
 		{
@@ -252,6 +254,7 @@ func checkREQHelloTest(conf *Configuration, t *testing.T) error {
 	return nil
 }
 
+// Check the error logger type.
 func checkREQErrorLogTest(conf *Configuration, t *testing.T) error {
 	m := `[
 		{
@@ -275,6 +278,7 @@ func checkREQErrorLogTest(conf *Configuration, t *testing.T) error {
 	return nil
 }
 
+// Check http get method.
 func checkREQHttpGetTest(conf *Configuration, t *testing.T) error {
 	// Web server for testing.
 	{
@@ -313,8 +317,7 @@ func checkREQHttpGetTest(conf *Configuration, t *testing.T) error {
 	return nil
 }
 
-// ---
-
+// Check the tailing of files type.
 func checkREQTailFileTest(conf *Configuration, t *testing.T) error {
 	// Create a file with some content.
 	fh, err := os.OpenFile("test.file", os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)

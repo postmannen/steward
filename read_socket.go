@@ -57,6 +57,11 @@ func (s *server) writeStewSocket(toStewSocketCh []byte) {
 	//s.StewSockListener
 }
 
+// The subject are made up of different parts of the message field.
+// To make things easier and to avoid figuring out what the subject
+// is in all places we've created the concept of subjectAndMessage
+// (sam) where we get the subject for the message once, and use the
+// sam structure with subject alongside the message instead.
 type subjectAndMessage struct {
 	Subject `json:"subject" yaml:"subject"`
 	Message `json:"message" yaml:"message"`
@@ -91,7 +96,7 @@ func convertBytesToSAM(b []byte) ([]subjectAndMessage, error) {
 }
 
 // newSAM will look up the correct values and value types to
-// be used in a subject for a Message, and return the a combined structure
+// be used in a subject for a Message (sam), and return the a combined structure
 // of type subjectAndMessage.
 func newSAM(m Message) (subjectAndMessage, error) {
 	// We need to create a tempory method type to look up the kind for the

@@ -56,6 +56,7 @@ func NewServer(c *Configuration) (*server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	var opt nats.Option
+
 	if c.RootCAPath != "" {
 		opt = nats.RootCAs(c.RootCAPath)
 	}
@@ -70,11 +71,10 @@ func NewServer(c *Configuration) (*server, error) {
 		}
 	}
 
-	// Connect to the nats server, and retry until succesful.
-
 	var conn *nats.Conn
 	const connRetryWait = 5
 
+	// Connect to the nats server, and retry until succesful.
 	for {
 		var err error
 		// Setting MaxReconnects to -1 which equals unlimited.
@@ -196,7 +196,7 @@ func NewServer(c *Configuration) (*server, error) {
 // Start will spawn up all the predefined subscriber processes.
 // Spawning of publisher processes is done on the fly by checking
 // if there is publisher process for a given message subject, and
-// not exist it will spawn one.
+// if it does not exist it will spawn one.
 func (s *server) Start() {
 	// Start the error kernel that will do all the error handling
 	// that is not done within a process.
@@ -242,10 +242,6 @@ func (s *server) Start() {
 
 // Will stop all processes started during startup.
 func (s *server) Stop() {
-	// TODO: Add done sync functionality within the
-	// stop functions so we get a confirmation that
-	// all processes actually are stopped.
-
 	// Stop the started pub/sub message processes.
 	s.processes.Stop()
 	log.Printf("info: stopped all subscribers\n")

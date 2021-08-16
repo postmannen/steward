@@ -48,14 +48,17 @@ const (
 	// Same as above, but No ACK.
 	EventNACK CommandOrEvent = "EventNACK"
 	// eventCommand, just wait for the ACK that the
-	// message is received. What action happens on the
-	// receiving side is up to the received to decide.
+	// message is received. What action happens is up to the
+	// received to decide.
 )
 
+// CommandOrEventAvailable are used for checking if the
+// commands or events are defined.
 type CommandOrEventAvailable struct {
 	topics map[CommandOrEvent]struct{}
 }
 
+// Check if a command or even exists.
 func (co CommandOrEventAvailable) CheckIfExists(c CommandOrEvent, subject Subject) bool {
 	_, ok := co.topics[c]
 	if ok {

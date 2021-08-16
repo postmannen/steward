@@ -22,7 +22,8 @@ const (
 	processKindPublisher  processKind = "publisher"
 )
 
-// process are represent the communication to one individual host
+// process holds all the logic to handle a message type and it's
+// method, subscription/publishin messages for a subject, and more.
 type process struct {
 	messageID int
 	// the subject used for the specific process. One process
@@ -189,7 +190,6 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 	p.processName = pn
 
 	// Add information about the new process to the started processes map.
-
 	idProcMap := make(map[int]process)
 	idProcMap[p.processID] = p
 
@@ -199,8 +199,9 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 }
 
 // messageDeliverNats will take care of the delivering the message
-// as converted to gob format as a nats.Message. It will also take
-// care of checking timeouts and retries specified for the message.
+// that is converted to gob format as a nats.Message. It will also
+// take care of checking timeouts and retries specified for the
+// message.
 func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 	retryAttempts := 0
 
@@ -263,6 +264,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 				// did not receive a reply, decide what to do..
 				retryAttempts++
 				log.Printf("Retry attempts:%v, retries: %v, ACKTimeout: %v\n", retryAttempts, message.Retries, message.ACKTimeout)
+
 				switch {
 				case message.Retries == 0:
 					// 0 indicates unlimited retries
@@ -308,7 +310,9 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
 	}
 
+	// Check if it is an ACK or NACK message, and do the appropriate action accordingly.
 	switch {
+	// Check for ACK type Commands or Event.
 	case p.subject.CommandOrEvent == CommandACK || p.subject.CommandOrEvent == EventACK:
 		mh, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
@@ -342,6 +346,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		// Send a confirmation message back to the publisher
 		natsConn.Publish(msg.Reply, out)
 
+	// Check for NACK type Commands or Event.
 	case p.subject.CommandOrEvent == CommandNACK || p.subject.CommandOrEvent == EventNACK:
 		mf, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
@@ -372,7 +377,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 			er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
 			sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
 		}
-		// ---
+
 	default:
 		er := fmt.Errorf("info: did not find that specific type of command: %#v", p.subject.CommandOrEvent)
 		sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
@@ -380,16 +385,15 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 	}
 }
 
-// Subscribe will start up a Go routine under the hood calling the
-// callback function specified when a new message is received.
+// SubscribeMessage will register the Nats callback function for the specified
+// nats subject. This allows us to receive Nats messages for a given subject
+// on a node.
 func (p process) subscribeMessages() *nats.Subscription {
 	subject := string(p.subject.name())
 	natsSubscription, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
 		//_, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
 
-		// We start one handler per message received by using go routines here.
-		// This is for being able to reply back the current publisher who sent
-		// the message.
+		// Start up the subscriber handler.
 		go p.subscriberHandler(p.natsConn, p.configuration.NodeName, msg)
 	})
 	if err != nil {

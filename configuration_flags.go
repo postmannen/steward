@@ -228,7 +228,6 @@ func (c *Configuration) CheckFlags() error {
 		return fmt.Errorf("error: the centralNodeName config option or flag cannot be empty, check -help")
 	}
 
-	// NB: Disabling the config file options for now.
 	if err := c.WriteConfigFile(); err != nil {
 		log.Printf("error: checkFlags: failed writing config file: %v\n", err)
 		os.Exit(1)
