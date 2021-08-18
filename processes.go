@@ -274,18 +274,18 @@ func (s startup) subREQHello(p process) {
 	proc.procFunc = func(ctx context.Context) error {
 		sayHelloNodes := make(map[Node]struct{})
 
-		promHelloNodes := prometheus.NewGauge(prometheus.GaugeOpts{
+		s.metrics.promHelloNodes = prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "hello_nodes_total",
 			Help: "The current number of total nodes who have said hello",
 		})
-		s.metrics.promRegistry.MustRegister(promHelloNodes)
+		s.metrics.promRegistry.MustRegister(s.metrics.promHelloNodes)
 
-		promHelloNodesNameVec := prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "hello_node_last_hello",
+		s.metrics.promHelloNodesNameVec = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "hello_node_contact_last",
 			Help: "Name of the nodes who have said hello",
 		}, []string{"nodeName"},
 		)
-		s.metrics.promRegistry.MustRegister(promHelloNodesNameVec)
+		s.metrics.promRegistry.MustRegister(s.metrics.promHelloNodesNameVec)
 
 		for {
 			// Receive a copy of the message sent from the method handler.
@@ -304,8 +304,8 @@ func (s startup) subREQHello(p process) {
 			sayHelloNodes[m.FromNode] = struct{}{}
 
 			// update the prometheus metrics
-			promHelloNodes.Set(float64(len(sayHelloNodes)))
-			promHelloNodesNameVec.With(prometheus.Labels{"nodeName": string(m.FromNode)}).SetToCurrentTime()
+			s.metrics.promHelloNodes.Set(float64(len(sayHelloNodes)))
+			s.metrics.promHelloNodesNameVec.With(prometheus.Labels{"nodeName": string(m.FromNode)}).SetToCurrentTime()
 
 		}
 	}

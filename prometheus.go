@@ -21,6 +21,10 @@ type metrics struct {
 	promTotalProcesses prometheus.Gauge
 	//
 	promProcessesVec *prometheus.GaugeVec
+	//
+	promHelloNodes prometheus.Gauge
+	//
+	promHelloNodesNameVec *prometheus.GaugeVec
 }
 
 // newMetrics will prepare and return a *metrics
