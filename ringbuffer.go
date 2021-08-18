@@ -84,6 +84,12 @@ func newringBuffer(metrics *metrics, c Configuration, size int, dbFileName strin
 	})
 	metrics.promRegistry.MustRegister(metrics.promRingbufferStalledMessagesTotal)
 
+	metrics.promInMemoryBufferMessagesCurrent = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "in_memory_buffer_messages_current",
+		Help: "The current value of messages in memory buffer",
+	})
+	metrics.promRegistry.MustRegister(metrics.promInMemoryBufferMessagesCurrent)
+
 	return &ringBuffer{
 		bufData:       make(chan samDBValue, size),
 		db:            db,
@@ -221,6 +227,8 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan samDBValueAndDelivered) {
 	// Range over the buffer of messages to pass on to processes.
 	for v := range r.bufData {
+		r.metrics.promInMemoryBufferMessagesCurrent.Set(float64(len(r.bufData)))
+
 		// Create a done channel per message. A process started by the
 		// spawnProcess function will handle incomming messages sequentaly.
 		// So in the spawnProcess function we put a struct{} value when a

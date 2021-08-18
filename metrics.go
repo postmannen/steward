@@ -17,27 +17,36 @@ type metrics struct {
 	promRegistry *prometheus.Registry
 	// host and port where prometheus metrics will be exported.
 	hostAndPort string
+
+	// --- Processes
 	// Prometheus metrics for total processes.
 	promProcessesTotal prometheus.Gauge
 	// Prometheus metrics for vector of process names.
 	promProcessesAllRunning *prometheus.GaugeVec
+
+	// --- Methods
 	// Prometheus metrics for number of hello nodes.
 	promHelloNodesTotal prometheus.Gauge
 	// Prometheus metrics for the vector of hello nodes.
 	promHelloNodesContactLast *prometheus.GaugeVec
+
+	// --- Ringbuffer
 	// Prometheus metrics for the last processed DB id in key
 	// value store.
 	promMessagesProcessedTotal prometheus.Gauge
-	//
+	// Prometheus metrics for the total count of stalled
+	// messages in the ringbuffer.
 	promRingbufferStalledMessagesTotal prometheus.Counter
+	// Prometheus metrics for current messages in memory buffer
+	promInMemoryBufferMessagesCurrent prometheus.Gauge
 }
 
-// newMetrics will prepare and return a *metrics
+// newMetrics will prepare and return a *metrics.
 func newMetrics(hostAndPort string) *metrics {
 	reg := prometheus.NewRegistry()
-	//prometheus.Unregister(prometheus.NewGoCollector())
+	//prometheus.Unregister(prometheus.NewGoCollector()).
 	reg.MustRegister(collectors.NewGoCollector())
-	// prometheus.MustRegister(collectors.NewGoCollector())
+	// prometheus.MustRegister(collectors.NewGoCollector()).
 	m := metrics{
 		promRegistry: reg,
 		hostAndPort:  hostAndPort,
