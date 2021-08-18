@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -46,11 +47,11 @@ type ringBuffer struct {
 	nodeName Node
 	// New messages to the system to be put into the ring buffer.
 	newMessagesCh chan []subjectAndMessage
+	metrics       *metrics
 }
 
 // newringBuffer returns a push/pop storage for values.
-func newringBuffer(c Configuration, size int, dbFileName string, nodeName Node, newMessagesCh chan []subjectAndMessage) *ringBuffer {
-	// ---
+func newringBuffer(metrics *metrics, c Configuration, size int, dbFileName string, nodeName Node, newMessagesCh chan []subjectAndMessage) *ringBuffer {
 	// Check if socket folder exists, if not create it
 	if _, err := os.Stat(c.DatabaseFolder); os.IsNotExist(err) {
 		err := os.MkdirAll(c.DatabaseFolder, 0700)
@@ -69,12 +70,27 @@ func newringBuffer(c Configuration, size int, dbFileName string, nodeName Node, 
 		log.Printf("error: failed to open db: %v\n", err)
 		os.Exit(1)
 	}
+
+	// Set up the metrics to be used.
+	metrics.promMessagesProcessedTotal = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "messages_processed_total",
+		Help: "The last processed db in key value/store",
+	})
+	metrics.promRegistry.MustRegister(metrics.promMessagesProcessedTotal)
+
+	metrics.promRingbufferStalledMessagesTotal = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "ringbuffer_stalled_messages_total",
+		Help: "Number of stalled messages in ringbuffer",
+	})
+	metrics.promRegistry.MustRegister(metrics.promRingbufferStalledMessagesTotal)
+
 	return &ringBuffer{
 		bufData:       make(chan samDBValue, size),
 		db:            db,
 		permStore:     make(chan string),
 		nodeName:      nodeName,
 		newMessagesCh: newMessagesCh,
+		metrics:       metrics,
 	}
 }
 
@@ -240,6 +256,8 @@ func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan sam
 				// Testing with a timeout here to figure out if messages are stuck
 				// waiting for done signal.
 				log.Printf("Error: *** message %v seems to be stuck, did not receive delivered signal from reading process\n", v.ID)
+
+				r.metrics.promRingbufferStalledMessagesTotal.Inc()
 			}
 			// Listen on the done channel here , so a go routine handling the
 			// message will be able to signal back here that the message have
@@ -248,6 +266,7 @@ func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan sam
 			select {
 			case <-v.Data.done:
 				log.Printf("info: processBufferMessages: done with message, deleting key from bucket, %v\n", v.ID)
+				r.metrics.promMessagesProcessedTotal.Set(float64(v.ID))
 				// case <-time.After(time.Second * 3):
 				// 	// Testing with a timeout here to figure out if messages are stuck
 				// 	// waiting for done signal.

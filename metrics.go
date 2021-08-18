@@ -13,18 +13,23 @@ import (
 // metrics are generally used to hold the structure around metrics
 // handling
 type metrics struct {
-	// The channel to pass metrics that should be processed
+	// The channel to pass metrics that should be processed.
 	promRegistry *prometheus.Registry
-	// host and port where prometheus metrics will be exported
+	// host and port where prometheus metrics will be exported.
 	hostAndPort string
+	// Prometheus metrics for total processes.
+	promProcessesTotal prometheus.Gauge
+	// Prometheus metrics for vector of process names.
+	promProcessesAllRunning *prometheus.GaugeVec
+	// Prometheus metrics for number of hello nodes.
+	promHelloNodesTotal prometheus.Gauge
+	// Prometheus metrics for the vector of hello nodes.
+	promHelloNodesContactLast *prometheus.GaugeVec
+	// Prometheus metrics for the last processed DB id in key
+	// value store.
+	promMessagesProcessedTotal prometheus.Gauge
 	//
-	promTotalProcesses prometheus.Gauge
-	//
-	promProcessesVec *prometheus.GaugeVec
-	//
-	promHelloNodes prometheus.Gauge
-	//
-	promHelloNodesNameVec *prometheus.GaugeVec
+	promRingbufferStalledMessagesTotal prometheus.Counter
 }
 
 // newMetrics will prepare and return a *metrics

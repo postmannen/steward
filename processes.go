@@ -45,18 +45,18 @@ func newProcesses(ctx context.Context, metrics *metrics) *processes {
 
 	// Register the metrics for the process.
 
-	p.metrics.promTotalProcesses = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "total_running_processes",
+	p.metrics.promProcessesTotal = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "processes_total",
 		Help: "The current number of total running processes",
 	})
-	metrics.promRegistry.MustRegister(p.metrics.promTotalProcesses)
+	metrics.promRegistry.MustRegister(p.metrics.promProcessesTotal)
 
-	p.metrics.promProcessesVec = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "running_process",
-		Help: "Name of the running process",
+	p.metrics.promProcessesAllRunning = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "processes_all_running",
+		Help: "Name of the running processes",
 	}, []string{"processName"},
 	)
-	metrics.promRegistry.MustRegister(metrics.promProcessesVec)
+	metrics.promRegistry.MustRegister(metrics.promProcessesAllRunning)
 
 	return &p
 }
@@ -274,18 +274,18 @@ func (s startup) subREQHello(p process) {
 	proc.procFunc = func(ctx context.Context) error {
 		sayHelloNodes := make(map[Node]struct{})
 
-		s.metrics.promHelloNodes = prometheus.NewGauge(prometheus.GaugeOpts{
+		s.metrics.promHelloNodesTotal = prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "hello_nodes_total",
 			Help: "The current number of total nodes who have said hello",
 		})
-		s.metrics.promRegistry.MustRegister(s.metrics.promHelloNodes)
+		s.metrics.promRegistry.MustRegister(s.metrics.promHelloNodesTotal)
 
-		s.metrics.promHelloNodesNameVec = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		s.metrics.promHelloNodesContactLast = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "hello_node_contact_last",
 			Help: "Name of the nodes who have said hello",
 		}, []string{"nodeName"},
 		)
-		s.metrics.promRegistry.MustRegister(s.metrics.promHelloNodesNameVec)
+		s.metrics.promRegistry.MustRegister(s.metrics.promHelloNodesContactLast)
 
 		for {
 			// Receive a copy of the message sent from the method handler.
@@ -304,8 +304,8 @@ func (s startup) subREQHello(p process) {
 			sayHelloNodes[m.FromNode] = struct{}{}
 
 			// update the prometheus metrics
-			s.metrics.promHelloNodes.Set(float64(len(sayHelloNodes)))
-			s.metrics.promHelloNodesNameVec.With(prometheus.Labels{"nodeName": string(m.FromNode)}).SetToCurrentTime()
+			s.metrics.promHelloNodesTotal.Set(float64(len(sayHelloNodes)))
+			s.metrics.promHelloNodesContactLast.With(prometheus.Labels{"nodeName": string(m.FromNode)}).SetToCurrentTime()
 
 		}
 	}
@@ -365,6 +365,6 @@ func (p *processes) printProcessesMap() {
 	}
 	p.mu.Unlock()
 
-	p.metrics.promTotalProcesses.Set(float64(len(p.active)))
+	p.metrics.promProcessesTotal.Set(float64(len(p.active)))
 
 }

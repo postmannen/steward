@@ -318,7 +318,7 @@ type samDBValueAndDelivered struct {
 func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subjectAndMessage) {
 	// Prepare and start a new ring buffer
 	const bufferSize int = 1000
-	rb := newringBuffer(*s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.toRingbufferCh)
+	rb := newringBuffer(s.metrics, *s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.toRingbufferCh)
 	inCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValueAndDelivered)
 	// start the ringbuffer.
