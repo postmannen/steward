@@ -19,6 +19,8 @@ type metrics struct {
 	hostAndPort string
 	//
 	promTotalProcesses prometheus.Gauge
+	//
+	promProcessesVec *prometheus.GaugeVec
 }
 
 // newMetrics will prepare and return a *metrics

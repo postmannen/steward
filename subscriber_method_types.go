@@ -448,7 +448,7 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 				}
 
 				// Remove the prometheus label
-				proc.processes.promProcessesVec.Delete(prometheus.Labels{"processName": string(processName)})
+				proc.processes.metrics.promProcessesVec.Delete(prometheus.Labels{"processName": string(processName)})
 
 				er := fmt.Errorf("info: stopProc: stopped %v on %v", sub, message.ToNode)
 				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
