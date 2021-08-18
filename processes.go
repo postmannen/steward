@@ -25,8 +25,6 @@ type processes struct {
 	// The instance global prometheus registry.
 	metrics *metrics
 	//
-	promTotalProcesses prometheus.Gauge
-	//
 	promProcessesVec *prometheus.GaugeVec
 	// Waitgroup to keep track of all the processes started
 	wg sync.WaitGroup
@@ -49,11 +47,11 @@ func newProcesses(ctx context.Context, metrics *metrics) *processes {
 
 	// Register the metrics for the process.
 
-	p.promTotalProcesses = prometheus.NewGauge(prometheus.GaugeOpts{
+	p.metrics.promTotalProcesses = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "total_running_processes",
 		Help: "The current number of total running processes",
 	})
-	metrics.promRegistry.MustRegister(p.promTotalProcesses)
+	metrics.promRegistry.MustRegister(p.metrics.promTotalProcesses)
 
 	p.promProcessesVec = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "running_process",
@@ -369,6 +367,6 @@ func (p *processes) printProcessesMap() {
 	}
 	p.mu.Unlock()
 
-	p.promTotalProcesses.Set(float64(len(p.active)))
+	p.metrics.promTotalProcesses.Set(float64(len(p.active)))
 
 }

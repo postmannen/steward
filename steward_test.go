@@ -473,7 +473,7 @@ func checkErrorKernelMalformedJSONtest(stewardServer *server, conf *Configuratio
 
 func checkMetricValuesTest(stewardServer *server, conf *Configuration, t *testing.T) error {
 
-	fmt.Printf("%v, type: %T\n", stewardServer.processes.promTotalProcesses, stewardServer.processes.promTotalProcesses)
+	fmt.Printf("%v, type: %T\n", stewardServer.metrics.promTotalProcesses, stewardServer.metrics.promTotalProcesses)
 
 	mfs, err := stewardServer.metrics.promRegistry.Gather()
 	if err != nil {

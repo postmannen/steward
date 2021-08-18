@@ -17,6 +17,8 @@ type metrics struct {
 	promRegistry *prometheus.Registry
 	// host and port where prometheus metrics will be exported
 	hostAndPort string
+	//
+	promTotalProcesses prometheus.Gauge
 }
 
 // newMetrics will prepare and return a *metrics
