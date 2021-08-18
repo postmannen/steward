@@ -386,7 +386,7 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 
 			// Create the process and start it.
 			sub := newSubject(arg.Method, proc.configuration.NodeName)
-			procNew := newProcess(proc.ctx, proc.natsConn, proc.processes, proc.toRingbufferCh, proc.configuration, sub, proc.errorCh, processKindSubscriber, arg.AllowedNodes, nil)
+			procNew := newProcess(proc.ctx, proc.processes.metrics, proc.natsConn, proc.processes, proc.toRingbufferCh, proc.configuration, sub, proc.errorCh, processKindSubscriber, arg.AllowedNodes, nil)
 			go procNew.spawnWorker(proc.processes, proc.natsConn)
 
 			er := fmt.Errorf("info: startProc: started id: %v, subject: %v: node: %v", procNew.processID, sub, message.ToNode)

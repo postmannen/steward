@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -20,8 +21,12 @@ type metrics struct {
 
 // newMetrics will prepare and return a *metrics
 func newMetrics(hostAndPort string) *metrics {
+	reg := prometheus.NewRegistry()
+	//prometheus.Unregister(prometheus.NewGoCollector())
+	reg.MustRegister(collectors.NewGoCollector())
+	// prometheus.MustRegister(collectors.NewGoCollector())
 	m := metrics{
-		promRegistry: prometheus.NewRegistry(),
+		promRegistry: reg,
 		hostAndPort:  hostAndPort,
 	}
 
@@ -37,10 +42,12 @@ func (m *metrics) start() error {
 	if err != nil {
 		return fmt.Errorf("error: startMetrics: failed to open prometheus listen port: %v", err)
 	}
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
+	//mux := http.NewServeMux()
+	//mux.Handle("/metrics", promhttp.Handler())
 
-	err = http.Serve(n, mux)
+	http.Handle("/metrics", promhttp.HandlerFor(m.promRegistry, promhttp.HandlerOpts{}))
+
+	err = http.Serve(n, nil)
 	if err != nil {
 		return fmt.Errorf("error: startMetrics: failed to start http.Serve: %v", err)
 	}

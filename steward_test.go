@@ -48,6 +48,7 @@ func TestStewardServer(t *testing.T) {
 		DatabaseFolder:        filepath.Join(tempdir, "var/lib"),
 		SubscribersDataFolder: filepath.Join(tempdir, "data"),
 		BrokerAddress:         "127.0.0.1:40222",
+		PromHostAndPort:       ":2112",
 		NodeName:              "central",
 		CentralNodeName:       "central",
 		DefaultMessageRetries: 1,
@@ -75,7 +76,7 @@ func TestStewardServer(t *testing.T) {
 	//
 	// ---------------------------------------
 
-	type testFunc func(*Configuration, *testing.T) error
+	type testFunc func(*server, *Configuration, *testing.T) error
 
 	// Specify all the test funcs to run in the slice.
 	funcs := []testFunc{
@@ -95,10 +96,11 @@ func TestStewardServer(t *testing.T) {
 		// checkREQToSocketTest(conf, t)
 
 		checkErrorKernelMalformedJSONtest,
+		checkMetricValuesTest,
 	}
 
 	for _, f := range funcs {
-		err := f(conf, t)
+		err := f(stewardServer, conf, t)
 		if err != nil {
 			t.Errorf("%v\n", err)
 		}
@@ -114,7 +116,7 @@ func TestStewardServer(t *testing.T) {
 // ----------------------------------------------------------------------------
 
 // Testing op (operator) Commands.
-func checkREQOpCommandTest(conf *Configuration, t *testing.T) error {
+func checkREQOpCommandTest(stewardServer *server, conf *Configuration, t *testing.T) error {
 	m := `[
 		{
 			"directory":"commands-executed",
@@ -147,7 +149,7 @@ func checkREQOpCommandTest(conf *Configuration, t *testing.T) error {
 }
 
 // Sending of CLI Commands.
-func checkREQCliCommandTest(conf *Configuration, t *testing.T) error {
+func checkREQCliCommandTest(stewardServer *server, conf *Configuration, t *testing.T) error {
 	m := `[
 		{
 			"directory":"commands-executed",
@@ -175,7 +177,7 @@ func checkREQCliCommandTest(conf *Configuration, t *testing.T) error {
 }
 
 // The non-sequential sending of CLI Commands.
-func checkREQnCliCommandTest(conf *Configuration, t *testing.T) error {
+func checkREQnCliCommandTest(stewardServer *server, conf *Configuration, t *testing.T) error {
 	m := `[
 		{
 			"directory":"commands-executed",
@@ -203,7 +205,7 @@ func checkREQnCliCommandTest(conf *Configuration, t *testing.T) error {
 }
 
 // The continous non-sequential sending of CLI Commands.
-func checkREQnCliCommandContTest(conf *Configuration, t *testing.T) error {
+func checkREQnCliCommandContTest(stewardServer *server, conf *Configuration, t *testing.T) error {
 	m := `[
 		{
 			"directory":"commands-executed",
@@ -231,7 +233,7 @@ func checkREQnCliCommandContTest(conf *Configuration, t *testing.T) error {
 }
 
 // Sending of Hello.
-func checkREQHelloTest(conf *Configuration, t *testing.T) error {
+func checkREQHelloTest(stewardServer *server, conf *Configuration, t *testing.T) error {
 	m := `[
 		{
 			"directory":"commands-executed",
@@ -255,7 +257,7 @@ func checkREQHelloTest(conf *Configuration, t *testing.T) error {
 }
 
 // Check the error logger type.
-func checkREQErrorLogTest(conf *Configuration, t *testing.T) error {
+func checkREQErrorLogTest(stewardServer *server, conf *Configuration, t *testing.T) error {
 	m := `[
 		{
 			"directory": "errorLog",
@@ -279,7 +281,7 @@ func checkREQErrorLogTest(conf *Configuration, t *testing.T) error {
 }
 
 // Check http get method.
-func checkREQHttpGetTest(conf *Configuration, t *testing.T) error {
+func checkREQHttpGetTest(stewardServer *server, conf *Configuration, t *testing.T) error {
 	// Web server for testing.
 	{
 		h := func(w http.ResponseWriter, r *http.Request) {
@@ -318,7 +320,7 @@ func checkREQHttpGetTest(conf *Configuration, t *testing.T) error {
 }
 
 // Check the tailing of files type.
-func checkREQTailFileTest(conf *Configuration, t *testing.T) error {
+func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing.T) error {
 	// Create a file with some content.
 	fh, err := os.OpenFile("test.file", os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
 	if err != nil {
@@ -408,7 +410,7 @@ func checkREQTailFileTest(conf *Configuration, t *testing.T) error {
 // ----------------------------------------------------------------------------
 
 // Check errorKernel
-func checkErrorKernelMalformedJSONtest(conf *Configuration, t *testing.T) error {
+func checkErrorKernelMalformedJSONtest(stewardServer *server, conf *Configuration, t *testing.T) error {
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "central", "errorCentral.REQErrorLog.log")
 
 	// JSON message with error, missing brace.
@@ -467,6 +469,27 @@ func checkErrorKernelMalformedJSONtest(conf *Configuration, t *testing.T) error 
 			return fmt.Errorf(" * failed: did not get an update in the errorKernel log file")
 		}
 	}
+}
+
+func checkMetricValuesTest(stewardServer *server, conf *Configuration, t *testing.T) error {
+
+	fmt.Printf("%v, type: %T\n", stewardServer.processes.promTotalProcesses, stewardServer.processes.promTotalProcesses)
+
+	mfs, err := stewardServer.metrics.promRegistry.Gather()
+	if err != nil {
+		log.Printf("error: gathering: %v\n", mfs)
+	}
+
+	for _, mf := range mfs {
+		fmt.Printf(" name : %v, type: %T\n", mf.GetName(), mf.GetName())
+		m := mf.GetMetric()
+		fmt.Printf(" metric : %v, type %T\n", m, m)
+
+		// m2 := prometheus.Gauge(m)
+		fmt.Printf(" metric : %v, type %T\n", m[0].Gauge.GetValue(), m[0].Gauge.GetValue())
+	}
+
+	return nil
 }
 
 // ----------------------------------------------------------------------------
