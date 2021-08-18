@@ -472,22 +472,33 @@ func checkErrorKernelMalformedJSONtest(stewardServer *server, conf *Configuratio
 }
 
 func checkMetricValuesTest(stewardServer *server, conf *Configuration, t *testing.T) error {
-
-	fmt.Printf("%v, type: %T\n", stewardServer.metrics.promTotalProcesses, stewardServer.metrics.promTotalProcesses)
-
 	mfs, err := stewardServer.metrics.promRegistry.Gather()
 	if err != nil {
-		log.Printf("error: gathering: %v\n", mfs)
+		return fmt.Errorf("error: promRegistry.gathering: %v", mfs)
 	}
 
+	if len(mfs) <= 0 {
+		return fmt.Errorf("error: promRegistry.gathering: did not find any metric families: %v", mfs)
+	}
+
+	found := false
 	for _, mf := range mfs {
-		fmt.Printf(" name : %v, type: %T\n", mf.GetName(), mf.GetName())
-		m := mf.GetMetric()
-		fmt.Printf(" metric : %v, type %T\n", m, m)
+		if mf.GetName() == "total_running_processes" {
+			found = true
 
-		// m2 := prometheus.Gauge(m)
-		fmt.Printf(" metric : %v, type %T\n", m[0].Gauge.GetValue(), m[0].Gauge.GetValue())
+			m := mf.GetMetric()
+
+			if m[0].Gauge.GetValue() <= 0 {
+				return fmt.Errorf("error: promRegistry.gathering: did not find any running processes in metric for total_running_processes : %v", m[0].Gauge.GetValue())
+			}
+		}
 	}
+
+	if !found {
+		return fmt.Errorf("error: promRegistry.gathering: did not find specified metric total_running_processes")
+	}
+
+	t.Logf(" [SUCCESS]	: checkMetricValuesTest")
 
 	return nil
 }
