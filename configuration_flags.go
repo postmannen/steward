@@ -179,8 +179,13 @@ func (c *Configuration) CheckFlags() error {
 	// Create an empty default config
 	var fc Configuration
 
-	// Read file config. Set system default if it can't find config file.
+	// Set default configfolder if no env was provided.
 	configFolder := os.Getenv("CONFIGFOLDER")
+	if configFolder == "" {
+		c.ConfigFolder = "./etc/"
+	}
+
+	// Read file config. Set system default if it can't find config file.
 	fc, err := c.ReadConfigFile(configFolder)
 	if err != nil {
 		log.Printf("%v\n", err)
@@ -189,7 +194,7 @@ func (c *Configuration) CheckFlags() error {
 
 	*c = fc
 
-	flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "Defaults to ./usr/local/steward/etc/. *NB* This flag is not used, if your config file are located somwhere else than default set the location in an env variable named CONFIGFOLDER")
+	//flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "Defaults to ./usr/local/steward/etc/. *NB* This flag is not used, if your config file are located somwhere else than default set the location in an env variable named CONFIGFOLDER")
 	flag.StringVar(&c.SocketFolder, "socketFolder", fc.SocketFolder, "folder who contains the socket file. Defaults to ./tmp/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.DatabaseFolder, "databaseFolder", fc.DatabaseFolder, "folder who contains the database file. Defaults to ./var/lib/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.NodeName, "nodeName", fc.NodeName, "some unique string to identify this Edge unit")
