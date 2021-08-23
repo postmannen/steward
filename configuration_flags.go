@@ -81,6 +81,8 @@ type Configuration struct {
 	ConfigFolder string
 	// The folder where the socket file should live
 	SocketFolder string
+	// TCP Listener for sending messages to the system
+	TCPListener string
 	// The folder where the database should live
 	DatabaseFolder string
 	// some unique string to identify this Edge unit
@@ -146,6 +148,7 @@ func newConfigurationDefaults() Configuration {
 	c := Configuration{
 		ConfigFolder:               "/usr/local/steward/etc/",
 		SocketFolder:               "./tmp",
+		TCPListener:                "",
 		DatabaseFolder:             "./var/lib",
 		BrokerAddress:              "127.0.0.1:4222",
 		ProfilingPort:              "",
@@ -197,6 +200,7 @@ func (c *Configuration) CheckFlags() error {
 
 	//flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "Defaults to ./usr/local/steward/etc/. *NB* This flag is not used, if your config file are located somwhere else than default set the location in an env variable named CONFIGFOLDER")
 	flag.StringVar(&c.SocketFolder, "socketFolder", fc.SocketFolder, "folder who contains the socket file. Defaults to ./tmp/. If other folder is used this flag must be specified at startup.")
+	flag.StringVar(&c.TCPListener, "tcpListener", fc.TCPListener, "start up a TCP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")
 	flag.StringVar(&c.DatabaseFolder, "databaseFolder", fc.DatabaseFolder, "folder who contains the database file. Defaults to ./var/lib/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.NodeName, "nodeName", fc.NodeName, "some unique string to identify this Edge unit")
 	flag.StringVar(&c.BrokerAddress, "brokerAddress", fc.BrokerAddress, "the address of the message broker")

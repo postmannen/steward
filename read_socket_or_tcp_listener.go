@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net"
+	"os"
 )
 
 // readSocket will read the .sock file specified.
@@ -49,6 +52,71 @@ func (s *server) readSocket(toRingbufferCh chan []subjectAndMessage) {
 		toRingbufferCh <- sam
 
 		conn.Close()
+	}
+}
+
+// readTCPListener wait and read messages delivered on the TCP
+// port if started.
+// It will take a channel of []byte as input, and it is in this
+// channel the content of a file that has changed is returned.
+func (s *server) readTCPListener(toRingbufferCh chan []subjectAndMessage) {
+	ln, err := net.Listen("tcp", s.configuration.TCPListener)
+	if err != nil {
+		log.Printf("error: readTCPListener: failed to start tcp listener: %v\n", err)
+		os.Exit(1)
+	}
+	// Loop, and wait for new connections.
+	for {
+
+		conn, err := ln.Accept()
+		if err != nil {
+			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
+			sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
+			continue
+		}
+
+		go func(conn net.Conn) {
+			defer conn.Close()
+
+			var readBytes []byte
+
+			for {
+				b := make([]byte, 1500)
+				_, err = conn.Read(b)
+				if err != nil && err != io.EOF {
+					er := fmt.Errorf("error: failed to read data from tcp listener: %v", err)
+					sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
+					return
+				}
+
+				readBytes = append(readBytes, b...)
+
+				if err == io.EOF {
+					break
+				}
+			}
+
+			readBytes = bytes.Trim(readBytes, "\x00")
+
+			// unmarshal the JSON into a struct
+			sam, err := convertBytesToSAM(readBytes)
+			if err != nil {
+				er := fmt.Errorf("error: malformed json: %v", err)
+				sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
+				return
+			}
+
+			for i := range sam {
+
+				// Fill in the value for the FromNode field, so the receiver
+				// can check this field to know where it came from.
+				sam[i].Message.FromNode = Node(s.nodeName)
+			}
+
+			// Send the SAM struct to be picked up by the ring buffer.
+			toRingbufferCh <- sam
+
+		}(conn)
 	}
 }
 

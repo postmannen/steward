@@ -222,6 +222,11 @@ func (s *server) Start() {
 	// Start the checking the input socket for new messages from operator.
 	go s.readSocket(s.toRingbufferCh)
 
+	// Check if we should start the tcp listener fro new messages from operator.
+	if s.configuration.TCPListener != "" {
+		go s.readTCPListener(s.toRingbufferCh)
+	}
+
 	// Start up the predefined subscribers.
 	//
 	// Since all the logic to handle processes are tied to the process
