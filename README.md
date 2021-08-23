@@ -648,6 +648,8 @@ For CliCommand message to a node named "ship1" of type Command and it wants an A
 
 ## TODO
 
+Add metrics to buffers
+
 ### nACK messages like hello messages should not be stored in db for retry if failed
 
 ### Error message should also contain subject
