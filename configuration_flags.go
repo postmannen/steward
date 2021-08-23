@@ -101,10 +101,10 @@ type Configuration struct {
 	CentralNodeName string
 	// Path to the certificate of the root CA
 	RootCAPath string
-
 	// Full path to the NKEY's seed file
 	NkeySeedFile string
-
+	// The host and port to expose the data folder
+	ExposeDataFolder string
 	// Make the current node send hello messages to central at given interval in seconds
 	StartPubREQHello int
 	// Start the central error logger.
@@ -157,6 +157,7 @@ func newConfigurationDefaults() Configuration {
 		CentralNodeName:            "",
 		RootCAPath:                 "",
 		NkeySeedFile:               "",
+		ExposeDataFolder:           "",
 		StartSubREQErrorLog:        flagNodeSlice{Values: []Node{}},
 		StartSubREQHello:           flagNodeSlice{OK: true, Values: []Node{"*"}},
 		StartSubREQToFileAppend:    flagNodeSlice{OK: true, Values: []Node{"*"}},
@@ -207,6 +208,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.CentralNodeName, "centralNodeName", fc.CentralNodeName, "The name of the central node to receive messages published by this node")
 	flag.StringVar(&c.RootCAPath, "rootCAPath", fc.RootCAPath, "If TLS, enter the path for where to find the root CA certificate")
 	flag.StringVar(&c.NkeySeedFile, "nkeySeedFile", fc.NkeySeedFile, "The full path of the nkeys seed file")
+	flag.StringVar(&c.ExposeDataFolder, "exposeDataFolder", fc.ExposeDataFolder, "If set the data folder will be exposed on the given host:port. Default value is not exposed at all")
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 

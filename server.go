@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -235,6 +236,12 @@ func (s *server) Start() {
 	time.Sleep(time.Second * 1)
 	s.processes.printProcessesMap()
 
+	// Start exposing the the data folder via HTTP if flag is set.
+	if s.configuration.ExposeDataFolder != "" {
+		log.Printf("info: Starting expose of data folder via HTTP\n")
+		go s.exposeDataFolder(s.ctx)
+	}
+
 	// Start the processing of new messages from an input channel.
 	s.routeMessagesToProcess("./incomingBuffer.db", s.toRingbufferCh)
 
@@ -409,4 +416,24 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 			}
 		}
 	}()
+}
+
+func (s *server) exposeDataFolder(ctx context.Context) {
+	//create a file server, and serve the files found in ./
+	fd := http.FileServer(http.Dir(s.configuration.SubscribersDataFolder))
+	http.Handle("/", fd)
+
+	// we create a net.Listen type to use later with the http.Serve function.
+	nl, err := net.Listen("tcp", s.configuration.ExposeDataFolder)
+	if err != nil {
+		log.Println("error: starting net.Listen: ", err)
+	}
+
+	// start the web server with http.Serve instead of the usual http.ListenAndServe
+	err = http.Serve(nl, nil)
+	if err != nil {
+		log.Printf("Error: failed to start web server: %v\n", err)
+	}
+	os.Exit(1)
+
 }
