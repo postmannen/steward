@@ -23,35 +23,48 @@ func (s *server) readSocket(toRingbufferCh chan []subjectAndMessage) {
 			sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
 		}
 
-		b := make([]byte, 65535)
-		_, err = conn.Read(b)
-		if err != nil {
-			er := fmt.Errorf("error: failed to read data from socket: %v", err)
-			sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
-			continue
-		}
+		go func(conn net.Conn) {
+			defer conn.Close()
 
-		b = bytes.Trim(b, "\x00")
+			var readBytes []byte
 
-		// unmarshal the JSON into a struct
-		sam, err := convertBytesToSAM(b)
-		if err != nil {
-			er := fmt.Errorf("error: malformed json: %v", err)
-			sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
-			continue
-		}
+			for {
+				b := make([]byte, 1500)
+				_, err = conn.Read(b)
+				if err != nil && err != io.EOF {
+					er := fmt.Errorf("error: failed to read data from tcp listener: %v", err)
+					sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
+					return
+				}
 
-		for i := range sam {
+				readBytes = append(readBytes, b...)
 
-			// Fill in the value for the FromNode field, so the receiver
-			// can check this field to know where it came from.
-			sam[i].Message.FromNode = Node(s.nodeName)
-		}
+				if err == io.EOF {
+					break
+				}
+			}
 
-		// Send the SAM struct to be picked up by the ring buffer.
-		toRingbufferCh <- sam
+			readBytes = bytes.Trim(readBytes, "\x00")
 
-		conn.Close()
+			// unmarshal the JSON into a struct
+			sam, err := convertBytesToSAM(readBytes)
+			if err != nil {
+				er := fmt.Errorf("error: malformed json: %v", err)
+				sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
+				return
+			}
+
+			for i := range sam {
+
+				// Fill in the value for the FromNode field, so the receiver
+				// can check this field to know where it came from.
+				sam[i].Message.FromNode = Node(s.nodeName)
+			}
+
+			// Send the SAM struct to be picked up by the ring buffer.
+			toRingbufferCh <- sam
+
+		}(conn)
 	}
 }
 
