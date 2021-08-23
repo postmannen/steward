@@ -424,9 +424,14 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 }
 
 func (s *server) exposeDataFolder(ctx context.Context) {
+	fileHandler := func(w http.ResponseWriter, r *http.Request) {
+		// w.Header().Set("Content-Type", "text/html")
+		http.FileServer(http.Dir(s.configuration.SubscribersDataFolder)).ServeHTTP(w, r)
+	}
+
 	//create a file server, and serve the files found in ./
-	fd := http.FileServer(http.Dir(s.configuration.SubscribersDataFolder))
-	http.Handle("/", fd)
+	//fd := http.FileServer(http.Dir(s.configuration.SubscribersDataFolder))
+	http.HandleFunc("/", fileHandler)
 
 	// we create a net.Listen type to use later with the http.Serve function.
 	nl, err := net.Listen("tcp", s.configuration.ExposeDataFolder)
