@@ -389,7 +389,7 @@ func (r *ringBuffer) getIndexValue(indexBucket string) int {
 
 	index, err := strconv.Atoi(string(indexB))
 	if err != nil && string(indexB) == "" {
-		log.Printf("info: getIndexValue: no index value found : %v\n", err)
+		log.Printf("info: getIndexValue: no index value found, probaly empty database, and no previous entries in db to process : %v\n", err)
 	}
 
 	// fmt.Printf("\n**** ringBuffer.getIndexValue: got index value = %v\n\n", index)
@@ -405,7 +405,7 @@ func (r *ringBuffer) dbView(db *bolt.DB, bucket string, key string) ([]byte, err
 		//Open a bucket to get key's and values from.
 		bu := tx.Bucket([]byte(bucket))
 		if bu == nil {
-			log.Printf("info: no such bucket exist: %v\n", bucket)
+			log.Printf("info: no db bucket exist: %v\n", bucket)
 			return nil
 		}
 
