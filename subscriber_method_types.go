@@ -989,12 +989,14 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 				return
 			}
 
-			out, err := io.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				er := fmt.Errorf("error: methodREQHttpGet: io.ReadAll failed : %v, message: %v", err, message)
 				sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 				log.Printf("%v\n", er)
 			}
+
+			out := body
 
 			select {
 			case outCh <- out:
