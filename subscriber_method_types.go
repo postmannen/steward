@@ -688,13 +688,13 @@ func (m methodREQErrorLog) handler(proc process, message Message, node string) (
 	case message.PreviousMessage == nil:
 		// If this was a direct request there are no previous message to take
 		// information from, so we use the one that are in the current mesage.
-		fileName = message.FileName
+		fileName = fmt.Sprintf("%v-%v", string(message.FromNode), message.FileName)
 		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.ToNode), string(message.Method))
 	case message.PreviousMessage.ToNode != "":
-		fileName = message.PreviousMessage.FileName
+		fileName = fmt.Sprintf("%v-%v", string(message.FromNode), message.PreviousMessage.FileName)
 		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode), string(message.PreviousMessage.Method))
 	case message.PreviousMessage.ToNode == "":
-		fileName = message.PreviousMessage.FileName
+		fileName = fmt.Sprintf("%v-%v", string(message.FromNode), message.PreviousMessage.FileName)
 		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.FromNode), string(message.Method))
 	}
 
