@@ -41,10 +41,10 @@ type Message struct {
 	// For example "syslog","metrics", or "metrics/mysensor"
 	// The type is typically used in the handler of a method.
 	Directory string `json:"directory" yaml:"directory"`
-	// FileExtension is used to be able to set a wanted extension
+	// FileName is used to be able to set a wanted extension
 	// on a file being saved as the result of data being handled
 	// by a method handler.
-	FileExtension string `json:"fileExtension" yaml:"fileExtension"`
+	FileName string `json:"fileName" yaml:"fileName"`
 	// operation are used to give an opCmd and opArg's.
 	Operation Operation `json:"operation"`
 	// PreviousMessage are used for example if a reply message is

@@ -157,6 +157,7 @@ func convertBytesToSAM(b []byte) ([]subjectAndMessage, error) {
 
 	err := json.Unmarshal(b, &MsgSlice)
 	if err != nil {
+		//fmt.Printf(" *** %v", string(b))
 		return nil, fmt.Errorf("error: unmarshal of file failed: %#v", err)
 	}
 

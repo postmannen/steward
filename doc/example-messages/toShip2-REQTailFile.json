@@ -1,7 +1,7 @@
 [
     {
         "directory": "./mine-tail-filer/",
-        "fileExtension": ".log",
+        "fileName": "somefile.log",
         "toNode": "ship2",
         "data": ["/var/log/system.log"],
         "method":"REQTailFile",

@@ -1,7 +1,7 @@
 [
     {
         "directory": "ping",
-        "fileExtension":".ping.log",
+        "fileName":"somefile.ping.log",
         "toNode": "ship1",
         "data": [""],
         "method":"REQPing",

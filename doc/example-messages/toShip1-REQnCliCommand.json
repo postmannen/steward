@@ -1,7 +1,7 @@
 [
     {
         "directory":"some-directory",
-        "fileExtension":".result",
+        "fileName":"somefile.result",
         "toNode": "ship1",
         "data": ["bash","-c","tree ../"],
         "replyMethod":"REQToFileAppend",

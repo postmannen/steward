@@ -12,3 +12,4 @@ steward.sock
 ships/
 .gitignore
 testing_messages/
+test.file

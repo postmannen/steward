@@ -44,9 +44,10 @@ func TestStewardServer(t *testing.T) {
 	// Create the config to run a steward instance.
 	tempdir := "./tmp"
 	conf := &Configuration{
-		SocketFolder:          filepath.Join(tempdir, "tmp"),
-		DatabaseFolder:        filepath.Join(tempdir, "var/lib"),
-		SubscribersDataFolder: filepath.Join(tempdir, "data"),
+		SocketFolder:   filepath.Join(tempdir, "tmp"),
+		DatabaseFolder: filepath.Join(tempdir, "var/lib"),
+		//SubscribersDataFolder: filepath.Join(tempdir, "data"),
+		SubscribersDataFolder: "./tmp/",
 		BrokerAddress:         "127.0.0.1:40222",
 		PromHostAndPort:       ":2112",
 		NodeName:              "central",
@@ -119,8 +120,8 @@ func TestStewardServer(t *testing.T) {
 func checkREQOpCommandTest(stewardServer *server, conf *Configuration, t *testing.T) error {
 	m := `[
 		{
-			"directory":"commands-executed",
-			"fileExtension": ".result",
+			"directory":"opCommand",
+			"fileName": "fileName.result",
 			"toNode": "central",
 			"data": [],
 			"method":"REQOpCommand",
@@ -138,7 +139,7 @@ func checkREQOpCommandTest(stewardServer *server, conf *Configuration, t *testin
 
 	writeToSocketTest(conf, m, t)
 
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQOpCommand.result")
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "opCommand", "central", "central", "REQOpCommand", "fileName.result")
 	_, err := findStringInFileTest("central.REQOpCommand.CommandACK", resultFile, conf, t)
 	if err != nil {
 		return fmt.Errorf(" [FAILED]	: checkREQOpCommandTest: %v", err)
@@ -153,7 +154,7 @@ func checkREQCliCommandTest(stewardServer *server, conf *Configuration, t *testi
 	m := `[
 		{
 			"directory":"commands-executed",
-			"fileExtension":".result",
+			"fileName":"fileName.result",
 			"toNode": "central",
 			"data": ["bash","-c","echo apekatt"],
 			"replyMethod":"REQToFileAppend",
@@ -166,7 +167,7 @@ func checkREQCliCommandTest(stewardServer *server, conf *Configuration, t *testi
 
 	writeToSocketTest(conf, m, t)
 
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQCliCommand.result")
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central", "REQCliCommand", "fileName.result")
 	_, err := findStringInFileTest("apekatt", resultFile, conf, t)
 	if err != nil {
 		return fmt.Errorf(" [FAILED]	: checkREQCliCommandTest: %v", err)
@@ -181,7 +182,7 @@ func checkREQnCliCommandTest(stewardServer *server, conf *Configuration, t *test
 	m := `[
 		{
 			"directory":"commands-executed",
-			"fileExtension":".result",
+			"fileName":"fileName.result",
 			"toNode": "central",
 			"data": ["bash","-c","echo apekatt"],
 			"replyMethod":"REQToFileAppend",
@@ -194,7 +195,7 @@ func checkREQnCliCommandTest(stewardServer *server, conf *Configuration, t *test
 
 	writeToSocketTest(conf, m, t)
 
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQnCliCommand.result")
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central", "REQnCliCommand", "fileName.result")
 	_, err := findStringInFileTest("apekatt", resultFile, conf, t)
 	if err != nil {
 		return fmt.Errorf(" [FAILED]	: checkREQnCliCommandTest: %v", err)
@@ -209,7 +210,7 @@ func checkREQnCliCommandContTest(stewardServer *server, conf *Configuration, t *
 	m := `[
 		{
 			"directory":"commands-executed",
-			"fileExtension":".result",
+			"fileName":"fileName.result",
 			"toNode": "central",
 			"data": ["bash","-c","echo apekatt && sleep 5 && echo gris"],
 			"replyMethod":"REQToFileAppend",
@@ -222,7 +223,7 @@ func checkREQnCliCommandContTest(stewardServer *server, conf *Configuration, t *
 
 	writeToSocketTest(conf, m, t)
 
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQnCliCommandCont.result")
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central", "REQnCliCommandCont", "fileName.result")
 	_, err := findStringInFileTest("apekatt", resultFile, conf, t)
 	if err != nil {
 		return fmt.Errorf(" [FAILED]	: checkREQnCliCommandContTest: %v", err)
@@ -237,7 +238,7 @@ func checkREQHelloTest(stewardServer *server, conf *Configuration, t *testing.T)
 	m := `[
 		{
 			"directory":"commands-executed",
-			"fileExtension":".result",
+			"fileName":"fileName.result",
 			"toNode": "central",
 			"data": [],
 			"method":"REQHello"
@@ -246,7 +247,7 @@ func checkREQHelloTest(stewardServer *server, conf *Configuration, t *testing.T)
 
 	writeToSocketTest(conf, m, t)
 
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central.REQHello.result")
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "central", "REQHello", "fileName.result")
 	_, err := findStringInFileTest("Received hello from", resultFile, conf, t)
 	if err != nil {
 		return fmt.Errorf(" [FAILED]	: checkREQHelloTest: %v", err)
@@ -261,7 +262,7 @@ func checkREQErrorLogTest(stewardServer *server, conf *Configuration, t *testing
 	m := `[
 		{
 			"directory": "errorLog",
-			"fileExtension":".result",
+			"fileName":"fileName.result",
 			"toNode": "errorCentral",
 			"data": ["some error"],
 			"method": "REQErrorLog"
@@ -270,7 +271,7 @@ func checkREQErrorLogTest(stewardServer *server, conf *Configuration, t *testing
 
 	writeToSocketTest(conf, m, t)
 
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "central", "errorCentral.REQErrorLog.result")
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "central", "errorCentral", "REQErrorLog", "fileName.result")
 	_, err := findStringInFileTest("some error", resultFile, conf, t)
 	if err != nil {
 		return fmt.Errorf(" [FAILED]	: checkREQErrorLogTest: %v", err)
@@ -297,7 +298,7 @@ func checkREQHttpGetTest(stewardServer *server, conf *Configuration, t *testing.
 	m := `[
 		{
 			"directory": "httpget",
-			"fileExtension":".result",
+			"fileName":"fileName.result",
 			"toNode": "central",
 			"data": ["http://127.0.0.1:10080/"],
 			"method": "REQHttpGet",
@@ -309,7 +310,7 @@ func checkREQHttpGetTest(stewardServer *server, conf *Configuration, t *testing.
 
 	writeToSocketTest(conf, m, t)
 
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "httpget", "central", "central.REQHttpGet.result")
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "httpget", "central", "central", "REQHttpGet", "fileName.result")
 	_, err := findStringInFileTest("web page content", resultFile, conf, t)
 	if err != nil {
 		return fmt.Errorf(" [FAILED]	: checkREQHttpGetTest: %v", err)
@@ -363,7 +364,7 @@ func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing
 	[
 		{
 			"directory": "tail-files",
-			"fileExtension": ".result",
+			"fileName": "fileName.result",
 			"toNode": "central",
 			"data": ["` + file + `"],
 			"method":"REQTailFile",
@@ -377,7 +378,7 @@ func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing
 
 	// time.Sleep(time.Second * 5)
 
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "tail-files", "central", "central.REQTailFile.result")
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "tail-files", "central", "central", "REQTailFile", "fileName.result")
 
 	// Wait n times for result file to be created.
 	n := 5
@@ -411,13 +412,12 @@ func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing
 
 // Check errorKernel
 func checkErrorKernelMalformedJSONtest(stewardServer *server, conf *Configuration, t *testing.T) error {
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "central", "errorCentral.REQErrorLog.log")
 
 	// JSON message with error, missing brace.
 	m := `[
 		{
 			"directory": "some dir",
-			"fileExtension":"someext",
+			"fileName":"someext",
 			"toNode": "somenode",
 			"data": ["some data"],
 			"method": "REQErrorLog"
@@ -425,6 +425,8 @@ func checkErrorKernelMalformedJSONtest(stewardServer *server, conf *Configuratio
 	]`
 
 	writeToSocketTest(conf, m, t)
+
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "central", "errorCentral", "REQErrorLog", "error.log")
 
 	// Wait n times for error file to be created.
 	n := 5
@@ -483,19 +485,19 @@ func checkMetricValuesTest(stewardServer *server, conf *Configuration, t *testin
 
 	found := false
 	for _, mf := range mfs {
-		if mf.GetName() == "total_running_processes" {
+		if mf.GetName() == "processes_total" {
 			found = true
 
 			m := mf.GetMetric()
 
 			if m[0].Gauge.GetValue() <= 0 {
-				return fmt.Errorf("error: promRegistry.gathering: did not find any running processes in metric for total_running_processes : %v", m[0].Gauge.GetValue())
+				return fmt.Errorf("error: promRegistry.gathering: did not find any running processes in metric for processes_total : %v", m[0].Gauge.GetValue())
 			}
 		}
 	}
 
 	if !found {
-		return fmt.Errorf("error: promRegistry.gathering: did not find specified metric total_running_processes")
+		return fmt.Errorf("error: promRegistry.gathering: did not find specified metric processes_total")
 	}
 
 	t.Logf(" [SUCCESS]	: checkMetricValuesTest")

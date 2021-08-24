@@ -1,7 +1,7 @@
 [
     {
         "directory":"cli/command/result",
-        "fileExtension": ".result",
+        "fileName": "somefile.result",
         "toNode": "ship1",
         "data": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",

@@ -145,7 +145,7 @@ func messageSlide(app *tview.Application) tview.Primitive {
 		case "Directory":
 			value := "/some-dir/"
 			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
-		case "FileExtension":
+		case "FileName":
 			value := ".log"
 			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
 		case "Operation":
@@ -383,8 +383,8 @@ func messageSlide(app *tview.Application) tview.Primitive {
 					m.MethodTimeout = v
 				case "Directory":
 					m.Directory = value
-				case "FileExtension":
-					m.FileExtension = value
+				case "FileName":
+					m.FileName = value
 				case "Operation":
 					// We need to check what type of operation it is, and pick
 					// the correct struct type, and fill it with values
@@ -584,10 +584,10 @@ type msg struct {
 	// For example "syslog","metrics", or "metrics/mysensor"
 	// The type is typically used in the handler of a method.
 	Directory string `json:"directory" yaml:"directory"`
-	// FileExtension is used to be able to set a wanted extension
+	// FileName is used to be able to set a wanted extension
 	// on a file being saved as the result of data being handled
 	// by a method handler.
-	FileExtension string `json:"fileExtension" yaml:"fileExtension"`
+	FileName string `json:"fileName" yaml:"fileName"`
 	// operation are used to give an opCmd and opArg's.
 	Operation interface{} `json:"operation,omitempty"`
 }

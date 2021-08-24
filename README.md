@@ -12,7 +12,7 @@ Command And Control anything like Servers, Containers, VM's or others by creatin
 [
     {
         "directory":"cli_command__result",
-        "fileExtension": ".result",
+        "fileName": "some-file-name.result",
         "toNode": "ship1",
         "data": ["bash","-c","sleep 5 & tree ./"],
         "method":"REQCliCommand",
@@ -191,11 +191,11 @@ Print the output of the reply message to the console.
 
 #### REQToFileAppend
 
-Append the output of the reply message to a log file specified with the `directory` and `fileExtension` fields.
+Append the output of the reply message to a log file specified with the `directory` and `fileName` fields.
 
 #### REQToFile
 
-Write the output of the reply message to a log file specified with the `directory` and `fileExtension` fields.
+Write the output of the reply message to a log file specified with the `directory` and `fileName` fields.
 
 ### Errors reporting
 
@@ -394,10 +394,10 @@ methodTimeout
 // For example "syslog","metrics", or "metrics/mysensor"
 // The type is typically used in the handler of a method.
 directory
-// FileExtension is used to be able to set a wanted extension
+// FileName is used to be able to set a wanted name
 // on a file being saved as the result of data being handled
 // by a method handler.
-fileExtension
+fileName
 // operation are used to give an opCmd and opArg's.
 operation
 ```
@@ -459,7 +459,7 @@ and another example
 [
     {
         "directory":"opcommand_logs",
-        "fileExtension": ".log",
+        "fileName": "some.log",
         "toNode": "ship2",
         "data": [],
         "method":"REQOpCommand",
@@ -531,7 +531,7 @@ To send a Op Command message for process listing with custom timeout and amount 
 [
     {
         "directory":"opcommand_logs",
-        "fileExtension": ".log",
+        "fileName": "some.log",
         "toNode": "ship2",
         "data": [],
         "method":"REQOpCommand",
@@ -553,7 +553,7 @@ To send and Op Command to stop a subscriber on a node
 [
     {
         "directory":"opcommand_logs",
-        "fileExtension": ".log",
+        "fileName": "some.log",
         "toNode": "ship2",
         "data": [],
         "method":"REQOpCommand",
@@ -580,7 +580,7 @@ To send and Op Command to start a subscriber on a node
 [
     {
         "directory":"opcommand_logs",
-        "fileExtension": ".log",
+        "fileName": "some.log",
         "toNode": "ship2",
         "data": [],
         "method":"REQOpCommand",
@@ -606,7 +606,7 @@ Tail a log file on a node, and save the result of the tail centrally at the dire
 [
     {
         "directory": "./my/log/files/",
-        "fileExtension": ".log",
+        "fileName": "some.log",
         "toNode": "ship2",
         "data": ["./test.log"],
         "method":"REQTailFile",

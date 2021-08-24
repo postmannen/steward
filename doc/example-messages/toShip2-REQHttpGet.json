@@ -1,7 +1,7 @@
 [
     {
         "directory": "metrics/network/sniffer",
-        "fileExtension": ".html",
+        "fileName": "somefile.html",
         "toNode": "ship2",
         "data": ["http://erter.org"],
         "method":"REQHttpGet",

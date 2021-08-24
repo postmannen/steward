@@ -297,12 +297,12 @@ func createErrorMsgContent(FromNode Node, theError error) subjectAndMessage {
 	sam := subjectAndMessage{
 		Subject: newSubject(REQErrorLog, "errorCentral"),
 		Message: Message{
-			Directory:     "errorLog",
-			ToNode:        "errorCentral",
-			FromNode:      FromNode,
-			FileExtension: ".log",
-			Data:          []string{er},
-			Method:        REQErrorLog,
+			Directory: "errorLog",
+			ToNode:    "errorCentral",
+			FromNode:  FromNode,
+			FileName:  "error.log",
+			Data:      []string{er},
+			Method:    REQErrorLog,
 		},
 	}
 

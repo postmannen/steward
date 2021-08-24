@@ -192,6 +192,7 @@ func (s startup) pubREQHello(p process) {
 				d := fmt.Sprintf("Hello from %v\n", p.node)
 
 				m := Message{
+					FileName:  "hello.log",
 					Directory: "hello-messages",
 					ToNode:    Node(p.configuration.CentralNodeName),
 					FromNode:  Node(p.node),

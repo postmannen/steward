@@ -496,14 +496,14 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 	case message.PreviousMessage == nil:
 		// If this was a direct request there are no previous message to take
 		// information from, so we use the one that are in the current mesage.
-		fileName = fmt.Sprintf("%v.%v%v", message.ToNode, message.Method, message.FileExtension)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.FromNode))
+		fileName = message.FileName
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.FromNode), string(message.ToNode), string(message.Method))
 	case message.PreviousMessage.ToNode != "":
-		fileName = fmt.Sprintf("%v.%v%v", message.PreviousMessage.ToNode, message.PreviousMessage.Method, message.PreviousMessage.FileExtension)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode))
+		fileName = message.PreviousMessage.FileName
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode), string(message.PreviousMessage.ToNode), string(message.PreviousMessage.Method))
 	case message.PreviousMessage.ToNode == "":
-		fileName = fmt.Sprintf("%v.%v%v", message.FromNode, message.Method, message.PreviousMessage.FileExtension)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode))
+		fileName = message.PreviousMessage.FileName
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode), string(message.FromNode), string(message.Method))
 	}
 
 	// Check if folder structure exist, if not create it.
@@ -565,14 +565,14 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 	case message.PreviousMessage == nil:
 		// If this was a direct request there are no previous message to take
 		// information from, so we use the one that are in the current mesage.
-		fileName = fmt.Sprintf("%v.%v%v", message.ToNode, message.Method, message.FileExtension)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.FromNode))
+		fileName = message.FileName
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.FromNode), string(message.ToNode), string(message.Method))
 	case message.PreviousMessage.ToNode != "":
-		fileName = fmt.Sprintf("%v.%v%v", message.PreviousMessage.ToNode, message.PreviousMessage.Method, message.PreviousMessage.FileExtension)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode))
+		fileName = message.PreviousMessage.FileName
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode), string(message.PreviousMessage.ToNode), string(message.PreviousMessage.Method))
 	case message.PreviousMessage.ToNode == "":
-		fileName = fmt.Sprintf("%v.%v%v", message.FromNode, message.Method, message.PreviousMessage.FileExtension)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode))
+		fileName = message.PreviousMessage.FileName
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode), string(message.FromNode), string(message.Method))
 	}
 
 	// Check if folder structure exist, if not create it.
@@ -627,8 +627,8 @@ func (m methodREQHello) getKind() CommandOrEvent {
 func (m methodREQHello) handler(proc process, message Message, node string) ([]byte, error) {
 	data := fmt.Sprintf("Received hello from %#v\n", message.FromNode)
 
-	fileName := fmt.Sprintf("%v.%v%v", message.FromNode, message.Method, message.FileExtension)
-	folderTree := filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.ToNode))
+	fileName := message.FileName
+	folderTree := filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.ToNode), string(message.FromNode), string(message.Method))
 
 	// Check if folder structure exist, if not create it.
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
@@ -688,14 +688,14 @@ func (m methodREQErrorLog) handler(proc process, message Message, node string) (
 	case message.PreviousMessage == nil:
 		// If this was a direct request there are no previous message to take
 		// information from, so we use the one that are in the current mesage.
-		fileName = fmt.Sprintf("%v.%v%v", message.ToNode, message.Method, message.FileExtension)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.FromNode))
+		fileName = message.FileName
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.FromNode), string(message.ToNode), string(message.Method))
 	case message.PreviousMessage.ToNode != "":
-		fileName = fmt.Sprintf("%v.%v%v", message.PreviousMessage.ToNode, message.PreviousMessage.Method, message.PreviousMessage.FileExtension)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode))
+		fileName = message.PreviousMessage.FileName
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode), string(message.PreviousMessage.ToNode), string(message.PreviousMessage.Method))
 	case message.PreviousMessage.ToNode == "":
-		fileName = fmt.Sprintf("%v.%v%v", message.FromNode, message.Method, message.PreviousMessage.FileExtension)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode))
+		fileName = message.PreviousMessage.FileName
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode), string(message.FromNode), string(message.Method))
 	}
 
 	// Check if folder structure exist, if not create it.
