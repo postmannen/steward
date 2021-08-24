@@ -271,7 +271,7 @@ func checkREQErrorLogTest(stewardServer *server, conf *Configuration, t *testing
 
 	writeToSocketTest(conf, m, t)
 
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "errorCentral", "REQErrorLog", "fileName.result")
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "errorCentral", "REQErrorLog", "central-fileName.result")
 	_, err := findStringInFileTest("some error", resultFile, conf, t)
 	if err != nil {
 		return fmt.Errorf(" [FAILED]	: checkREQErrorLogTest: %v", err)
@@ -426,7 +426,7 @@ func checkErrorKernelMalformedJSONtest(stewardServer *server, conf *Configuratio
 
 	writeToSocketTest(conf, m, t)
 
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "errorCentral", "REQErrorLog", "error.log")
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "errorCentral", "REQErrorLog", "central-error.log")
 
 	// Wait n times for error file to be created.
 	n := 5
