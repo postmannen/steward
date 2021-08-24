@@ -522,7 +522,7 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 	file := filepath.Join(folderTree, fileName)
 	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
 	if err != nil {
-		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to open file : %v, message: %v", err, message)
+		er := fmt.Errorf("error: methodREQToFileAppend.handler: failed to open file : %v, message: %v", err, message)
 		sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 		log.Printf("%v\n", er)
 		return nil, err
@@ -593,7 +593,7 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 	file := filepath.Join(folderTree, fileName)
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
 	if err != nil {
-		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to open file: %v, %v", err, message)
+		er := fmt.Errorf("error: methodREQToFile.handler: failed to open file, check that you've specified a value for fileName in the message: %v", err)
 		sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 		log.Printf("%v\n", er)
 		return nil, err
@@ -645,7 +645,7 @@ func (m methodREQHello) handler(proc process, message Message, node string) ([]b
 	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
 
 	if err != nil {
-		log.Printf("error: methodEventTextLogging.handler: failed to open file: %v\n", err)
+		log.Printf("error: methodREQHello.handler: failed to open file: %v\n", err)
 		return nil, err
 	}
 	defer f.Close()
@@ -712,7 +712,7 @@ func (m methodREQErrorLog) handler(proc process, message Message, node string) (
 	file := filepath.Join(folderTree, fileName)
 	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
 	if err != nil {
-		log.Printf("error: methodEventTextLogging.handler: failed to open file: %v\n", err)
+		log.Printf("error: methodREQErrorLog.handler: failed to open file: %v\n", err)
 		return nil, err
 	}
 	defer f.Close()
