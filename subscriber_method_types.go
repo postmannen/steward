@@ -281,14 +281,14 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 		PreviousMessage: &message,
 	}
 
-	nSAM, err := newSAM(newMsg)
+	sam, err := newSubjectAndMessage(newMsg)
 	if err != nil {
 		// In theory the system should drop the message before it reaches here.
 		er := fmt.Errorf("error: newReplyMessage : %v, message: %v", err, message)
 		sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
 		log.Printf("%v\n", er)
 	}
-	proc.toRingbufferCh <- []subjectAndMessage{nSAM}
+	proc.toRingbufferCh <- []subjectAndMessage{sam}
 }
 
 // ------------------------------------------------------------
