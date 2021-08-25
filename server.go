@@ -42,8 +42,9 @@ type server struct {
 	processes *processes
 	// The name of the node
 	nodeName string
-	// Mutex for locking when writing to the process map
-	toRingbufferCh chan []subjectAndMessage
+	// newMessagesCh are the channel where new messages to be handled
+	// by the system are put.
+	newMessagesCh chan []subjectAndMessage
 	// errorKernel is doing all the error handling like what to do if
 	// an error occurs.
 	errorKernel *errorKernel
@@ -164,16 +165,16 @@ func NewServer(c *Configuration) (*server, error) {
 	metrics := newMetrics(c.PromHostAndPort)
 
 	s := &server{
-		ctx:            ctx,
-		cancel:         cancel,
-		configuration:  c,
-		nodeName:       c.NodeName,
-		natsConn:       conn,
-		StewardSocket:  nl,
-		StewSocket:     stewNL,
-		processes:      newProcesses(ctx, metrics),
-		toRingbufferCh: make(chan []subjectAndMessage),
-		metrics:        metrics,
+		ctx:           ctx,
+		cancel:        cancel,
+		configuration: c,
+		nodeName:      c.NodeName,
+		natsConn:      conn,
+		StewardSocket: nl,
+		StewSocket:    stewNL,
+		processes:     newProcesses(ctx, metrics),
+		newMessagesCh: make(chan []subjectAndMessage),
+		metrics:       metrics,
 	}
 
 	// Create the default data folder for where subscribers should
@@ -204,7 +205,7 @@ func (s *server) Start() {
 	s.errorKernel = newErrorKernel(s.ctx)
 
 	go func() {
-		err := s.errorKernel.start(s.toRingbufferCh)
+		err := s.errorKernel.start(s.newMessagesCh)
 		if err != nil {
 			log.Printf("%v\n", err)
 		}
@@ -220,11 +221,11 @@ func (s *server) Start() {
 	}()
 
 	// Start the checking the input socket for new messages from operator.
-	go s.readSocket(s.toRingbufferCh)
+	go s.readSocket(s.newMessagesCh)
 
 	// Check if we should start the tcp listener fro new messages from operator.
 	if s.configuration.TCPListener != "" {
-		go s.readTCPListener(s.toRingbufferCh)
+		go s.readTCPListener(s.newMessagesCh)
 	}
 
 	// Start up the predefined subscribers.
@@ -234,7 +235,7 @@ func (s *server) Start() {
 	//
 	// NB: The context of the initial process are set in processes.Start.
 	sub := newSubject(REQInitial, s.nodeName)
-	p := newProcess(context.TODO(), s.metrics, s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, "", []Node{}, nil)
+	p := newProcess(context.TODO(), s.metrics, s.natsConn, s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, "", []Node{}, nil)
 	// Start all wanted subscriber processes.
 	s.processes.Start(p)
 
@@ -248,7 +249,7 @@ func (s *server) Start() {
 	}
 
 	// Start the processing of new messages from an input channel.
-	s.routeMessagesToProcess("./incomingBuffer.db", s.toRingbufferCh)
+	s.routeMessagesToProcess("./incomingBuffer.db", s.newMessagesCh)
 
 }
 
@@ -330,22 +331,22 @@ type samDBValueAndDelivered struct {
 func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subjectAndMessage) {
 	// Prepare and start a new ring buffer
 	const bufferSize int = 1000
-	rb := newringBuffer(s.metrics, *s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.toRingbufferCh)
+	rb := newringBuffer(s.metrics, *s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.newMessagesCh)
 	// TODO:
-	inCh := make(chan subjectAndMessage)
+	ringBufferInCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValueAndDelivered)
 	// start the ringbuffer.
-	rb.start(inCh, ringBufferOutCh, s.configuration.DefaultMessageTimeout, s.configuration.DefaultMessageRetries)
+	rb.start(ringBufferInCh, ringBufferOutCh, s.configuration.DefaultMessageTimeout, s.configuration.DefaultMessageRetries)
 
 	// Start reading new fresh messages received on the incomming message
 	// pipe/file requested, and fill them into the buffer.
 	go func() {
 		for samSlice := range newSAM {
 			for _, sam := range samSlice {
-				inCh <- sam
+				ringBufferInCh <- sam
 			}
 		}
-		close(inCh)
+		close(ringBufferInCh)
 	}()
 
 	// Process the messages that are in the ring buffer. Check and
@@ -366,12 +367,12 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 			// Check if the format of the message is correct.
 			if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
 				er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
-				sendErrorLogMessage(s.toRingbufferCh, Node(s.nodeName), er)
+				sendErrorLogMessage(s.newMessagesCh, Node(s.nodeName), er)
 				continue
 			}
 			if !coeAvailable.CheckIfExists(sam.Subject.CommandOrEvent, sam.Subject) {
 				er := fmt.Errorf("error: routeMessagesToProcess: the command or event do not exist, message dropped: %v", sam.Message.Method)
-				sendErrorLogMessage(s.toRingbufferCh, Node(s.nodeName), er)
+				sendErrorLogMessage(s.newMessagesCh, Node(s.nodeName), er)
 
 				continue
 			}
@@ -412,7 +413,7 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 				log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 				sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
-				proc := newProcess(s.ctx, s.metrics, s.natsConn, s.processes, s.toRingbufferCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil, nil)
+				proc := newProcess(s.ctx, s.metrics, s.natsConn, s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil, nil)
 				// fmt.Printf("*** %#v\n", proc)
 				proc.spawnWorker(s.processes, s.natsConn)
 
