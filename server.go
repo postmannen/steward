@@ -249,7 +249,7 @@ func (s *server) Start() {
 	}
 
 	// Start the processing of new messages from an input channel.
-	s.routeMessagesToProcess("./incomingBuffer.db", s.newMessagesCh)
+	s.routeMessagesToProcess("./incomingBuffer.db")
 
 }
 
@@ -318,17 +318,16 @@ type samDBValueAndDelivered struct {
 	delivered  func()
 }
 
-// routeMessagesToProcess takes a database name and an input channel as
-// it's input arguments.
-// The database will be used as the persistent store for the work queue
-// which is implemented as a ring buffer.
-// The input channel are where we read new messages to publish.
+// routeMessagesToProcess takes a database name it's input argument.
+// The database will be used as the persistent k/v store for the work
+// queue which is implemented as a ring buffer.
+// The newMessagesCh are where we get new messages to publish.
 // Incomming messages will be routed to the correct subject process, where
 // the handling of each nats subject is handled within it's own separate
 // worker process.
 // It will also handle the process of spawning more worker processes
 // for publisher subjects if it does not exist.
-func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subjectAndMessage) {
+func (s *server) routeMessagesToProcess(dbFileName string) {
 	// Prepare and start a new ring buffer
 	const bufferSize int = 1000
 	rb := newringBuffer(s.metrics, *s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.newMessagesCh)
@@ -341,7 +340,7 @@ func (s *server) routeMessagesToProcess(dbFileName string, newSAM chan []subject
 	// Start reading new fresh messages received on the incomming message
 	// pipe/file requested, and fill them into the buffer.
 	go func() {
-		for samSlice := range newSAM {
+		for samSlice := range s.newMessagesCh {
 			for _, sam := range samSlice {
 				ringBufferInCh <- sam
 			}
