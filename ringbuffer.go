@@ -289,11 +289,11 @@ func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan sam
 
 			r.permStore <- fmt.Sprintf("%v : %+v\n", time.Now().UTC(), v)
 
-			// REMOVE: Dump the whole KV store
-			err := r.printBucketContent(samValueBucket)
-			if err != nil {
-				log.Printf("* Error: dump of db failed: %v\n", err)
-			}
+			// TODO: REMOVE: Dump the whole KV store
+			// err := r.printBucketContent(samValueBucket)
+			// if err != nil {
+			// 	log.Printf("* Error: dump of db failed: %v\n", err)
+			// }
 		}(v)
 
 	}

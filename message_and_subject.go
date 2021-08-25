@@ -12,8 +12,10 @@ import (
 // --- Message
 
 type Message struct {
-	// The node to send the message to
+	// The node to send the message to.
 	ToNode Node `json:"toNode" yaml:"toNode"`
+	// ToNodes to specify several hosts to send message to.
+	ToNodes []Node `json:"toNodes,omitempty" yaml:"toNodes,omitempty"`
 	// The Unique ID of the message
 	ID int `json:"id" yaml:"id"`
 	// The actual data in the message
