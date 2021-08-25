@@ -221,7 +221,7 @@ func (s *server) Start() {
 	}()
 
 	// Start the checking the input socket for new messages from operator.
-	go s.readSocket(s.newMessagesCh)
+	go s.readSocket()
 
 	// Check if we should start the tcp listener fro new messages from operator.
 	if s.configuration.TCPListener != "" {
@@ -340,8 +340,8 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 	// Start reading new fresh messages received on the incomming message
 	// pipe/file requested, and fill them into the buffer.
 	go func() {
-		for samSlice := range s.newMessagesCh {
-			for _, sam := range samSlice {
+		for sams := range s.newMessagesCh {
+			for _, sam := range sams {
 				ringBufferInCh <- sam
 			}
 		}
