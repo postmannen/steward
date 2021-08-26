@@ -741,19 +741,66 @@ func (m methodREQPing) getKind() CommandOrEvent {
 
 // Handle receving a ping.
 func (m methodREQPing) handler(proc process, message Message, node string) ([]byte, error) {
-	// TODO: Replace this with an append to file on receival.
-	log.Printf("<--- PING REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
+	// Write to file that we received a ping
 
-	// ---
+	// If it was a request type message we want to check what the initial messages
+	// method, so we can use that in creating the file name to store the data.
+	var fileName string
+	var folderTree string
+	switch {
+	case message.PreviousMessage == nil:
+		// If this was a direct request there are no previous message to take
+		// information from, so we use the one that are in the current mesage.
+		fileName = fmt.Sprintf("%v-%v", string(message.FromNode), message.FileName)
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.ToNode), string(message.Method))
+	case message.PreviousMessage.ToNode != "":
+		fileName = fmt.Sprintf("%v-%v", string(message.FromNode), message.PreviousMessage.FileName)
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode), string(message.PreviousMessage.Method))
+	case message.PreviousMessage.ToNode == "":
+		fileName = fmt.Sprintf("%v-%v", string(message.FromNode), message.PreviousMessage.FileName)
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.FromNode), string(message.Method))
+	}
 
-	// ---
+	// Check if folder structure exist, if not create it.
+	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
+		err := os.MkdirAll(folderTree, 0700)
+		if err != nil {
+			er := fmt.Errorf("error: methodREQPing.handler: failed to create toFile directory tree %v: %v, %v", folderTree, err, message)
+			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+			log.Printf("%v\n", er)
+
+			return nil, er
+		}
+
+		log.Printf("info: Creating subscribers data folder at %v\n", folderTree)
+	}
+
+	// Open file.
+	file := filepath.Join(folderTree, fileName)
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
+	if err != nil {
+		er := fmt.Errorf("error: methodREQPing.handler: failed to open file, check that you've specified a value for fileName in the message: %v", err)
+		sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+		log.Printf("%v\n", er)
+		return nil, err
+	}
+	defer f.Close()
+
+	// And write the data
+	d := fmt.Sprintf("%v, ping received from %v\n", time.Now().UTC(), message.FromNode)
+	_, err = f.Write([]byte(d))
+	f.Sync()
+	if err != nil {
+		er := fmt.Errorf("error: methodREQPing.handler: failed to write to file: %v, %v", err, message)
+		sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+		log.Printf("%v\n", er)
+	}
 
 	proc.processes.wg.Add(1)
 	go func() {
 		defer proc.processes.wg.Done()
 
-		d := fmt.Sprintf("%v, ping reply sent from %v\n", time.Now().UTC(), message.ToNode)
-		newReplyMessage(proc, message, []byte(d))
+		newReplyMessage(proc, message, nil)
 	}()
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -772,8 +819,60 @@ func (m methodREQPong) getKind() CommandOrEvent {
 
 // Handle receiving a pong.
 func (m methodREQPong) handler(proc process, message Message, node string) ([]byte, error) {
-	// TODO: Replace this with an append to file on receival.
-	log.Printf("<--- ECHO Reply received from: %v, containing: %v", message.FromNode, message.Data)
+	// Write to file that we received a pong
+
+	// If it was a request type message we want to check what the initial messages
+	// method, so we can use that in creating the file name to store the data.
+	var fileName string
+	var folderTree string
+	switch {
+	case message.PreviousMessage == nil:
+		// If this was a direct request there are no previous message to take
+		// information from, so we use the one that are in the current mesage.
+		fileName = fmt.Sprintf("%v", message.FileName)
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.ToNode), string(message.Method))
+	case message.PreviousMessage.ToNode != "":
+		fileName = fmt.Sprintf("%v", message.PreviousMessage.FileName)
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode), string(message.PreviousMessage.Method))
+	case message.PreviousMessage.ToNode == "":
+		fileName = fmt.Sprintf("%v", message.PreviousMessage.FileName)
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.FromNode), string(message.Method))
+	}
+
+	// Check if folder structure exist, if not create it.
+	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
+		err := os.MkdirAll(folderTree, 0700)
+		if err != nil {
+			er := fmt.Errorf("error: methodREQPong.handler: failed to create toFile directory tree %v: %v, %v", folderTree, err, message)
+			sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+			log.Printf("%v\n", er)
+
+			return nil, er
+		}
+
+		log.Printf("info: Creating subscribers data folder at %v\n", folderTree)
+	}
+
+	// Open file.
+	file := filepath.Join(folderTree, fileName)
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
+	if err != nil {
+		er := fmt.Errorf("error: methodREQPong.handler: failed to open file, check that you've specified a value for fileName in the message: %v", err)
+		sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+		log.Printf("%v\n", er)
+		return nil, err
+	}
+	defer f.Close()
+
+	// And write the data
+	d := fmt.Sprintf("%v, pong received from %v\n", time.Now().UTC(), message.PreviousMessage.ToNode)
+	_, err = f.Write([]byte(d))
+	f.Sync()
+	if err != nil {
+		er := fmt.Errorf("error: methodREQPong.handler: failed to write to file: %v, %v", err, message)
+		sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+		log.Printf("%v\n", er)
+	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
