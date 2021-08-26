@@ -19,7 +19,7 @@ func (s *server) readSocket() {
 		conn, err := s.StewardSocket.Accept()
 		if err != nil {
 			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
-			sendErrorLogMessage(s.newMessagesCh, Node(s.nodeName), er)
+			sendErrorLogMessage(s.metrics, s.newMessagesCh, Node(s.nodeName), er)
 		}
 
 		go func(conn net.Conn) {
@@ -32,7 +32,7 @@ func (s *server) readSocket() {
 				_, err = conn.Read(b)
 				if err != nil && err != io.EOF {
 					er := fmt.Errorf("error: failed to read data from tcp listener: %v", err)
-					sendErrorLogMessage(s.newMessagesCh, Node(s.nodeName), er)
+					sendErrorLogMessage(s.metrics, s.newMessagesCh, Node(s.nodeName), er)
 					return
 				}
 
@@ -49,7 +49,7 @@ func (s *server) readSocket() {
 			sams, err := s.convertBytesToSAMs(readBytes)
 			if err != nil {
 				er := fmt.Errorf("error: malformed json: %v", err)
-				sendErrorLogMessage(s.newMessagesCh, Node(s.nodeName), er)
+				sendErrorLogMessage(s.metrics, s.newMessagesCh, Node(s.nodeName), er)
 				return
 			}
 
@@ -83,7 +83,7 @@ func (s *server) readTCPListener(toRingbufferCh chan []subjectAndMessage) {
 		conn, err := ln.Accept()
 		if err != nil {
 			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
-			sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
+			sendErrorLogMessage(s.metrics, toRingbufferCh, Node(s.nodeName), er)
 			continue
 		}
 
@@ -97,7 +97,7 @@ func (s *server) readTCPListener(toRingbufferCh chan []subjectAndMessage) {
 				_, err = conn.Read(b)
 				if err != nil && err != io.EOF {
 					er := fmt.Errorf("error: failed to read data from tcp listener: %v", err)
-					sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
+					sendErrorLogMessage(s.metrics, toRingbufferCh, Node(s.nodeName), er)
 					return
 				}
 
@@ -114,7 +114,7 @@ func (s *server) readTCPListener(toRingbufferCh chan []subjectAndMessage) {
 			sam, err := s.convertBytesToSAMs(readBytes)
 			if err != nil {
 				er := fmt.Errorf("error: malformed json: %v", err)
-				sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
+				sendErrorLogMessage(s.metrics, toRingbufferCh, Node(s.nodeName), er)
 				return
 			}
 
@@ -215,7 +215,7 @@ func (s *server) checkMessageToNodes(MsgSlice []Message) []Message {
 		// the slice since it is not valid.
 		default:
 			er := fmt.Errorf("error: no toNode or toNodes where specified in the message got'n, dropping message: %v", v)
-			sendErrorLogMessage(s.newMessagesCh, Node(s.nodeName), er)
+			sendErrorLogMessage(s.metrics, s.newMessagesCh, Node(s.nodeName), er)
 			continue
 		}
 	}

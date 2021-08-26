@@ -282,11 +282,13 @@ func (s *server) Stop() {
 
 // sendErrorMessage will put the error message directly on the channel that is
 // read by the nats publishing functions.
-func sendErrorLogMessage(newMessagesCh chan<- []subjectAndMessage, FromNode Node, theError error) {
+func sendErrorLogMessage(metrics *metrics, newMessagesCh chan<- []subjectAndMessage, FromNode Node, theError error) {
 	// NB: Adding log statement here for more visuality during development.
 	log.Printf("%v\n", theError)
 	sam := createErrorMsgContent(FromNode, theError)
 	newMessagesCh <- []subjectAndMessage{sam}
+
+	metrics.promErrorMessagesSentTotal.Inc()
 }
 
 // createErrorMsgContent will prepare a subject and message with the content
@@ -366,12 +368,12 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 			// Check if the format of the message is correct.
 			if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
 				er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
-				sendErrorLogMessage(s.newMessagesCh, Node(s.nodeName), er)
+				sendErrorLogMessage(s.metrics, s.newMessagesCh, Node(s.nodeName), er)
 				continue
 			}
 			if !coeAvailable.CheckIfExists(sam.Subject.CommandOrEvent, sam.Subject) {
 				er := fmt.Errorf("error: routeMessagesToProcess: the command or event do not exist, message dropped: %v", sam.Message.Method)
-				sendErrorLogMessage(s.newMessagesCh, Node(s.nodeName), er)
+				sendErrorLogMessage(s.metrics, s.newMessagesCh, Node(s.nodeName), er)
 
 				continue
 			}

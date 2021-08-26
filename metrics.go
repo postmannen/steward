@@ -138,13 +138,13 @@ func newMetrics(hostAndPort string) *metrics {
 		Name: "steward_error_messages_received_total",
 		Help: "Number of error messages received total",
 	})
-	m.promRegistry.MustRegister(m.promNatsMessagesMissedACKsTotal)
+	m.promRegistry.MustRegister(m.promErrorMessagesReceivedTotal)
 
 	m.promErrorMessagesSentTotal = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "steward_error_messages_sent_total",
 		Help: "Number of error messages sent total",
 	})
-	m.promRegistry.MustRegister(m.promErrorMessagesReceivedTotal)
+	m.promRegistry.MustRegister(m.promErrorMessagesSentTotal)
 
 	return &m
 }

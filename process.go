@@ -160,7 +160,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 				err := p.procFunc(p.ctx)
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: procFunc failed: %v", err)
-					sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
+					sendErrorLogMessage(procs.metrics, p.toRingbufferCh, Node(p.node), er)
 				}
 			}()
 		}
@@ -180,7 +180,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 				err := p.procFunc(p.ctx)
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: procFunc failed: %v", err)
-					sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
+					sendErrorLogMessage(procs.metrics, p.toRingbufferCh, Node(p.node), er)
 				}
 			}()
 		}
@@ -213,7 +213,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		dataPayload, err := gobEncodeMessage(message)
 		if err != nil {
 			er := fmt.Errorf("error: createDataPayload: %v", err)
-			sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
+			sendErrorLogMessage(p.processes.metrics, p.toRingbufferCh, Node(p.node), er)
 			continue
 		}
 
@@ -273,7 +273,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 				case retryAttempts >= message.Retries:
 					// max retries reached
 					er := fmt.Errorf("info: toNode: %v, fromNode: %v, method: %v: max retries reached, check if node is up and running and if it got a subscriber for the given REQ type", message.ToNode, message.FromNode, message.Method)
-					sendErrorLogMessage(p.toRingbufferCh, p.node, er)
+					sendErrorLogMessage(p.processes.metrics, p.toRingbufferCh, p.node, er)
 
 					p.processes.metrics.promNatsMessagesFailedACKsTotal.Inc()
 					return
@@ -314,7 +314,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 	err := gobDec.Decode(&message)
 	if err != nil {
 		er := fmt.Errorf("error: gob decoding failed: %v", err)
-		sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
+		sendErrorLogMessage(p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 	}
 
 	// Check if it is an ACK or NACK message, and do the appropriate action accordingly.
@@ -324,7 +324,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		mh, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.CommandOrEvent)
-			sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
+			sendErrorLogMessage(p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 		}
 
 		out := []byte("not allowed from " + message.FromNode)
@@ -343,11 +343,11 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-				sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
+				sendErrorLogMessage(p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 			}
 		} else {
 			er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
-			sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
+			sendErrorLogMessage(p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 		}
 
 		// Send a confirmation message back to the publisher
@@ -358,7 +358,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		mf, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.CommandOrEvent)
-			sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
+			sendErrorLogMessage(p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 		}
 
 		// Check if we are allowed to receive from that host
@@ -378,16 +378,16 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-				sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
+				sendErrorLogMessage(p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 			}
 		} else {
 			er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
-			sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
+			sendErrorLogMessage(p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 		}
 
 	default:
 		er := fmt.Errorf("info: did not find that specific type of command: %#v", p.subject.CommandOrEvent)
-		sendErrorLogMessage(p.toRingbufferCh, Node(thisNode), er)
+		sendErrorLogMessage(p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 
 	}
 }

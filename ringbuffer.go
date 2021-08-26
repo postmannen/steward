@@ -144,7 +144,7 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 		// Check if the command or event exists in commandOrEvent.go
 		if !coeAvailable.CheckIfExists(v.CommandOrEvent, v.Subject) {
 			er := fmt.Errorf("error: fillBuffer: the event or command type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v, where given: coe=%v, with subject=%v", coeAvailableValues, v.CommandOrEvent, v.Subject)
-			sendErrorLogMessage(r.newMessagesCh, Node(r.nodeName), er)
+			sendErrorLogMessage(r.metrics, r.newMessagesCh, Node(r.nodeName), er)
 
 			fmt.Println()
 			// if it was not a valid value, we jump back up, and
@@ -177,14 +177,14 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 		js, err := json.Marshal(samV)
 		if err != nil {
 			er := fmt.Errorf("error:fillBuffer: json marshaling: %v", err)
-			sendErrorLogMessage(r.newMessagesCh, Node(r.nodeName), er)
+			sendErrorLogMessage(r.metrics, r.newMessagesCh, Node(r.nodeName), er)
 		}
 
 		// Store the incomming message in key/value store
 		err = r.dbUpdate(r.db, samValueBucket, strconv.Itoa(dbID), js)
 		if err != nil {
 			er := fmt.Errorf("error: dbUpdate samValue failed: %v", err)
-			sendErrorLogMessage(r.newMessagesCh, Node(r.nodeName), er)
+			sendErrorLogMessage(r.metrics, r.newMessagesCh, Node(r.nodeName), er)
 
 		}
 
