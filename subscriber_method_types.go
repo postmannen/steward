@@ -744,11 +744,14 @@ func (m methodREQPing) handler(proc process, message Message, node string) ([]by
 	// TODO: Replace this with an append to file on receival.
 	log.Printf("<--- PING REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 
+	// ---
+
+	// ---
+
 	proc.processes.wg.Add(1)
 	go func() {
 		defer proc.processes.wg.Done()
-		// Prepare and queue for sending a new message with the output
-		// of the action executed.
+
 		d := fmt.Sprintf("%v, ping reply sent from %v\n", time.Now().UTC(), message.ToNode)
 		newReplyMessage(proc, message, []byte(d))
 	}()
