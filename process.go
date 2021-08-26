@@ -283,6 +283,9 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 			}
 			log.Printf("<--- publisher: received ACK from:%v, for: %v, data: %s\n", message.ToNode, message.Method, msgReply.Data)
 		}
+
+		p.processes.metrics.promNatsDeliveredTotal.Inc()
+
 		return
 	}
 }

@@ -43,21 +43,6 @@ func newProcesses(ctx context.Context, metrics *metrics) *processes {
 
 	p.metrics = metrics
 
-	// Register the metrics for the process.
-
-	p.metrics.promProcessesTotal = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "processes_total",
-		Help: "The current number of total running processes",
-	})
-	metrics.promRegistry.MustRegister(p.metrics.promProcessesTotal)
-
-	p.metrics.promProcessesAllRunning = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "processes_all_running",
-		Help: "Name of the running processes",
-	}, []string{"processName"},
-	)
-	metrics.promRegistry.MustRegister(metrics.promProcessesAllRunning)
-
 	return &p
 }
 
@@ -274,19 +259,6 @@ func (s startup) subREQHello(p process) {
 	// which is the information we pass along to generate metrics.
 	proc.procFunc = func(ctx context.Context) error {
 		sayHelloNodes := make(map[Node]struct{})
-
-		s.metrics.promHelloNodesTotal = prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "hello_nodes_total",
-			Help: "The current number of total nodes who have said hello",
-		})
-		s.metrics.promRegistry.MustRegister(s.metrics.promHelloNodesTotal)
-
-		s.metrics.promHelloNodesContactLast = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "hello_node_contact_last",
-			Help: "Name of the nodes who have said hello",
-		}, []string{"nodeName"},
-		)
-		s.metrics.promRegistry.MustRegister(s.metrics.promHelloNodesContactLast)
 
 		for {
 			// Receive a copy of the message sent from the method handler.

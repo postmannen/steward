@@ -14,7 +14,6 @@ import (
 // It will take a channel of []byte as input, and it is in this
 // channel the content of a file that has changed is returned.
 func (s *server) readSocket() {
-
 	// Loop, and wait for new connections.
 	for {
 		conn, err := s.StewardSocket.Accept()
@@ -163,6 +162,7 @@ func (s *server) convertBytesToSAMs(b []byte) ([]subjectAndMessage, error) {
 
 	// Check for toNode and toNodes field.
 	MsgSlice = s.checkMessageToNodes(MsgSlice)
+	s.metrics.promUserMessagesTotal.Add(float64(len(MsgSlice)))
 
 	sam := []subjectAndMessage{}
 

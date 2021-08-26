@@ -19,7 +19,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -72,25 +71,6 @@ func newringBuffer(metrics *metrics, c Configuration, size int, dbFileName strin
 		log.Printf("error: failed to open db: %v\n", err)
 		os.Exit(1)
 	}
-
-	// Set up the metrics to be used.
-	metrics.promMessagesProcessedTotal = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "messages_processed_total",
-		Help: "The last processed db in key value/store",
-	})
-	metrics.promRegistry.MustRegister(metrics.promMessagesProcessedTotal)
-
-	metrics.promRingbufferStalledMessagesTotal = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "ringbuffer_stalled_messages_total",
-		Help: "Number of stalled messages in ringbuffer",
-	})
-	metrics.promRegistry.MustRegister(metrics.promRingbufferStalledMessagesTotal)
-
-	metrics.promInMemoryBufferMessagesCurrent = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "in_memory_buffer_messages_current",
-		Help: "The current value of messages in memory buffer",
-	})
-	metrics.promRegistry.MustRegister(metrics.promInMemoryBufferMessagesCurrent)
 
 	return &ringBuffer{
 		bufData:       make(chan samDBValue, size),
