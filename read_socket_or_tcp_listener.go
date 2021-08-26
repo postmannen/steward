@@ -161,6 +161,40 @@ func convertBytesToSAMs(b []byte) ([]subjectAndMessage, error) {
 		return nil, fmt.Errorf("error: unmarshal of file failed: %#v", err)
 	}
 
+	// --------------------
+	MsgSliceTmp := []Message{}
+
+	for _, v := range MsgSlice {
+		switch {
+		// if toNode specified, we don't care about the toHosts.
+		case v.ToNode != "":
+			MsgSliceTmp = append(MsgSliceTmp, v)
+			continue
+
+		// if toNodes specified, we use the original message, and
+		// create new node messages for each of the nodes specified.
+		case len(v.ToNodes) != 0:
+			fmt.Printf("\n * Found TonNodes: %#v\n\n", len(v.ToNodes))
+			for _, n := range v.ToNodes {
+				m := v
+				m.ToNodes = nil
+				m.ToNode = n
+				MsgSliceTmp = append(MsgSliceTmp, m)
+			}
+			continue
+
+		// No toNode or toNodes specified. Drop the message by not appending it to
+		// the slice since it is not valid.
+		default:
+			continue
+		}
+	}
+
+	MsgSlice = MsgSliceTmp
+	// --------------------
+
+	// TODO: Implement check for empty toNode field.
+
 	sam := []subjectAndMessage{}
 
 	// Range over all the messages parsed from json, and create a subject for
