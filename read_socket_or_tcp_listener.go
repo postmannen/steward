@@ -161,11 +161,8 @@ func (s *server) convertBytesToSAMs(b []byte) ([]subjectAndMessage, error) {
 		return nil, fmt.Errorf("error: unmarshal of file failed: %#v", err)
 	}
 
-	// --------------------
+	// Check for toNode and toNodes field.
 	MsgSlice = s.checkMessageToNodes(MsgSlice)
-	// --------------------
-
-	// TODO: Implement check for empty toNode field.
 
 	sam := []subjectAndMessage{}
 

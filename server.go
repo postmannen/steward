@@ -331,7 +331,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 	// Prepare and start a new ring buffer
 	const bufferSize int = 1000
 	rb := newringBuffer(s.metrics, *s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.newMessagesCh)
-	// TODO:
+
 	ringBufferInCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValueAndDelivered)
 	// start the ringbuffer.
