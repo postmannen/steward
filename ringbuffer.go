@@ -256,7 +256,7 @@ func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan sam
 			select {
 			case <-v.Data.done:
 				log.Printf("info: processBufferMessages: done with message, deleting key from bucket, %v\n", v.ID)
-				r.metrics.promMessagesProcessedTotal.Set(float64(v.ID))
+				r.metrics.promMessagesProcessedIDLast.Set(float64(v.ID))
 				// case <-time.After(time.Second * 3):
 				// 	// Testing with a timeout here to figure out if messages are stuck
 				// 	// waiting for done signal.

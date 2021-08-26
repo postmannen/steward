@@ -274,10 +274,13 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 					// max retries reached
 					er := fmt.Errorf("info: toNode: %v, fromNode: %v, method: %v: max retries reached, check if node is up and running and if it got a subscriber for the given REQ type", message.ToNode, message.FromNode, message.Method)
 					sendErrorLogMessage(p.toRingbufferCh, p.node, er)
+
+					p.processes.metrics.promNatsMessagesFailedACKsTotal.Inc()
 					return
 
 				default:
 					// none of the above matched, so we've not reached max retries yet
+					p.processes.metrics.promNatsMessagesMissedACKsTotal.Inc()
 					continue
 				}
 			}

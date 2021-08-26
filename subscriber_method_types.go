@@ -678,7 +678,7 @@ func (m methodREQErrorLog) getKind() CommandOrEvent {
 
 // Handle the writing of error logs.
 func (m methodREQErrorLog) handler(proc process, message Message, node string) ([]byte, error) {
-	log.Printf("<--- Received error from: %v, containing: %v", message.FromNode, message.Data)
+	proc.processes.metrics.promErrorMessagesReceivedTotal.Inc()
 
 	// If it was a request type message we want to check what the initial messages
 	// method, so we can use that in creating the file name to store the data.
