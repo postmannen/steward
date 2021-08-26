@@ -47,7 +47,7 @@ func (s *server) readSocket() {
 			readBytes = bytes.Trim(readBytes, "\x00")
 
 			// unmarshal the JSON into a struct
-			sams, err := convertBytesToSAMs(readBytes)
+			sams, err := s.convertBytesToSAMs(readBytes)
 			if err != nil {
 				er := fmt.Errorf("error: malformed json: %v", err)
 				sendErrorLogMessage(s.newMessagesCh, Node(s.nodeName), er)
@@ -112,7 +112,7 @@ func (s *server) readTCPListener(toRingbufferCh chan []subjectAndMessage) {
 			readBytes = bytes.Trim(readBytes, "\x00")
 
 			// unmarshal the JSON into a struct
-			sam, err := convertBytesToSAMs(readBytes)
+			sam, err := s.convertBytesToSAMs(readBytes)
 			if err != nil {
 				er := fmt.Errorf("error: malformed json: %v", err)
 				sendErrorLogMessage(toRingbufferCh, Node(s.nodeName), er)
@@ -152,7 +152,7 @@ type subjectAndMessage struct {
 // json format. For each element found the Message type will be converted into
 // a SubjectAndMessage type value and appended to a slice, and the slice is
 // returned to the caller.
-func convertBytesToSAMs(b []byte) ([]subjectAndMessage, error) {
+func (s *server) convertBytesToSAMs(b []byte) ([]subjectAndMessage, error) {
 	MsgSlice := []Message{}
 
 	err := json.Unmarshal(b, &MsgSlice)
@@ -162,35 +162,7 @@ func convertBytesToSAMs(b []byte) ([]subjectAndMessage, error) {
 	}
 
 	// --------------------
-	MsgSliceTmp := []Message{}
-
-	for _, v := range MsgSlice {
-		switch {
-		// if toNode specified, we don't care about the toHosts.
-		case v.ToNode != "":
-			MsgSliceTmp = append(MsgSliceTmp, v)
-			continue
-
-		// if toNodes specified, we use the original message, and
-		// create new node messages for each of the nodes specified.
-		case len(v.ToNodes) != 0:
-			fmt.Printf("\n * Found TonNodes: %#v\n\n", len(v.ToNodes))
-			for _, n := range v.ToNodes {
-				m := v
-				m.ToNodes = nil
-				m.ToNode = n
-				MsgSliceTmp = append(MsgSliceTmp, m)
-			}
-			continue
-
-		// No toNode or toNodes specified. Drop the message by not appending it to
-		// the slice since it is not valid.
-		default:
-			continue
-		}
-	}
-
-	MsgSlice = MsgSliceTmp
+	MsgSlice = s.checkMessageToNodes(MsgSlice)
 	// --------------------
 
 	// TODO: Implement check for empty toNode field.
@@ -209,6 +181,49 @@ func convertBytesToSAMs(b []byte) ([]subjectAndMessage, error) {
 	}
 
 	return sam, nil
+}
+
+// checkMessageToNodes will check that either toHost or toHosts are
+// specified in the message. If not specified it will drop the message
+// and send an error.
+// if toNodes is specified, the original message will be used, and
+// and an individual message will be created with a toNode field for
+// each if the toNodes specified.
+func (s *server) checkMessageToNodes(MsgSlice []Message) []Message {
+	msgs := []Message{}
+
+	for _, v := range MsgSlice {
+		switch {
+		// if toNode specified, we don't care about the toHosts.
+		case v.ToNode != "":
+			msgs = append(msgs, v)
+			continue
+
+		// if toNodes specified, we use the original message, and
+		// create new node messages for each of the nodes specified.
+		case len(v.ToNodes) != 0:
+			fmt.Printf("\n * Found TonNodes: %#v\n\n", len(v.ToNodes))
+			for _, n := range v.ToNodes {
+				m := v
+				// Set the toNodes field to nil since we're creating
+				// an individual toNode message for each of the toNodes
+				// found, and hence we no longer need that field.
+				m.ToNodes = nil
+				m.ToNode = n
+				msgs = append(msgs, m)
+			}
+			continue
+
+		// No toNode or toNodes specified. Drop the message by not appending it to
+		// the slice since it is not valid.
+		default:
+			er := fmt.Errorf("error: no toNode or toNodes where specified in the message got'n, dropping message: %v", v)
+			sendErrorLogMessage(s.newMessagesCh, Node(s.nodeName), er)
+			continue
+		}
+	}
+
+	return msgs
 }
 
 // newSubjectAndMessage will look up the correct values and value types to
