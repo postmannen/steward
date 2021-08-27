@@ -156,7 +156,7 @@ func newConfigurationDefaults() Configuration {
 		DefaultMessageTimeout:      10,
 		DefaultMessageRetries:      1,
 		StartPubREQHello:           30,
-		SubscribersDataFolder:      "./var",
+		SubscribersDataFolder:      "./data",
 		CentralNodeName:            "",
 		RootCAPath:                 "",
 		NkeySeedFile:               "",
@@ -185,6 +185,10 @@ func (c *Configuration) CheckFlags() error {
 
 	// Set default configfolder if no env was provided.
 	configFolder := os.Getenv("CONFIG_FOLDER")
+
+	if configFolder == "" {
+		configFolder = "./etc/"
+	}
 
 	// Read file config. Set system default if it can't find config file.
 	fc, err := c.ReadConfigFile(configFolder)
