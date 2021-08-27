@@ -267,7 +267,7 @@ func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan sam
 			// it out of the K/V Store.
 			r.deleteKeyFromBucket(samValueBucket, strconv.Itoa(v.ID))
 
-			r.permStore <- fmt.Sprintf("%v : %+v\n", time.Now().UTC(), v)
+			r.permStore <- fmt.Sprintf("%v : %+v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), v)
 
 			// TODO: REMOVE: Dump the whole KV store
 			// err := r.printBucketContent(samValueBucket)

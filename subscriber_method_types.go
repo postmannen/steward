@@ -346,7 +346,7 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			// be returned in the reply message.
 			for _, idMap := range proc.processes.active {
 				for _, v := range idMap {
-					s := fmt.Sprintf("%v, proc: %v, id: %v, name: %v, allowed from: %s\n", time.Now().UTC(), v.processKind, v.processID, v.subject.name(), v.allowedReceivers)
+					s := fmt.Sprintf("%v, proc: %v, id: %v, name: %v, allowed from: %s\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), v.processKind, v.processID, v.subject.name(), v.allowedReceivers)
 					sb := []byte(s)
 					out = append(out, sb...)
 				}
@@ -625,7 +625,7 @@ func (m methodREQHello) getKind() CommandOrEvent {
 
 // Handler for receiving hello messages.
 func (m methodREQHello) handler(proc process, message Message, node string) ([]byte, error) {
-	data := fmt.Sprintf("Received hello from %#v\n", message.FromNode)
+	data := fmt.Sprintf("%v, Received hello from %#v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), message.FromNode)
 
 	fileName := message.FileName
 	folderTree := filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.FromNode), string(message.Method))
@@ -787,7 +787,7 @@ func (m methodREQPing) handler(proc process, message Message, node string) ([]by
 	defer f.Close()
 
 	// And write the data
-	d := fmt.Sprintf("%v, ping received from %v\n", time.Now().UTC(), message.FromNode)
+	d := fmt.Sprintf("%v, ping received from %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), message.FromNode)
 	_, err = f.Write([]byte(d))
 	f.Sync()
 	if err != nil {
@@ -865,7 +865,7 @@ func (m methodREQPong) handler(proc process, message Message, node string) ([]by
 	defer f.Close()
 
 	// And write the data
-	d := fmt.Sprintf("%v, pong received from %v\n", time.Now().UTC(), message.PreviousMessage.ToNode)
+	d := fmt.Sprintf("%v, pong received from %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), message.PreviousMessage.ToNode)
 	_, err = f.Write([]byte(d))
 	f.Sync()
 	if err != nil {
