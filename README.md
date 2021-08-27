@@ -217,13 +217,15 @@ clone the repository, then cd `./steward/cmd` and do `go build -o steward`, and 
 
 ### Options for running
 
+The location of the config file are given via an env variable at startup (default "./etc/).
+
+`env CONFIG_FOLDER </myconfig/folder/here>`
+
 ```text
     -brokerAddress string
     the address of the message broker (default "127.0.0.1:4222")
   -centralNodeName string
     The name of the central node to receive messages published by this node (default "central")
-  -configFolder string
-    folder who contains the config file. Defaults to ./etc/. If other folder is used this flag must be specified at startup. (default "./etc")
   -defaultMessageRetries int
     default amount of retries that will be done before a message is thrown away, and out of the system (default 3)
   -defaultMessageTimeout int
@@ -340,11 +342,11 @@ More example configurations for the nats-server are located in the `doc` folder 
 
 #### Steward
 
-To set the location of the config folder other than default, you should use the ENV variable `CONFIGFOLDER`.
+To set the location of the config folder other than default, you should use the ENV variable `CONFIG_FOLDER`.
 
-`env CONFIGFOLDER=./etc/ ./steward --node="central"`
+`env CONFIG_FOLDER=./etc/ ./steward --node="central"`
 
-Using default configfolder location on some central server which will act as your command and control server.
+Using default config folder location on some central server which will act as your command and control server.
 
 `./steward --node="central"`
 

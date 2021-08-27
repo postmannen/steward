@@ -146,7 +146,7 @@ func NewConfiguration() *Configuration {
 // Default configuration
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
-		ConfigFolder:               "/usr/local/steward/etc/",
+		ConfigFolder:               "./etc/",
 		SocketFolder:               "./tmp",
 		TCPListener:                "",
 		DatabaseFolder:             "./var/lib",
@@ -184,16 +184,19 @@ func (c *Configuration) CheckFlags() error {
 	var fc Configuration
 
 	// Set default configfolder if no env was provided.
-	configFolder := os.Getenv("CONFIGFOLDER")
-	if configFolder == "" {
-		c.ConfigFolder = "./etc/"
-	}
+	configFolder := os.Getenv("CONFIG_FOLDER")
 
 	// Read file config. Set system default if it can't find config file.
 	fc, err := c.ReadConfigFile(configFolder)
 	if err != nil {
 		log.Printf("%v\n", err)
 		fc = newConfigurationDefaults()
+	}
+
+	if configFolder == "" {
+		fc.ConfigFolder = "./etc/"
+	} else {
+		fc.ConfigFolder = configFolder
 	}
 
 	*c = fc
