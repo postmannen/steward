@@ -650,6 +650,20 @@ For CliCommand message to a node named "ship1" of type Command and it wants an A
 
 ## TODO
 
+Services at startup of Steward. Could be implemented by having a local folder of messages to go through at startup. What is needed:
+
+- A Handler that writes to this folder.
+- A Handler that can check what is in this folder.
+- A Handler to remove messages from this folder.
+
+---
+
+A carrier type of message, that are able to forward a message on behalf of others, and are not directly ment for itself.
+
+---
+
+Look into if it makes sense to make configuration into it's own service with a go routine and channels ?
+
 ### nACK messages like hello messages should not be stored in db for retry if failed
 
 ### Error message should also contain subject
