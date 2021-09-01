@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -74,25 +73,18 @@ func NewServer(c *Configuration) (*server, error) {
 	}
 
 	var conn *nats.Conn
-	const connRetryWait = 5
+	const connRetryWait = 10
 
 	// Connect to the nats server, and retry until succesful.
 	for {
 		var err error
 		// Setting MaxReconnects to -1 which equals unlimited.
 		conn, err = nats.Connect(c.BrokerAddress, opt, nats.MaxReconnects(-1))
-		// Nats use string types for errors, so we need to check the content of the error.
 		// If no servers where available, we loop and retry until succesful.
 		if err != nil {
-			if strings.Contains(err.Error(), "no servers available") {
-				log.Printf("error: could not connect, waiting 5 seconds, and retrying: %v\n", err)
-				time.Sleep(time.Duration(time.Second * connRetryWait))
-				continue
-			}
-
-			er := fmt.Errorf("error: nats.Connect failed: %v", err)
-			cancel()
-			return nil, er
+			log.Printf("error: could not connect, waiting %v seconds, and retrying: %v\n", connRetryWait, err)
+			time.Sleep(time.Duration(time.Second * connRetryWait))
+			continue
 		}
 
 		break
