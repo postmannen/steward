@@ -73,7 +73,6 @@ func NewServer(c *Configuration) (*server, error) {
 	}
 
 	var conn *nats.Conn
-	const connRetryWait = 10
 
 	// Connect to the nats server, and retry until succesful.
 	for {
@@ -82,8 +81,8 @@ func NewServer(c *Configuration) (*server, error) {
 		conn, err = nats.Connect(c.BrokerAddress, opt, nats.MaxReconnects(-1))
 		// If no servers where available, we loop and retry until succesful.
 		if err != nil {
-			log.Printf("error: could not connect, waiting %v seconds, and retrying: %v\n", connRetryWait, err)
-			time.Sleep(time.Duration(time.Second * connRetryWait))
+			log.Printf("error: could not connect, waiting %v seconds, and retrying: %v\n", c.NatsConnectRetryInterval, err)
+			time.Sleep(time.Duration(time.Second * time.Duration(c.NatsConnectRetryInterval)))
 			continue
 		}
 

@@ -89,6 +89,8 @@ type Configuration struct {
 	NodeName string
 	// the address of the message broker
 	BrokerAddress string
+	// nats connect retry
+	NatsConnectRetryInterval int
 	// The number of the profiling port
 	ProfilingPort string
 	// host and port for prometheus listener, e.g. localhost:2112
@@ -151,6 +153,7 @@ func newConfigurationDefaults() Configuration {
 		TCPListener:                "",
 		DatabaseFolder:             "./var/lib",
 		BrokerAddress:              "127.0.0.1:4222",
+		NatsConnectRetryInterval:   10,
 		ProfilingPort:              "",
 		PromHostAndPort:            "",
 		DefaultMessageTimeout:      10,
@@ -211,6 +214,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.DatabaseFolder, "databaseFolder", fc.DatabaseFolder, "folder who contains the database file. Defaults to ./var/lib/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.NodeName, "nodeName", fc.NodeName, "some unique string to identify this Edge unit")
 	flag.StringVar(&c.BrokerAddress, "brokerAddress", fc.BrokerAddress, "the address of the message broker")
+	flag.IntVar(&c.NatsConnectRetryInterval, "natsConnectRetryInterval", fc.NatsConnectRetryInterval, "default nats retry connect interval in seconds.")
 	flag.StringVar(&c.ProfilingPort, "profilingPort", fc.ProfilingPort, "The number of the profiling port")
 	flag.StringVar(&c.PromHostAndPort, "promHostAndPort", fc.PromHostAndPort, "host and port for prometheus listener, e.g. localhost:2112")
 	flag.IntVar(&c.DefaultMessageTimeout, "defaultMessageTimeout", fc.DefaultMessageTimeout, "default message timeout in seconds. This can be overridden on the message level")
