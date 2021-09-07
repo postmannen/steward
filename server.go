@@ -273,10 +273,10 @@ func (s *server) Stop() {
 
 // sendErrorMessage will put the error message directly on the channel that is
 // read by the nats publishing functions.
-func sendErrorLogMessage(metrics *metrics, newMessagesCh chan<- []subjectAndMessage, FromNode Node, theError error) {
+func sendErrorLogMessage(conf *Configuration, metrics *metrics, newMessagesCh chan<- []subjectAndMessage, FromNode Node, theError error) {
 	// NB: Adding log statement here for more visuality during development.
 	log.Printf("%v\n", theError)
-	sam := createErrorMsgContent(FromNode, theError)
+	sam := createErrorMsgContent(conf, FromNode, theError)
 	newMessagesCh <- []subjectAndMessage{sam}
 
 	metrics.promErrorMessagesSentTotal.Inc()
@@ -284,19 +284,21 @@ func sendErrorLogMessage(metrics *metrics, newMessagesCh chan<- []subjectAndMess
 
 // createErrorMsgContent will prepare a subject and message with the content
 // of the error
-func createErrorMsgContent(FromNode Node, theError error) subjectAndMessage {
+func createErrorMsgContent(conf *Configuration, FromNode Node, theError error) subjectAndMessage {
 	// Add time stamp
 	er := fmt.Sprintf("%v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), theError.Error())
 
 	sam := subjectAndMessage{
 		Subject: newSubject(REQErrorLog, "errorCentral"),
 		Message: Message{
-			Directory: "errorLog",
-			ToNode:    "errorCentral",
-			FromNode:  FromNode,
-			FileName:  "error.log",
-			Data:      []string{er},
-			Method:    REQErrorLog,
+			Directory:  "errorLog",
+			ToNode:     "errorCentral",
+			FromNode:   FromNode,
+			FileName:   "error.log",
+			Data:       []string{er},
+			Method:     REQErrorLog,
+			ACKTimeout: conf.ErrorMessageTimeout,
+			Retries:    conf.ErrorMessageRetries,
 		},
 	}
 
@@ -323,7 +325,7 @@ type samDBValueAndDelivered struct {
 func (s *server) routeMessagesToProcess(dbFileName string) {
 	// Prepare and start a new ring buffer
 	const bufferSize int = 1000
-	rb := newringBuffer(s.metrics, *s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.newMessagesCh)
+	rb := newringBuffer(s.metrics, s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.newMessagesCh)
 
 	ringBufferInCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValueAndDelivered)
@@ -359,12 +361,12 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 			// Check if the format of the message is correct.
 			if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
 				er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
-				sendErrorLogMessage(s.metrics, s.newMessagesCh, Node(s.nodeName), er)
+				sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
 				continue
 			}
 			if !coeAvailable.CheckIfExists(sam.Subject.CommandOrEvent, sam.Subject) {
 				er := fmt.Errorf("error: routeMessagesToProcess: the command or event do not exist, message dropped: %v", sam.Message.Method)
-				sendErrorLogMessage(s.metrics, s.newMessagesCh, Node(s.nodeName), er)
+				sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
 
 				continue
 			}

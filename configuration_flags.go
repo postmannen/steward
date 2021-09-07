@@ -109,6 +109,10 @@ type Configuration struct {
 	NkeySeedFile string
 	// The host and port to expose the data folder
 	ExposeDataFolder string
+	// Timeout for error messages
+	ErrorMessageTimeout int
+	// Retries for error messages.
+	ErrorMessageRetries int
 	// Make the current node send hello messages to central at given interval in seconds
 	StartPubREQHello int
 	// Start the central error logger.
@@ -148,22 +152,25 @@ func NewConfiguration() *Configuration {
 // Default configuration
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
-		ConfigFolder:               "./etc/",
-		SocketFolder:               "./tmp",
-		TCPListener:                "",
-		DatabaseFolder:             "./var/lib",
-		BrokerAddress:              "127.0.0.1:4222",
-		NatsConnectRetryInterval:   10,
-		ProfilingPort:              "",
-		PromHostAndPort:            "",
-		DefaultMessageTimeout:      10,
-		DefaultMessageRetries:      1,
-		StartPubREQHello:           30,
-		SubscribersDataFolder:      "./data",
-		CentralNodeName:            "",
-		RootCAPath:                 "",
-		NkeySeedFile:               "",
-		ExposeDataFolder:           "",
+		ConfigFolder:             "./etc/",
+		SocketFolder:             "./tmp",
+		TCPListener:              "",
+		DatabaseFolder:           "./var/lib",
+		BrokerAddress:            "127.0.0.1:4222",
+		NatsConnectRetryInterval: 10,
+		ProfilingPort:            "",
+		PromHostAndPort:          "",
+		DefaultMessageTimeout:    10,
+		DefaultMessageRetries:    1,
+		StartPubREQHello:         30,
+		SubscribersDataFolder:    "./data",
+		CentralNodeName:          "",
+		RootCAPath:               "",
+		NkeySeedFile:             "",
+		ExposeDataFolder:         "",
+		ErrorMessageTimeout:      60,
+		ErrorMessageRetries:      10,
+
 		StartSubREQErrorLog:        flagNodeSlice{Values: []Node{}},
 		StartSubREQHello:           flagNodeSlice{OK: true, Values: []Node{"*"}},
 		StartSubREQToFileAppend:    flagNodeSlice{OK: true, Values: []Node{"*"}},
@@ -224,6 +231,8 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.RootCAPath, "rootCAPath", fc.RootCAPath, "If TLS, enter the path for where to find the root CA certificate")
 	flag.StringVar(&c.NkeySeedFile, "nkeySeedFile", fc.NkeySeedFile, "The full path of the nkeys seed file")
 	flag.StringVar(&c.ExposeDataFolder, "exposeDataFolder", fc.ExposeDataFolder, "If set the data folder will be exposed on the given host:port. Default value is not exposed at all")
+	flag.IntVar(&c.ErrorMessageTimeout, "errorMessageTimeout", fc.ErrorMessageTimeout, "The number of seconds to wait for an error message to time out")
+	flag.IntVar(&c.ErrorMessageRetries, "errorMessageRetries", fc.ErrorMessageRetries, "The number of if times to retry an error message before we drop it")
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 

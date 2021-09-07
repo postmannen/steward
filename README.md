@@ -648,6 +648,10 @@ For CliCommand message to a node named "ship1" of type Command and it wants an A
 
 `ship1.REQCliCommand.CommandACK`
 
+---
+
+Dont send error messages when max retries reached for error messages.
+
 ## TODO
 
 Put in a limit on error messages if the central for some reason have not started errorLog, since you will be spammed with this..
