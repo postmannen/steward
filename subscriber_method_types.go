@@ -291,6 +291,31 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 	proc.toRingbufferCh <- []subjectAndMessage{sam}
 }
 
+// selectFileNaming will figure out the correct naming of the file
+// structure to use for the reply data.
+// It will return the filename, and the tree structure for the folders
+// to create.
+func selectFileNaming(message Message, proc process) (string, string) {
+	var fileName string
+	var folderTree string
+
+	switch {
+	case message.PreviousMessage == nil:
+		// If this was a direct request there are no previous message to take
+		// information from, so we use the one that are in the current mesage.
+		fileName = message.FileName
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.ToNode))
+	case message.PreviousMessage.ToNode != "":
+		fileName = message.PreviousMessage.FileName
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode))
+	case message.PreviousMessage.ToNode == "":
+		fileName = message.PreviousMessage.FileName
+		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.FromNode))
+	}
+
+	return fileName, folderTree
+}
+
 // ------------------------------------------------------------
 // Subscriber method handlers
 // ------------------------------------------------------------
@@ -490,21 +515,7 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 
 	// If it was a request type message we want to check what the initial messages
 	// method, so we can use that in creating the file name to store the data.
-	var fileName string
-	var folderTree string
-	switch {
-	case message.PreviousMessage == nil:
-		// If this was a direct request there are no previous message to take
-		// information from, so we use the one that are in the current mesage.
-		fileName = message.FileName
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.ToNode), string(message.Method))
-	case message.PreviousMessage.ToNode != "":
-		fileName = message.PreviousMessage.FileName
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode), string(message.PreviousMessage.Method))
-	case message.PreviousMessage.ToNode == "":
-		fileName = message.PreviousMessage.FileName
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.FromNode), string(message.Method))
-	}
+	fileName, folderTree := selectFileNaming(message, proc)
 
 	// Check if folder structure exist, if not create it.
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
@@ -559,21 +570,7 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 
 	// If it was a request type message we want to check what the initial messages
 	// method, so we can use that in creating the file name to store the data.
-	var fileName string
-	var folderTree string
-	switch {
-	case message.PreviousMessage == nil:
-		// If this was a direct request there are no previous message to take
-		// information from, so we use the one that are in the current mesage.
-		fileName = message.FileName
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.ToNode), string(message.Method))
-	case message.PreviousMessage.ToNode != "":
-		fileName = message.PreviousMessage.FileName
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode), string(message.PreviousMessage.Method))
-	case message.PreviousMessage.ToNode == "":
-		fileName = message.PreviousMessage.FileName
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.FromNode), string(message.Method))
-	}
+	fileName, folderTree := selectFileNaming(message, proc)
 
 	// Check if folder structure exist, if not create it.
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
@@ -682,21 +679,7 @@ func (m methodREQErrorLog) handler(proc process, message Message, node string) (
 
 	// If it was a request type message we want to check what the initial messages
 	// method, so we can use that in creating the file name to store the data.
-	var fileName string
-	var folderTree string
-	switch {
-	case message.PreviousMessage == nil:
-		// If this was a direct request there are no previous message to take
-		// information from, so we use the one that are in the current mesage.
-		fileName = fmt.Sprintf("%v-%v", string(message.FromNode), message.FileName)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.ToNode), string(message.Method))
-	case message.PreviousMessage.ToNode != "":
-		fileName = fmt.Sprintf("%v-%v", string(message.FromNode), message.PreviousMessage.FileName)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode), string(message.PreviousMessage.Method))
-	case message.PreviousMessage.ToNode == "":
-		fileName = fmt.Sprintf("%v-%v", string(message.FromNode), message.PreviousMessage.FileName)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.FromNode), string(message.Method))
-	}
+	fileName, folderTree := selectFileNaming(message, proc)
 
 	// Check if folder structure exist, if not create it.
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
@@ -745,21 +728,7 @@ func (m methodREQPing) handler(proc process, message Message, node string) ([]by
 
 	// If it was a request type message we want to check what the initial messages
 	// method, so we can use that in creating the file name to store the data.
-	var fileName string
-	var folderTree string
-	switch {
-	case message.PreviousMessage == nil:
-		// If this was a direct request there are no previous message to take
-		// information from, so we use the one that are in the current mesage.
-		fileName = fmt.Sprintf("%v-%v", string(message.FromNode), message.FileName)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.ToNode), string(message.Method))
-	case message.PreviousMessage.ToNode != "":
-		fileName = fmt.Sprintf("%v-%v", string(message.FromNode), message.PreviousMessage.FileName)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode), string(message.PreviousMessage.Method))
-	case message.PreviousMessage.ToNode == "":
-		fileName = fmt.Sprintf("%v-%v", string(message.FromNode), message.PreviousMessage.FileName)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.FromNode), string(message.Method))
-	}
+	fileName, folderTree := selectFileNaming(message, proc)
 
 	// Check if folder structure exist, if not create it.
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
@@ -823,21 +792,7 @@ func (m methodREQPong) handler(proc process, message Message, node string) ([]by
 
 	// If it was a request type message we want to check what the initial messages
 	// method, so we can use that in creating the file name to store the data.
-	var fileName string
-	var folderTree string
-	switch {
-	case message.PreviousMessage == nil:
-		// If this was a direct request there are no previous message to take
-		// information from, so we use the one that are in the current mesage.
-		fileName = fmt.Sprintf("%v", message.FileName)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.ToNode), string(message.Method))
-	case message.PreviousMessage.ToNode != "":
-		fileName = fmt.Sprintf("%v", message.PreviousMessage.FileName)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode), string(message.PreviousMessage.Method))
-	case message.PreviousMessage.ToNode == "":
-		fileName = fmt.Sprintf("%v", message.PreviousMessage.FileName)
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.FromNode), string(message.Method))
-	}
+	fileName, folderTree := selectFileNaming(message, proc)
 
 	// Check if folder structure exist, if not create it.
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {

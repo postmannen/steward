@@ -650,6 +650,12 @@ For CliCommand message to a node named "ship1" of type Command and it wants an A
 
 ## TODO
 
+Put in a limit on error messages if the central for some reason have not started errorLog, since you will be spammed with this..
+
+2021/09/04 05:56:00 <--- publisher: received ACK from:errorCentral, for: REQErrorLog, data: not allowed from central
+
+---
+
 Services at startup of Steward. Could be implemented by having a local folder of messages to go through at startup. What is needed:
 
 - A Handler that writes to this folder.
