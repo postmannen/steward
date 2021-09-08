@@ -426,7 +426,7 @@ func checkErrorKernelMalformedJSONtest(stewardServer *server, conf *Configuratio
 
 	writeToSocketTest(conf, m, t)
 
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "errorCentral", "central-error.log")
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "errorCentral", "error.log")
 
 	// Wait n times for error file to be created.
 	n := 5
@@ -485,7 +485,7 @@ func checkMetricValuesTest(stewardServer *server, conf *Configuration, t *testin
 
 	found := false
 	for _, mf := range mfs {
-		if mf.GetName() == "processes_total" {
+		if mf.GetName() == "steward_processes_total" {
 			found = true
 
 			m := mf.GetMetric()
