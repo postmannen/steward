@@ -34,6 +34,7 @@ package steward
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -869,14 +870,23 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 			defer proc.processes.wg.Done()
 
 			cmd := exec.CommandContext(ctx, c, a...)
-			out, err := cmd.Output()
+
+			var out bytes.Buffer
+			var stderr bytes.Buffer
+			cmd.Stdout = &out
+			cmd.Stderr = &stderr
+			err := cmd.Run()
 			if err != nil {
-				er := fmt.Errorf("error: methodREQCliCommand: cmd.Output : %v, message: %v", err, message)
+				if err != nil {
+					log.Printf("error: failed to io.ReadAll of stderr: %v\n", err)
+				}
+
+				er := fmt.Errorf("error: methodREQCliCommand: cmd.Output : %v, message: %v, error_output: %v", err, message, stderr.String())
 				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 				log.Printf("%v\n", er)
 			}
 			select {
-			case outCh <- out:
+			case outCh <- out.Bytes():
 			case <-ctx.Done():
 				return
 			}
@@ -940,15 +950,23 @@ func (m methodREQnCliCommand) handler(proc process, message Message, node string
 			defer proc.processes.wg.Done()
 
 			cmd := exec.CommandContext(ctx, c, a...)
-			out, err := cmd.Output()
+			var out bytes.Buffer
+			var stderr bytes.Buffer
+			cmd.Stdout = &out
+			cmd.Stderr = &stderr
+			err := cmd.Run()
 			if err != nil {
-				er := fmt.Errorf("error: methodREQnCliCommand: cmd.Output : %v, message: %v", err, message)
+				if err != nil {
+					log.Printf("error: failed to io.ReadAll of stderr: %v\n", err)
+				}
+
+				er := fmt.Errorf("error: methodREQCliCommand: cmd.Output : %v, message: %v, error_output: %v", err, message, stderr.String())
 				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 				log.Printf("%v\n", er)
 			}
 
 			select {
-			case outCh <- out:
+			case outCh <- out.Bytes():
 			case <-ctx.Done():
 				return
 			}
@@ -1211,12 +1229,41 @@ func (m methodREQnCliCommandCont) handler(proc process, message Message, node st
 				log.Printf("error: %v\n", err)
 			}
 
+			ErrorReader, err := cmd.StderrPipe()
+			if err != nil {
+				er := fmt.Errorf("error: methodREQnCliCommandCont: cmd.StderrPipe failed : %v, message: %v", err, message)
+				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
+
+				log.Printf("error: %v\n", err)
+			}
+
 			if err := cmd.Start(); err != nil {
 				er := fmt.Errorf("error: methodREQnCliCommandCont: cmd.Start failed : %v, message: %v", err, message)
 				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 				log.Printf("%v\n", er)
 
 			}
+
+			// Also send error messages that might happen during the time
+			// cmd.Start runs.
+			// Putting the scanner.Text value on a channel so we can make
+			// the scanner non-blocking, and also check context cancelation.
+			go func() {
+				errCh := make(chan string, 1)
+
+				scanner := bufio.NewScanner(ErrorReader)
+				for scanner.Scan() {
+					select {
+					case errCh <- scanner.Text():
+						er := fmt.Errorf("error: methodREQnCliCommandCont: cmd.Start failed : %v, message: %v, error_output: %v", err, message, <-errCh)
+						sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+						log.Printf("%v\n", er)
+					case <-ctx.Done():
+						return
+					}
+				}
+			}()
 
 			scanner := bufio.NewScanner(outReader)
 			for scanner.Scan() {

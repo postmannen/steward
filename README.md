@@ -650,8 +650,6 @@ For CliCommand message to a node named "ship1" of type Command and it wants an A
 
 ## TODO
 
-### Make the actual output errors of CMD's executed be put in the error message 
-
 ### Fix bug when new flags are added to an existing config and the value is always set to 0 and not it's default
 
 Add a set flag to the configuration so we can know if a value have been set or is a default value. We can then loop over the whole struct to check if new fields have been added and give it the appropriate default value.
