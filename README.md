@@ -664,14 +664,6 @@ Add a set flag to the configuration so we can know if a value have been set or i
 
 ### A carrier type of message, that are able to forward a message on behalf of others, and are not directly ment for itself
 
-### Error message should also contain subject
-  
-```log
-2021-06-09 13:04:33.259759 +0000 UTC, info: toNode: ship1, fromNode: ww.central, method:REQOpCommand: max retries reached, check if node is up and running and if it got a subscriber forthe given REQ type
-```
-
-### Remove the message from log statements, and just point to the ID of the message instead
-
 ### Workflow request type
 
 Implement a workflow request type that will allow steps to be executed, and rollback if something failed during execution.
