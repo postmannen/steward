@@ -650,12 +650,6 @@ For CliCommand message to a node named "ship1" of type Command and it wants an A
 
 ## TODO
 
-### Fix bug when new flags are added to an existing config and the value is always set to 0 and not it's default
-
-Add a set flag to the configuration so we can know if a value have been set or is a default value. We can then loop over the whole struct to check if new fields have been added and give it the appropriate default value.
-
-### Cap the output of the data field in the error messages, and the state log
-
 ### Services at startup of Steward. Could be implemented by having a local folder of messages to go through at startup. What is needed
 
 - A Handler that writes to this folder.
