@@ -650,27 +650,29 @@ For CliCommand message to a node named "ship1" of type Command and it wants an A
 
 ## TODO
 
-Put in a limit on error messages if the central for some reason have not started errorLog, since you will be spammed with this..
+### Fix bug when new flags are added to an existing config and the value is always set to 0 and not it's default
+
+Add a set flag to the configuration so we can know if a value have been set or is a default value. We can then loop over the whole struct to check if new fields have been added and give it the appropriate default value.
+
+### Cap the out put of the data field in the error messages, and the state log
+
+### Put in a limit on error messages if the central for some reason have not started errorLog, since you will be spammed with this
 
 2021/09/04 05:56:00 <--- publisher: received ACK from:errorCentral, for: REQErrorLog, data: not allowed from central
 
----
-
-Services at startup of Steward. Could be implemented by having a local folder of messages to go through at startup. What is needed:
+### Services at startup of Steward. Could be implemented by having a local folder of messages to go through at startup. What is needed
 
 - A Handler that writes to this folder.
 - A Handler that can check what is in this folder.
 - A Handler to remove messages from this folder.
 
----
+### A carrier type of message, that are able to forward a message on behalf of others, and are not directly ment for itself
 
-A carrier type of message, that are able to forward a message on behalf of others, and are not directly ment for itself.
-
----
-
-Look into if it makes sense to make configuration into it's own service with a go routine and channels ?
+### Look into if it makes sense to make configuration into it's own service
 
 ### nACK messages like hello messages should not be stored in db for retry if failed
+
+This can be solved by setting the retry to 1.
 
 ### Error message should also contain subject
   
