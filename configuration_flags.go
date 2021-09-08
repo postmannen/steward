@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	toml "github.com/pelletier/go-toml"
 )
@@ -22,9 +21,8 @@ import (
 // it can be used to check if the flag was used and contained any
 // values.
 type flagNodeSlice struct {
-	value  string
-	OK     bool
-	Values []Node
+	value string
+	OK    bool
 }
 
 // String method
@@ -50,28 +48,6 @@ func (f *flagNodeSlice) Set(s string) error {
 // be reflected in values stored in the config file, since the
 // config file is written after the flags have been parsed.
 func (f *flagNodeSlice) Parse() error {
-	if len(f.value) == 0 {
-		return nil
-	}
-
-	split := strings.Split(f.value, ",")
-
-	// Reset values if RST was the flag value.
-	if split[0] == "RST" {
-		f.OK = false
-		f.value = ""
-		f.Values = []Node{}
-		return nil
-	}
-
-	fv := f.value
-	sp := strings.Split(fv, ",")
-	f.OK = true
-	f.Values = []Node{}
-
-	for _, v := range sp {
-		f.Values = append(f.Values, Node(v))
-	}
 	return nil
 }
 
@@ -171,18 +147,18 @@ func newConfigurationDefaults() Configuration {
 		ErrorMessageTimeout:      60,
 		ErrorMessageRetries:      10,
 
-		StartSubREQErrorLog:        flagNodeSlice{Values: []Node{}},
-		StartSubREQHello:           flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQToFileAppend:    flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQToFile:          flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQPing:            flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQPong:            flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQCliCommand:      flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQnCliCommand:     flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQToConsole:       flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQHttpGet:         flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQTailFile:        flagNodeSlice{OK: true, Values: []Node{"*"}},
-		StartSubREQnCliCommandCont: flagNodeSlice{OK: true, Values: []Node{"*"}},
+		StartSubREQErrorLog:        flagNodeSlice{OK: true},
+		StartSubREQHello:           flagNodeSlice{OK: true},
+		StartSubREQToFileAppend:    flagNodeSlice{OK: true},
+		StartSubREQToFile:          flagNodeSlice{OK: true},
+		StartSubREQPing:            flagNodeSlice{OK: true},
+		StartSubREQPong:            flagNodeSlice{OK: true},
+		StartSubREQCliCommand:      flagNodeSlice{OK: true},
+		StartSubREQnCliCommand:     flagNodeSlice{OK: true},
+		StartSubREQToConsole:       flagNodeSlice{OK: true},
+		StartSubREQHttpGet:         flagNodeSlice{OK: true},
+		StartSubREQTailFile:        flagNodeSlice{OK: true},
+		StartSubREQnCliCommandCont: flagNodeSlice{OK: true},
 	}
 	return c
 }

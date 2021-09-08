@@ -226,7 +226,7 @@ func (s *server) Start() {
 	//
 	// NB: The context of the initial process are set in processes.Start.
 	sub := newSubject(REQInitial, s.nodeName)
-	p := newProcess(context.TODO(), s.metrics, s.natsConn, s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, "", []Node{}, nil)
+	p := newProcess(context.TODO(), s.metrics, s.natsConn, s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, "", nil)
 	// Start all wanted subscriber processes.
 	s.processes.Start(p)
 
@@ -407,7 +407,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 				log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 				sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
-				proc := newProcess(s.ctx, s.metrics, s.natsConn, s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil, nil)
+				proc := newProcess(s.ctx, s.metrics, s.natsConn, s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil)
 				// fmt.Printf("*** %#v\n", proc)
 				proc.spawnWorker(s.processes, s.natsConn)
 
