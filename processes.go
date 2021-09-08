@@ -177,12 +177,14 @@ func (s startup) pubREQHello(p process) {
 				d := fmt.Sprintf("Hello from %v\n", p.node)
 
 				m := Message{
-					FileName:  "hello.log",
-					Directory: "hello-messages",
-					ToNode:    Node(p.configuration.CentralNodeName),
-					FromNode:  Node(p.node),
-					Data:      []string{d},
-					Method:    REQHello,
+					FileName:   "hello.log",
+					Directory:  "hello-messages",
+					ToNode:     Node(p.configuration.CentralNodeName),
+					FromNode:   Node(p.node),
+					Data:       []string{d},
+					Method:     REQHello,
+					ACKTimeout: 10,
+					Retries:    1,
 				}
 
 				sam, err := newSubjectAndMessage(m)
