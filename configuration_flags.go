@@ -10,47 +10,6 @@ import (
 	toml "github.com/pelletier/go-toml"
 )
 
-// --- flag string slice
-
-// flagStringSlice is a type used when a flag value contains
-// comma separated values like `-myflag="somevalue,anothervalue`.
-// If a flag of this type is used, and it contains a value, the
-// Set(string) method will call the Parse() method.
-// The comma separated content will then be split, and put into
-// the []values field, and the `ok` field will be set to true, so
-// it can be used to check if the flag was used and contained any
-// values.
-type flagNodeSlice struct {
-	value string
-	OK    bool
-}
-
-// String method
-func (f *flagNodeSlice) String() string {
-	return ""
-}
-
-// Set will be called when this flag type is used as a flag.Var.
-// It will put the comma separated string value given as input into
-// the `value`field, then call the Parse function to split those
-// comma separated values into []values.
-func (f *flagNodeSlice) Set(s string) error {
-	f.value = s
-	f.Parse()
-	return nil
-}
-
-// If the flag value "RST" is given, set the default values
-// for each of the flag var's fields, and return back.
-// Since we reset the actual flag values, it is also these
-// blank values that will be written to the config file, and
-// making the change persistent in the system. This will also
-// be reflected in values stored in the config file, since the
-// config file is written after the flags have been parsed.
-func (f *flagNodeSlice) Parse() error {
-	return nil
-}
-
 // --- Configuration
 type Configuration struct {
 	// The configuration folder on disk
@@ -93,29 +52,29 @@ type Configuration struct {
 	StartPubREQHello int
 	// Start the central error logger.
 	// Takes a comma separated string of nodes to receive from or "*" for all nodes.
-	StartSubREQErrorLog flagNodeSlice
+	StartSubREQErrorLog bool
 	// Subscriber for hello messages
-	StartSubREQHello flagNodeSlice
+	StartSubREQHello bool
 	// Subscriber for text logging
-	StartSubREQToFileAppend flagNodeSlice
+	StartSubREQToFileAppend bool
 	// Subscriber for writing to file
-	StartSubREQToFile flagNodeSlice
+	StartSubREQToFile bool
 	// Subscriber for Echo Request
-	StartSubREQPing flagNodeSlice
+	StartSubREQPing bool
 	// Subscriber for Echo Reply
-	StartSubREQPong flagNodeSlice
+	StartSubREQPong bool
 	// Subscriber for CLICommandRequest
-	StartSubREQCliCommand flagNodeSlice
+	StartSubREQCliCommand bool
 	// Subscriber for REQnCliCommand
-	StartSubREQnCliCommand flagNodeSlice
+	StartSubREQnCliCommand bool
 	// Subscriber for REQToConsole
-	StartSubREQToConsole flagNodeSlice
+	StartSubREQToConsole bool
 	// Subscriber for REQHttpGet
-	StartSubREQHttpGet flagNodeSlice
+	StartSubREQHttpGet bool
 	// Subscriber for tailing log files
-	StartSubREQTailFile flagNodeSlice
+	StartSubREQTailFile bool
 	// Subscriber for continously delivery of output from cli commands.
-	StartSubREQnCliCommandCont flagNodeSlice
+	StartSubREQnCliCommandCont bool
 }
 
 // NewConfiguration will set a default Configuration,
@@ -147,18 +106,18 @@ func newConfigurationDefaults() Configuration {
 		ErrorMessageTimeout:      60,
 		ErrorMessageRetries:      10,
 
-		StartSubREQErrorLog:        flagNodeSlice{OK: true},
-		StartSubREQHello:           flagNodeSlice{OK: true},
-		StartSubREQToFileAppend:    flagNodeSlice{OK: true},
-		StartSubREQToFile:          flagNodeSlice{OK: true},
-		StartSubREQPing:            flagNodeSlice{OK: true},
-		StartSubREQPong:            flagNodeSlice{OK: true},
-		StartSubREQCliCommand:      flagNodeSlice{OK: true},
-		StartSubREQnCliCommand:     flagNodeSlice{OK: true},
-		StartSubREQToConsole:       flagNodeSlice{OK: true},
-		StartSubREQHttpGet:         flagNodeSlice{OK: true},
-		StartSubREQTailFile:        flagNodeSlice{OK: true},
-		StartSubREQnCliCommandCont: flagNodeSlice{OK: true},
+		StartSubREQErrorLog:        true,
+		StartSubREQHello:           true,
+		StartSubREQToFileAppend:    true,
+		StartSubREQToFile:          true,
+		StartSubREQPing:            true,
+		StartSubREQPong:            true,
+		StartSubREQCliCommand:      true,
+		StartSubREQnCliCommand:     true,
+		StartSubREQToConsole:       true,
+		StartSubREQHttpGet:         true,
+		StartSubREQTailFile:        true,
+		StartSubREQnCliCommandCont: true,
 	}
 	return c
 }
@@ -212,18 +171,18 @@ func (c *Configuration) CheckFlags() error {
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 
-	flag.Var(&c.StartSubREQErrorLog, "startSubREQErrorLog", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubREQHello, "startSubREQHello", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubREQToFileAppend, "startSubREQToFileAppend", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubREQToFile, "startSubREQToFile", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubREQPing, "startSubREQPing", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubREQPong, "startSubREQPong", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubREQCliCommand, "startSubREQCliCommand", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubREQnCliCommand, "startSubREQnCliCommand", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubREQToConsole, "startSubREQToConsole", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubREQHttpGet, "startSubREQHttpGet", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubREQTailFile, "startSubREQTailFile", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
-	flag.Var(&c.StartSubREQnCliCommandCont, "startSubREQnCliCommandCont", "Specify comma separated list for nodes to allow messages from. Use \"*\" for from all. Value RST will turn off subscriber.")
+	flag.BoolVar(&c.StartSubREQErrorLog, "startSubREQErrorLog", fc.StartSubREQErrorLog, "true/false")
+	flag.BoolVar(&c.StartSubREQHello, "startSubREQHello", fc.StartSubREQHello, "true/false")
+	flag.BoolVar(&c.StartSubREQToFileAppend, "startSubREQToFileAppend", fc.StartSubREQToFileAppend, "true/false")
+	flag.BoolVar(&c.StartSubREQToFile, "startSubREQToFile", fc.StartSubREQToFile, "true/false")
+	flag.BoolVar(&c.StartSubREQPing, "startSubREQPing", fc.StartSubREQPing, "true/false")
+	flag.BoolVar(&c.StartSubREQPong, "startSubREQPong", fc.StartSubREQPong, "true/false")
+	flag.BoolVar(&c.StartSubREQCliCommand, "startSubREQCliCommand", fc.StartSubREQCliCommand, "true/false")
+	flag.BoolVar(&c.StartSubREQnCliCommand, "startSubREQnCliCommand", fc.StartSubREQnCliCommand, "true/false")
+	flag.BoolVar(&c.StartSubREQToConsole, "startSubREQToConsole", fc.StartSubREQToConsole, "true/false")
+	flag.BoolVar(&c.StartSubREQHttpGet, "startSubREQHttpGet", fc.StartSubREQHttpGet, "true/false")
+	flag.BoolVar(&c.StartSubREQTailFile, "startSubREQTailFile", fc.StartSubREQTailFile, "true/false")
+	flag.BoolVar(&c.StartSubREQnCliCommandCont, "startSubREQnCliCommandCont", fc.StartSubREQnCliCommandCont, "true/false")
 
 	flag.Parse()
 

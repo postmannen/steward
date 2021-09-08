@@ -64,47 +64,47 @@ func (p *processes) Start(proc process) {
 	}
 
 	// Start a subscriber for textLogging messages
-	if proc.configuration.StartSubREQToFileAppend.OK {
+	if proc.configuration.StartSubREQToFileAppend {
 		proc.startup.subREQToFileAppend(proc)
 	}
 
 	// Start a subscriber for text to file messages
-	if proc.configuration.StartSubREQToFile.OK {
+	if proc.configuration.StartSubREQToFile {
 		proc.startup.subREQToFile(proc)
 	}
 
 	// Start a subscriber for Hello messages
-	if proc.configuration.StartSubREQHello.OK {
+	if proc.configuration.StartSubREQHello {
 		proc.startup.subREQHello(proc)
 	}
 
-	if proc.configuration.StartSubREQErrorLog.OK {
+	if proc.configuration.StartSubREQErrorLog {
 		// Start a subscriber for REQErrorLog messages
 		proc.startup.subREQErrorLog(proc)
 	}
 
 	// Start a subscriber for Ping Request messages
-	if proc.configuration.StartSubREQPing.OK {
+	if proc.configuration.StartSubREQPing {
 		proc.startup.subREQPing(proc)
 	}
 
 	// Start a subscriber for REQPong messages
-	if proc.configuration.StartSubREQPong.OK {
+	if proc.configuration.StartSubREQPong {
 		proc.startup.subREQPong(proc)
 	}
 
 	// Start a subscriber for REQCliCommand messages
-	if proc.configuration.StartSubREQCliCommand.OK {
+	if proc.configuration.StartSubREQCliCommand {
 		proc.startup.subREQCliCommand(proc)
 	}
 
 	// Start a subscriber for Not In Order Cli Command Request messages
-	if proc.configuration.StartSubREQnCliCommand.OK {
+	if proc.configuration.StartSubREQnCliCommand {
 		proc.startup.subREQnCliCommand(proc)
 	}
 
 	// Start a subscriber for CLICommandReply messages
-	if proc.configuration.StartSubREQToConsole.OK {
+	if proc.configuration.StartSubREQToConsole {
 		proc.startup.subREQToConsole(proc)
 	}
 
@@ -113,15 +113,15 @@ func (p *processes) Start(proc process) {
 	}
 
 	// Start a subscriber for Http Get Requests
-	if proc.configuration.StartSubREQHttpGet.OK {
+	if proc.configuration.StartSubREQHttpGet {
 		proc.startup.subREQHttpGet(proc)
 	}
 
-	if proc.configuration.StartSubREQTailFile.OK {
+	if proc.configuration.StartSubREQTailFile {
 		proc.startup.subREQTailFile(proc)
 	}
 
-	if proc.configuration.StartSubREQnCliCommandCont.OK {
+	if proc.configuration.StartSubREQnCliCommandCont {
 		proc.startup.subREQnCliCommandCont(proc)
 	}
 
