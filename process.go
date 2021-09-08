@@ -337,28 +337,34 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 		}
 
-		out := []byte("not allowed from " + message.FromNode)
-		//var err error
+		var out []byte
 
-		// Check if we are allowed to receive from that host
-		_, arOK1 := p.allowedReceivers[message.FromNode]
-		_, arOK2 := p.allowedReceivers["*"]
+		// NB:
+		// The commented out code below is for the allowed recievers functionality
+		// for the REQ type specified at startup. Keeping the code for now, but it
+		// is probably redundant since the same information can be specified in
+		// the broker config
+		//
+		// // out := []byte("not allowed from " + message.FromNode)
+		// // Check if we are allowed to receive from that host
+		// _, arOK1 := p.allowedReceivers[message.FromNode]
+		// _, arOK2 := p.allowedReceivers["*"]
+		//
+		// if arOK1 || arOK2 {
+		// 	// Start the method handler for that specific subject type.
+		// 	// The handler started here is what actually doing the action
+		// 	// that executed a CLI command, or writes to a log file on
+		// 	// the node who received the message.
+		out, err = mh.handler(p, message, thisNode)
 
-		if arOK1 || arOK2 {
-			// Start the method handler for that specific subject type.
-			// The handler started here is what actually doing the action
-			// that executed a CLI command, or writes to a log file on
-			// the node who received the message.
-			out, err = mh.handler(p, message, thisNode)
-
-			if err != nil {
-				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-				sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
-			}
-		} else {
-			er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
+		if err != nil {
+			er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
 			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 		}
+		// } else {
+		// 	er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
+		// 	sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
+		// }
 
 		// Send a confirmation message back to the publisher
 		natsConn.Publish(msg.Reply, out)
@@ -371,29 +377,35 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 		}
 
-		// Check if we are allowed to receive from that host
-		_, arOK1 := p.allowedReceivers[message.FromNode]
-		_, arOK2 := p.allowedReceivers["*"]
+		// NB:
+		// The commented out code below is for the allowed recievers functionality
+		// for the REQ type specified at startup. Keeping the code for now, but it
+		// is probably redundant since the same information can be specified in
+		// the broker config
+		//
+		// // Check if we are allowed to receive from that host
+		// _, arOK1 := p.allowedReceivers[message.FromNode]
+		// _, arOK2 := p.allowedReceivers["*"]
+		//
+		// if arOK1 || arOK2 {
+		//
+		// 	// Start the method handler for that specific subject type.
+		// 	// The handler started here is what actually doing the action
+		// 	// that executed a CLI command, or writes to a log file on
+		// 	// the node who received the message.
+		// 	//
+		// 	// since we don't send a reply for a NACK message, we don't care about the
+		// 	// out return when calling mf.handler
+		_, err := mf.handler(p, message, thisNode)
 
-		if arOK1 || arOK2 {
-
-			// Start the method handler for that specific subject type.
-			// The handler started here is what actually doing the action
-			// that executed a CLI command, or writes to a log file on
-			// the node who received the message.
-			//
-			// since we don't send a reply for a NACK message, we don't care about the
-			// out return when calling mf.handler
-			_, err := mf.handler(p, message, thisNode)
-
-			if err != nil {
-				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-				sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
-			}
-		} else {
-			er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
+		if err != nil {
+			er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
 			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 		}
+		// } else {
+		// 	er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
+		// 	sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
+		// }
 
 	default:
 		er := fmt.Errorf("info: did not find that specific type of command: %#v", p.subject.CommandOrEvent)
