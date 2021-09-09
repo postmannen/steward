@@ -216,7 +216,7 @@ func (s *server) Start() {
 
 	// Check if we should start the tcp listener fro new messages from operator.
 	if s.configuration.TCPListener != "" {
-		go s.readTCPListener(s.newMessagesCh)
+		go s.readTCPListener()
 	}
 
 	// Start up the predefined subscribers.

@@ -71,7 +71,7 @@ func (s *server) readSocket() {
 // port if started.
 // It will take a channel of []byte as input, and it is in this
 // channel the content of a file that has changed is returned.
-func (s *server) readTCPListener(toRingbufferCh chan []subjectAndMessage) {
+func (s *server) readTCPListener() {
 	ln, err := net.Listen("tcp", s.configuration.TCPListener)
 	if err != nil {
 		log.Printf("error: readTCPListener: failed to start tcp listener: %v\n", err)
@@ -83,7 +83,7 @@ func (s *server) readTCPListener(toRingbufferCh chan []subjectAndMessage) {
 		conn, err := ln.Accept()
 		if err != nil {
 			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
-			sendErrorLogMessage(s.configuration, s.metrics, toRingbufferCh, Node(s.nodeName), er)
+			sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
 			continue
 		}
 
@@ -97,7 +97,7 @@ func (s *server) readTCPListener(toRingbufferCh chan []subjectAndMessage) {
 				_, err = conn.Read(b)
 				if err != nil && err != io.EOF {
 					er := fmt.Errorf("error: failed to read data from tcp listener: %v", err)
-					sendErrorLogMessage(s.configuration, s.metrics, toRingbufferCh, Node(s.nodeName), er)
+					sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
 					return
 				}
 
@@ -114,7 +114,7 @@ func (s *server) readTCPListener(toRingbufferCh chan []subjectAndMessage) {
 			sam, err := s.convertBytesToSAMs(readBytes)
 			if err != nil {
 				er := fmt.Errorf("error: malformed json: %v", err)
-				sendErrorLogMessage(s.configuration, s.metrics, toRingbufferCh, Node(s.nodeName), er)
+				sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
 				return
 			}
 
@@ -126,7 +126,7 @@ func (s *server) readTCPListener(toRingbufferCh chan []subjectAndMessage) {
 			}
 
 			// Send the SAM struct to be picked up by the ring buffer.
-			toRingbufferCh <- sam
+			s.newMessagesCh <- sam
 
 		}(conn)
 	}
