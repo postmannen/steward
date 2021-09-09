@@ -10,7 +10,12 @@ import (
 	toml "github.com/pelletier/go-toml"
 )
 
-// --- Configuration
+// Configuration are the structure that holds all the different
+// configuration options used both with flags and the config file.
+// If a new field is added to this struct there should also be
+// added the same field to the ConfigurationFromFile struct, and
+// an if check should be added to the checkConfigValues function
+// to set default values when reading from config file.
 type Configuration struct {
 	// The configuration folder on disk
 	ConfigFolder string
@@ -77,14 +82,51 @@ type Configuration struct {
 	StartSubREQnCliCommandCont bool
 }
 
-// NewConfiguration will set a default Configuration,
-// and return a *Configuration.
+// ConfigurationFromFile should have the same structure as
+// Configuration. This structure is used when parsing the
+// configuration values from file, so we are able to detect
+// if a value were given or not when parsing.
+type ConfigurationFromFile struct {
+	ConfigFolder               *string
+	SocketFolder               *string
+	TCPListener                *string
+	DatabaseFolder             *string
+	NodeName                   *string
+	BrokerAddress              *string
+	NatsConnectRetryInterval   *int
+	ProfilingPort              *string
+	PromHostAndPort            *string
+	DefaultMessageTimeout      *int
+	DefaultMessageRetries      *int
+	SubscribersDataFolder      *string
+	CentralNodeName            *string
+	RootCAPath                 *string
+	NkeySeedFile               *string
+	ExposeDataFolder           *string
+	ErrorMessageTimeout        *int
+	ErrorMessageRetries        *int
+	StartPubREQHello           *int
+	StartSubREQErrorLog        *bool
+	StartSubREQHello           *bool
+	StartSubREQToFileAppend    *bool
+	StartSubREQToFile          *bool
+	StartSubREQPing            *bool
+	StartSubREQPong            *bool
+	StartSubREQCliCommand      *bool
+	StartSubREQnCliCommand     *bool
+	StartSubREQToConsole       *bool
+	StartSubREQHttpGet         *bool
+	StartSubREQTailFile        *bool
+	StartSubREQnCliCommandCont *bool
+}
+
+// NewConfiguration will return a *Configuration.
 func NewConfiguration() *Configuration {
 	c := Configuration{}
 	return &c
 }
 
-// Default configuration
+// Get a Configuration struct with the default values set.
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
 		ConfigFolder:             "./etc/",
@@ -120,6 +162,171 @@ func newConfigurationDefaults() Configuration {
 		StartSubREQnCliCommandCont: true,
 	}
 	return c
+}
+
+// Check if all values are present in config file, and if not
+// found use the default value.
+func checkConfigValues(cf ConfigurationFromFile) Configuration {
+	var conf Configuration
+	cd := newConfigurationDefaults()
+
+	if cf.ConfigFolder == nil {
+		conf.ConfigFolder = cd.ConfigFolder
+	} else {
+		conf.ConfigFolder = *cf.ConfigFolder
+	}
+	if cf.SocketFolder == nil {
+		conf.SocketFolder = cd.SocketFolder
+	} else {
+		conf.SocketFolder = *cf.SocketFolder
+	}
+	if cf.TCPListener == nil {
+		conf.TCPListener = cd.TCPListener
+	} else {
+		conf.TCPListener = *cf.TCPListener
+	}
+	if cf.DatabaseFolder == nil {
+		conf.DatabaseFolder = cd.DatabaseFolder
+	} else {
+		conf.DatabaseFolder = *cf.DatabaseFolder
+	}
+	if cf.NodeName == nil {
+		conf.NodeName = cd.NodeName
+	} else {
+		conf.NodeName = *cf.NodeName
+	}
+	if cf.BrokerAddress == nil {
+		conf.BrokerAddress = cd.BrokerAddress
+	} else {
+		conf.BrokerAddress = *cf.BrokerAddress
+	}
+	if cf.NatsConnectRetryInterval == nil {
+		conf.NatsConnectRetryInterval = cd.NatsConnectRetryInterval
+	} else {
+		conf.NatsConnectRetryInterval = *cf.NatsConnectRetryInterval
+	}
+	if cf.ProfilingPort == nil {
+		conf.ProfilingPort = cd.ProfilingPort
+	} else {
+		conf.ProfilingPort = *cf.ProfilingPort
+	}
+	if cf.PromHostAndPort == nil {
+		conf.PromHostAndPort = cd.PromHostAndPort
+	} else {
+		conf.PromHostAndPort = *cf.PromHostAndPort
+	}
+	if cf.DefaultMessageTimeout == nil {
+		conf.DefaultMessageTimeout = cd.DefaultMessageTimeout
+	} else {
+		conf.DefaultMessageTimeout = *cf.DefaultMessageTimeout
+	}
+	if cf.DefaultMessageRetries == nil {
+		conf.DefaultMessageRetries = cd.DefaultMessageRetries
+	} else {
+		conf.DefaultMessageRetries = *cf.DefaultMessageRetries
+	}
+	if cf.SubscribersDataFolder == nil {
+		conf.SubscribersDataFolder = cd.SubscribersDataFolder
+	} else {
+		conf.SubscribersDataFolder = *cf.SubscribersDataFolder
+	}
+	if cf.CentralNodeName == nil {
+		conf.CentralNodeName = cd.CentralNodeName
+	} else {
+		conf.CentralNodeName = *cf.CentralNodeName
+	}
+	if cf.RootCAPath == nil {
+		conf.RootCAPath = cd.RootCAPath
+	} else {
+		conf.RootCAPath = *cf.RootCAPath
+	}
+	if cf.NkeySeedFile == nil {
+		conf.NkeySeedFile = cd.NkeySeedFile
+	} else {
+		conf.NkeySeedFile = *cf.NkeySeedFile
+	}
+	if cf.ExposeDataFolder == nil {
+		conf.ExposeDataFolder = cd.ExposeDataFolder
+	} else {
+		conf.ExposeDataFolder = *cf.ExposeDataFolder
+	}
+	if cf.ErrorMessageTimeout == nil {
+		conf.ErrorMessageTimeout = cd.ErrorMessageTimeout
+	} else {
+		conf.ErrorMessageTimeout = *cf.ErrorMessageTimeout
+	}
+	if cf.ErrorMessageRetries == nil {
+		conf.ErrorMessageRetries = cd.ErrorMessageRetries
+	} else {
+		conf.ErrorMessageRetries = *cf.ErrorMessageRetries
+	}
+	if cf.StartPubREQHello == nil {
+		conf.StartPubREQHello = cd.StartPubREQHello
+	} else {
+		conf.StartPubREQHello = *cf.StartPubREQHello
+	}
+	if cf.StartSubREQErrorLog == nil {
+		conf.StartSubREQErrorLog = cd.StartSubREQErrorLog
+	} else {
+		conf.StartSubREQErrorLog = *cf.StartSubREQErrorLog
+	}
+	if cf.StartSubREQHello == nil {
+		conf.StartSubREQHello = cd.StartSubREQHello
+	} else {
+		conf.StartSubREQHello = *cf.StartSubREQHello
+	}
+	if cf.StartSubREQToFileAppend == nil {
+		conf.StartSubREQToFileAppend = cd.StartSubREQToFileAppend
+	} else {
+		conf.StartSubREQToFileAppend = *cf.StartSubREQToFileAppend
+	}
+	if cf.StartSubREQToFile == nil {
+		conf.StartSubREQToFile = cd.StartSubREQToFile
+	} else {
+		conf.StartSubREQToFile = *cf.StartSubREQToFile
+	}
+	if cf.StartSubREQPing == nil {
+		conf.StartSubREQPing = cd.StartSubREQPing
+	} else {
+		conf.StartSubREQPing = *cf.StartSubREQPing
+	}
+	if cf.StartSubREQPong == nil {
+		conf.StartSubREQPong = cd.StartSubREQPong
+	} else {
+		conf.StartSubREQPong = *cf.StartSubREQPong
+	}
+	if cf.StartSubREQCliCommand == nil {
+		conf.StartSubREQCliCommand = cd.StartSubREQCliCommand
+	} else {
+		conf.StartSubREQCliCommand = *cf.StartSubREQCliCommand
+	}
+	if cf.StartSubREQnCliCommand == nil {
+		conf.StartSubREQnCliCommand = cd.StartSubREQnCliCommand
+	} else {
+		conf.StartSubREQnCliCommand = *cf.StartSubREQnCliCommand
+	}
+	if cf.StartSubREQToConsole == nil {
+		conf.StartSubREQToConsole = cd.StartSubREQToConsole
+	} else {
+		conf.StartSubREQToConsole = *cf.StartSubREQToConsole
+	}
+	if cf.StartSubREQHttpGet == nil {
+		conf.StartSubREQHttpGet = cd.StartSubREQHttpGet
+	} else {
+		conf.StartSubREQHttpGet = *cf.StartSubREQHttpGet
+	}
+	if cf.StartSubREQTailFile == nil {
+		conf.StartSubREQTailFile = cd.StartSubREQTailFile
+	} else {
+		conf.StartSubREQTailFile = *cf.StartSubREQTailFile
+	}
+	if cf.StartSubREQnCliCommandCont == nil {
+		conf.StartSubREQnCliCommandCont = cd.StartSubREQnCliCommandCont
+	} else {
+		conf.StartSubREQnCliCommandCont = *cf.StartSubREQnCliCommandCont
+	}
+
+	return conf
 }
 
 // CheckFlags will parse all flags
@@ -204,24 +411,27 @@ func (c *Configuration) CheckFlags() error {
 
 // Reads the current config file from disk.
 func (c *Configuration) ReadConfigFile(configFolder string) (Configuration, error) {
-	fp := filepath.Join(configFolder, "config.toml")
+	fPath := filepath.Join(configFolder, "config.toml")
 
-	if _, err := os.Stat(fp); os.IsNotExist(err) {
-		return Configuration{}, fmt.Errorf("error: no config file found %v: %v", fp, err)
+	if _, err := os.Stat(fPath); os.IsNotExist(err) {
+		return Configuration{}, fmt.Errorf("error: no config file found %v: %v", fPath, err)
 	}
 
-	f, err := os.OpenFile(fp, os.O_RDONLY, 0600)
+	f, err := os.OpenFile(fPath, os.O_RDONLY, 0600)
 	if err != nil {
 		return Configuration{}, fmt.Errorf("error: ReadConfigFile: failed to open file: %v", err)
 	}
 	defer f.Close()
 
-	var conf Configuration
+	var cFile ConfigurationFromFile
 	dec := toml.NewDecoder(f)
-	err = dec.Decode(&conf)
+	err = dec.Decode(&cFile)
 	if err != nil {
-		return Configuration{}, fmt.Errorf("error: decode toml file %v: %v", fp, err)
+		log.Printf("error: decoding config.toml file. The program will automatically try to correct the problem, and use sane default where it kind find a value to use, but beware of this error in case the program start to behave in not expected ways: path=%v: err=%v", fPath, err)
 	}
+
+	// Check that all values read are ok.
+	conf := checkConfigValues(cFile)
 
 	// fmt.Printf("%+v\n", c)
 	return conf, nil
