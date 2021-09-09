@@ -215,7 +215,7 @@ clone the repository `git clone https://github.com/RaaLabs/steward.git`.
 
 Then cd `./steward/cmd` and do `go build -o steward`._1FJeI4_rrR6mY_Y496rsi5
 
-Run the application with `env CONFIG_FOLDER </myconfig/folder/here> ./steward` 
+Run the application with `env CONFIG_FOLDER </myconfig/folder/here> ./steward`
 
 You can get all the options with `./steward --help`
 
@@ -373,7 +373,7 @@ More example configurations for the nats-server are located in the `doc` folder 
 
 To set the location of the config folder other than default, you should use the ENV variable `CONFIG_FOLDER`.
 
-`env CONFIG_FOLDER=./etc/ ./steward --nodeName="central" --centralNodeName="central"` 
+`env CONFIG_FOLDER=./etc/ ./steward --nodeName="central" --centralNodeName="central"`
 
 Or using default config folder location on some central server which will act as your command and control server.
 
