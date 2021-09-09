@@ -14,13 +14,17 @@ import (
 type Message struct {
 	// The node to send the message to.
 	ToNode Node `json:"toNode" yaml:"toNode"`
-	// ToNodes to specify several hosts to send message to.
+	// ToNodes to specify several hosts to send message to in the
+	// form of an slice/array.
 	ToNodes []Node `json:"toNodes,omitempty" yaml:"toNodes,omitempty"`
 	// The Unique ID of the message
 	ID int `json:"id" yaml:"id"`
-	// The actual data in the message
+	// The actual data in the message. This is typically where we
+	// specify the cli commands to execute on a node, and this is
+	// also the field where we put the returned data in a reply
+	// message.
 	Data []string `json:"data" yaml:"data"`
-	// Method, what is this message doing, etc. CLI, syslog, etc.
+	// Method, what request type to use, like REQCliCommand, REQHttpGet..
 	Method Method `json:"method" yaml:"method"`
 	// ReplyMethod, is the method to use for the reply message.
 	// By default the reply method will be set to log to file, but
@@ -43,7 +47,7 @@ type Message struct {
 	// For example "syslog","metrics", or "metrics/mysensor"
 	// The type is typically used in the handler of a method.
 	Directory string `json:"directory" yaml:"directory"`
-	// FileName is used to be able to set a wanted extension
+	// FileName is used to be able to set a wanted name
 	// on a file being saved as the result of data being handled
 	// by a method handler.
 	FileName string `json:"fileName" yaml:"fileName"`

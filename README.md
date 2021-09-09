@@ -139,13 +139,9 @@ A default config file will be created at first startup if one does not exist, wi
 
 If new values are provided via flags they will take precedence over the ones currently in the config file, and they will also replace the current value in the config file, making it the default for the next restart.
 
-The only exception from the above are the `startSubX` flags which got one extra value that can be used which is the value `RST` for Reset. This will disable the specified subscriber, and also null out the array for which Nodes the subscriber will allow traffic from.
-
 The config file can also be edited directly, making the use of flags not needed.
 
 If just getting back to standard default for all config options needed, then delete the current config file, restart Steward, and a new config file with all the options set to it's default values will be created.
-
-TIP: Most likely the best way to control how the service should behave and what is started is to start Steward the first time so it creates the default config file. Then stop the service, edit the config file and change the defaults needed. Then start the service again.
 
 ### Request Methods
 
@@ -213,7 +209,15 @@ Write the output of the reply message to a log file specified with the `director
 
 ### Build and Run
 
-clone the repository, then cd `./steward/cmd` and do `go build -o steward`, and run the application with `./steward --help`
+Steward is written in go, so you need Go installed to compile it. You can get go at <https://golang.org/dl/>.
+
+clone the repository `git clone https://github.com/RaaLabs/steward.git`.
+
+Then cd `./steward/cmd` and do `go build -o steward`._1FJeI4_rrR6mY_Y496rsi5
+
+Run the application with `env CONFIG_FOLDER </myconfig/folder/here> ./steward` 
+
+You can get all the options with `./steward --help`
 
 ### Options for running
 
@@ -222,46 +226,69 @@ The location of the config file are given via an env variable at startup (defaul
 `env CONFIG_FOLDER </myconfig/folder/here>`
 
 ```text
-    -brokerAddress string
-    the address of the message broker (default "127.0.0.1:4222")
-  -centralNodeName string
-    The name of the central node to receive messages published by this node (default "central")
-  -defaultMessageRetries int
-    default amount of retries that will be done before a message is thrown away, and out of the system (default 3)
-  -defaultMessageTimeout int
-    default message timeout in seconds. This can be overridden on the message level (default 5)
-  -nodeName string
-    some unique string to identify this Edge unit (default "central")
-  -profilingPort string
-    The number of the profiling port
-  -promHostAndPort string
-    host and port for prometheus listener, e.g. localhost:2112 (default ":2112")
-  -startPubREQHello int
-    Make the current node send hello messages to central at given interval in seconds
-  -startSubREQCliCommand value
-    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubREQErrorLog value
-    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubREQHello value
-    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubREQHttpGet value
-    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubREQPing value
-    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubREQPong value
-    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubREQTailFile value
-    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubREQToConsole value
-    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubREQToFile value
-    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubREQToFileAppend value
-    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -startSubREQnCliCommand value
-    Specify comma separated list for nodes to allow messages from. Use "*" for from all. Value RST will turn off subscriber.
-  -subscribersDataFolder string
-    The data folder where subscribers are allowed to write their data if needed (default "./var")
+  // The configuration folder on disk
+  ConfigFolder string
+  // The folder where the socket file should live
+  SocketFolder string
+  // TCP Listener for sending messages to the system
+  TCPListener string
+  // The folder where the database should live
+  DatabaseFolder string
+  // some unique string to identify this Edge unit
+  NodeName string
+  // the address of the message broker
+  BrokerAddress string
+  // nats connect retry
+  NatsConnectRetryInterval int
+  // The number of the profiling port
+  ProfilingPort string
+  // host and port for prometheus listener, e.g. localhost:2112
+  PromHostAndPort string
+  // set to true if this is the node that should receive the error log's from other nodes
+  DefaultMessageTimeout int
+  // default amount of retries that will be done before a message is thrown away, and out of the system
+  DefaultMessageRetries int
+  // Publisher data folder
+  SubscribersDataFolder string
+  // central node to receive messages published from nodes
+  CentralNodeName string
+  // Path to the certificate of the root CA
+  RootCAPath string
+  // Full path to the NKEY's seed file
+  NkeySeedFile string
+  // The host and port to expose the data folder
+  ExposeDataFolder string
+  // Timeout for error messages
+  ErrorMessageTimeout int
+  // Retries for error messages.
+  ErrorMessageRetries int
+  // Make the current node send hello messages to central at given interval in seconds
+  StartPubREQHello int
+  // Start the central error logger.
+  // Takes a comma separated string of nodes to receive from or "*" for all nodes.
+  StartSubREQErrorLog bool
+  // Subscriber for hello messages
+  StartSubREQHello bool
+  // Subscriber for text logging
+  StartSubREQToFileAppend bool
+  // Subscriber for writing to file
+  StartSubREQToFile bool
+  // Subscriber for Echo Request
+  StartSubREQPing bool
+  // Subscriber for Echo Reply
+  StartSubREQPong bool
+  // Subscriber for CLICommandRequest
+  StartSubREQCliCommand bool
+  // Subscriber for REQnCliCommand
+  StartSubREQnCliCommand bool
+  // Subscriber for REQToConsole
+  StartSubREQToConsole bool
+  // Subscriber for REQHttpGet
+  StartSubREQHttpGet bool
+  // Subscriber for tailing log files
+  StartSubREQTailFile bool
+  // Subscriber for continously delivery of output from cli commands.
+  StartSubREQnCliCommandCont bool
 ```
 
 ### How to Run
@@ -269,6 +296,8 @@ The location of the config file are given via an env variable at startup (defaul
 #### Nkey Authentication
 
 Nkey's can be used for authentication, and you use the `nkeySeedFile` flag to specify the seed file to use.
+
+Read more in the sections below on how to generate nkey's.
 
 #### nats-server (the message broker)
 
@@ -344,15 +373,15 @@ More example configurations for the nats-server are located in the `doc` folder 
 
 To set the location of the config folder other than default, you should use the ENV variable `CONFIG_FOLDER`.
 
-`env CONFIG_FOLDER=./etc/ ./steward --node="central"`
+`env CONFIG_FOLDER=./etc/ ./steward --nodeName="central" --centralNodeName="central"` 
 
-Using default config folder location on some central server which will act as your command and control server.
+Or using default config folder location on some central server which will act as your command and control server.
 
-`./steward --node="central"`
+`./steward --nodeName="central" --centralNodeName="central"`
 
 One the nodes out there
 
-`./steward --node="ship1"` & `./steward --node="ship1"` and so on.
+`./steward ./steward --nodeName="ship1" --centralNodeName="central"` & `./steward --node="ship2"` and so on.
 
 Use the `-help` flag to get all possibilities.
 
@@ -364,18 +393,20 @@ And start another node that will be managed via central.
 
 `./steward --nodeName="ship1" -startPubREQHello=200 --centralNodeName="central" -promHostAndPort=":12112" -brokerAddress="127.0.0.1:4222"`
 
-#### Start subscriber flags
-
-The start subscribers flags take a string value of which nodes that it will process messages from. Since using a flag to set a value automatically sets that value also in the config file, a value of RST can be given to turn off the subscriber.
-
 ### Message fields explanation
 
 ```go
 // The node to send the message to
 toNode
-// The actual data in the message
+// ToNodes to specify several hosts to send message to in the
+// form of an slice/array.
+toNodes
+// The actual data in the message. This is typically where we
+// specify the cli commands to execute on a node, and this is
+// also the field where we put the returned data in a reply
+// message.
 data
-// Method, what is this message doing, etc. CLI, syslog, etc.
+// Method, what request type to use, like REQCliCommand, REQHttpGet..
 method
 // ReplyMethod, is the method to use for the reply message.
 // By default the reply method will be set to log to file, but
@@ -406,11 +437,15 @@ operation
 
 ### How to send a Message
 
-The API for sending a message from one node to another node is by pasting a structured JSON object into the socket file file called `steward.sock` which by default lives in the `./tmp` directory. This file will be read continously, and when updated the content will be picked up, umarshaled, and if OK it will be sent a message to the node specified in the `toNode` field.
+The API for sending a message from one node to another node is by pasting a structured JSON object into the socket file file called `steward.sock` which by default lives in the `./tmp` directory, or by starting the TCPListener, or via http (not implented yet). The message will be picked up, umarshaled, and if OK it will be sent as a message to the node specified in the `toNode` field.
 
 The `method` is what defines what the event will do.
 
 The `Operation` field is a little bit special. This field is used with the `REQOpCommand` to specify what operation command to run, and also it's arguments.
+
+#### Send to socket with netcat
+
+`nc -U ./tmp/steward.sock < myMessage.json`
 
 #### The current `operation`'s that are available are
 
@@ -486,12 +521,13 @@ NB: Both the keys and the values used are case sensitive.
 
 #### Sending a command from one Node to Another Node
 
-Example JSON for appending a message of type command into the `socket` file
+##### Example JSON for appending a message of type command into the `socket` file
 
 ```json
 [
     {
         "directory":"/var/steward/cli-command/executed-result",
+        "fileName": "some.log",
         "toNode": "ship1",
         "data": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",
@@ -502,12 +538,13 @@ Example JSON for appending a message of type command into the `socket` file
 ]
 ```
 
-To specify more messages at once do
+##### Specify more messages at once do
 
 ```json
 [
     {
         "directory":"cli-command-executed-result",
+        "fileName": "some.log",
         "toNode": "ship1",
         "data": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",
@@ -517,6 +554,7 @@ To specify more messages at once do
     },
     {
         "directory":"cli-command-executed-result",
+        "fileName": "some.log",
         "toNode": "ship2",
         "data": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",
@@ -527,7 +565,26 @@ To specify more messages at once do
 ]
 ```
 
-To send a Op Command message for process listing with custom timeout and amount of retries
+##### Send the same message to several hosts by using the toHosts field
+
+```json
+[
+    {
+        "directory": "httpget",
+        "fileName": "finn.no.html",
+        "toNode": "",
+        "toNodes": ["central","ship2"],
+        "data": ["https://finn.no"],
+        "method":"REQHttpGet",
+        "replyMethod":"REQToFile",
+        "ACKTimeout":5,
+        "retries":3,
+        "methodTimeout": 5
+    }
+]
+```
+
+##### Send an Op Command message for process listing with custom timeout and amount of retries
 
 ```json
 [
@@ -544,12 +601,12 @@ To send a Op Command message for process listing with custom timeout and amount 
         "retries":3,
         "replyACKTimeout":3,
         "replyRetries":3,
-        "MethodTimeout": 7
+        "methodTimeout": 7
     }
 ]
 ```
 
-To send and Op Command to stop a subscriber on a node
+##### Send and Op Command to stop a subscriber on a node
 
 ```json
 [
@@ -571,12 +628,12 @@ To send and Op Command to stop a subscriber on a node
         "retries":3,
         "replyACKTimeout":3,
         "replyRetries":3,
-        "MethodTimeout": 7
+        "methodTimeout": 7
     }
 ]
 ```
 
-To send and Op Command to start a subscriber on a node
+##### Send and Op Command to start a subscriber on a node
 
 ```json
 [
@@ -597,7 +654,7 @@ To send and Op Command to start a subscriber on a node
         "retries":3,
         "replyACKTimeout":3,
         "replyRetries":3,
-        "MethodTimeout": 7
+        "methodTimeout": 7
     }
 ]
 ```
