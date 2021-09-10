@@ -9,8 +9,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // readSocket will read the .sock file specified.
@@ -160,7 +158,7 @@ func (s *server) readHttpListener() {
 			os.Exit(1)
 		}
 		mux := http.NewServeMux()
-		mux.Handle("/metrics", promhttp.Handler())
+		mux.HandleFunc("/metrics", s.readHTTPlistenerHandler)
 
 		err = http.Serve(n, mux)
 		if err != nil {

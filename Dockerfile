@@ -20,6 +20,7 @@ COPY --from=build-env /build/cmd/steward/steward /app/
 ENV CONFIG_FOLDER "./etc"
 ENV SOCKET_FOLDER "./tmp"
 ENV TCP_LISTENER ""
+ENV HTTP_LISTENER "localhost:8091"
 ENV DATABASE_FOLDER "./var/lib"
 ENV NODE_NAME ""
 ENV BROKER_ADDRESS "127.0.0.1:4222"
@@ -54,6 +55,7 @@ ENV START_SUB_REQ_N_CLI_COMMAND_CONT ""
 CMD ["ash","-c","env CONFIGFOLDER=./etc/ /app/steward\
     -socketFolder=$SOCKET_FOLDER\
     -tcpListener=$TCP_LISTENER\
+    -httpListener=$HTTP_LISTENER\
     -databaseFolder=$DATABASE_FOLDER\
     -nodeName=$NODE_NAME\
     -brokerAddress=$BROKER_ADDRESS\
