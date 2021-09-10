@@ -18,6 +18,9 @@ type metrics struct {
 	// host and port where prometheus metrics will be exported.
 	hostAndPort string
 
+	// The build version
+	promVersion *prometheus.GaugeVec
+
 	// --- Processes
 	// Prometheus metrics for total processes.
 	promProcessesTotal prometheus.Gauge
@@ -65,6 +68,13 @@ func newMetrics(hostAndPort string) *metrics {
 		hostAndPort:  hostAndPort,
 	}
 
+	m.promVersion = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "steward_build_version",
+		Help: "Build version of steward",
+	}, []string{"version"},
+	)
+	m.promRegistry.MustRegister(m.promVersion)
+
 	m.promProcessesTotal = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "steward_processes_total",
 		Help: "The current number of total running processes",
@@ -87,8 +97,7 @@ func newMetrics(hostAndPort string) *metrics {
 	m.promHelloNodesContactLast = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "steward_hello_node_contact_last",
 		Help: "Name of the nodes who have said hello",
-	}, []string{"nodeName"},
-	)
+	}, []string{"nodeName"})
 	m.promRegistry.MustRegister(m.promHelloNodesContactLast)
 
 	m.promMessagesProcessedIDLast = prometheus.NewGauge(prometheus.GaugeOpts{

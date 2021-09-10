@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type processName string
@@ -195,6 +196,7 @@ func NewServer(c *Configuration, version string) (*server, error) {
 // if it does not exist it will spawn one.
 func (s *server) Start() {
 	fmt.Printf(" * VERSION = %+v\n", s.version)
+	s.metrics.promVersion.With(prometheus.Labels{"version": string(s.version)})
 
 	// Start the error kernel that will do all the error handling
 	// that is not done within a process.
