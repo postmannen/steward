@@ -67,7 +67,7 @@ func TestStewardServer(t *testing.T) {
 		StartSubREQTailFile:        true,
 		// StartSubREQToSocket:		flagNodeSlice{OK: true, Values: []Node{"*"}},
 	}
-	stewardServer, err := NewServer(conf)
+	stewardServer, err := NewServer(conf, "test")
 	if err != nil {
 		t.Fatalf(" * failed: could not start the Steward instance %v\n", err)
 	}

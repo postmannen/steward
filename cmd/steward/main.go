@@ -13,6 +13,12 @@ import (
 	"github.com/RaaLabs/steward"
 )
 
+// Use ldflags to set version
+// env CONFIGFOLDER=./etc/ go run -ldflags "-X main.version=v0.1.10" --race ./cmd/steward/.
+// or
+// env GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=v0.1.10" -o steward
+var version string
+
 func main() {
 	// defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
 	// defer profile.Start(profile.TraceProfile, profile.ProfilePath(".")).Stop()
@@ -33,7 +39,7 @@ func main() {
 
 	}
 
-	s, err := steward.NewServer(c)
+	s, err := steward.NewServer(c, version)
 	if err != nil {
 		log.Printf("%v\n", err)
 		os.Exit(1)

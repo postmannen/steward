@@ -49,10 +49,12 @@ type server struct {
 	errorKernel *errorKernel
 	// metric exporter
 	metrics *metrics
+	// Version of package
+	version string
 }
 
 // newServer will prepare and return a server type
-func NewServer(c *Configuration) (*server, error) {
+func NewServer(c *Configuration, version string) (*server, error) {
 	// Set up the main background context.
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -166,6 +168,7 @@ func NewServer(c *Configuration) (*server, error) {
 		processes:     newProcesses(ctx, metrics),
 		newMessagesCh: make(chan []subjectAndMessage),
 		metrics:       metrics,
+		version:       version,
 	}
 
 	// Create the default data folder for where subscribers should
@@ -191,6 +194,8 @@ func NewServer(c *Configuration) (*server, error) {
 // if there is publisher process for a given message subject, and
 // if it does not exist it will spawn one.
 func (s *server) Start() {
+	fmt.Printf(" * VERSION = %+v\n", s.version)
+
 	// Start the error kernel that will do all the error handling
 	// that is not done within a process.
 	s.errorKernel = newErrorKernel(s.ctx)
