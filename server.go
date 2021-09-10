@@ -214,9 +214,14 @@ func (s *server) Start() {
 	// Start the checking the input socket for new messages from operator.
 	go s.readSocket()
 
-	// Check if we should start the tcp listener fro new messages from operator.
+	// Check if we should start the tcp listener for new messages from operator.
 	if s.configuration.TCPListener != "" {
 		go s.readTCPListener()
+	}
+
+	// Check if we should start the http listener for new messages from operator.
+	if s.configuration.HTTPListener != "" {
+		go s.readHttpListener()
 	}
 
 	// Start up the predefined subscribers.

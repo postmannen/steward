@@ -7,7 +7,10 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/http"
 	"os"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // readSocket will read the .sock file specified.
@@ -135,6 +138,36 @@ func (s *server) readTCPListener() {
 // TODO: Create the writer go routine for this socket.
 func (s *server) writeStewSocket(toStewSocketCh []byte) {
 	//s.StewSockListener
+}
+
+func (s *server) readHTTPlistenerHandler(w http.ResponseWriter, r *http.Request) {
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+		er := fmt.Errorf("error: readHTTPListenerHandler: %v", err)
+		sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
+	}
+	r.Body.Close()
+
+	log.Printf("got: %v\n", string(b))
+
+}
+
+func (s *server) readHttpListener() {
+	go func() {
+		n, err := net.Listen("tcp", s.configuration.HTTPListener)
+		if err != nil {
+			log.Printf("error: startMetrics: failed to open prometheus listen port: %v\n", err)
+			os.Exit(1)
+		}
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", promhttp.Handler())
+
+		err = http.Serve(n, mux)
+		if err != nil {
+			log.Printf("error: startMetrics: failed to start http.Serve: %v\n", err)
+			os.Exit(1)
+		}
+	}()
 }
 
 // The subject are made up of different parts of the message field.
