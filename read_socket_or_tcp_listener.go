@@ -158,7 +158,7 @@ func (s *server) readHttpListener() {
 			os.Exit(1)
 		}
 		mux := http.NewServeMux()
-		mux.HandleFunc("/metrics", s.readHTTPlistenerHandler)
+		mux.HandleFunc("/", s.readHTTPlistenerHandler)
 
 		err = http.Serve(n, mux)
 		if err != nil {
