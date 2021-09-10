@@ -145,7 +145,7 @@ func checkREQOpCommandTest(stewardServer *server, conf *Configuration, t *testin
 		return fmt.Errorf(" [FAILED]	: checkREQOpCommandTest: %v", err)
 	}
 
-	t.Logf(" [SUCCESS]	: checkREQOpCommandTest\n")
+	t.Logf(" \U0001f600 [SUCCESS]	: checkREQOpCommandTest\n")
 	return nil
 }
 
@@ -173,7 +173,7 @@ func checkREQCliCommandTest(stewardServer *server, conf *Configuration, t *testi
 		return fmt.Errorf(" [FAILED]	: checkREQCliCommandTest: %v", err)
 	}
 
-	t.Logf(" [SUCCESS]	: checkREQCliCommandTest\n")
+	t.Logf(" \U0001f600 [SUCCESS]	: checkREQCliCommandTest\n")
 	return nil
 }
 
@@ -201,7 +201,7 @@ func checkREQnCliCommandTest(stewardServer *server, conf *Configuration, t *test
 		return fmt.Errorf(" [FAILED]	: checkREQnCliCommandTest: %v", err)
 	}
 
-	t.Logf(" [SUCCESS]	: checkREQnCliCommandTest\n")
+	t.Logf(" \U0001f600 [SUCCESS]	: checkREQnCliCommandTest\n")
 	return nil
 }
 
@@ -229,7 +229,7 @@ func checkREQnCliCommandContTest(stewardServer *server, conf *Configuration, t *
 		return fmt.Errorf(" [FAILED]	: checkREQnCliCommandContTest: %v", err)
 	}
 
-	t.Logf(" [SUCCESS]	: checkREQnCliCommandContTest\n")
+	t.Logf(" \U0001f600 [SUCCESS]	: checkREQnCliCommandContTest\n")
 	return nil
 }
 
@@ -253,7 +253,7 @@ func checkREQHelloTest(stewardServer *server, conf *Configuration, t *testing.T)
 		return fmt.Errorf(" [FAILED]	: checkREQHelloTest: %v", err)
 	}
 
-	t.Logf(" [SUCCESS]	: checkREQHelloTest\n")
+	t.Logf(" \U0001f600 [SUCCESS]	: checkREQHelloTest\n")
 	return nil
 }
 
@@ -277,7 +277,7 @@ func checkREQErrorLogTest(stewardServer *server, conf *Configuration, t *testing
 		return fmt.Errorf(" [FAILED]	: checkREQErrorLogTest: %v", err)
 	}
 
-	t.Logf(" [SUCCESS]	: checkREQErrorLogTest\n")
+	t.Logf(" \U0001f600 [SUCCESS]	: checkREQErrorLogTest\n")
 	return nil
 }
 
@@ -316,7 +316,7 @@ func checkREQHttpGetTest(stewardServer *server, conf *Configuration, t *testing.
 		return fmt.Errorf(" [FAILED]	: checkREQHttpGetTest: %v", err)
 	}
 
-	t.Logf(" [SUCCESS]	: checkREQHttpGetTest\n")
+	t.Logf(" \U0001f600 [SUCCESS]	: checkREQHttpGetTest\n")
 	return nil
 }
 
@@ -402,7 +402,7 @@ func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing
 		return fmt.Errorf(" [FAILED]	: checkREQTailFileTest: %v", err)
 	}
 
-	t.Logf(" [SUCCESS]	: checkREQTailFileTest\n")
+	t.Logf(" \U0001f600 [SUCCESS]	: checkREQTailFileTest\n")
 	return nil
 }
 
@@ -464,7 +464,7 @@ func checkErrorKernelMalformedJSONtest(stewardServer *server, conf *Configuratio
 			}
 
 			if found {
-				t.Logf(" [SUCCESS]	: checkErrorKernelMalformedJSONtest")
+				t.Logf(" \U0001f600 [SUCCESS]	: checkErrorKernelMalformedJSONtest")
 				return nil
 			}
 		case <-ticker.C:
@@ -500,7 +500,7 @@ func checkMetricValuesTest(stewardServer *server, conf *Configuration, t *testin
 		return fmt.Errorf("error: promRegistry.gathering: did not find specified metric processes_total")
 	}
 
-	t.Logf(" [SUCCESS]	: checkMetricValuesTest")
+	t.Logf(" \U0001f600 [SUCCESS]	: checkMetricValuesTest")
 
 	return nil
 }
