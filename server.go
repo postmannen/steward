@@ -258,8 +258,8 @@ func (s *server) Start() {
 
 // Will stop all processes started during startup.
 func (s *server) Stop() {
-	fmt.Printf(" * DEBUG100 * processMap \n")
-	s.processes.printProcessesMap()
+	// fmt.Printf(" * DEBUG100 * processMap \n")
+	// s.processes.printProcessesMap()
 
 	// Stop the started pub/sub message processes.
 	s.processes.Stop()
@@ -370,13 +370,12 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 
 	go func() {
 		for samTmp := range ringBufferOutCh {
-			fmt.Printf(" * DEBUG1.1 * before signaling back to the ringbuffer that message was picked from ring buffer, samTmp.delivered: %#v\n", samTmp.samDBValue.ID)
-			samTmp.delivered()
-			fmt.Printf(" * DEBUG1.2 * after signaling back to the ringbuffer that message was picked from ring buffer, samTmp.delivered: %#v\n", samTmp.samDBValue.ID)
+			// fmt.Printf(" * DEBUG1.1 * before signaling back to the ringbuffer that message was picked from ring buffer, samTmp.delivered: %#v\n", samTmp.samDBValue.ID)
 
-			// * DEBUG1 NOTE: It seems the problem are after here, since this loop seems to get stuck
-			// because the none of the two println's above are getting printed when many messages are
-			// being pushed on the system. Meaning this for loop gets stuck below.
+			// Signal back to the ringbuffer that message have been picked up.
+			samTmp.delivered()
+
+			// fmt.Printf(" * DEBUG1.2 * after signaling back to the ringbuffer that message was picked from ring buffer, samTmp.delivered: %#v\n", samTmp.samDBValue.ID)
 
 			sam := samTmp.samDBValue.Data
 			// Check if the format of the message is correct.
@@ -413,22 +412,30 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 			// for that subject, put the message on that processes incomming
 			// message channel.
 			if ok {
-				fmt.Printf(" * DEBUG1.3 * MUTEX.LOCK before range existingProcIDMap, samDBValue.id: %#v\n", samTmp.samDBValue.ID)
+				// fmt.Printf(" * DEBUG1.3 * MUTEX.LOCK before range existingProcIDMap, samDBValue.id: %#v, existingProcIDMap length: %v\n", samTmp.samDBValue.ID, len(existingProcIDMap))
 				s.processes.mu.Lock()
-				var pid int
+				// var pid int
+				var proc process
+				// forLoopCounter := 1
 				for _, existingProc := range existingProcIDMap {
-					pid = existingProc.processID
-					log.Printf("info: processNewMessages: found the specific subject: %v, proc.ID: %v\n", subjName, existingProc.processID)
+					// fmt.Printf(" * DEBUG1.3 * forLoopCounter: %v\n", forLoopCounter)
 
-					// * DEBUG5 NOTE: It seems to get stuck when writing to the messageCh below.
-					fmt.Printf(" * DEBUG1.4 * before putting on channel to found process, process ch: %#v,existingproc.id: %v\n", &existingProc.subject.messageCh, existingProc.processID)
+					// pid = existingProc.processID
+					// log.Printf("info: processNewMessages: found the specific subject: %v, proc.ID: %v\n", subjName, existingProc.processID)
 
-					existingProc.subject.messageCh <- m
+					// fmt.Printf(" * DEBUG1.4 * before putting on channel to found process, process ch: %#v,existingproc.id: %v\n", &existingProc.subject.messageCh, existingProc.processID)
 
-					fmt.Printf(" * DEBUG1.5 * after putting on channel to found process, process ch: %#v,existingproc.id: %v\n", &existingProc.subject.messageCh, existingProc.processID)
+					proc = existingProc
+
+					// fmt.Printf(" * DEBUG1.5 * after putting on channel to found process, process ch: %#v,existingproc.id: %v\n", &existingProc.subject.messageCh, existingProc.processID)
+
+					// forLoopCounter++
 				}
 				s.processes.mu.Unlock()
-				fmt.Printf(" *** DEBUG1.6 * MUTEX.UNLOCK after range existing Proc ID Map, samDBValue.id: %#v, proc.id: %v\n", samTmp.samDBValue.ID, pid)
+
+				// We have found the process to route the message to, deliver it.
+				proc.subject.messageCh <- m
+				// fmt.Printf(" *** DEBUG1.6 * MUTEX.UNLOCK after range existing Proc ID Map, samDBValue.id: %#v, proc.id: %v\n", samTmp.samDBValue.ID, pid)
 
 				// If no process to handle the specific subject exist,
 				// the we create and spawn one.
