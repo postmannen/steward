@@ -413,20 +413,22 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 			// for that subject, put the message on that processes incomming
 			// message channel.
 			if ok {
-				fmt.Printf(" * DEBUG1.3 * before range existingProcIDMap: %#v\n", samTmp.samDBValue.ID)
+				fmt.Printf(" * DEBUG1.3 * MUTEX.LOCK before range existingProcIDMap, samDBValue.id: %#v\n", samTmp.samDBValue.ID)
 				s.processes.mu.Lock()
+				var pid int
 				for _, existingProc := range existingProcIDMap {
-					log.Printf("info: processNewMessages: found the specific subject: %v\n", subjName)
-
-					fmt.Printf(" * DEBUG1.4 * before putting on channel existingProc.subject.messageCh: %#v, proc.id: %#v\n", samTmp.samDBValue.ID, existingProc.processID)
+					pid = existingProc.processID
+					log.Printf("info: processNewMessages: found the specific subject: %v, proc.ID: %v\n", subjName, existingProc.processID)
 
 					// * DEBUG5 NOTE: It seems to get stuck when writing to the messageCh below.
-					fmt.Printf(" * DEBUG1.5 * before putting on channel to found process: %#v\n", &existingProc.subject.messageCh)
+					fmt.Printf(" * DEBUG1.4 * before putting on channel to found process, process ch: %#v,existingproc.id: %v\n", &existingProc.subject.messageCh, existingProc.processID)
+
 					existingProc.subject.messageCh <- m
-					fmt.Printf(" *** DEBUG1.6 * after putting on channel to found process: %#v\n", samTmp.samDBValue.ID)
+
+					fmt.Printf(" * DEBUG1.5 * after putting on channel to found process, process ch: %#v,existingproc.id: %v\n", &existingProc.subject.messageCh, existingProc.processID)
 				}
 				s.processes.mu.Unlock()
-				fmt.Printf(" *** DEBUG1.7 * after range existing Proc ID Map: %#v\n", samTmp.samDBValue.ID)
+				fmt.Printf(" *** DEBUG1.6 * MUTEX.UNLOCK after range existing Proc ID Map, samDBValue.id: %#v, proc.id: %v\n", samTmp.samDBValue.ID, pid)
 
 				// If no process to handle the specific subject exist,
 				// the we create and spawn one.
@@ -439,6 +441,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 				proc := newProcess(s.ctx, s.metrics, s.natsConn, s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil)
 				// fmt.Printf("*** %#v\n", proc)
 				proc.spawnWorker(s.processes, s.natsConn)
+				log.Printf("info: processNewMessages: new process started, subject: %v, processID: %v\n", subjName, proc.processID)
 
 				// Now when the process is spawned we jump back to the redo: label,
 				// and send the message to that new process.

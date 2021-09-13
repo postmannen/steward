@@ -432,11 +432,11 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 	for {
 		var err error
 		var m Message
-		fmt.Printf(" * DEBUG2.2 : publishMessages, process nr: %v\n", p.processID)
+		fmt.Printf(" * DEBUG2.1 : publishMessages, proc.id: %v\n", p.processID)
 
 		// Wait and read the next message on the message channel, or
 		// exit this function if Cancel are received via ctx.
-		fmt.Printf(" * DEBUG2.2 * before selecting read p.subject.messageCh: %#v, message.id: %#v\n", p.subject.messageCh, p.messageID)
+		fmt.Printf(" * DEBUG2.2 * before selecting read p.subject.messageCh: %#v, message.id: %#v, proc.id: %v\n", &p.subject.messageCh, p.messageID, p.processID)
 		select {
 		// * DEBUG2 NOTE: Can it be that it have chosen the wrong process earler, and are waiting on the wrong channel here ?
 		case m = <-p.subject.messageCh:
@@ -446,7 +446,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 			log.Printf("%v\n", er)
 			return
 		}
-		fmt.Printf(" * DEBUG2.2 * before selecting read p.subject.messageCh: %#v, message.id: %#v\n", p.subject.messageCh, p.messageID)
+		fmt.Printf(" * DEBUG2.3 * after selecting read p.subject.messageCh: %#v, message.id: %#v, proc.id: %v\n", p.subject.messageCh, p.messageID, p.processID)
 		// Get the process name so we can look up the process in the
 		// processes map, and increment the message counter.
 		pn := processNameGet(p.subject.name(), processKindPublisher)
