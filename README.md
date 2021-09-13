@@ -60,6 +60,7 @@ The idea behind Steward is to help out with exactly that, and let you handle the
       - [Subject](#subject)
         - [Complete subject example](#complete-subject-example)
   - [TODO](#todo)
+    - [Move the processes map into it's own go routine](#move-the-processes-map-into-its-own-go-routine)
     - [Services at startup of Steward. Could be implemented by having a local folder of messages to go through at startup. What is needed](#services-at-startup-of-steward-could-be-implemented-by-having-a-local-folder-of-messages-to-go-through-at-startup-what-is-needed)
     - [A carrier type of message, that are able to forward a message on behalf of others, and are not directly ment for itself](#a-carrier-type-of-message-that-are-able-to-forward-a-message-on-behalf-of-others-and-are-not-directly-ment-for-itself)
     - [Workflow request type](#workflow-request-type)
@@ -768,6 +769,10 @@ For CliCommand message to a node named "ship1" of type Command and it wants an A
 `ship1.REQCliCommand.CommandACK`
 
 ## TODO
+
+### Move the processes map into it's own go routine
+
+Use channels to update and get values, and get rid of the use of mutex's.
 
 ### Services at startup of Steward. Could be implemented by having a local folder of messages to go through at startup. What is needed
 
