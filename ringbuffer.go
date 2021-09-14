@@ -35,7 +35,9 @@ type ringBuffer struct {
 	// In memory buffer for the messages.
 	bufData chan samDBValue
 	// The database to use.
-	db *bolt.DB
+	db               *bolt.DB
+	samValueBucket   string
+	indexValueBucket string
 	// The current number of items in the database.
 	totalMessagesIndex int
 	mu                 sync.Mutex
@@ -53,7 +55,7 @@ type ringBuffer struct {
 }
 
 // newringBuffer returns a push/pop storage for values.
-func newringBuffer(metrics *metrics, configuration *Configuration, size int, dbFileName string, nodeName Node, newMessagesCh chan []subjectAndMessage) *ringBuffer {
+func newringBuffer(metrics *metrics, configuration *Configuration, size int, dbFileName string, nodeName Node, newMessagesCh chan []subjectAndMessage, samValueBucket string, indexValueBucket string) *ringBuffer {
 	// Check if socket folder exists, if not create it
 	if _, err := os.Stat(configuration.DatabaseFolder); os.IsNotExist(err) {
 		err := os.MkdirAll(configuration.DatabaseFolder, 0700)
@@ -74,13 +76,15 @@ func newringBuffer(metrics *metrics, configuration *Configuration, size int, dbF
 	}
 
 	return &ringBuffer{
-		bufData:       make(chan samDBValue, size),
-		db:            db,
-		permStore:     make(chan string),
-		nodeName:      nodeName,
-		newMessagesCh: newMessagesCh,
-		metrics:       metrics,
-		configuration: configuration,
+		bufData:          make(chan samDBValue, size),
+		db:               db,
+		samValueBucket:   samValueBucket,
+		indexValueBucket: indexValueBucket,
+		permStore:        make(chan string),
+		nodeName:         nodeName,
+		newMessagesCh:    newMessagesCh,
+		metrics:          metrics,
+		configuration:    configuration,
 	}
 }
 
@@ -92,24 +96,21 @@ func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan samDBValueAnd
 	// Starting both writing and reading in separate go routines so we
 	// can write and read concurrently.
 
-	const samValueBucket string = "samValueBucket"
-	const indexValueBucket string = "indexValueBucket"
-
-	r.totalMessagesIndex = r.getIndexValue(indexValueBucket)
+	r.totalMessagesIndex = r.getIndexValue()
 
 	// Fill the buffer when new data arrives into the system
-	go r.fillBuffer(inCh, samValueBucket, indexValueBucket, defaultMessageTimeout, defaultMessageRetries)
+	go r.fillBuffer(inCh, defaultMessageTimeout, defaultMessageRetries)
 
 	// Start the process to permanently store done messages.
 	go r.startPermanentStore()
 
 	// Start the process that will handle messages present in the ringbuffer.
-	go r.processBufferMessages(samValueBucket, outCh)
+	go r.processBufferMessages(outCh)
 }
 
 // fillBuffer will fill the buffer in the ringbuffer  reading from the inchannel.
 // It will also store the messages in a K/V DB while being processed.
-func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket string, indexValueBucket string, defaultMessageTimeout int, defaultMessageRetries int) {
+func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, defaultMessageTimeout int, defaultMessageRetries int) {
 	// At startup get all the values that might be in the K/V store so we can
 	// put them into the buffer before we start to fill up with new incomming
 	// messages to the system.
@@ -117,7 +118,7 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 	// if there where previously unhandled messages that need to be handled first.
 
 	func() {
-		s, err := r.dumpBucket(samValueBucket)
+		s, err := r.dumpBucket(r.samValueBucket)
 		if err != nil {
 			er := fmt.Errorf("info: fillBuffer: retreival of values from k/v store failed, probaly empty database, and no previous entries in db to process: %v", err)
 			log.Printf("%v\n", er)
@@ -183,7 +184,7 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 		}
 
 		// Store the incomming message in key/value store
-		err = r.dbUpdate(r.db, samValueBucket, strconv.Itoa(dbID), js)
+		err = r.dbUpdate(r.db, r.samValueBucket, strconv.Itoa(dbID), js)
 		if err != nil {
 			er := fmt.Errorf("error: dbUpdate samValue failed: %v", err)
 			sendErrorLogMessage(r.configuration, r.metrics, r.newMessagesCh, Node(r.nodeName), er)
@@ -196,7 +197,7 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 		// Increment index, and store the new value to the database.
 		r.mu.Lock()
 		r.totalMessagesIndex++
-		r.dbUpdate(r.db, indexValueBucket, "index", []byte(strconv.Itoa(r.totalMessagesIndex)))
+		r.dbUpdate(r.db, r.indexValueBucket, "index", []byte(strconv.Itoa(r.totalMessagesIndex)))
 		r.mu.Unlock()
 	}
 
@@ -208,7 +209,7 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, samValueBucket stri
 // one by one. The messages will be delivered on the outCh, and it will wait
 // until a signal is received on the done channel before it continues with the
 // next message.
-func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan samDBValueAndDelivered) {
+func (r *ringBuffer) processBufferMessages(outCh chan samDBValueAndDelivered) {
 	// Range over the buffer of messages to pass on to processes.
 	for v := range r.bufData {
 		r.metrics.promInMemoryBufferMessagesCurrent.Set(float64(len(r.bufData)))
@@ -267,7 +268,7 @@ func (r *ringBuffer) processBufferMessages(samValueBucket string, outCh chan sam
 
 			// Since we are now done with the specific message we can delete
 			// it out of the K/V Store.
-			r.deleteKeyFromBucket(samValueBucket, strconv.Itoa(v.ID))
+			r.deleteKeyFromBucket(r.samValueBucket, strconv.Itoa(v.ID))
 
 			r.permStore <- fmt.Sprintf("%v : %+v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), v)
 
@@ -364,9 +365,9 @@ func (r *ringBuffer) deleteKeyFromBucket(bucket string, key string) error {
 }
 
 // getIndexValue will get the last index value stored in DB.
-func (r *ringBuffer) getIndexValue(indexBucket string) int {
+func (r *ringBuffer) getIndexValue() int {
 	const indexKey string = "index"
-	indexB, err := r.dbView(r.db, indexBucket, indexKey)
+	indexB, err := r.dbView(r.db, r.indexValueBucket, indexKey)
 	if err != nil {
 		log.Printf("error: getIndexValue: dbView: %v\n", err)
 	}
