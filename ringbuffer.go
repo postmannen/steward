@@ -9,6 +9,7 @@
 package steward
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -32,6 +33,12 @@ type samDBValue struct {
 
 // ringBuffer holds the data of the buffer,
 type ringBuffer struct {
+	// Context for ring buffer.
+	ctx context.Context
+	// Cancel function for ring buffer.
+	cancel context.CancelFunc
+	// Waitgroup for ringbuffer.
+	wg sync.WaitGroup
 	// In memory buffer for the messages.
 	bufData chan samDBValue
 	// The database to use.
@@ -55,7 +62,9 @@ type ringBuffer struct {
 }
 
 // newringBuffer returns a push/pop storage for values.
-func newringBuffer(metrics *metrics, configuration *Configuration, size int, dbFileName string, nodeName Node, newMessagesCh chan []subjectAndMessage, samValueBucket string, indexValueBucket string) *ringBuffer {
+func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configuration, size int, dbFileName string, nodeName Node, newMessagesCh chan []subjectAndMessage, samValueBucket string, indexValueBucket string) *ringBuffer {
+	ctxRingbuffer, cancel := context.WithCancel(ctx)
+
 	// Check if socket folder exists, if not create it
 	if _, err := os.Stat(configuration.DatabaseFolder); os.IsNotExist(err) {
 		err := os.MkdirAll(configuration.DatabaseFolder, 0700)
@@ -76,6 +85,8 @@ func newringBuffer(metrics *metrics, configuration *Configuration, size int, dbF
 	}
 
 	return &ringBuffer{
+		ctx:              ctxRingbuffer,
+		cancel:           cancel,
 		bufData:          make(chan samDBValue, size),
 		db:               db,
 		samValueBucket:   samValueBucket,
@@ -107,6 +118,7 @@ func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan samDBValueAnd
 	// Start the process that will handle messages present in the ringbuffer.
 	go r.processBufferMessages(outCh)
 
+	r.wg.Add(1)
 	go func() {
 		ticker := time.NewTicker(time.Second * 5)
 
@@ -114,9 +126,17 @@ func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan samDBValueAnd
 			select {
 			case <-ticker.C:
 				r.dbUpdateMetrics(r.samValueBucket)
+			case <-r.ctx.Done():
+				r.wg.Done()
+				return
 			}
 		}
 	}()
+}
+
+func (r *ringBuffer) stop() {
+	r.cancel()
+	r.wg.Wait()
 }
 
 // fillBuffer will fill the buffer in the ringbuffer  reading from the inchannel.

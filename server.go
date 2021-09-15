@@ -48,6 +48,8 @@ type server struct {
 	// errorKernel is doing all the error handling like what to do if
 	// an error occurs.
 	errorKernel *errorKernel
+	// Ring buffer
+	ringBuffer *ringBuffer
 	// metric exporter
 	metrics *metrics
 	// Version of package
@@ -252,6 +254,8 @@ func (s *server) Start() {
 	}
 
 	// Start the processing of new messages from an input channel.
+	// NB: We might need to create a sub context for the ringbuffer here
+	// so we can cancel this context last, and not use the server.
 	s.routeMessagesToProcess("./incomingBuffer.db")
 
 }
@@ -272,6 +276,8 @@ func (s *server) Stop() {
 	// Stop the main context.
 	s.cancel()
 	log.Printf("info: stopped the main context\n")
+
+	// Stop the ringbuffer.
 
 	// Delete the socket file when the program exits.
 	socketFilepath := filepath.Join(s.configuration.SocketFolder, "steward.sock")
@@ -343,7 +349,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 	const samValueBucket string = "samValueBucket"
 	const indexValueBucket string = "indexValueBucket"
 
-	rb := newringBuffer(s.metrics, s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.newMessagesCh, samValueBucket, indexValueBucket)
+	rb := newringBuffer(s.ctx, s.metrics, s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.newMessagesCh, samValueBucket, indexValueBucket)
 
 	ringBufferInCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValueAndDelivered)
