@@ -33,12 +33,6 @@ type samDBValue struct {
 
 // ringBuffer holds the data of the buffer,
 type ringBuffer struct {
-	// Context for ring buffer.
-	ctx context.Context
-	// Cancel function for ring buffer.
-	cancel context.CancelFunc
-	// Waitgroup for ringbuffer.
-	wg sync.WaitGroup
 	// In memory buffer for the messages.
 	bufData chan samDBValue
 	// The database to use.
@@ -63,7 +57,6 @@ type ringBuffer struct {
 
 // newringBuffer returns a push/pop storage for values.
 func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configuration, size int, dbFileName string, nodeName Node, newMessagesCh chan []subjectAndMessage, samValueBucket string, indexValueBucket string) *ringBuffer {
-	ctxRingbuffer, cancel := context.WithCancel(ctx)
 
 	// Check if socket folder exists, if not create it
 	if _, err := os.Stat(configuration.DatabaseFolder); os.IsNotExist(err) {
@@ -85,8 +78,6 @@ func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configu
 	}
 
 	return &ringBuffer{
-		ctx:              ctxRingbuffer,
-		cancel:           cancel,
 		bufData:          make(chan samDBValue, size),
 		db:               db,
 		samValueBucket:   samValueBucket,
@@ -102,7 +93,7 @@ func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configu
 // start will process incomming messages through the inCh,
 // put the messages on a buffered channel
 // and deliver messages out when requested on the outCh.
-func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan samDBValueAndDelivered, defaultMessageTimeout int, defaultMessageRetries int) {
+func (r *ringBuffer) start(ctx context.Context, inCh chan subjectAndMessage, outCh chan samDBValueAndDelivered, defaultMessageTimeout int, defaultMessageRetries int) {
 
 	// Starting both writing and reading in separate go routines so we
 	// can write and read concurrently.
@@ -118,7 +109,6 @@ func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan samDBValueAnd
 	// Start the process that will handle messages present in the ringbuffer.
 	go r.processBufferMessages(outCh)
 
-	r.wg.Add(1)
 	go func() {
 		ticker := time.NewTicker(time.Second * 5)
 
@@ -126,17 +116,11 @@ func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan samDBValueAnd
 			select {
 			case <-ticker.C:
 				r.dbUpdateMetrics(r.samValueBucket)
-			case <-r.ctx.Done():
-				r.wg.Done()
+			case <-ctx.Done():
 				return
 			}
 		}
 	}()
-}
-
-func (r *ringBuffer) stop() {
-	r.cancel()
-	r.wg.Wait()
 }
 
 // fillBuffer will fill the buffer in the ringbuffer  reading from the inchannel.
