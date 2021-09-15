@@ -55,6 +55,8 @@ type metrics struct {
 	promErrorMessagesReceivedTotal prometheus.Counter
 	// Metrics for sent error messages
 	promErrorMessagesSentTotal prometheus.Counter
+	// Metrics for the amount of messages currently in db.
+	promDBMessagesCurrent prometheus.Gauge
 }
 
 // newMetrics will prepare and return a *metrics.
@@ -154,6 +156,12 @@ func newMetrics(hostAndPort string) *metrics {
 		Help: "Number of error messages sent total",
 	})
 	m.promRegistry.MustRegister(m.promErrorMessagesSentTotal)
+
+	m.promDBMessagesCurrent = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "steward_db_messages_current",
+		Help: "The current value messages in database",
+	})
+	m.promRegistry.MustRegister(m.promDBMessagesCurrent)
 
 	return &m
 }

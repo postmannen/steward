@@ -106,6 +106,17 @@ func (r *ringBuffer) start(inCh chan subjectAndMessage, outCh chan samDBValueAnd
 
 	// Start the process that will handle messages present in the ringbuffer.
 	go r.processBufferMessages(outCh)
+
+	go func() {
+		ticker := time.NewTicker(time.Second * 5)
+
+		for {
+			select {
+			case <-ticker.C:
+				r.dbUpdateMetrics(r.samValueBucket)
+			}
+		}
+	}()
 }
 
 // fillBuffer will fill the buffer in the ringbuffer  reading from the inchannel.
@@ -357,6 +368,19 @@ func (r *ringBuffer) deleteKeyFromBucket(bucket string, key string) error {
 		if err != nil {
 			log.Printf("error: delete key in bucket %v failed: %v\n", bucket, err)
 		}
+
+		return nil
+	})
+
+	return err
+}
+
+// db update metrics.
+func (r *ringBuffer) dbUpdateMetrics(bucket string) error {
+	err := r.db.Update(func(tx *bolt.Tx) error {
+		bu := tx.Bucket([]byte(bucket))
+
+		r.metrics.promDBMessagesCurrent.Set(float64(bu.Stats().KeyN))
 
 		return nil
 	})
