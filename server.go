@@ -278,6 +278,8 @@ func (s *server) Stop() {
 	log.Printf("info: stopped the main context\n")
 
 	// Stop the ringbuffer.
+	s.ringBuffer.stop()
+	log.Printf("info: stopped the ring buffer\n")
 
 	// Delete the socket file when the program exits.
 	socketFilepath := filepath.Join(s.configuration.SocketFolder, "steward.sock")
@@ -349,12 +351,12 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 	const samValueBucket string = "samValueBucket"
 	const indexValueBucket string = "indexValueBucket"
 
-	rb := newringBuffer(s.ctx, s.metrics, s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.newMessagesCh, samValueBucket, indexValueBucket)
+	s.ringBuffer = newringBuffer(s.ctx, s.metrics, s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.newMessagesCh, samValueBucket, indexValueBucket)
 
 	ringBufferInCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValueAndDelivered)
 	// start the ringbuffer.
-	rb.start(ringBufferInCh, ringBufferOutCh, s.configuration.DefaultMessageTimeout, s.configuration.DefaultMessageRetries)
+	s.ringBuffer.start(ringBufferInCh, ringBufferOutCh, s.configuration.DefaultMessageTimeout, s.configuration.DefaultMessageRetries)
 
 	// Start reading new fresh messages received on the incomming message
 	// pipe/file requested, and fill them into the buffer.
