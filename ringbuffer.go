@@ -101,13 +101,13 @@ func (r *ringBuffer) start(ctx context.Context, inCh chan subjectAndMessage, out
 	r.totalMessagesIndex = r.getIndexValue()
 
 	// Fill the buffer when new data arrives into the system
-	go r.fillBuffer(inCh, defaultMessageTimeout, defaultMessageRetries)
+	go r.fillBuffer(ctx, inCh, defaultMessageTimeout, defaultMessageRetries)
 
 	// Start the process to permanently store done messages.
-	go r.startPermanentStore()
+	go r.startPermanentStore(ctx)
 
 	// Start the process that will handle messages present in the ringbuffer.
-	go r.processBufferMessages(outCh)
+	go r.processBufferMessages(ctx, outCh)
 
 	go func() {
 		ticker := time.NewTicker(time.Second * 5)
@@ -125,7 +125,7 @@ func (r *ringBuffer) start(ctx context.Context, inCh chan subjectAndMessage, out
 
 // fillBuffer will fill the buffer in the ringbuffer  reading from the inchannel.
 // It will also store the messages in a K/V DB while being processed.
-func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, defaultMessageTimeout int, defaultMessageRetries int) {
+func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage, defaultMessageTimeout int, defaultMessageRetries int) {
 	// At startup get all the values that might be in the K/V store so we can
 	// put them into the buffer before we start to fill up with new incomming
 	// messages to the system.
@@ -157,146 +157,153 @@ func (r *ringBuffer) fillBuffer(inCh chan subjectAndMessage, defaultMessageTimeo
 
 	// Check for incomming messages. These are typically comming from
 	// the go routine who reads the socket.
-	for v := range inCh {
+	for {
+		select {
+		case v := <-inCh:
+			// Check if the command or event exists in commandOrEvent.go
+			if !coeAvailable.CheckIfExists(v.CommandOrEvent, v.Subject) {
+				er := fmt.Errorf("error: fillBuffer: the event or command type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v, where given: coe=%v, with subject=%v", coeAvailableValues, v.CommandOrEvent, v.Subject)
+				sendErrorLogMessage(r.configuration, r.metrics, r.newMessagesCh, Node(r.nodeName), er)
 
-		// Check if the command or event exists in commandOrEvent.go
-		if !coeAvailable.CheckIfExists(v.CommandOrEvent, v.Subject) {
-			er := fmt.Errorf("error: fillBuffer: the event or command type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v, where given: coe=%v, with subject=%v", coeAvailableValues, v.CommandOrEvent, v.Subject)
-			sendErrorLogMessage(r.configuration, r.metrics, r.newMessagesCh, Node(r.nodeName), er)
+				fmt.Println()
+				// if it was not a valid value, we jump back up, and
+				// continue the range iteration.
+				continue
+			}
 
-			fmt.Println()
-			// if it was not a valid value, we jump back up, and
-			// continue the range iteration.
-			continue
+			// Check if message values for timers override default values
+			if v.Message.ACKTimeout < 1 {
+				v.Message.ACKTimeout = defaultMessageTimeout
+			}
+			if v.Message.Retries < 1 {
+				v.Message.Retries = defaultMessageRetries
+			}
+
+			// --- Store the incomming message in the k/v store ---
+
+			// Get a unique number for the message to use when storing
+			// it in the databases, and also use when further processing.
+			r.mu.Lock()
+			dbID := r.totalMessagesIndex
+			r.mu.Unlock()
+
+			// Create a structure for JSON marshaling.
+			samV := samDBValue{
+				ID:   dbID,
+				Data: v,
+			}
+
+			js, err := json.Marshal(samV)
+			if err != nil {
+				er := fmt.Errorf("error:fillBuffer: json marshaling: %v", err)
+				sendErrorLogMessage(r.configuration, r.metrics, r.newMessagesCh, Node(r.nodeName), er)
+			}
+
+			// Store the incomming message in key/value store
+			err = r.dbUpdate(r.db, r.samValueBucket, strconv.Itoa(dbID), js)
+			if err != nil {
+				er := fmt.Errorf("error: dbUpdate samValue failed: %v", err)
+				sendErrorLogMessage(r.configuration, r.metrics, r.newMessagesCh, Node(r.nodeName), er)
+
+			}
+
+			// Put the message on the inmemory buffer.
+			r.bufData <- samV
+
+			// Increment index, and store the new value to the database.
+			r.mu.Lock()
+			r.totalMessagesIndex++
+			r.dbUpdate(r.db, r.indexValueBucket, "index", []byte(strconv.Itoa(r.totalMessagesIndex)))
+			r.mu.Unlock()
+		case <-ctx.Done():
+			// When done close the buffer channel
+			close(r.bufData)
+			return
 		}
 
-		// Check if message values for timers override default values
-		if v.Message.ACKTimeout < 1 {
-			v.Message.ACKTimeout = defaultMessageTimeout
-		}
-		if v.Message.Retries < 1 {
-			v.Message.Retries = defaultMessageRetries
-		}
-
-		// --- Store the incomming message in the k/v store ---
-
-		// Get a unique number for the message to use when storing
-		// it in the databases, and also use when further processing.
-		r.mu.Lock()
-		dbID := r.totalMessagesIndex
-		r.mu.Unlock()
-
-		// Create a structure for JSON marshaling.
-		samV := samDBValue{
-			ID:   dbID,
-			Data: v,
-		}
-
-		js, err := json.Marshal(samV)
-		if err != nil {
-			er := fmt.Errorf("error:fillBuffer: json marshaling: %v", err)
-			sendErrorLogMessage(r.configuration, r.metrics, r.newMessagesCh, Node(r.nodeName), er)
-		}
-
-		// Store the incomming message in key/value store
-		err = r.dbUpdate(r.db, r.samValueBucket, strconv.Itoa(dbID), js)
-		if err != nil {
-			er := fmt.Errorf("error: dbUpdate samValue failed: %v", err)
-			sendErrorLogMessage(r.configuration, r.metrics, r.newMessagesCh, Node(r.nodeName), er)
-
-		}
-
-		// Put the message on the inmemory buffer.
-		r.bufData <- samV
-
-		// Increment index, and store the new value to the database.
-		r.mu.Lock()
-		r.totalMessagesIndex++
-		r.dbUpdate(r.db, r.indexValueBucket, "index", []byte(strconv.Itoa(r.totalMessagesIndex)))
-		r.mu.Unlock()
 	}
-
-	// When done close the buffer channel
-	close(r.bufData)
 }
 
 // processBufferMessages will pick messages from the buffer, and process them
 // one by one. The messages will be delivered on the outCh, and it will wait
 // until a signal is received on the done channel before it continues with the
 // next message.
-func (r *ringBuffer) processBufferMessages(outCh chan samDBValueAndDelivered) {
+func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDBValueAndDelivered) {
 	// Range over the buffer of messages to pass on to processes.
-	for v := range r.bufData {
-		r.metrics.promInMemoryBufferMessagesCurrent.Set(float64(len(r.bufData)))
+	for {
+		select {
+		case v := <-r.bufData:
+			r.metrics.promInMemoryBufferMessagesCurrent.Set(float64(len(r.bufData)))
 
-		// Create a done channel per message. A process started by the
-		// spawnProcess function will handle incomming messages sequentaly.
-		// So in the spawnProcess function we put a struct{} value when a
-		// message is processed on the "done" channel and an ack is received
-		// for a message, and we wait here for the "done" to be received.
+			// Create a done channel per message. A process started by the
+			// spawnProcess function will handle incomming messages sequentaly.
+			// So in the spawnProcess function we put a struct{} value when a
+			// message is processed on the "done" channel and an ack is received
+			// for a message, and we wait here for the "done" to be received.
 
-		// We start the actual processing of an individual message here within
-		// it's own go routine. Reason is that we don't want to block other
-		// messages to be processed while waiting for the done signal, or if an
-		// error with an individual message occurs.
-		go func(v samDBValue) {
-			v.Data.Message.done = make(chan struct{})
-			delivredCh := make(chan struct{})
+			// We start the actual processing of an individual message here within
+			// it's own go routine. Reason is that we don't want to block other
+			// messages to be processed while waiting for the done signal, or if an
+			// error with an individual message occurs.
+			go func(v samDBValue) {
+				v.Data.Message.done = make(chan struct{})
+				delivredCh := make(chan struct{})
 
-			// Prepare the structure with the data, and a function that can
-			// be called when the data is received for signaling back.
-			sd := samDBValueAndDelivered{
-				samDBValue: v,
-				delivered: func() {
-					delivredCh <- struct{}{}
-				},
-			}
+				// Prepare the structure with the data, and a function that can
+				// be called when the data is received for signaling back.
+				sd := samDBValueAndDelivered{
+					samDBValue: v,
+					delivered: func() {
+						delivredCh <- struct{}{}
+					},
+				}
 
-			outCh <- sd
-			// Just to confirm here that the message was picked up, to know if the
-			// the read process have stalled or not.
-			// For now it will not do anything,
-			select {
-			case <-delivredCh:
-				// OK.
-			case <-time.After(time.Second * 5):
-				// TODO: Check out if more logic should be made here if messages are stuck etc.
-				// Testing with a timeout here to figure out if messages are stuck
-				// waiting for done signal.
-				log.Printf("Error: *** message %v seems to be stuck, did not receive delivered signal from reading process\n", v.ID)
+				outCh <- sd
+				// Just to confirm here that the message was picked up, to know if the
+				// the read process have stalled or not.
+				// For now it will not do anything,
+				select {
+				case <-delivredCh:
+					// OK.
+				case <-time.After(time.Second * 5):
+					// TODO: Check out if more logic should be made here if messages are stuck etc.
+					// Testing with a timeout here to figure out if messages are stuck
+					// waiting for done signal.
+					log.Printf("Error: *** message %v seems to be stuck, did not receive delivered signal from reading process\n", v.ID)
 
-				r.metrics.promRingbufferStalledMessagesTotal.Inc()
-			}
-			// Listen on the done channel here , so a go routine handling the
-			// message will be able to signal back here that the message have
-			// been processed, and that we then can delete it out of the K/V Store.
+					r.metrics.promRingbufferStalledMessagesTotal.Inc()
+				}
+				// Listen on the done channel here , so a go routine handling the
+				// message will be able to signal back here that the message have
+				// been processed, and that we then can delete it out of the K/V Store.
 
-			select {
-			case <-v.Data.done:
-				log.Printf("info: processBufferMessages: done with message, deleting key from bucket, %v\n", v.ID)
-				r.metrics.promMessagesProcessedIDLast.Set(float64(v.ID))
-				// case <-time.After(time.Second * 3):
-				// 	// Testing with a timeout here to figure out if messages are stuck
-				// 	// waiting for done signal.
-				// 	fmt.Printf(" *** Ingo: message %v seems to be stuck, dropping message\n", v.ID)
-			}
+				select {
+				case <-v.Data.done:
+					log.Printf("info: processBufferMessages: done with message, deleting key from bucket, %v\n", v.ID)
+					r.metrics.promMessagesProcessedIDLast.Set(float64(v.ID))
+					// case <-time.After(time.Second * 3):
+					// 	// Testing with a timeout here to figure out if messages are stuck
+					// 	// waiting for done signal.
+					// 	fmt.Printf(" *** Ingo: message %v seems to be stuck, dropping message\n", v.ID)
+				}
 
-			// Since we are now done with the specific message we can delete
-			// it out of the K/V Store.
-			r.deleteKeyFromBucket(r.samValueBucket, strconv.Itoa(v.ID))
+				// Since we are now done with the specific message we can delete
+				// it out of the K/V Store.
+				r.deleteKeyFromBucket(r.samValueBucket, strconv.Itoa(v.ID))
 
-			r.permStore <- fmt.Sprintf("%v : %+v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), v)
+				r.permStore <- fmt.Sprintf("%v : %+v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), v)
 
-			// TODO: REMOVE: Dump the whole KV store
-			// err := r.printBucketContent(samValueBucket)
-			// if err != nil {
-			// 	log.Printf("* Error: dump of db failed: %v\n", err)
-			// }
-		}(v)
-
+				// TODO: REMOVE: Dump the whole KV store
+				// err := r.printBucketContent(samValueBucket)
+				// if err != nil {
+				// 	log.Printf("* Error: dump of db failed: %v\n", err)
+				// }
+			}(v)
+		case <-ctx.Done():
+			//close(outCh)
+			return
+		}
 	}
-
-	close(outCh)
 }
 
 // dumpBucket will dump out all they keys and values in the
@@ -462,7 +469,7 @@ func (r *ringBuffer) dbUpdate(db *bolt.DB, bucket string, key string, value []by
 // handled message to a permanent file.
 // To store a message in the store, send what to store on the
 // ringbuffer.permStore channel.
-func (r *ringBuffer) startPermanentStore() {
+func (r *ringBuffer) startPermanentStore(ctx context.Context) {
 	const storeFile string = "store.log"
 	f, err := os.OpenFile(storeFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
@@ -471,10 +478,14 @@ func (r *ringBuffer) startPermanentStore() {
 	defer f.Close()
 
 	for {
-		d := <-r.permStore
-		_, err := f.WriteString(d)
-		if err != nil {
-			log.Printf("error:failed to write entry: %v\n", err)
+		select {
+		case d := <-r.permStore:
+			_, err := f.WriteString(d)
+			if err != nil {
+				log.Printf("error:failed to write entry: %v\n", err)
+			}
+		case <-ctx.Done():
+			return
 		}
 	}
 
