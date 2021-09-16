@@ -858,8 +858,8 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 	go func() {
 		defer proc.processes.wg.Done()
 
-		c := message.Data[0]
-		a := message.Data[1:]
+		c := message.MethodArgs[0]
+		a := message.MethodArgs[1:]
 
 		ctx, cancel := context.WithTimeout(proc.ctx, time.Second*time.Duration(message.MethodTimeout))
 
@@ -938,8 +938,8 @@ func (m methodREQnCliCommand) handler(proc process, message Message, node string
 	go func() {
 		defer proc.processes.wg.Done()
 
-		c := message.Data[0]
-		a := message.Data[1:]
+		c := message.MethodArgs[0]
+		a := message.MethodArgs[1:]
 
 		ctx, cancel := context.WithTimeout(proc.ctx, time.Second*time.Duration(message.MethodTimeout))
 
@@ -1027,7 +1027,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 	go func() {
 		defer proc.processes.wg.Done()
 
-		url := message.Data[0]
+		url := message.MethodArgs[0]
 
 		client := http.Client{
 			Timeout: time.Second * 5,
@@ -1119,7 +1119,7 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 	go func() {
 		defer proc.processes.wg.Done()
 
-		fp := message.Data[0]
+		fp := message.MethodArgs[0]
 
 		var ctx context.Context
 		var cancel context.CancelFunc
@@ -1205,8 +1205,8 @@ func (m methodREQnCliCommandCont) handler(proc process, message Message, node st
 	go func() {
 		defer proc.processes.wg.Done()
 
-		c := message.Data[0]
-		a := message.Data[1:]
+		c := message.MethodArgs[0]
+		a := message.MethodArgs[1:]
 
 		ctx, cancel := context.WithTimeout(proc.ctx, time.Second*time.Duration(message.MethodTimeout))
 

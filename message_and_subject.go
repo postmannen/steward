@@ -26,10 +26,20 @@ type Message struct {
 	Data []string `json:"data" yaml:"data"`
 	// Method, what request type to use, like REQCliCommand, REQHttpGet..
 	Method Method `json:"method" yaml:"method"`
+	// Additional arguments that might be needed when executing the
+	// method. Can be f.ex. an ip address if it is a tcp sender, or the
+	// shell command to execute in a cli session.
+	// TODO:
+	MethodArgs []string `json:"methodArgs" yaml:"methodArgs"`
 	// ReplyMethod, is the method to use for the reply message.
 	// By default the reply method will be set to log to file, but
 	// you can override it setting your own here.
 	ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
+	// Additional arguments that might be needed when executing the reply
+	// method. Can be f.ex. an ip address if it is a tcp sender, or the
+	// shell command to execute in a cli session.
+	// TODO:
+	ReplyMethodArgs []string `json:"replyMethodArgs" yaml:"replyMethodArgs"`
 	// From what node the message originated
 	FromNode Node
 	// ACKTimeout for waiting for an ack message
