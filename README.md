@@ -80,7 +80,7 @@ Command And Control anything like Servers, Containers, VM's or others by creatin
         "directory":"cli_command__result",
         "fileName": "some-file-name.result",
         "toNode": "ship1",
-        "data": ["bash","-c","sleep 5 & tree ./"],
+        "methodArgs": ["bash","-c","sleep 5 & tree ./"],
         "method":"REQCliCommand",
         "replyMethod":"REQToFileAppend",
         "ACKTimeout":5,
@@ -472,6 +472,10 @@ toNodes
 data
 // Method, what request type to use, like REQCliCommand, REQHttpGet..
 method
+// Additional arguments that might be needed when executing the
+// method. Can be f.ex. an ip address if it is a tcp sender, or the
+// shell command to execute in a cli session.
+MethodArgs []string `json:"methodArgs" yaml:"methodArgs"`
 // ReplyMethod, is the method to use for the reply message.
 // By default the reply method will be set to log to file, but
 // you can override it setting your own here.
@@ -593,7 +597,7 @@ NB: Both the keys and the values used are case sensitive.
         "directory":"/var/steward/cli-command/executed-result",
         "fileName": "some.log",
         "toNode": "ship1",
-        "data": ["bash","-c","sleep 3 & tree ./"],
+        "methodArgs": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",
         "ACKTimeout":10,
         "retries":3,
@@ -610,7 +614,7 @@ NB: Both the keys and the values used are case sensitive.
         "directory":"cli-command-executed-result",
         "fileName": "some.log",
         "toNode": "ship1",
-        "data": ["bash","-c","sleep 3 & tree ./"],
+        "methodArgs": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",
         "ACKTimeout":10,
         "retries":3,
@@ -620,7 +624,7 @@ NB: Both the keys and the values used are case sensitive.
         "directory":"cli-command-executed-result",
         "fileName": "some.log",
         "toNode": "ship2",
-        "data": ["bash","-c","sleep 3 & tree ./"],
+        "methodArgs": ["bash","-c","sleep 3 & tree ./"],
         "method":"REQCliCommand",
         "ACKTimeout":10,
         "retries":3,
@@ -638,7 +642,7 @@ NB: Both the keys and the values used are case sensitive.
         "fileName": "finn.no.html",
         "toNode": "",
         "toNodes": ["central","ship2"],
-        "data": ["https://finn.no"],
+        "methodArgs": ["https://finn.no"],
         "method":"REQHttpGet",
         "replyMethod":"REQToFile",
         "ACKTimeout":5,
@@ -731,7 +735,7 @@ Tail a log file on a node, and save the result of the tail centrally at the dire
         "directory": "./my/log/files/",
         "fileName": "some.log",
         "toNode": "ship2",
-        "data": ["./test.log"],
+        "methodArgs": ["./test.log"],
         "method":"REQTailFile",
         "ACKTimeout":5,
         "retries":3,
