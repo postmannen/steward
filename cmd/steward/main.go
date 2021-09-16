@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"time"
 
-	// _ "net/http/pprof"
+	_ "net/http/pprof"
 
 	"github.com/RaaLabs/steward"
 )
