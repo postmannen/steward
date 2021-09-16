@@ -263,9 +263,9 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 				log.Printf("Retry attempt:%v, retries: %v, ACKTimeout: %v, message.ID: %v\n", retryAttempts, message.Retries, message.ACKTimeout, message.ID)
 
 				switch {
-				case message.Retries == -1:
-					// 0 indicates unlimited retries
-					continue
+				//case message.Retries == 0:
+				//	// 0 indicates unlimited retries
+				//	continue
 				case retryAttempts >= message.Retries:
 					// max retries reached
 					er := fmt.Errorf("info: toNode: %v, fromNode: %v, method: %v: max retries reached, check if node is up and running and if it got a subscriber for the given REQ type", message.ToNode, message.FromNode, message.Method)

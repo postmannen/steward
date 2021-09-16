@@ -195,8 +195,6 @@ Example: We probably want an ACK when sending some CLICommand to be executed, bu
 
 - Timeout's can be specified on both the message, and the method. With other words a message can have a timeout, and for example if the method it will trigger is a shell command it can have it's own timeout so processes can have a timeout if they get stuck.
 
-- Setting the retries to `0` is the same as unlimited retries.
-
 ### Flags and configuration file
 
 Steward supports both the use of flags/arguments set at startup, and the use of a config file. But how it is used might be a little different than how similar use is normally done.
