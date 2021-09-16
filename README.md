@@ -475,11 +475,15 @@ method
 // Additional arguments that might be needed when executing the
 // method. Can be f.ex. an ip address if it is a tcp sender, or the
 // shell command to execute in a cli session.
-MethodArgs []string `json:"methodArgs" yaml:"methodArgs"`
+MethodArgs []string
 // ReplyMethod, is the method to use for the reply message.
 // By default the reply method will be set to log to file, but
 // you can override it setting your own here.
 replyMethod
+// Additional arguments that might be needed when executing the reply
+// method. Can be f.ex. an ip address if it is a tcp sender, or the
+// shell command to execute in a cli session.
+ReplyMethodArgs []string 
 // Initial message Reply ACK wait timeout
 ACKTimeout
 // Normal Resend retries
@@ -490,6 +494,8 @@ replyACKTimeout
 replyRetries
 // Timeout for long a process should be allowed to operate
 methodTimeout
+// Timeout for long a process should be allowed to operate
+ReplyMethodTimeout int
 // Directory is a string that can be used to create the
 //directory structure when saving the result of some method.
 // For example "syslog","metrics", or "metrics/mysensor"

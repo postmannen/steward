@@ -52,6 +52,8 @@ type Message struct {
 	ReplyRetries int `json:"replyRetries" yaml:"replyRetries"`
 	// Timeout for long a process should be allowed to operate
 	MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
+	// Timeout for long a process should be allowed to operate
+	ReplyMethodTimeout int `json:"replyMethodTimeout" yaml:"replyMethodTimeout"`
 	// Directory is a string that can be used to create the
 	//directory structure when saving the result of some method.
 	// For example "syslog","metrics", or "metrics/mysensor"
