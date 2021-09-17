@@ -185,6 +185,7 @@ func (s startup) pubREQHello(p process) {
 				sam, err := newSubjectAndMessage(m)
 				if err != nil {
 					// In theory the system should drop the message before it reaches here.
+					sendErrorLogMessage(proc.configuration, s.metrics, proc.toRingbufferCh, Node(proc.node), err)
 					log.Printf("error: ProcessesStart: %v\n", err)
 				}
 				proc.toRingbufferCh <- []subjectAndMessage{sam}

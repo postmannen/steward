@@ -232,6 +232,7 @@ func (s *server) convertBytesToSAMs(b []byte) ([]subjectAndMessage, error) {
 	for _, m := range MsgSlice {
 		sm, err := newSubjectAndMessage(m)
 		if err != nil {
+			sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), err)
 			log.Printf("error: jsonFromFileData: %v\n", err)
 			continue
 		}
@@ -296,7 +297,7 @@ func newSubjectAndMessage(m Message) (subjectAndMessage, error) {
 
 	tmpH := mt.getHandler(m.Method)
 	if tmpH == nil {
-		return subjectAndMessage{}, fmt.Errorf("error: no such request type defined: %v", tmpH)
+		return subjectAndMessage{}, fmt.Errorf("error: no such request type defined: %v", m.Method)
 	}
 
 	sub := Subject{
