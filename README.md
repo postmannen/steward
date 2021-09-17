@@ -15,15 +15,12 @@ The idea behind Steward is to help out with exactly that, and let you handle the
     - [Logical structure](#logical-structure)
   - [Terminology](#terminology)
   - [Features](#features)
-    - [Messages in order](#messages-in-order)
-    - [Messages not in order](#messages-not-in-order)
     - [Error messages from nodes](#error-messages-from-nodes)
     - [Message handling and threads](#message-handling-and-threads)
     - [Timeouts and retries](#timeouts-and-retries)
     - [Flags and configuration file](#flags-and-configuration-file)
     - [Request Methods](#request-methods)
       - [REQCliCommand](#reqclicommand)
-      - [REQnCliCommand](#reqnclicommand)
       - [REQnCliCommandCont](#reqnclicommandcont)
       - [REQTailFile](#reqtailfile)
       - [REQHttpGet](#reqhttpget)
@@ -100,8 +97,6 @@ Send Shell Commands, HTTP Get, or Tail log files to control your servers by pass
 
 Steward uses Nats as message passing architecture for the commands back and forth from nodes, where delivery is guaranteed, and where all of the processes in the system are running concurrently so if something breaks or some process is slow it will not affect the handling and delivery of the other messages in the system.
 
-By default the system guarantees that the order of the messages are handled by the subscriber in the order they where sent. There have also been implemented a special type `NOSEQ` which will allow messages within that process to be handles in a not sequential manner. This is handy for jobs that will run for a long time, and where other messages are not dependent on it's result.
-
 A node can be a server running any host operating system, a container living in the cloud somewhere, a rapsberry pi, or something else that needs to be controlled that have an operating system installed.
 
 ## Inspiration
@@ -156,16 +151,6 @@ If one process hangs on a long running message method it will not affect the res
 
 ## Features
 
-### Messages in order
-
-- By default the system guarantees that the order of the messages are handled by the subscriber in the order they where sent. So if a network link is down when the message is being sent, it will automatically be rescheduled at the specified interval with the given number of retries.
-
-These types of messages have method starting with `REQ<Method name>`
-
-### Messages not in order
-
-- There have been implemented a special method type `REQn<Method name>` which will allow messages to be handled within that process in a not sequential manner. This is handy for jobs that will run for a long time, and where other messages are not dependent on it's result.
-
 ### Error messages from nodes
 
 - Error messages will be sent back to the central error handler upon failure on a node.
@@ -180,7 +165,7 @@ These types of messages have method starting with `REQ<Method name>`
 
 - Publishing processes will potentially be able to send to all nodes. It is the subscribing nodes who will limit from where and what they will receive from.
 
-- Messages not fully processed or not started yet will be automatically handled in chronological order if the service is restarted since the current state of all the messages being processed are stored on the local node in a key value store until they are finished.
+- Messages not fully processed or not started yet will be automatically rehandled if the service is restarted since the current state of all the messages being processed are stored on the local node in a key value store until they are finished.
 
 - All messages processed by a publisher will be written to a log file as they are processed, with all the information needed to recreate the same message if needed, or it can be used for auditing.
 
@@ -214,12 +199,6 @@ If just getting back to standard default for all config options needed, then del
 Run CLI command on a node. Linux/Windows/Mac/Docker-container or other.
 
 Will run the command given, and return the stdout output of the command when the command is done.
-
-#### REQnCliCommand
-
-Run CLI command on a node. Linux/Windows/Mac/Docker-container or other.
-
-Will run the command given without the execution order guarantee, and return the stdout output of the command when the command is done.
 
 #### REQnCliCommandCont
 
@@ -343,8 +322,6 @@ The location of the config file are given via an env variable at startup (defaul
   StartSubREQPong bool
   // Subscriber for CLICommandRequest
   StartSubREQCliCommand bool
-  // Subscriber for REQnCliCommand
-  StartSubREQnCliCommand bool
   // Subscriber for REQToConsole
   StartSubREQToConsole bool
   // Subscriber for REQHttpGet

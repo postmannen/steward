@@ -72,8 +72,6 @@ type Configuration struct {
 	StartSubREQPong bool
 	// Subscriber for CLICommandRequest
 	StartSubREQCliCommand bool
-	// Subscriber for REQnCliCommand
-	StartSubREQnCliCommand bool
 	// Subscriber for REQToConsole
 	StartSubREQToConsole bool
 	// Subscriber for REQHttpGet
@@ -159,7 +157,6 @@ func newConfigurationDefaults() Configuration {
 		StartSubREQPing:            true,
 		StartSubREQPong:            true,
 		StartSubREQCliCommand:      true,
-		StartSubREQnCliCommand:     true,
 		StartSubREQToConsole:       true,
 		StartSubREQHttpGet:         true,
 		StartSubREQTailFile:        true,
@@ -309,11 +306,6 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.StartSubREQCliCommand = *cf.StartSubREQCliCommand
 	}
-	if cf.StartSubREQnCliCommand == nil {
-		conf.StartSubREQnCliCommand = cd.StartSubREQnCliCommand
-	} else {
-		conf.StartSubREQnCliCommand = *cf.StartSubREQnCliCommand
-	}
 	if cf.StartSubREQToConsole == nil {
 		conf.StartSubREQToConsole = cd.StartSubREQToConsole
 	} else {
@@ -395,7 +387,6 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.StartSubREQPing, "startSubREQPing", fc.StartSubREQPing, "true/false")
 	flag.BoolVar(&c.StartSubREQPong, "startSubREQPong", fc.StartSubREQPong, "true/false")
 	flag.BoolVar(&c.StartSubREQCliCommand, "startSubREQCliCommand", fc.StartSubREQCliCommand, "true/false")
-	flag.BoolVar(&c.StartSubREQnCliCommand, "startSubREQnCliCommand", fc.StartSubREQnCliCommand, "true/false")
 	flag.BoolVar(&c.StartSubREQToConsole, "startSubREQToConsole", fc.StartSubREQToConsole, "true/false")
 	flag.BoolVar(&c.StartSubREQHttpGet, "startSubREQHttpGet", fc.StartSubREQHttpGet, "true/false")
 	flag.BoolVar(&c.StartSubREQTailFile, "startSubREQTailFile", fc.StartSubREQTailFile, "true/false")

@@ -73,18 +73,6 @@ const (
 	// The data field is a slice of strings where the first string
 	// value should be the command, and the following the arguments.
 	REQCliCommand Method = "REQCliCommand"
-	// Execute a CLI command in for example bash or cmd.
-	// This is an event type, where a message will be sent to a
-	// node with the command to execute and an ACK will be replied
-	// if it was delivered succesfully. The output of the command
-	// ran will be delivered back to the node where it was initiated
-	// as a new message.
-	// The NOSEQ method will process messages as they are recived,
-	// and the reply back will be sent as soon as the process is
-	// done. No order are preserved.
-	// The data field is a slice of strings where the first string
-	// value should be the command, and the following the arguments.
-	REQnCliCommand Method = "REQnCliCommand"
 	// REQnCliCommandCont same as normal Cli command, but can be used
 	// when running a command that will take longer time and you want
 	// to send the output of the command continually back as it is
@@ -147,9 +135,6 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				commandOrEvent: CommandACK,
 			},
 			REQCliCommand: methodREQCliCommand{
-				commandOrEvent: CommandACK,
-			},
-			REQnCliCommand: methodREQnCliCommand{
 				commandOrEvent: CommandACK,
 			},
 			REQnCliCommandCont: methodREQnCliCommandCont{
@@ -898,86 +883,6 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQCliCommand: method timed out %v", message)
-			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-		case out := <-outCh:
-			cancel()
-
-			// Prepare and queue for sending a new message with the output
-			// of the action executed.
-			newReplyMessage(proc, message, out)
-		}
-
-	}()
-
-	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
-	return ackMsg, nil
-}
-
-// --- methodCLICommandRequestNOSEQ
-
-type methodREQnCliCommand struct {
-	commandOrEvent CommandOrEvent
-}
-
-func (m methodREQnCliCommand) getKind() CommandOrEvent {
-	return m.commandOrEvent
-}
-
-// handler to run a CLI command with timeout context. The handler will
-// return the output of the command run back to the calling publisher
-// as a new message.
-// The NOSEQ method will process messages as they are recived,
-// and the reply back will be sent as soon as the process is
-// done. No order are preserved.
-func (m methodREQnCliCommand) handler(proc process, message Message, node string) ([]byte, error) {
-	log.Printf("<--- nCLICommand REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
-
-	// Execute the CLI command in it's own go routine, so we are able
-	// to return immediately with an ack reply that the messag was
-	// received, and we create a new message to send back to the calling
-	// node for the out put of the actual command.
-	proc.processes.wg.Add(1)
-	go func() {
-		defer proc.processes.wg.Done()
-
-		c := message.MethodArgs[0]
-		a := message.MethodArgs[1:]
-
-		ctx, cancel := context.WithTimeout(proc.ctx, time.Second*time.Duration(message.MethodTimeout))
-
-		outCh := make(chan []byte)
-
-		proc.processes.wg.Add(1)
-		go func() {
-			defer proc.processes.wg.Done()
-
-			cmd := exec.CommandContext(ctx, c, a...)
-			var out bytes.Buffer
-			var stderr bytes.Buffer
-			cmd.Stdout = &out
-			cmd.Stderr = &stderr
-			err := cmd.Run()
-			if err != nil {
-				if err != nil {
-					log.Printf("error: failed to io.ReadAll of stderr: %v\n", err)
-				}
-
-				er := fmt.Errorf("error: methodREQCliCommand: cmd.Output : %v, message: %v, error_output: %v", err, message, stderr.String())
-				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-				log.Printf("%v\n", er)
-			}
-
-			select {
-			case outCh <- out.Bytes():
-			case <-ctx.Done():
-				return
-			}
-		}()
-
-		select {
-		case <-ctx.Done():
-			cancel()
-			er := fmt.Errorf("error: methodREQnCliCommand: method timed out %v", message)
 			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 		case out := <-outCh:
 			cancel()

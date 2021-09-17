@@ -98,11 +98,6 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQCliCommand(proc)
 	}
 
-	// Start a subscriber for Not In Order Cli Command Request messages
-	if proc.configuration.StartSubREQnCliCommand {
-		proc.startup.subREQnCliCommand(proc)
-	}
-
 	// Start a subscriber for CLICommandReply messages
 	if proc.configuration.StartSubREQToConsole {
 		proc.startup.subREQToConsole(proc)
@@ -210,13 +205,6 @@ func (s startup) pubREQHello(p process) {
 func (s startup) subREQToConsole(p process) {
 	log.Printf("Starting Text To Console subscriber: %#v\n", p.node)
 	sub := newSubject(REQToConsole, string(p.node))
-	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, nil)
-	go proc.spawnWorker(p.processes, p.natsConn)
-}
-
-func (s startup) subREQnCliCommand(p process) {
-	log.Printf("Starting CLICommand Not Sequential Request subscriber: %#v\n", p.node)
-	sub := newSubject(REQnCliCommand, string(p.node))
 	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, nil)
 	go proc.spawnWorker(p.processes, p.natsConn)
 }

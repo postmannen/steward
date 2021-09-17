@@ -56,7 +56,6 @@ func TestStewardServer(t *testing.T) {
 		DefaultMessageTimeout: 3,
 
 		StartSubREQCliCommand:      true,
-		StartSubREQnCliCommand:     true,
 		StartSubREQnCliCommandCont: true,
 		StartSubREQToConsole:       true,
 		StartSubREQToFileAppend:    true,
@@ -83,7 +82,6 @@ func TestStewardServer(t *testing.T) {
 	funcs := []testFunc{
 		checkREQOpCommandTest,
 		checkREQCliCommandTest,
-		checkREQnCliCommandTest,
 		checkREQnCliCommandContTest,
 		// checkREQToConsoleTest(conf, t), NB: No tests will be made for console ouput.
 		// checkREQToFileAppendTest(conf, t), NB: Already tested via others
@@ -174,34 +172,6 @@ func checkREQCliCommandTest(stewardServer *server, conf *Configuration, t *testi
 	}
 
 	t.Logf(" \U0001f600 [SUCCESS]	: checkREQCliCommandTest\n")
-	return nil
-}
-
-// The non-sequential sending of CLI Commands.
-func checkREQnCliCommandTest(stewardServer *server, conf *Configuration, t *testing.T) error {
-	m := `[
-		{
-			"directory":"commands-executed",
-			"fileName":"fileName.result",
-			"toNode": "central",
-			"data": ["bash","-c","echo apekatt"],
-			"replyMethod":"REQToFileAppend",
-			"method":"REQnCliCommand",
-			"ACKTimeout":3,
-			"retries":3,
-			"methodTimeout": 10
-		}
-	]`
-
-	writeToSocketTest(conf, m, t)
-
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "fileName.result")
-	_, err := findStringInFileTest("apekatt", resultFile, conf, t)
-	if err != nil {
-		return fmt.Errorf(" [FAILED]	: checkREQnCliCommandTest: %v", err)
-	}
-
-	t.Logf(" \U0001f600 [SUCCESS]	: checkREQnCliCommandTest\n")
 	return nil
 }
 
