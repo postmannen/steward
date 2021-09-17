@@ -116,8 +116,8 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQTailFile(proc)
 	}
 
-	if proc.configuration.StartSubREQnCliCommandCont {
-		proc.startup.subREQnCliCommandCont(proc)
+	if proc.configuration.StartSubREQCliCommandCont {
+		proc.startup.subREQCliCommandCont(proc)
 	}
 
 	proc.startup.subREQToSocket(proc)
@@ -299,9 +299,9 @@ func (s startup) subREQTailFile(p process) {
 	go proc.spawnWorker(p.processes, p.natsConn)
 }
 
-func (s startup) subREQnCliCommandCont(p process) {
+func (s startup) subREQCliCommandCont(p process) {
 	log.Printf("Starting cli command with continous delivery: %#v\n", p.node)
-	sub := newSubject(REQnCliCommandCont, string(p.node))
+	sub := newSubject(REQCliCommandCont, string(p.node))
 	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, nil)
 	// fmt.Printf("*** %#v\n", proc)
 	go proc.spawnWorker(p.processes, p.natsConn)

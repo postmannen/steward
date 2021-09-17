@@ -79,7 +79,7 @@ type Configuration struct {
 	// Subscriber for tailing log files
 	StartSubREQTailFile bool
 	// Subscriber for continously delivery of output from cli commands.
-	StartSubREQnCliCommandCont bool
+	StartSubREQCliCommandCont bool
 }
 
 // ConfigurationFromFile should have the same structure as
@@ -87,38 +87,37 @@ type Configuration struct {
 // configuration values from file, so we are able to detect
 // if a value were given or not when parsing.
 type ConfigurationFromFile struct {
-	ConfigFolder               *string
-	SocketFolder               *string
-	TCPListener                *string
-	HTTPListener               *string
-	DatabaseFolder             *string
-	NodeName                   *string
-	BrokerAddress              *string
-	NatsConnectRetryInterval   *int
-	ProfilingPort              *string
-	PromHostAndPort            *string
-	DefaultMessageTimeout      *int
-	DefaultMessageRetries      *int
-	SubscribersDataFolder      *string
-	CentralNodeName            *string
-	RootCAPath                 *string
-	NkeySeedFile               *string
-	ExposeDataFolder           *string
-	ErrorMessageTimeout        *int
-	ErrorMessageRetries        *int
-	StartPubREQHello           *int
-	StartSubREQErrorLog        *bool
-	StartSubREQHello           *bool
-	StartSubREQToFileAppend    *bool
-	StartSubREQToFile          *bool
-	StartSubREQPing            *bool
-	StartSubREQPong            *bool
-	StartSubREQCliCommand      *bool
-	StartSubREQnCliCommand     *bool
-	StartSubREQToConsole       *bool
-	StartSubREQHttpGet         *bool
-	StartSubREQTailFile        *bool
-	StartSubREQnCliCommandCont *bool
+	ConfigFolder              *string
+	SocketFolder              *string
+	TCPListener               *string
+	HTTPListener              *string
+	DatabaseFolder            *string
+	NodeName                  *string
+	BrokerAddress             *string
+	NatsConnectRetryInterval  *int
+	ProfilingPort             *string
+	PromHostAndPort           *string
+	DefaultMessageTimeout     *int
+	DefaultMessageRetries     *int
+	SubscribersDataFolder     *string
+	CentralNodeName           *string
+	RootCAPath                *string
+	NkeySeedFile              *string
+	ExposeDataFolder          *string
+	ErrorMessageTimeout       *int
+	ErrorMessageRetries       *int
+	StartPubREQHello          *int
+	StartSubREQErrorLog       *bool
+	StartSubREQHello          *bool
+	StartSubREQToFileAppend   *bool
+	StartSubREQToFile         *bool
+	StartSubREQPing           *bool
+	StartSubREQPong           *bool
+	StartSubREQCliCommand     *bool
+	StartSubREQToConsole      *bool
+	StartSubREQHttpGet        *bool
+	StartSubREQTailFile       *bool
+	StartSubREQCliCommandCont *bool
 }
 
 // NewConfiguration will return a *Configuration.
@@ -150,17 +149,17 @@ func newConfigurationDefaults() Configuration {
 		ErrorMessageTimeout:      60,
 		ErrorMessageRetries:      10,
 
-		StartSubREQErrorLog:        true,
-		StartSubREQHello:           true,
-		StartSubREQToFileAppend:    true,
-		StartSubREQToFile:          true,
-		StartSubREQPing:            true,
-		StartSubREQPong:            true,
-		StartSubREQCliCommand:      true,
-		StartSubREQToConsole:       true,
-		StartSubREQHttpGet:         true,
-		StartSubREQTailFile:        true,
-		StartSubREQnCliCommandCont: true,
+		StartSubREQErrorLog:       true,
+		StartSubREQHello:          true,
+		StartSubREQToFileAppend:   true,
+		StartSubREQToFile:         true,
+		StartSubREQPing:           true,
+		StartSubREQPong:           true,
+		StartSubREQCliCommand:     true,
+		StartSubREQToConsole:      true,
+		StartSubREQHttpGet:        true,
+		StartSubREQTailFile:       true,
+		StartSubREQCliCommandCont: true,
 	}
 	return c
 }
@@ -321,10 +320,10 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.StartSubREQTailFile = *cf.StartSubREQTailFile
 	}
-	if cf.StartSubREQnCliCommandCont == nil {
-		conf.StartSubREQnCliCommandCont = cd.StartSubREQnCliCommandCont
+	if cf.StartSubREQCliCommandCont == nil {
+		conf.StartSubREQCliCommandCont = cd.StartSubREQCliCommandCont
 	} else {
-		conf.StartSubREQnCliCommandCont = *cf.StartSubREQnCliCommandCont
+		conf.StartSubREQCliCommandCont = *cf.StartSubREQCliCommandCont
 	}
 
 	return conf
@@ -390,7 +389,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.StartSubREQToConsole, "startSubREQToConsole", fc.StartSubREQToConsole, "true/false")
 	flag.BoolVar(&c.StartSubREQHttpGet, "startSubREQHttpGet", fc.StartSubREQHttpGet, "true/false")
 	flag.BoolVar(&c.StartSubREQTailFile, "startSubREQTailFile", fc.StartSubREQTailFile, "true/false")
-	flag.BoolVar(&c.StartSubREQnCliCommandCont, "startSubREQnCliCommandCont", fc.StartSubREQnCliCommandCont, "true/false")
+	flag.BoolVar(&c.StartSubREQCliCommandCont, "startSubREQCliCommandCont", fc.StartSubREQCliCommandCont, "true/false")
 
 	flag.Parse()
 

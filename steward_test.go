@@ -55,15 +55,15 @@ func TestStewardServer(t *testing.T) {
 		DefaultMessageRetries: 1,
 		DefaultMessageTimeout: 3,
 
-		StartSubREQCliCommand:      true,
-		StartSubREQnCliCommandCont: true,
-		StartSubREQToConsole:       true,
-		StartSubREQToFileAppend:    true,
-		StartSubREQToFile:          true,
-		StartSubREQHello:           true,
-		StartSubREQErrorLog:        true,
-		StartSubREQHttpGet:         true,
-		StartSubREQTailFile:        true,
+		StartSubREQCliCommand:     true,
+		StartSubREQCliCommandCont: true,
+		StartSubREQToConsole:      true,
+		StartSubREQToFileAppend:   true,
+		StartSubREQToFile:         true,
+		StartSubREQHello:          true,
+		StartSubREQErrorLog:       true,
+		StartSubREQHttpGet:        true,
+		StartSubREQTailFile:       true,
 		// StartSubREQToSocket:		flagNodeSlice{OK: true, Values: []Node{"*"}},
 	}
 	stewardServer, err := NewServer(conf, "test")
@@ -82,7 +82,7 @@ func TestStewardServer(t *testing.T) {
 	funcs := []testFunc{
 		checkREQOpCommandTest,
 		checkREQCliCommandTest,
-		checkREQnCliCommandContTest,
+		checkREQCliCommandContTest,
 		// checkREQToConsoleTest(conf, t), NB: No tests will be made for console ouput.
 		// checkREQToFileAppendTest(conf, t), NB: Already tested via others
 		// checkREQToFileTest(conf, t), NB: Already tested via others
@@ -176,7 +176,7 @@ func checkREQCliCommandTest(stewardServer *server, conf *Configuration, t *testi
 }
 
 // The continous non-sequential sending of CLI Commands.
-func checkREQnCliCommandContTest(stewardServer *server, conf *Configuration, t *testing.T) error {
+func checkREQCliCommandContTest(stewardServer *server, conf *Configuration, t *testing.T) error {
 	m := `[
 		{
 			"directory":"commands-executed",
@@ -184,7 +184,7 @@ func checkREQnCliCommandContTest(stewardServer *server, conf *Configuration, t *
 			"toNode": "central",
 			"data": ["bash","-c","echo apekatt && sleep 5 && echo gris"],
 			"replyMethod":"REQToFileAppend",
-			"method":"REQnCliCommandCont",
+			"method":"REQCliCommandCont",
 			"ACKTimeout":3,
 			"retries":3,
 			"methodTimeout": 5
@@ -196,10 +196,10 @@ func checkREQnCliCommandContTest(stewardServer *server, conf *Configuration, t *
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "fileName.result")
 	_, err := findStringInFileTest("apekatt", resultFile, conf, t)
 	if err != nil {
-		return fmt.Errorf(" [FAILED]	: checkREQnCliCommandContTest: %v", err)
+		return fmt.Errorf(" [FAILED]	: checkREQCliCommandContTest: %v", err)
 	}
 
-	t.Logf(" \U0001f600 [SUCCESS]	: checkREQnCliCommandContTest\n")
+	t.Logf(" \U0001f600 [SUCCESS]	: checkREQCliCommandContTest\n")
 	return nil
 }
 

@@ -21,7 +21,7 @@ The idea behind Steward is to help out with exactly that, and let you handle the
     - [Flags and configuration file](#flags-and-configuration-file)
     - [Request Methods](#request-methods)
       - [REQCliCommand](#reqclicommand)
-      - [REQnCliCommandCont](#reqnclicommandcont)
+      - [REQCliCommandCont](#reqclicommandcont)
       - [REQTailFile](#reqtailfile)
       - [REQHttpGet](#reqhttpget)
       - [REQHello](#reqhello)
@@ -200,7 +200,7 @@ Run CLI command on a node. Linux/Windows/Mac/Docker-container or other.
 
 Will run the command given, and return the stdout output of the command when the command is done.
 
-#### REQnCliCommandCont
+#### REQCliCommandCont
 
 Run CLI command on a node. Linux/Windows/Mac/Docker-container or other.
 
@@ -329,7 +329,7 @@ The location of the config file are given via an env variable at startup (defaul
   // Subscriber for tailing log files
   StartSubREQTailFile bool
   // Subscriber for continously delivery of output from cli commands.
-  StartSubREQnCliCommandCont bool
+  StartSubREQCliCommandCont bool
 ```
 
 ### How to Run
@@ -554,7 +554,7 @@ and another example
         "operation":{
             "opCmd":"startProc",
             "opArg": {
-                "method": "REQnCliCommandCont",
+                "method": "REQCliCommandCont",
                 "allowedNodes": ["central"]
             }
         },

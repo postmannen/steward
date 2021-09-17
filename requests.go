@@ -73,11 +73,11 @@ const (
 	// The data field is a slice of strings where the first string
 	// value should be the command, and the following the arguments.
 	REQCliCommand Method = "REQCliCommand"
-	// REQnCliCommandCont same as normal Cli command, but can be used
+	// REQCliCommandCont same as normal Cli command, but can be used
 	// when running a command that will take longer time and you want
 	// to send the output of the command continually back as it is
-	// generated, and not just when the command is finished.
-	REQnCliCommandCont Method = "REQnCliCommandCont"
+	// generated, and not wait until the command is finished.
+	REQCliCommandCont Method = "REQCliCommandCont"
 	// Send text to be logged to the console.
 	// The data field is a slice of strings where the first string
 	// value should be the command, and the following the arguments.
@@ -137,7 +137,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQCliCommand: methodREQCliCommand{
 				commandOrEvent: CommandACK,
 			},
-			REQnCliCommandCont: methodREQnCliCommandCont{
+			REQCliCommandCont: methodREQCliCommandCont{
 				commandOrEvent: CommandACK,
 			},
 			REQToConsole: methodREQToConsole{
@@ -1089,19 +1089,19 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 }
 
 // ---
-type methodREQnCliCommandCont struct {
+type methodREQCliCommandCont struct {
 	commandOrEvent CommandOrEvent
 }
 
-func (m methodREQnCliCommandCont) getKind() CommandOrEvent {
+func (m methodREQCliCommandCont) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-// Handler to run REQnCliCommandCont, which is the same as normal
+// Handler to run REQCliCommandCont, which is the same as normal
 // Cli command, but can be used when running a command that will take
 // longer time and you want to send the output of the command continually
 // back as it is generated, and not just when the command is finished.
-func (m methodREQnCliCommandCont) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodREQCliCommandCont) handler(proc process, message Message, node string) ([]byte, error) {
 	log.Printf("<--- CLInCommandCont REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 
 	// Execute the CLI command in it's own go routine, so we are able
@@ -1129,7 +1129,7 @@ func (m methodREQnCliCommandCont) handler(proc process, message Message, node st
 			// able to read the out put of the command.
 			outReader, err := cmd.StdoutPipe()
 			if err != nil {
-				er := fmt.Errorf("error: methodREQnCliCommandCont: cmd.StdoutPipe failed : %v, message: %v", err, message)
+				er := fmt.Errorf("error: methodREQCliCommandCont: cmd.StdoutPipe failed : %v, message: %v", err, message)
 				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 				log.Printf("%v\n", er)
 
@@ -1138,7 +1138,7 @@ func (m methodREQnCliCommandCont) handler(proc process, message Message, node st
 
 			ErrorReader, err := cmd.StderrPipe()
 			if err != nil {
-				er := fmt.Errorf("error: methodREQnCliCommandCont: cmd.StderrPipe failed : %v, message: %v", err, message)
+				er := fmt.Errorf("error: methodREQCliCommandCont: cmd.StderrPipe failed : %v, message: %v", err, message)
 				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 				log.Printf("%v\n", er)
 
@@ -1146,7 +1146,7 @@ func (m methodREQnCliCommandCont) handler(proc process, message Message, node st
 			}
 
 			if err := cmd.Start(); err != nil {
-				er := fmt.Errorf("error: methodREQnCliCommandCont: cmd.Start failed : %v, message: %v", err, message)
+				er := fmt.Errorf("error: methodREQCliCommandCont: cmd.Start failed : %v, message: %v", err, message)
 				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 				log.Printf("%v\n", er)
 
@@ -1163,7 +1163,7 @@ func (m methodREQnCliCommandCont) handler(proc process, message Message, node st
 				for scanner.Scan() {
 					select {
 					case errCh <- scanner.Text():
-						er := fmt.Errorf("error: methodREQnCliCommandCont: cmd.Start failed : %v, message: %v, error_output: %v", err, message, <-errCh)
+						er := fmt.Errorf("error: methodREQCliCommandCont: cmd.Start failed : %v, message: %v, error_output: %v", err, message, <-errCh)
 						sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 						log.Printf("%v\n", er)
 					case <-ctx.Done():
@@ -1189,7 +1189,7 @@ func (m methodREQnCliCommandCont) handler(proc process, message Message, node st
 			select {
 			case <-ctx.Done():
 				cancel()
-				er := fmt.Errorf("info: methodREQnCliCommandCont: method timeout reached, canceling: %v", message)
+				er := fmt.Errorf("info: methodREQCliCommandCont: method timeout reached, canceling: %v", message)
 				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 				return
 			case out := <-outCh:

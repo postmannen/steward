@@ -296,7 +296,7 @@ func newSubjectAndMessage(m Message) (subjectAndMessage, error) {
 
 	tmpH := mt.getHandler(m.Method)
 	if tmpH == nil {
-		return subjectAndMessage{}, fmt.Errorf("error: method value did not exist in map")
+		return subjectAndMessage{}, fmt.Errorf("error: no such request type defined: %v", tmpH)
 	}
 
 	sub := Subject{
