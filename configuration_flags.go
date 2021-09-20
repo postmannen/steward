@@ -55,6 +55,10 @@ type Configuration struct {
 	ErrorMessageTimeout int
 	// Retries for error messages.
 	ErrorMessageRetries int
+
+	// NOTE:
+	// Op commands will not be specified as a flag since they can't be turned off.
+
 	// Make the current node send hello messages to central at given interval in seconds
 	StartPubREQHello int
 	// Start the central error logger.

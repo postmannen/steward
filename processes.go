@@ -55,10 +55,24 @@ func (p *processes) Start(proc process) {
 
 	// --- Subscriber services that can be started via flags
 
-	// Allways start an REQOpCommand subscriber
+	// Allways start the listeners for Op commands
 	{
 		log.Printf("Starting REQOpCommand subscriber: %#v\n", proc.node)
 		sub := newSubject(REQOpCommand, string(proc.node))
+		proc := newProcess(proc.ctx, p.metrics, proc.natsConn, p, proc.toRingbufferCh, proc.configuration, sub, proc.errorCh, processKindSubscriber, nil)
+		go proc.spawnWorker(proc.processes, proc.natsConn)
+	}
+
+	{
+		log.Printf("Starting REQOpProcessList subscriber: %#v\n", proc.node)
+		sub := newSubject(REQOpProcessList, string(proc.node))
+		proc := newProcess(proc.ctx, p.metrics, proc.natsConn, p, proc.toRingbufferCh, proc.configuration, sub, proc.errorCh, processKindSubscriber, nil)
+		go proc.spawnWorker(proc.processes, proc.natsConn)
+	}
+
+	{
+		log.Printf("Starting REQOpProcessStart subscriber: %#v\n", proc.node)
+		sub := newSubject(REQOpProcessStart, string(proc.node))
 		proc := newProcess(proc.ctx, p.metrics, proc.natsConn, p, proc.toRingbufferCh, proc.configuration, sub, proc.errorCh, processKindSubscriber, nil)
 		go proc.spawnWorker(proc.processes, proc.natsConn)
 	}
