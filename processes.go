@@ -77,6 +77,13 @@ func (p *processes) Start(proc process) {
 		go proc.spawnWorker(proc.processes, proc.natsConn)
 	}
 
+	{
+		log.Printf("Starting REQOpProcessStop subscriber: %#v\n", proc.node)
+		sub := newSubject(REQOpProcessStop, string(proc.node))
+		proc := newProcess(proc.ctx, p.metrics, proc.natsConn, p, proc.toRingbufferCh, proc.configuration, sub, proc.errorCh, processKindSubscriber, nil)
+		go proc.spawnWorker(proc.processes, proc.natsConn)
+	}
+
 	// Start a subscriber for textLogging messages
 	if proc.configuration.StartSubREQToFileAppend {
 		proc.startup.subREQToFileAppend(proc)
