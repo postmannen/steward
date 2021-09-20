@@ -375,7 +375,7 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			// be returned in the reply message.
 			for _, idMap := range proc.processes.active {
 				for _, v := range idMap {
-					s := fmt.Sprintf("%v, proc: %v, id: %v, name: %v, allowed from: %s\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), v.processKind, v.processID, v.subject.name(), v.allowedReceivers)
+					s := fmt.Sprintf("%v, proc: %v, id: %v, name: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), v.processKind, v.processID, v.subject.name())
 					sb := []byte(s)
 					out = append(out, sb...)
 				}
@@ -529,7 +529,7 @@ func (m methodREQOpProcessList) handler(proc process, message Message, node stri
 		// be returned in the reply message.
 		for _, idMap := range proc.processes.active {
 			for _, v := range idMap {
-				s := fmt.Sprintf("%v, process: %v, id: %v, name: %v, allowed from: %s\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), v.processKind, v.processID, v.subject.name(), v.allowedReceivers)
+				s := fmt.Sprintf("%v, process: %v, id: %v, name: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), v.processKind, v.processID, v.subject.name())
 				sb := []byte(s)
 				out = append(out, sb...)
 			}

@@ -43,7 +43,7 @@ type process struct {
 	errorCh     chan errProcess
 	processKind processKind
 	// Who are we allowed to receive from ?
-	allowedReceivers map[Node]struct{}
+	// allowedReceivers map[Node]struct{}
 	// methodsAvailable
 	methodsAvailable MethodsAvailable
 	// Helper or service function that can do some kind of work
