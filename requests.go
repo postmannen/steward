@@ -619,18 +619,19 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 		// real method for the message.
 		var mt Method
 
-		if v := len(message.MethodArgs); v != 4 {
+		if v := len(message.MethodArgs); v != 3 {
 			er := fmt.Errorf("error: OpProcessStop: methodArgs should contain 4 elements, found %v", v)
 			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 			return
 		}
 
+		fmt.Printf(" * DEBUG : message.ToNode: %v\n", message.ToNode)
+
 		// --- Parse and check the method arguments given.
 		fmt.Printf(" * DEBUG : %v\n", message.MethodArgs)
 		methodString := message.MethodArgs[0]
-		node := message.MethodArgs[1]
-		kind := message.MethodArgs[2]
-		idString := message.MethodArgs[3]
+		kind := message.MethodArgs[1]
+		idString := message.MethodArgs[2]
 
 		method := Method(methodString)
 		tmpH := mt.getHandler(Method(method))
