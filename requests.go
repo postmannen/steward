@@ -45,6 +45,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hpcloud/tail"
@@ -1066,6 +1067,20 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 	proc.processes.wg.Add(1)
 	go func() {
 		defer proc.processes.wg.Done()
+
+		// Check if {{data}} is defined in the arguments. If found put the
+		// data payload there.
+		for i, v := range message.MethodArgs {
+			if strings.Contains(v, "{{data}}") {
+				var s string
+				for _, vv := range message.Data {
+					s = s + vv
+				}
+
+				message.MethodArgs[i] = s
+
+			}
+		}
 
 		c := message.MethodArgs[0]
 		a := message.MethodArgs[1:]

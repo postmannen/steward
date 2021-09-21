@@ -239,7 +239,7 @@ Steward supports both the use of flags/arguments set at startup, and the use of 
 
 - A default config file will be created at first startup if one does not exist
   - The default config will contain default values.
-  - Any value also provided via a flag will also be written to the config file. 
+  - Any value also provided via a flag will also be written to the config file.
 - If **Steward** is restarted, the current content of the config file will be used as the new defaults. 
   - If you restart Steward without any flags specified, the values of the last run will be read from the config file.
 - If new values are provided via CLI flags, they will take **precedence** over the ones currently in the config file.
