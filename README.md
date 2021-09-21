@@ -1,6 +1,6 @@
 # steward
 
-Command & Control systems that are either always online or occasionally available online. Similar to Servers or IOT platforms where the link for reaching them can be a not-always-connected satellite links, GSM connections, or even reliable fiber links that might fail.
+Command & Control systems that are either always online or occasionally available online. Similar to Servers or IOT platforms where the link for reaching them can be stable wire/fibre LAN connections, or not-always-connected satellite links or GSM connections, or devices available over WAN connections.
 
 The idea behind Steward is to help out with exactly these issues, allowing you to handle the state of your servers/containers/nodes.
 
@@ -12,6 +12,7 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
   - [Publishing and Subscribing processes](#publishing-and-subscribing-processes)
     - [Publisher](#publisher)
     - [Subscriber](#subscriber)
+    - [All parts involved](#all-parts-involved)
     - [Logical structure](#logical-structure)
   - [Terminology](#terminology)
   - [Features](#features)
@@ -19,6 +20,7 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
     - [Message handling and threads](#message-handling-and-threads)
     - [Timeouts and retries](#timeouts-and-retries)
     - [Flags and configuration file](#flags-and-configuration-file)
+    - [Schema for the messages to send into Steward via the API's](#schema-for-the-messages-to-send-into-steward-via-the-apis)
     - [Request Methods](#request-methods)
       - [REQOpProcessList](#reqopprocesslist)
       - [REQOpProcessStart](#reqopprocessstart)
@@ -43,11 +45,12 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
       - [Nkey Authentication](#nkey-authentication)
       - [nats-server (the message broker)](#nats-server-the-message-broker)
         - [Server config with nkey authentication](#server-config-with-nkey-authentication)
-      - [Steward](#steward-1)
+      - [Examples for running Steward](#examples-for-running-steward)
+        - [Minimum config example](#minimum-config-example)
+        - [More details config example](#more-details-config-example)
     - [Message fields explanation](#message-fields-explanation)
     - [How to send a Message](#how-to-send-a-message)
       - [Send to socket with netcat](#send-to-socket-with-netcat)
-      - [The current `operation`'s that are available are](#the-current-operations-that-are-available-are)
       - [Sending a command from one Node to Another Node](#sending-a-command-from-one-node-to-another-node)
         - [Example JSON for appending a message of type command into the `socket` file](#example-json-for-appending-a-message-of-type-command-into-the-socket-file)
         - [Specify more messages at once do](#specify-more-messages-at-once-do)
@@ -55,6 +58,7 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
         - [Send an Op Command message for process listing with custom timeout and amount of retries](#send-an-op-command-message-for-process-listing-with-custom-timeout-and-amount-of-retries)
         - [Send and Op Command to stop a subscriber on a node](#send-and-op-command-to-stop-a-subscriber-on-a-node)
         - [Send and Op Command to start a subscriber on a node](#send-and-op-command-to-start-a-subscriber-on-a-node)
+        - [Tail a log file on a node, and save the result of the tail centrally at the directory specified](#tail-a-log-file-on-a-node-and-save-the-result-of-the-tail-centrally-at-the-directory-specified)
   - [Concepts/Ideas](#conceptsideas)
     - [Naming](#naming)
       - [Subject](#subject)
@@ -94,21 +98,33 @@ An example of a **request method** to feed into the system. All fields are expla
 ]
 ```
 
-If the receiver `toNode` is down when the message was sent, it will be retried until delivered within the criterias set for `timeouts` and `retries`.
+If the receiver `toNode` is down when the message was sent, it will be **retried** until delivered within the criterias set for `timeouts` and `retries`. The state of each message processed is handled by the owning steward instance where the message originated, and no state about the messages are handled in the message broker.
+
+Since the initial connection from a Steward node is outbound towards the central message broker no inbound firewall openings are needed.
 
 ## Overview
 
-Send Shell Commands, HTTP Get, or Tail log files to control your servers by passing a message that will have guaranteed delivery if/when the subsribing node is available. Or for example send logs or metrics from an end node back to a central log subscriber. The result of the method executed will be delivered back to you from the node you sent it from.
+Send Request Methods to control your servers by passing a messages that will have guaranteed delivery  based on the criteries set, and when/if the receiving node is available. The result of the method executed will be delivered back to you from the node you sent it from.
 
-Steward uses Nats as message passing architecture for the commands back and forth from nodes, where delivery is guaranteed, and where all of the processes in the system are running concurrently so if something breaks or some process is slow it will not affect the handling and delivery of the other messages in the system.
+Examples of Request Methods:
 
-A node can be a server running any host operating system, a container living in the cloud somewhere, a rapsberry pi, or something else that needs to be controlled that have an operating system installed.
+- **Any** shell command or script of your own choice.
+- HTTP Get.
+- Tail log files.
+
+Steward uses **NATS** as message passing architecture for the commands back and forth from nodes. Delivery is guaranteed within the criterias set. All of the processes in the system are running concurrently, so if something breaks or some process is slow it will not affect the handling and delivery of the other messages in the system.
+
+A node can be a server running any host operating system, a container living in the cloud somewhere, a Rapsberry Pi, or something else that needs to be controlled that have an operating system installed.
+
+Steward can be compiled to run on all major architectures like **x86**, **amd64**,**arm64**, **ppc64** and more, with for example operating systems like **Linux**, **OSX**, **Windows** and **Android**.
 
 ## Inspiration
 
 The idea for how to handle processes, messages and errors are based on Joe Armstrongs idea behind Erlang described in his Thesis <https://erlang.org/download/armstrong_thesis_2003.pdf>.
 
-Joe's documents describes how to build a system where everything is based on sending messages back and forth between processes in Erlang, and where everything is done concurrently. I used those ideas as inspiration for building a fully concurrent system to control servers or container based systems by passing  messages between processes asynchronously to execute methods, handle errors if they occur, or handle the retrying if something fails.
+Joe's document describes how to build a system where everything is based on sending messages back and forth between processes in Erlang, and where everything is done concurrently.
+
+I used those ideas as inspiration for building a fully concurrent system to control servers or container based systems by passing  messages between processes asynchronously to execute methods, handle errors, or handle the retrying if something fails.
 
 Steward is written in programming language Go with NATS as the message broker.
 
@@ -130,29 +146,33 @@ If one process hangs on a long running message method it will not affect the res
 
 ### Publisher
 
-- A message in valid format is appended to the in socket.
-- The message is picked up by the system and put on a FIFO ringbuffer.
-- The method type of the message is checked, a subject is created based on the content of the message,  and a publisher process to handle the message type for that specific receiving node is started if it does not exist.
-- The message is then serialized to binary format, and sent to the subscriber on the receiving node.
-- If the message is expected to be ACK'ed by the subcriber then the publisher will wait for an ACK if the message was delivered. If an ACK was not received within the defined timeout the message will be resent. The amount of retries are defined within the message.
+1. A message in valid format is appended to the in socket.
+1. The message is picked up by the system and put on a FIFO ringbuffer.
+1. The method type of the message is checked, a subject is created based on the content of the message,  and a publisher process to handle the message type for that specific receiving node is started if it does not exist.
+1. The message is then serialized to binary format, and sent to the subscriber on the receiving node.
+1. If the message is expected to be ACK'ed by the subcriber then the publisher will wait for an ACK if the message was delivered. If an ACK was not received within the defined timeout the message will be resent. The amount of retries are defined within the message.
 
 ### Subscriber
 
-- The receiving end will need to have a subscriber process started on a specific subject and be allowed handle messages from the sending nodes to execute the method defined in the message.
-- When a message have been deserialized, it will lookup the correct handler for the method type specified within the message, and execute that handler.
-- If the output of the method called is supposed to be returned to the publiser it will do so by using the replyMethod specified, and pick up the next message in the queue.
+1. The receiving end will need to have a subscriber process started on a specific subject and be allowed handle messages from the sending nodes to execute the method defined in the message.
+1. When a message have been deserialized, it will lookup the correct handler for the method type specified within the message, and execute that handler.
+1. If the output of the method called is supposed to be returned to the publiser it will do so by using the replyMethod specified, and pick up the next message in the queue.
 
-### Logical structure
+### All parts involved
 
 ![overview](doc/steward.svg)
 
+### Logical structure
+
+TODO: Make a diagram here...
+
 ## Terminology
 
-- Node: Something with an operating system that have network available. This can be a server, a cloud instance, a container, or other.
-- Process: A message handler that knows how to handle messages of a given subject concurrently.
-- Message:
-  - Command: Something to be executed on the message received. An example can be a shell command.
-  - Event: Something that have happened. An example can be transfer of syslog data from a host.
+- **Node**: Something with an operating system that have network available. This can be a server, a cloud instance, a container, or other.
+- **Process**: A message handler that knows how to handle messages of a given subject concurrently.
+- **Message**:
+  - **Command**: Something to be executed on the message received. An example can be a shell command.
+  - **Event**: Something that have happened. An example can be transfer of syslog data from a host.
 
 ## Features
 
@@ -160,42 +180,91 @@ If one process hangs on a long running message method it will not affect the res
 
 - Error messages will be sent back to the central error handler upon failure on a node.
 
+```log
+Tue Sep 21 09:17:55 2021, info: toNode: ship2, fromNode: central, method: REQOpProcessList: max retries reached, check if node is up and running and if it got a subscriber for the given REQ type
+```
+
 ### Message handling and threads
 
-- The handling of all messages is done by spawning up a process for handling the message in it's own thread. This allows us to individually down to the message level keep the state for each message both in regards to ACK's, error handling, send retries, and rerun of a method for a message if the first run was not successful.
+- The handling of all messages is done by spawning up a process for handling the message in it's own thread. This allows us to down on the **individual message level** keep the state for each message both in regards to ACK's, error handling, send retries, and rerun of a method for a message if the first run was not successful.
 
-- Processes for handling messages on a host can be restarted upon failure, or asked to just terminate and send a message back to the operator that something have gone seriously wrong. This is right now just partially implemented to test that the concept works.
+- Processes for handling messages on a host can be **restarted** upon **failure**, or asked to just terminate and send a message back to the operator that something have gone seriously wrong. This is right now just partially implemented to test that the concept works, where the **action=no-action**.
 
 - Publisher Processes on a node for handling new messages for new nodes will automatically be spawned when needed if it does not already exist.
 
-- Publishing processes will potentially be able to send to all nodes. It is the subscribing nodes who will limit from where and what they will receive from.
-
-- Messages not fully processed or not started yet will be automatically rehandled if the service is restarted since the current state of all the messages being processed are stored on the local node in a key value store until they are finished.
+- Messages not fully processed or not started yet will be automatically rehandled if the service is restarted since the current state of all the messages being processed are stored on the local node in a **key value store** until they are finished.
 
 - All messages processed by a publisher will be written to a log file as they are processed, with all the information needed to recreate the same message if needed, or it can be used for auditing.
 
 - All handling down to the process and message level are handled concurrently. So if there are problems handling one message sent to a node on a subject it will not affect the messages being sent to other nodes, or other messages sent on other subjects to the same host.
 
-- Message types of both ACK and NACK, so we can decide if we want or don't want an Acknowledge if a message was delivered succesfully.
-Example: We probably want an ACK when sending some CLICommand to be executed, but we don't care for an acknowledge (NACK) when we send an "hello I'm here" event.
+- Message types of both **ACK** and **NACK**, so we can decide if we want or don't want an Acknowledge if a message was delivered succesfully.
+Example: We probably want an **ACK** when sending some **REQCLICommand** to be executed, but we don't care for an acknowledge **NACK** when we send an **REQHello** event.
 
 ### Timeouts and retries
 
 - Default timeouts to wait for ACK messages and max attempts to retry sending a message are specified upon startup. This can be overridden on the message level.
 
-- Timeout's can be specified on both the message, and the method. With other words a message can have a timeout, and for example if the method it will trigger is a shell command it can have it's own timeout so processes can have a timeout if they get stuck.
+- Timeouts can be specified on both the **message**, and the **method**.
+  - A message can have a timeout.
+  - If the method triggers a shell command, the command can have its own timeout, allowing process timeout for long/stuck commands, or for telling how long the command is supposed to run.
+
+Example of a message with timeouts set:
+
+```json
+[
+    {
+        "directory":"/some/result/directory/",
+        "fileName":"my-syslog.log",
+        "toNode": "ship2",
+        "methodArgs": ["bash","-c","tail -f /var/log/syslog"],
+        "replyMethod":"REQToFileAppend",
+        "method":"REQnCliCommandCont",
+        "ACKTimeout":3,
+        "retries":3,
+        "methodTimeout": 60
+    }
+]
+```
+
+In the above example, the values set meaning:
+
+- **ACKTimeout** : Wait 3 seconds for an **ACK** message.
+- **retries** : If an **ACK** is not received, retry sending the message 3 times.
+- **methodTimeout** : Let the bash command `tail -f ./tmp.log` run for 60 seconds before it is terminated.
 
 ### Flags and configuration file
 
-Steward supports both the use of flags/arguments set at startup, and the use of a config file. But how it is used might be a little different than how similar use is normally done.
+Steward supports both the use of flags/arguments set at startup, and the use of a config file.
 
-A default config file will be created at first startup if one does not exist, with standard defaults values set. Any value also provided via a flag will also be written to the config file. If Steward is restarted the current content of the config file will be used as the new defaults. Said with other words, if you restart Steward without any flags specified the values of the last run will be read from the config file and used.
+- A default config file will be created at first startup if one does not exist
+  - The default config will contain default values.
+  - Any value also provided via a flag will also be written to the config file. 
+- If **Steward** is restarted, the current content of the config file will be used as the new defaults. 
+  - If you restart Steward without any flags specified, the values of the last run will be read from the config file.
+- If new values are provided via CLI flags, they will take **precedence** over the ones currently in the config file.
+  - The new CLI flag values will be written to the config, making it the default for the next restart.
+- The config file can be edited directly, removing the need for CLI flag use.
+- To create a default config, simply:
+    1. Remove the current config file (or move it).
+    1. Restart Steward. A new default config file, with default values, will be created.
 
-If new values are provided via flags they will take precedence over the ones currently in the config file, and they will also replace the current value in the config file, making it the default for the next restart.
+### Schema for the messages to send into Steward via the API's
 
-The config file can also be edited directly, making the use of flags not needed.
-
-If just getting back to standard default for all config options needed, then delete the current config file, restart Steward, and a new config file with all the options set to it's default values will be created.
+- toNode : `string`
+- toNodes : `string array`
+- method : `string`
+- methodArgs : `string array`
+- replyMethod : `string`
+- replyMethodArgs : `string array`
+- ACKTimeout : `int`
+- retries : `int`
+- replyACKTimeout : `int`
+- replyRetries : `int`
+- methodTimeout : `int`
+- replyMethodTimeout : `int`
+- directory : `string`
+- fileName : `string`
 
 ### Request Methods
 
@@ -233,7 +302,6 @@ Start up a process. Takes the REQ method to start as it's only argument.
 ]
 ```
 
-
 #### REQOpProcessStop
 
 Stop a process. Takes the REQ method, receiving node name, kind publisher/subscriber, and the process ID as it's arguments.
@@ -257,6 +325,7 @@ Run CLI command on a node. Linux/Windows/Mac/Docker-container or other.
 
 Will run the command given, and return the stdout output of the command when the command is done.
 
+```json
 [
     {
         "directory":"some/cli/command",
@@ -267,6 +336,7 @@ Will run the command given, and return the stdout output of the command when the
         "replyMethod":"REQToFileAppend",
     }
 ]
+```
 
 #### REQCliCommandCont
 
@@ -344,27 +414,66 @@ All nodes have the flag option to start sending Hello message to the central ser
 
 Method for receiving error logs for Central error logger.
 
+This is **not** to be used by users. Use **REQToFileAppend** instead.
+
 ### Request Methods used for reply messages
 
 #### REQToConsole
 
 Print the output of the reply message to the STDOUT where the receiving steward instance are running.
 
+```json
+[
+    {
+        "toNode": "ship2",
+        "method":"REQOpProcessList",
+        "methodArgs": [],
+        "replyMethod":"REQToConsole",
+    }
+]
+```
+
 #### REQToFileAppend
 
 Append the output of the reply message to a log file specified with the `directory` and `fileName` fields.
 
+```json
+[
+    {
+        "directory":"test/dir",
+        "fileName":"test.result",
+        "toNode": "ship2",
+        "method":"REQOpProcessList",
+        "methodArgs": [],
+        "replyMethod":"REQToFileAppend",
+    }
+]
+```
+
 #### REQToFile
 
-Write the output of the reply message to a log file specified with the `directory` and `fileName` fields.
+Write the output of the reply message to a file specified with the `directory` and `fileName` fields, where the writing will write over any existing content of that file.
+
+```json
+[
+    {
+        "directory":"test/dir",
+        "fileName":"test.result",
+        "toNode": "ship2",
+        "method":"REQOpProcessList",
+        "methodArgs": [],
+        "replyMethod":"REQToFile",
+    }
+]
+```
 
 ### Errors reporting
 
-- Errors happening on a node will be reported in to the node name defined with the `-centralNodeName` flag.
+- Errors happening on **all** nodes will be reported back in to the node name defined with the `-centralNodeName` flag.
 
 ### Prometheus metrics
 
-- Prometheus exporters for Metrics
+- Prometheus exporters for Metrics.
 
 ### Other
 
@@ -376,11 +485,12 @@ Write the output of the reply message to a log file specified with the `director
 
 Steward is written in go, so you need Go installed to compile it. You can get go at <https://golang.org/dl/>.
 
-clone the repository `git clone https://github.com/RaaLabs/steward.git`.
-
-Then cd `./steward/cmd` and do `go build -o steward`._1FJeI4_rrR6mY_Y496rsi5
-
-Run the application with `env CONFIG_FOLDER </myconfig/folder/here> ./steward`
+- Clone the repository:
+  - `git clone https://github.com/RaaLabs/steward.git`.
+- Change directory and build:
+  - `cd ./steward/cmd` 
+  - `go build -o steward`
+- Run the application with `env CONFIG_FOLDER </myconfig/folder/here> ./steward`
 
 You can get all the options with `./steward --help`
 
@@ -464,7 +574,9 @@ Read more in the sections below on how to generate nkey's.
 
 #### nats-server (the message broker)
 
-The broker for messaging is Nats-server from <https://nats.io>. Download, run it, and use the `-brokerAddress` flag on Steward to point to it.
+The broker for messaging is Nats-server from <https://nats.io>. Download, run it, and use the `-brokerAddress` flag on **Steward** to point to the ip and port:
+
+`-brokerAddress="nats://10.0.0.124:4222"`
 
 There is a lot of different variants of how you can setup and confiure Nats. Full mesh, leaf node, TLS, Authentication, and more. You can read more about how to configure the Nats broker called nats-server at <https://nats.io/>.
 
@@ -473,8 +585,8 @@ There is a lot of different variants of how you can setup and confiure Nats. Ful
 ```config
 port: 4222
 tls {
-  cert_file: "/Users/bt/tmp/autocert/ww.steward.raalabs.tech/ww.steward.raalabs.tech.crt"
-  key_file: "/Users/bt/tmp/autocert/ww.steward.raalabs.tech/ww.steward.raalabs.tech.key"
+  cert_file: "some.crt"
+  key_file: "some.key"
 }
 
 
@@ -522,39 +634,56 @@ authorization: {
 
 The official docs for nkeys can be found here <https://docs.nats.io/nats-server/configuration/securing_nats/auth_intro/nkey_auth>.
 
-Generate private (seed) and public (user) key pair:
+- Generate private (seed) and public (user) key pair:
+  - `nk -gen user -pubout`
 
-`nk -gen user -pubout`
+- Generate a public (user) key from a private (seed) key file called `seed.txt`.
+  - `nk -inkey seed.txt -pubout > user.txt`
 
-Generate a public (user) key from a private (seed) key file called `seed.txt`.
+More example configurations for the nats-server are located in the [doc](https://github.com/RaaLabs/steward/tree/main/doc) folder in this repository.
 
-`nk -inkey seed.txt -pubout > user.txt`
+#### Examples for running Steward
 
-More example configurations for the nats-server are located in the `doc` folder in this repository.
+To set the location of the config folder other than default, you should use the **ENV** variable `CONFIG_FOLDER`.
 
-#### Steward
+##### Minimum config example
 
-To set the location of the config folder other than default, you should use the ENV variable `CONFIG_FOLDER`.
+Start up a  **central** server which will act as your command and control server.
 
-`env CONFIG_FOLDER=./etc/ ./steward --nodeName="central" --centralNodeName="central"`
+- `env CONFIG_FOLDER=./etc/ ./steward --nodeName="central" --centralNodeName="central"`
 
-Or using default config folder location on some central server which will act as your command and control server.
+Start up a node that will attach to the **central** node
 
-`./steward --nodeName="central" --centralNodeName="central"`
-
-One the nodes out there
-
-`./steward ./steward --nodeName="ship1" --centralNodeName="central"` & `./steward --node="ship2"` and so on.
+`env CONFIG_FOLDER=./etc/ ./steward ./steward --nodeName="ship1" --centralNodeName="central"` & `./steward --node="ship2"` and so on.
 
 Use the `-help` flag to get all possibilities.
 
+##### More details config example
+
 A complete example to start a central node called `central`.
 
-`./steward --nodeName="central" --defaultMessageRetries=3 --defaultMessageTimeout=5 -subscribersDataFolder="./data" --centralNodeName="central" -startSubREQErrorLog="*" -subscribersDataFolder="./var" -brokerAddress="127.0.0.1:4222"`
+```bash
+env CONFIG_FOLDER=./etc/ ./steward \
+ -nodeName="central" \
+ -defaultMessageRetries=3 \
+ -defaultMessageTimeout=5 \
+ -subscribersDataFolder="./data" \
+ -centralNodeName="central" \
+ -startSubREQErrorLog=true \
+ -subscribersDataFolder="./var" \
+ -brokerAddress="127.0.0.1:4222"
+```
 
 And start another node that will be managed via central.
 
-`./steward --nodeName="ship1" -startPubREQHello=200 --centralNodeName="central" -promHostAndPort=":12112" -brokerAddress="127.0.0.1:4222"`
+```bash
+env CONFIG_FOLDER=./etc/ ./steward \
+ -nodeName="ship1" \ 
+ -startPubREQHello=200 \
+ -centralNodeName="central" \
+ -promHostAndPort=":12112" \
+ -brokerAddress="127.0.0.1:4222"
+```
 
 ### Message fields explanation
 
@@ -610,87 +739,15 @@ operation
 
 ### How to send a Message
 
-The API for sending a message from one node to another node is by pasting a structured JSON object into the socket file file called `steward.sock` which by default lives in the `./tmp` directory, or by starting the TCPListener, or via http (not implented yet). The message will be picked up, umarshaled, and if OK it will be sent as a message to the node specified in the `toNode` field.
+The API for sending a message from one node to another node is by sending a structured JSON object into a listener port in of of the following ways.
 
-The `method` is what defines what the event will do.
-
-The `Operation` field is a little bit special. This field is used with the `REQOpCommand` to specify what operation command to run, and also it's arguments.
+- unix socket called `steward.sock`. By default lives in the `./tmp` directory
+- tcpListener, specify host:port with startup flag, or config file.
+- httpListener, specify host:port with startup flag, or config file.
 
 #### Send to socket with netcat
 
 `nc -U ./tmp/steward.sock < myMessage.json`
-
-#### The current `operation`'s that are available are
-
-To stop a process of a specific type on a node.
-
-```json
-...
-"method":"REQOpCommand",
-        "operation":{
-            "opCmd":"stopProc",
-            "opArg": {
-                "method": "REQHttpGet",
-                "kind": "subscriber",
-                "receivingNode": "ship2",
-                "id":127
-            }
-        },
-...
-```
-
-To get a list of all running processes on a node.
-
-```json
-...
-"method":"REQOpCommand",
-        "operation":{
-            "opCmd":"ps"
-        },
-...
-```
-
-To start a process of a specified type on a node.
-
-```json
-"method":"REQOpCommand",
-        "operation":{
-            "opCmd":"startProc",
-            "opArg": {
-                "method": "REQHttpGet",
-                "allowedNodes": ["central","node1"]
-            }
-        },
-```
-
-and another example
-
-```json
-[
-    {
-        "directory":"opcommand_logs",
-        "fileName": "some.log",
-        "toNode": "ship2",
-        "data": [],
-        "method":"REQOpCommand",
-        "operation":{
-            "opCmd":"startProc",
-            "opArg": {
-                "method": "REQCliCommandCont",
-                "allowedNodes": ["central"]
-            }
-        },
-        "replyMethod":"REQToFileAppend",
-        "ACKTimeout":3,
-        "retries":3,
-        "replyACKTimeout":3,
-        "replyRetries":3,
-        "MethodTimeout": 7
-    }
-]
-```
-
-NB: Both the keys and the values used are case sensitive.
 
 #### Sending a command from one Node to Another Node
 
@@ -745,7 +802,6 @@ NB: Both the keys and the values used are case sensitive.
     {
         "directory": "httpget",
         "fileName": "finn.no.html",
-        "toNode": "",
         "toNodes": ["central","ship2"],
         "methodArgs": ["https://finn.no"],
         "method":"REQHttpGet",
@@ -832,7 +888,7 @@ NB: Both the keys and the values used are case sensitive.
 ]
 ```
 
-Tail a log file on a node, and save the result of the tail centrally at the directory specified.
+##### Tail a log file on a node, and save the result of the tail centrally at the directory specified
 
 ```json
 [
@@ -849,9 +905,9 @@ Tail a log file on a node, and save the result of the tail centrally at the dire
 ]
 ```
 
-You can save the content to myfile.JSON and append it to the `socket` file.
+You can save the content to myfile.JSON and append it to the `socket` file:
 
-`nc -U ./steward.sock < example/toShip1-REQCliCommand.json`
+- `nc -U ./steward.sock < example/toShip1-REQCliCommand.json`
 
 ## Concepts/Ideas
 
@@ -861,12 +917,21 @@ You can save the content to myfile.JSON and append it to the `socket` file.
 
 `<nodename>.<method>.<command/event>`
 
-Nodename: Are the hostname of the device. This do not have to be resolvable via DNS, it is just a unique name for the host to receive the message.
+**Nodename**: Are the hostname of the device. This do not have to be resolvable via DNS, it is just a unique name for the host to receive the message.
 
-Command/Event: Are type of message sent. `CommandACK`/`EventACK`/`CommandNACK`/`EventNACK`. Description of the differences are mentioned earlier.\
-Info: The command/event which is called a MessageType are present in both the Subject structure and the Message structure. The reason for this is that it is used both in the naming of a subject, and in the message for knowing what kind of message it is and how to handle it.
+**Command/Event**: Is the type of message sent. Descriptions of these commands/events are provided in this document:
 
-Method: Are the functionality the message provide. Example could be `CLICommand` or `Syslogforwarding`
+- `CommandACK`
+- `EventACK`
+- `CommandNACK`
+- `EventNACK`
+
+Description of the differences are mentioned earlier.
+
+Info: The command/event called **MessageType** are present in both the **Subject** structure and the **Message** structure. 
+This is due to MessageType being used in both the naming of a subject, and for specifying message type to allow for specific processing of a message.
+
+**Method**: Are the functionality the message provide. Example could be `CLICommand` or `Syslogforwarding`
 
 ##### Complete subject example
 
