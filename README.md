@@ -1,8 +1,8 @@
 # steward
 
-Command & Control something that are either allways online or occasionally available online ? like Servers or IOT platforms where the link for reaching them can be a not-always-connected satellite, GSM, or even reliable fiber links that might fail ?
+Command & Control systems that are either always online or occasionally available online. Similar to Servers or IOT platforms where the link for reaching them can be a not-always-connected satellite links, GSM connections, or even reliable fiber links that might fail.
 
-The idea behind Steward is to help out with exactly that, and let you handle the state of your servers/containers/nodes.
+The idea behind Steward is to help out with exactly these issues, allowing you to handle the state of your servers/containers/nodes.
 
 - [steward](#steward)
   - [What is it ?](#what-is-it-)
@@ -20,6 +20,9 @@ The idea behind Steward is to help out with exactly that, and let you handle the
     - [Timeouts and retries](#timeouts-and-retries)
     - [Flags and configuration file](#flags-and-configuration-file)
     - [Request Methods](#request-methods)
+      - [REQOpProcessList](#reqopprocesslist)
+      - [REQOpProcessStart](#reqopprocessstart)
+      - [REQOpProcessStop](#reqopprocessstop)
       - [REQCliCommand](#reqclicommand)
       - [REQCliCommandCont](#reqclicommandcont)
       - [REQTailFile](#reqtailfile)
@@ -71,10 +74,12 @@ The idea behind Steward is to help out with exactly that, and let you handle the
 
 Command And Control anything like Servers, Containers, VM's or others by creating and sending messages with methods who will describe what to do. Steward will then take the responsibility for making sure that the message are delivered to the receiver, and that the method specified are executed with the given parameters defined. An example of a message.
 
+An example of a **request method** to feed into the system. All fields are explained in detail further down in the document.
+
 ```json
 [
     {
-        "directory":"cli_command__result",
+        "directory":"/var/cli/command_result/",
         "fileName": "some-file-name.result",
         "toNode": "ship1",
         "methodArgs": ["bash","-c","sleep 5 & tree ./"],
@@ -194,39 +199,156 @@ If just getting back to standard default for all config options needed, then del
 
 ### Request Methods
 
+#### REQOpProcessList
+
+Get a list of the running processes.
+
+```json
+[
+    {
+        "directory":"test/dir",
+        "fileName":"test.result",
+        "toNode": "ship2",
+        "method":"REQOpProcessList",
+        "methodArgs": [],
+        "replyMethod":"REQToFileAppend",
+    }
+]
+```
+
+#### REQOpProcessStart
+
+Start up a process. Takes the REQ method to start as it's only argument.
+
+```json
+[
+    {
+        "directory":"test/dir",
+        "fileName":"test.result",
+        "toNode": "ship2",
+        "method":"REQOpProcessStart",
+        "methodArgs": ["REQHttpGet"],
+        "replyMethod":"REQToFileAppend",
+    }
+]
+```
+
+
+#### REQOpProcessStop
+
+Stop a process. Takes the REQ method, receiving node name, kind publisher/subscriber, and the process ID as it's arguments.
+
+```json
+[
+    {
+        "directory":"test/dir",
+        "fileName":"test.result",
+        "toNode": "ship2",
+        "method":"REQOpProcessStop",
+        "methodArgs": ["REQHttpGet","ship2","subscriber","199"],
+        "replyMethod":"REQToFileAppend",
+    }
+]
+```
+
 #### REQCliCommand
 
-Run CLI command on a node. Linux/Windows/Mac/Docker-container or other.
+Run CLI command on a node. Linux/Windows/Mac/Docker-container or other. 
 
 Will run the command given, and return the stdout output of the command when the command is done.
+
+[
+    {
+        "directory":"some/cli/command",
+        "fileName":"cli.result",
+        "toNode": "ship2",
+        "method":"REQnCliCommand",
+        "methodArgs": ["bash","-c","docker ps -a"],
+        "replyMethod":"REQToFileAppend",
+    }
+]
 
 #### REQCliCommandCont
 
 Run CLI command on a node. Linux/Windows/Mac/Docker-container or other.
 
-Will run the command given, and return the stdout output of the command continously while the command runs.
+Will run the command given, and return the stdout output of the command continously while the command runs. Uses the methodTimeout to define for how long the command will run.
+
+```json
+[
+    {
+        "directory":"some/cli/command",
+        "fileName":"cli.result",
+        "toNode": "ship2",
+        "method":"REQnCliCommandCont",
+        "methodArgs": ["bash","-c","docker ps -a"],
+        "replyMethod":"REQToFileAppend",
+        "methodTimeout":10,
+    }
+]
+```
 
 #### REQTailFile
 
-Tail log files on some node, and get the result for each new line read sent back in a reply message until timeout is reached.
+Tail log files on some node, and get the result for each new line read sent back in a reply message. Uses the methodTimeout to define for how long the command will run.
+
+```json
+[
+    {
+        "directory": "/my/tail/files/",
+        "fileName": "tailfile.log",
+        "toNode": "ship2",
+        "method":"REQTailFile",
+        "methodArgs": ["/var/log/system.log"],
+        "methodTimeout": 10
+    }
+]
+```
 
 #### REQHttpGet
 
-Scrape web servers, and get the html sent back in a reply message.
+Scrape web url, and get the html sent back in a reply message. Uses the methodTimeout for how long it will wait for the http get method to return result.
+
+```json
+[
+    {
+        "directory": "web",
+        "fileName": "web.html",
+        "toNode": "ship2",
+        "method":"REQHttpGet",
+        "methodArgs": ["https://web.ics.purdue.edu/~gchopra/class/public/pages/webdesign/05_simple.html"],
+        "replyMethod":"REQToFile",
+        "ACKTimeout":10,
+        "retries": 3,
+        "methodTimeout": 3
+    }
+]
+```
 
 #### REQHello
 
-Get Hello messages from all running nodes.
+Send Hello messages.
+
+All nodes have the flag option to start sending Hello message to the central server. The structure of those messages looks like this.
+
+```json
+[
+    {
+        "toNode": "central",
+        "method":"REQHello"
+    }
+]
+```
 
 #### REQErrorLog
 
-Central error logger.
+Method for receiving error logs for Central error logger.
 
 ### Request Methods used for reply messages
 
 #### REQToConsole
 
-Print the output of the reply message to the console.
+Print the output of the reply message to the STDOUT where the receiving steward instance are running.
 
 #### REQToFileAppend
 
@@ -238,7 +360,7 @@ Write the output of the reply message to a log file specified with the `director
 
 ### Errors reporting
 
-- Report errors happening on some node in to central error handler.
+- Errors happening on a node will be reported in to the node name defined with the `-centralNodeName` flag.
 
 ### Prometheus metrics
 
