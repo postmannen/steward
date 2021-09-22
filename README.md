@@ -1,5 +1,7 @@
 # steward
 
+<img style="float: right;" src="pic/stew-small.png">
+
 Command & Control systems that are either always online or occasionally available online. Similar to Servers or IOT platforms where the link for reaching them can be stable wire/fibre LAN connections, or not-always-connected satellite links or GSM connections, or devices available over WAN connections.
 
 The idea behind Steward is to help out with exactly these issues, allowing you to handle the state of your servers/containers/nodes.
