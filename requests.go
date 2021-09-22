@@ -282,6 +282,7 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 		Method:        message.ReplyMethod,
 		MethodArgs:    message.ReplyMethodArgs,
 		MethodTimeout: message.ReplyMethodTimeout,
+		IsReply:       true,
 		ACKTimeout:    message.ReplyACKTimeout,
 		Retries:       message.ReplyRetries,
 		Directory:     message.Directory,
@@ -1140,6 +1141,12 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 		case out := <-outCh:
 			cancel()
+
+			// If this is this a reply message swap the toNode and fromNode
+			// fields so the output of the command are sent to central node.
+			if message.IsReply {
+				message.ToNode, message.FromNode = message.FromNode, message.ToNode
+			}
 
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.

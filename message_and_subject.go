@@ -40,6 +40,13 @@ type Message struct {
 	// shell command to execute in a cli session.
 	// TODO:
 	ReplyMethodArgs []string `json:"replyMethodArgs" yaml:"replyMethodArgs"`
+	// IsReply are used to tell that this is a reply message. By default
+	// the system sends the output of a request method back to the node
+	// the message originated from. If it is a reply method we want the
+	// result of the reply message to be sent to the central server, so
+	// we can use this value if set to swap the toNode, and fromNode
+	// fields.
+	IsReply bool `json:"isReply" yaml:"isReply"`
 	// From what node the message originated
 	FromNode Node
 	// ACKTimeout for waiting for an ack message
