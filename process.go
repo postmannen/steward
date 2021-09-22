@@ -227,7 +227,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		// Create a subscriber for the reply message.
 		subReply, err := natsConn.SubscribeSync(msg.Reply)
 		if err != nil {
-			er := fmt.Errorf("error: nc.SubscribeSync failed: failed to create reply message: %v", err)
+			er := fmt.Errorf("error: nc.SubscribeSync failed: failed to create reply message for subject: %v, error: %v", msg.Reply, err)
 			// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
 			log.Printf("%v, waiting %ds before retrying\n", er, subscribeSyncTimer)
 			time.Sleep(time.Second * subscribeSyncTimer)
