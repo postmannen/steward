@@ -1,6 +1,6 @@
 # steward
 
-<img style="float: right;" src="pic/stew-small.png">
+<img align="right" width="200" height="200" src="pic/stew-small.png">
 
 Command & Control systems that are either always online or occasionally available online. Similar to Servers or IOT platforms where the link for reaching them can be stable wire/fibre LAN connections, or not-always-connected satellite links or GSM connections, or devices available over WAN connections.
 
