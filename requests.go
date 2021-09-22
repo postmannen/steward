@@ -1075,22 +1075,6 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 	go func() {
 		defer proc.processes.wg.Done()
 
-		// Check if {{data}} is defined in the method arguments. If found put the
-		// data payload there.
-		var foundEnvData bool
-		var envData string
-		for i, v := range message.MethodArgs {
-			if strings.Contains(v, "{{STEWARD_DATA}}") {
-				foundEnvData = true
-				// Replace the found env variable placeholder with an actual env variable
-				message.MethodArgs[i] = strings.Replace(message.MethodArgs[i], "{{STEWARD_DATA}}", "$STEWARD_DATA", -1)
-
-				// Put all the data which is a slice of string into a single
-				// string so we can put it in a single env variable.
-				envData = strings.Join(message.Data, "")
-			}
-		}
-
 		fmt.Printf("* DEBUG * handler: received message contains : %#v\n", message)
 
 		c := message.MethodArgs[0]
@@ -1103,6 +1087,22 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 		proc.processes.wg.Add(1)
 		go func() {
 			defer proc.processes.wg.Done()
+
+			// Check if {{data}} is defined in the method arguments. If found put the
+			// data payload there.
+			var foundEnvData bool
+			var envData string
+			for i, v := range message.MethodArgs {
+				if strings.Contains(v, "{{STEWARD_DATA}}") {
+					foundEnvData = true
+					// Replace the found env variable placeholder with an actual env variable
+					message.MethodArgs[i] = strings.Replace(message.MethodArgs[i], "{{STEWARD_DATA}}", "$STEWARD_DATA", -1)
+
+					// Put all the data which is a slice of string into a single
+					// string so we can put it in a single env variable.
+					envData = strings.Join(message.Data, "")
+				}
+			}
 
 			cmd := exec.CommandContext(ctx, c, a...)
 
@@ -1142,6 +1142,9 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 		case out := <-outCh:
 			cancel()
 
+			// NB: Not quite sure what is the best way to handle the below
+			// isReply right now. Implementing as send to central for now.
+			//
 			// If this is this a reply message swap the toNode and fromNode
 			// fields so the output of the command are sent to central node.
 			if message.IsReply {

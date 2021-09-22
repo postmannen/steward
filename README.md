@@ -35,6 +35,7 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
       - [REQToConsole](#reqtoconsole)
       - [REQToFileAppend](#reqtofileappend)
       - [REQToFile](#reqtofile)
+      - [ReqCliCommand](#reqclicommand-1)
     - [Errors reporting](#errors-reporting)
     - [Prometheus metrics](#prometheus-metrics)
     - [Other](#other)
@@ -463,6 +464,38 @@ Write the output of the reply message to a file specified with the `directory` a
         "method":"REQOpProcessList",
         "methodArgs": [],
         "replyMethod":"REQToFile",
+    }
+]
+```
+
+#### ReqCliCommand
+
+**ReqCliCommand** is a bit special in that it can be used as both **method** and **replyMethod**
+
+The final result, if any, of the replyMethod will be sent to the central server.
+
+By using the `{{STEWARD_DATA}}` you can grab the output of your initial request method, and then use it as input in your reply method.
+
+**NB:** The echo command in the example below will remove new lines from the data. To also keep any new lines we need to put escaped **quotes** around the template variable. Like this:
+
+- `\"{{STEWARD_DATA}}\"`
+
+Example of usage:
+
+```json
+[
+    {
+        "directory":"cli_command_test",
+        "fileName":"cli_command.result",
+        "toNode": "ship2",
+        "method":"REQCliCommand",
+        "methodArgs": ["bash","-c","tree"],
+        "replyMethod":"REQCliCommand",
+        "replyMethodArgs": ["bash", "-c","echo \"{{STEWARD_DATA}}\" > apekatt.txt"],
+        "replyMethodTimeOut": 10,
+        "ACKTimeout":3,
+        "retries":3,
+        "methodTimeout": 10
     }
 ]
 ```
