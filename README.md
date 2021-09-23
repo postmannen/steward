@@ -500,6 +500,26 @@ Example of usage:
 ]
 ```
 
+Or the same using bash's herestring:
+
+```json
+[
+    {
+        "directory":"cli_command_test",
+        "fileName":"cli_command.result",
+        "toNode": "ship2",
+        "method":"REQCliCommand",
+        "methodArgs": ["bash","-c","tree"],
+        "replyMethod":"REQCliCommand",
+        "replyMethodArgs": ["bash", "-c","cat <<< {{STEWARD_DATA}} > hest.txt"],
+        "replyMethodTimeOut": 10,
+        "ACKTimeout":3,
+        "retries":3,
+        "methodTimeout": 10
+    }
+]
+```
+
 ### Errors reporting
 
 - Errors happening on **all** nodes will be reported back in to the node name defined with the `-centralNodeName` flag.
