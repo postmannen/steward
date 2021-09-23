@@ -305,7 +305,7 @@ func sendErrorLogMessage(conf *Configuration, metrics *metrics, newMessagesCh ch
 // of the error
 func createErrorMsgContent(conf *Configuration, FromNode Node, theError error) subjectAndMessage {
 	// Add time stamp
-	er := fmt.Sprintf("%v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), theError.Error())
+	er := fmt.Sprintf("%v, node: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), FromNode, theError.Error())
 
 	sam := subjectAndMessage{
 		Subject: newSubject(REQErrorLog, "errorCentral"),

@@ -152,7 +152,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 			go func() {
 				err := p.procFunc(p.ctx)
 				if err != nil {
-					er := fmt.Errorf("error: spawnWorker: procFunc failed: %v", err)
+					er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
 					sendErrorLogMessage(p.configuration, procs.metrics, p.toRingbufferCh, Node(p.node), er)
 				}
 			}()
@@ -172,7 +172,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 			go func() {
 				err := p.procFunc(p.ctx)
 				if err != nil {
-					er := fmt.Errorf("error: spawnWorker: procFunc failed: %v", err)
+					er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
 					sendErrorLogMessage(p.configuration, procs.metrics, p.toRingbufferCh, Node(p.node), er)
 				}
 			}()
@@ -207,7 +207,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 	for {
 		dataPayload, err := gobEncodeMessage(message)
 		if err != nil {
-			er := fmt.Errorf("error: createDataPayload: %v", err)
+			er := fmt.Errorf("error: messageDeliverNats: createDataPayload failed: %v", err)
 			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(p.node), er)
 			continue
 		}
@@ -227,7 +227,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		// Create a subscriber for the reply message.
 		subReply, err := natsConn.SubscribeSync(msg.Reply)
 		if err != nil {
-			er := fmt.Errorf("error: nc.SubscribeSync failed: failed to create reply message for subject: %v, error: %v", msg.Reply, err)
+			er := fmt.Errorf("error: nats SubscribeSync failed: failed to create reply message for subject: %v, error: %v", msg.Reply, err)
 			// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
 			log.Printf("%v, waiting %ds before retrying\n", er, subscribeSyncTimer)
 			time.Sleep(time.Second * subscribeSyncTimer)
@@ -238,7 +238,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 		// Publish message
 		err = natsConn.PublishMsg(msg)
 		if err != nil {
-			er := fmt.Errorf("error: publish failed: %v", err)
+			er := fmt.Errorf("error: nats publish failed: %v", err)
 			// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
 			log.Printf("%v, waiting %ds before retrying\n", er, publishTimer)
 			time.Sleep(time.Second * publishTimer)
@@ -254,7 +254,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 			// or exit if max retries for the message reached.
 			msgReply, err := subReply.NextMsg(time.Second * time.Duration(message.ACKTimeout))
 			if err != nil {
-				er := fmt.Errorf("error: subReply.NextMsg failed for node=%v, subject=%v: %v", p.node, p.subject.name(), err)
+				er := fmt.Errorf("error: ack receive failed: subject=%v: %v", p.subject.name(), err)
 				// sendErrorLogMessage(p.toRingbufferCh, p.node, er)
 				log.Printf(" ** %v\n", er)
 
@@ -268,7 +268,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 				//	continue
 				case retryAttempts >= message.Retries:
 					// max retries reached
-					er := fmt.Errorf("info: toNode: %v, fromNode: %v, method: %v: max retries reached, check if node is up and running and if it got a subscriber for the given REQ type", message.ToNode, message.FromNode, message.Method)
+					er := fmt.Errorf("info: toNode: %v, fromNode: %v, subject: %v: max retries reached, check if node is up and running and if it got a subscriber started for the given REQ type", message.ToNode, message.FromNode, msg.Subject)
 
 					// We do not want to send errorLogs for REQErrorLog type since
 					// it will just cause an endless loop.
@@ -331,38 +331,18 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 	case p.subject.CommandOrEvent == CommandACK || p.subject.CommandOrEvent == EventACK:
 		mh, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
-			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.CommandOrEvent)
+			er := fmt.Errorf("error: subscriberHandler: no such method type: %v", p.subject.CommandOrEvent)
 			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 		}
 
 		var out []byte
 
-		// NB:
-		// The commented out code below is for the allowed recievers functionality
-		// for the REQ type specified at startup. Keeping the code for now, but it
-		// is probably redundant since the same information can be specified in
-		// the broker config
-		//
-		// // out := []byte("not allowed from " + message.FromNode)
-		// // Check if we are allowed to receive from that host
-		// _, arOK1 := p.allowedReceivers[message.FromNode]
-		// _, arOK2 := p.allowedReceivers["*"]
-		//
-		// if arOK1 || arOK2 {
-		// 	// Start the method handler for that specific subject type.
-		// 	// The handler started here is what actually doing the action
-		// 	// that executed a CLI command, or writes to a log file on
-		// 	// the node who received the message.
 		out, err = mh.handler(p, message, thisNode)
 
 		if err != nil {
 			er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
 			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 		}
-		// } else {
-		// 	er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
-		// 	sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
-		// }
 
 		// Send a confirmation message back to the publisher
 		natsConn.Publish(msg.Reply, out)
@@ -375,38 +355,15 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 		}
 
-		// NB:
-		// The commented out code below is for the allowed recievers functionality
-		// for the REQ type specified at startup. Keeping the code for now, but it
-		// is probably redundant since the same information can be specified in
-		// the broker config
-		//
-		// // Check if we are allowed to receive from that host
-		// _, arOK1 := p.allowedReceivers[message.FromNode]
-		// _, arOK2 := p.allowedReceivers["*"]
-		//
-		// if arOK1 || arOK2 {
-		//
-		// 	// Start the method handler for that specific subject type.
-		// 	// The handler started here is what actually doing the action
-		// 	// that executed a CLI command, or writes to a log file on
-		// 	// the node who received the message.
-		// 	//
-		// 	// since we don't send a reply for a NACK message, we don't care about the
-		// 	// out return when calling mf.handler
 		_, err := mf.handler(p, message, thisNode)
 
 		if err != nil {
 			er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
 			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 		}
-		// } else {
-		// 	er := fmt.Errorf("info: we don't allow receiving from: %v, %v", message.FromNode, p.subject)
-		// 	sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
-		// }
 
 	default:
-		er := fmt.Errorf("info: did not find that specific type of command: %#v", p.subject.CommandOrEvent)
+		er := fmt.Errorf("info: did not find that specific type of command or event: %#v", p.subject.CommandOrEvent)
 		sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 
 	}

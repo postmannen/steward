@@ -49,7 +49,7 @@ func (s *server) readSocket() {
 			// unmarshal the JSON into a struct
 			sams, err := s.convertBytesToSAMs(readBytes)
 			if err != nil {
-				er := fmt.Errorf("error: malformed json: %v", err)
+				er := fmt.Errorf("error: malformed json received on socket: %v", err)
 				sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
 				return
 			}
@@ -114,7 +114,7 @@ func (s *server) readTCPListener() {
 			// unmarshal the JSON into a struct
 			sam, err := s.convertBytesToSAMs(readBytes)
 			if err != nil {
-				er := fmt.Errorf("error: malformed json: %v", err)
+				er := fmt.Errorf("error: malformed json received on tcp listener: %v", err)
 				sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
 				return
 			}
@@ -163,7 +163,7 @@ func (s *server) readHTTPlistenerHandler(w http.ResponseWriter, r *http.Request)
 	// unmarshal the JSON into a struct
 	sam, err := s.convertBytesToSAMs(readBytes)
 	if err != nil {
-		er := fmt.Errorf("error: malformed json: %v", err)
+		er := fmt.Errorf("error: malformed json received on HTTPListener: %v", err)
 		sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
 		return
 	}
@@ -275,7 +275,7 @@ func (s *server) checkMessageToNodes(MsgSlice []Message) []Message {
 		// No toNode or toNodes specified. Drop the message by not appending it to
 		// the slice since it is not valid.
 		default:
-			er := fmt.Errorf("error: no toNode or toNodes where specified in the message got'n, dropping message: %v", v)
+			er := fmt.Errorf("error: no toNode or toNodes where specified in the message, dropping message: %v", v)
 			sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
 			continue
 		}
