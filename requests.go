@@ -570,6 +570,14 @@ func (m methodREQOpProcessStart) handler(proc process, message Message, node str
 		// real method for the message.
 		var mt Method
 
+		switch {
+		case len(message.MethodArgs) < 1:
+			er := fmt.Errorf("error: methodREQOpProcessStart: got <1 number methodArgs")
+			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+			log.Printf("%v\n", er)
+			return
+		}
+
 		m := message.MethodArgs[0]
 		method := Method(m)
 		tmpH := mt.getHandler(Method(method))
@@ -635,6 +643,15 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 		// that publisher processes are named by the node they are sending the
 		// message to. Subscriber processes names are named by the node name
 		// they are running on.
+
+		switch {
+		case len(message.MethodArgs) != 4:
+			er := fmt.Errorf("error: methodREQCliCommand: got <4 number methodArgs, want: method,node,kind,id")
+			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+			log.Printf("%v\n", er)
+			return
+		}
+
 		methodString := message.MethodArgs[0]
 		node := message.MethodArgs[1]
 		kind := message.MethodArgs[2]
@@ -1069,8 +1086,19 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 	go func() {
 		defer proc.processes.wg.Done()
 
+		var a []string
+
+		switch {
+		case len(message.MethodArgs) < 1:
+			er := fmt.Errorf("error: methodREQCliCommand: got <1 number methodArgs")
+			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+			log.Printf("%v\n", er)
+			return
+		case len(message.MethodArgs) >= 0:
+			a = message.MethodArgs[1:]
+		}
+
 		c := message.MethodArgs[0]
-		a := message.MethodArgs[1:]
 
 		ctx, cancel := context.WithTimeout(proc.ctx, time.Second*time.Duration(message.MethodTimeout))
 
@@ -1188,6 +1216,14 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 	go func() {
 		defer proc.processes.wg.Done()
 
+		switch {
+		case len(message.MethodArgs) < 1:
+			er := fmt.Errorf("error: methodREQHttpGet: got <1 number methodArgs")
+			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+			log.Printf("%v\n", er)
+			return
+		}
+
 		url := message.MethodArgs[0]
 
 		client := http.Client{
@@ -1280,6 +1316,14 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 	go func() {
 		defer proc.processes.wg.Done()
 
+		switch {
+		case len(message.MethodArgs) < 1:
+			er := fmt.Errorf("error: methodREQTailFile: got <1 number methodArgs")
+			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+			log.Printf("%v\n", er)
+			return
+		}
+
 		fp := message.MethodArgs[0]
 
 		var ctx context.Context
@@ -1366,8 +1410,19 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 	go func() {
 		defer proc.processes.wg.Done()
 
+		var a []string
+
+		switch {
+		case len(message.MethodArgs) < 1:
+			er := fmt.Errorf("error: methodREQCliCommand: got <1 number methodArgs")
+			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+			log.Printf("%v\n", er)
+			return
+		case len(message.MethodArgs) >= 0:
+			a = message.MethodArgs[1:]
+		}
+
 		c := message.MethodArgs[0]
-		a := message.MethodArgs[1:]
 
 		ctx, cancel := context.WithTimeout(proc.ctx, time.Second*time.Duration(message.MethodTimeout))
 
