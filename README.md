@@ -65,13 +65,9 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
       - [Subject](#subject)
         - [Complete subject example](#complete-subject-example)
   - [TODO](#todo)
-    - [Implements a replyOpts message field](#implements-a-replyopts-message-field)
     - [Implements a repeat and repeatInterval message field](#implements-a-repeat-and-repeatinterval-message-field)
-    - [Split out the different opCmd's into it's own request types](#split-out-the-different-opcmds-into-its-own-request-types)
     - [Move the processes map into it's own go routine](#move-the-processes-map-into-its-own-go-routine)
     - [Services at startup of Steward. Could be implemented by having a local folder of messages to go through at startup. What is needed](#services-at-startup-of-steward-could-be-implemented-by-having-a-local-folder-of-messages-to-go-through-at-startup-what-is-needed)
-    - [A carrier type of message, that are able to forward a message on behalf of others, and are not directly ment for itself](#a-carrier-type-of-message-that-are-able-to-forward-a-message-on-behalf-of-others-and-are-not-directly-ment-for-itself)
-    - [Workflow request type](#workflow-request-type)
     - [Add Op option the remove messages from the queue on nodes](#add-op-option-the-remove-messages-from-the-queue-on-nodes)
   - [Disclaimer](#disclaimer)
 
@@ -998,15 +994,9 @@ For CliCommand message to a node named "ship1" of type Command and it wants an A
 
 ## TODO
 
-### Implements a replyOpts message field
-
-To be used for specifying options that can be needed for reply methods like external calls, etc.
-
 ### Implements a repeat and repeatInterval message field
 
 To specify how many times a message should be run and at what interval
-
-### Split out the different opCmd's into it's own request types
 
 ### Move the processes map into it's own go routine
 
@@ -1017,12 +1007,6 @@ Use channels to update and get values, and get rid of the use of mutex's.
 - A Handler that writes to this folder.
 - A Handler that can check what is in this folder.
 - A Handler to remove messages from this folder.
-
-### A carrier type of message, that are able to forward a message on behalf of others, and are not directly ment for itself
-
-### Workflow request type
-
-Implement a workflow request type that will allow steps to be executed, and rollback if something failed during execution.
 
 ### Add Op option the remove messages from the queue on nodes
 
