@@ -65,7 +65,6 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
       - [Subject](#subject)
         - [Complete subject example](#complete-subject-example)
   - [TODO](#todo)
-    - [Implements a repeat and repeatInterval message field](#implements-a-repeat-and-repeatinterval-message-field)
     - [Move the processes map into it's own go routine](#move-the-processes-map-into-its-own-go-routine)
     - [Services at startup of Steward. Could be implemented by having a local folder of messages to go through at startup. What is needed](#services-at-startup-of-steward-could-be-implemented-by-having-a-local-folder-of-messages-to-go-through-at-startup-what-is-needed)
     - [Add Op option the remove messages from the queue on nodes](#add-op-option-the-remove-messages-from-the-queue-on-nodes)
@@ -993,10 +992,6 @@ For CliCommand message to a node named "ship1" of type Command and it wants an A
 `ship1.REQCliCommand.CommandACK`
 
 ## TODO
-
-### Implements a repeat and repeatInterval message field
-
-To specify how many times a message should be run and at what interval
 
 ### Move the processes map into it's own go routine
 
