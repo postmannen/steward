@@ -241,7 +241,7 @@ Steward supports both the use of flags/arguments set at startup, and the use of 
 - A default config file will be created at first startup if one does not exist
   - The default config will contain default values.
   - Any value also provided via a flag will also be written to the config file.
-- If **Steward** is restarted, the current content of the config file will be used as the new defaults. 
+- If **Steward** is restarted, the current content of the config file will be used as the new defaults.
   - If you restart Steward without any flags specified, the values of the last run will be read from the config file.
 - If new values are provided via CLI flags, they will take **precedence** over the ones currently in the config file.
   - The new CLI flag values will be written to the config, making it the default for the next restart.
@@ -322,7 +322,7 @@ Stop a process. Takes the REQ method, receiving node name, kind publisher/subscr
 
 #### REQCliCommand
 
-Run CLI command on a node. Linux/Windows/Mac/Docker-container or other. 
+Run CLI command on a node. Linux/Windows/Mac/Docker-container or other.
 
 Will run the command given, and return the stdout output of the command when the command is done.
 
@@ -541,7 +541,7 @@ Steward is written in go, so you need Go installed to compile it. You can get go
 - Clone the repository:
   - `git clone https://github.com/RaaLabs/steward.git`.
 - Change directory and build:
-  - `cd ./steward/cmd` 
+  - `cd ./steward/cmd`
   - `go build -o steward`
 - Run the application with `env CONFIG_FOLDER </myconfig/folder/here> ./steward`
 
@@ -981,7 +981,7 @@ You can save the content to myfile.JSON and append it to the `socket` file:
 
 Description of the differences are mentioned earlier.
 
-Info: The command/event called **MessageType** are present in both the **Subject** structure and the **Message** structure. 
+Info: The command/event called **MessageType** are present in both the **Subject** structure and the **Message** structure.
 This is due to MessageType being used in both the naming of a subject, and for specifying message type to allow for specific processing of a message.
 
 **Method**: Are the functionality the message provide. Example could be `CLICommand` or `Syslogforwarding`

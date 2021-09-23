@@ -197,7 +197,7 @@ func NewServer(c *Configuration, version string) (*server, error) {
 // if there is publisher process for a given message subject, and
 // if it does not exist it will spawn one.
 func (s *server) Start() {
-	fmt.Printf(" * VERSION = %+v\n", s.version)
+	log.Printf("Starting steward, version=%+v\n", s.version)
 	s.metrics.promVersion.With(prometheus.Labels{"version": string(s.version)})
 
 	// Start the error kernel that will do all the error handling

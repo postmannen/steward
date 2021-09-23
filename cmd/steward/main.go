@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -54,7 +53,7 @@ func main() {
 
 	// Block and wait for CTRL+C
 	sig := <-sigCh
-	fmt.Printf("Got exit signal, terminating all processes, %v\n", sig)
+	log.Printf("Got exit signal, terminating all processes, %v\n", sig)
 
 	// Adding a safety function here so we can make sure that all processes
 	// are stopped after a given time if the context cancelation hangs.

@@ -270,9 +270,6 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 		message.ReplyMethod = REQToFileAppend
 	}
 
-	fmt.Printf("\n * DEBUG * newReplyMessage: message.FromNode contains: %v\n", message.FromNode)
-	fmt.Printf("\n * DEBUG * newReplyMessage: message.ToNode contains: %v\n", message.ToNode)
-
 	// Create a new message for the reply, and put it on the
 	// ringbuffer to be published.
 	newMsg := Message{
@@ -638,7 +635,6 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 		// that publisher processes are named by the node they are sending the
 		// message to. Subscriber processes names are named by the node name
 		// they are running on.
-		fmt.Printf(" * DEBUG : %v\n", message.MethodArgs)
 		methodString := message.MethodArgs[0]
 		node := message.MethodArgs[1]
 		kind := message.MethodArgs[2]
@@ -668,9 +664,7 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 		// We can then use this processName to get the real values for the
 		// actual process we want to stop.
 		sub := newSubject(method, string(node))
-		fmt.Printf(" * DEBUG : sub: %v\n", sub)
 		processName := processNameGet(sub.name(), processKind(kind))
-		fmt.Printf(" * DEBUG : processName: %v\n", processName)
 
 		proc.processes.mu.Lock()
 
@@ -1075,8 +1069,6 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 	go func() {
 		defer proc.processes.wg.Done()
 
-		fmt.Printf("* DEBUG * handler: received message contains : %#v\n", message)
-
 		c := message.MethodArgs[0]
 		a := message.MethodArgs[1:]
 
@@ -1110,7 +1102,6 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 			if foundEnvData {
 				envData = fmt.Sprintf("STEWARD_DATA=%v", envData)
 				cmd.Env = append(cmd.Env, envData)
-				fmt.Printf("\n * DEBUG * cmd.Env contains: %v\n\n", cmd.Env)
 			}
 
 			var out bytes.Buffer
@@ -1174,7 +1165,6 @@ func (m methodREQToConsole) getKind() CommandOrEvent {
 
 // Handler to write directly to console.
 func (m methodREQToConsole) handler(proc process, message Message, node string) ([]byte, error) {
-	fmt.Printf("<--- methodCLICommandReply: %v\n", message.Data)
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
@@ -1483,7 +1473,7 @@ func (m methodREQToSocket) getKind() CommandOrEvent {
 func (m methodREQToSocket) handler(proc process, message Message, node string) ([]byte, error) {
 
 	for _, d := range message.Data {
-		// Write the data to the socket here.
+		// TODO: Write the data to the socket here.
 		fmt.Printf("Info: Data to write to socket: %v\n", d)
 	}
 

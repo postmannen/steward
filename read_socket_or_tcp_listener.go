@@ -261,7 +261,6 @@ func (s *server) checkMessageToNodes(MsgSlice []Message) []Message {
 		// if toNodes specified, we use the original message, and
 		// create new node messages for each of the nodes specified.
 		case len(v.ToNodes) != 0:
-			fmt.Printf("\n * Found TonNodes: %#v\n\n", len(v.ToNodes))
 			for _, n := range v.ToNodes {
 				m := v
 				// Set the toNodes field to nil since we're creating
