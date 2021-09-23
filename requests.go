@@ -424,7 +424,7 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			go procNew.spawnWorker(proc.processes, proc.natsConn)
 
 			er := fmt.Errorf("info: startProc: started id: %v, subject: %v: node: %v", procNew.processID, sub, message.ToNode)
-			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+			sendInfoLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 
 		case "stopProc":
 			// Set the interface type dst to &OpStart.
@@ -485,7 +485,7 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 				proc.processes.metrics.promProcessesAllRunning.Delete(prometheus.Labels{"processName": string(processName)})
 
 				er := fmt.Errorf("info: stopProc: stopped %v on %v", sub, message.ToNode)
-				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+				sendInfoLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 				log.Printf("%v\n", er)
 
 				newReplyMessage(proc, message, []byte(er.Error()))
@@ -1325,7 +1325,7 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 				// go routine.
 				// close(t.Lines)
 				er := fmt.Errorf("info: method timeout reached REQTailFile, canceling: %v", message.MethodArgs)
-				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+				sendInfoLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 
 				return
 			case out := <-outCh:
@@ -1444,7 +1444,7 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 			case <-ctx.Done():
 				cancel()
 				er := fmt.Errorf("info: methodREQCliCommandCont: method timeout reached, canceling: methodArgs: %v", message.MethodArgs)
-				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+				sendInfoLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 				return
 			case out := <-outCh:
 				// Prepare and queue for sending a new message with the output

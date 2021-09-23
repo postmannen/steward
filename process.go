@@ -273,7 +273,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 					// We do not want to send errorLogs for REQErrorLog type since
 					// it will just cause an endless loop.
 					if message.Method != REQErrorLog {
-						sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, p.node, er)
+						sendInfoLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, p.node, er)
 					}
 
 					log.Printf("%v\n", er)
@@ -364,7 +364,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 
 	default:
 		er := fmt.Errorf("info: did not find that specific type of command or event: %#v", p.subject.CommandOrEvent)
-		sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
+		sendInfoLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 
 	}
 }
