@@ -354,6 +354,13 @@ Will run the command given, and return the stdout output of the command continou
 ]
 ```
 
+**NB**: A github issue is filed on not killing all child processes when using pipes <https://github.com/golang/go/issues/23019>. This is relevant for this request type.
+
+TODO: Check in later if there are any progress on the issue.
+When testing the problem seems to appear when using sudo, or tcpdump without
+the -l option. So for now, don't use sudo, and remember to use -l with tcpdump
+which makes stdout line buffered.
+
 #### REQTailFile
 
 Tail log files on some node, and get the result for each new line read sent back in a reply message. Uses the methodTimeout to define for how long the command will run.

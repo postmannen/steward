@@ -1427,6 +1427,7 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 		ctx, cancel := context.WithTimeout(proc.ctx, time.Second*time.Duration(message.MethodTimeout))
 
 		outCh := make(chan []byte)
+		errCh := make(chan string)
 
 		proc.processes.wg.Add(1)
 		go func() {
@@ -1440,9 +1441,7 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 			if err != nil {
 				er := fmt.Errorf("error: methodREQCliCommandCont: cmd.StdoutPipe failed : %v, methodArgs: %v", err, message.MethodArgs)
 				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-				log.Printf("%v\n", er)
-
-				log.Printf("error: %v\n", err)
+				log.Printf("error: %v\n", er)
 			}
 
 			ErrorReader, err := cmd.StderrPipe()
@@ -1450,8 +1449,6 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 				er := fmt.Errorf("error: methodREQCliCommandCont: cmd.StderrPipe failed : %v, methodArgs: %v", err, message.MethodArgs)
 				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 				log.Printf("%v\n", er)
-
-				log.Printf("error: %v\n", err)
 			}
 
 			if err := cmd.Start(); err != nil {
@@ -1461,34 +1458,33 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 
 			}
 
-			// Also send error messages that might happen during the time
-			// cmd.Start runs.
-			// Putting the scanner.Text value on a channel so we can make
-			// the scanner non-blocking, and also check context cancelation.
 			go func() {
-				errCh := make(chan string, 1)
-
 				scanner := bufio.NewScanner(ErrorReader)
 				for scanner.Scan() {
-					select {
-					case errCh <- scanner.Text():
-						er := fmt.Errorf("error: methodREQCliCommandCont: cmd.Start failed : %v, methodArgs: %v, error_output: %v", err, message.MethodArgs, <-errCh)
-						sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-						log.Printf("%v\n", er)
-					case <-ctx.Done():
-						return
-					}
+					errCh <- scanner.Text()
 				}
 			}()
 
-			scanner := bufio.NewScanner(outReader)
-			for scanner.Scan() {
-				select {
-				case outCh <- []byte(scanner.Text() + "\n"):
-				case <-ctx.Done():
-					return
+			go func() {
+				scanner := bufio.NewScanner(outReader)
+				for scanner.Scan() {
+					outCh <- []byte(scanner.Text() + "\n")
 				}
+			}()
 
+			// NB: sending cancel to command context, so processes are killed.
+			// A github issue is filed on not killing all child processes when using pipes:
+			// https://github.com/golang/go/issues/23019
+			// TODO: Check in later if there are any progress on the issue.
+			// When testing the problem seems to appear when using sudo, or tcpdump without
+			// the -l option. So for now, don't use sudo, and remember to use -l with tcpdump
+			// which makes stdout line buffered.
+
+			<-ctx.Done()
+			cancel()
+
+			if err := cmd.Wait(); err != nil {
+				log.Printf(" --------------- * error: REQCliCommandCont: cmd.Wait: %v\n", err)
 			}
 
 		}()
@@ -1502,9 +1498,9 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 				sendInfoLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 				return
 			case out := <-outCh:
-				// Prepare and queue for sending a new message with the output
-				// of the action executed.
 				newReplyMessage(proc, message, out)
+			case out := <-errCh:
+				newReplyMessage(proc, message, []byte(out))
 			}
 		}
 	}()
