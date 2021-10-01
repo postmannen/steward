@@ -268,7 +268,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 				//	continue
 				case retryAttempts >= message.Retries:
 					// max retries reached
-					er := fmt.Errorf("info: toNode: %v, fromNode: %v, subject: %v: max retries reached, check if node is up and running and if it got a subscriber started for the given REQ type", message.ToNode, message.FromNode, msg.Subject)
+					er := fmt.Errorf("info: toNode: %v, fromNode: %v, subject: %v, methodArgs: %v: max retries reached, check if node is up and running and if it got a subscriber started for the given REQ type", message.ToNode, message.FromNode, msg.Subject, message.MethodArgs)
 
 					// We do not want to send errorLogs for REQErrorLog type since
 					// it will just cause an endless loop.
