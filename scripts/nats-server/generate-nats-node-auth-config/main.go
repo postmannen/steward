@@ -1,3 +1,13 @@
+// Will generate the node specific config to be used in the
+// authentication section of the nats-server config.
+// It's given it's input via stdin
+//
+// Example:
+// ./generatenatsconfig < done.log
+//
+// The format of the input should be:
+// <ip address>,<full nodename>,nkey-user=<user key of node>
+
 package main
 
 import (
