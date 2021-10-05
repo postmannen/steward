@@ -1,3 +1,5 @@
+#!/bin/bash
+
 cat >./nats.conf <<EOF
 port: 4022
 tls {
