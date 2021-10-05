@@ -12,6 +12,18 @@ authorization: {
         {
     
         }
+        {
+            # central
+            nkey: FILL-IN-CENTRAL-USER-KEY-HERE
+            permissions: {
+                publish: {
+                        allow: ["FILL-IN-ORGANISATION-HERE.>","errorCentral.>","central.>"]
+                }
+            subscribe: {
+                        allow: ["FILL-IN-ORGANISATION-HERE.>","errorCentral.>","central.>"]
+                }
+            }
+        }
     ]
 }
 EOF

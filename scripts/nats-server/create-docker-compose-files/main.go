@@ -16,7 +16,7 @@ import (
 func generateEnv(templateFile string, eData envData) error {
 	tpl, err := template.ParseFiles(templateFile)
 	if err != nil {
-		return fmt.Errorf("error: parsing template file: %v, err: %v", templateFile, err)
+		return fmt.Errorf("error: parsing template file, check that the templateDir flag is set to the correct path: %v, err: %v", templateFile, err)
 	}
 
 	fh, err := os.OpenFile("env.env", os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0755)
@@ -37,7 +37,7 @@ func generateEnv(templateFile string, eData envData) error {
 func generateDockerCompose(templateFile string, cData composeData) error {
 	tpl, err := template.ParseFiles(templateFile)
 	if err != nil {
-		return fmt.Errorf("error: parsing template file: %v, err: %v", templateFile, err)
+		return fmt.Errorf("error: parsing template file, check that the templateDir flag is set to the correct path: %v, err: %v", templateFile, err)
 	}
 
 	fh, err := os.OpenFile("docker-compose.yml", os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0755)
@@ -76,7 +76,7 @@ func main() {
 
 	flags := flag.String("Flags", "-d", "flags to start nats-server with")
 
-	templateDir := flag.String("templateDir", "./", "the directory path to where the template files are located")
+	templateDir := flag.String("templateDir", "./steward/scripts/nats-server/create-docker-compose-files/", "the directory path to where the template files are located")
 
 	flag.Parse()
 
