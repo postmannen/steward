@@ -1,3 +1,6 @@
+// Example for how to run
+// go run main.go --brokerAddress=localhost:42222
+
 package main
 
 import (
@@ -5,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"text/template"
 )
 
@@ -87,21 +91,29 @@ func main() {
 	nkeySeedFile := flag.String("nkeySeedFile", "/tmp/seed.txt", "the complete path of the seed file to mount")
 	socketFolder := flag.String("sockerFolder", "/tmp/tmp/", "the complete path of the socket folder to mount")
 	flag.Parse()
+	templateDir := flag.String("templateDir", "./", "the directory path to where the template files are located")
 
 	if *brokerAddress == "" {
 		log.Printf("error: -brokerAddress flag can not be empty\n")
 		return
 	}
 
-	err := generateEnv("template_env.env", *brokerAddress)
-	if err != nil {
-		log.Printf("%v\n", err)
-		return
+	{
+		p := path.Join(*templateDir, "template_env.env")
+
+		err := generateEnv(p, *brokerAddress)
+		if err != nil {
+			log.Printf("%v\n", err)
+			return
+		}
 	}
 
-	err = generateDockerCompose("template_docker-compose.yml", *imageAndVersion, *exposedProfilingPort, *exposedPrometheusPort, *exposedDataFolderPort, *exposedTcpListenerPort, *exposedHttpListenerPort, *nkeySeedFile, *socketFolder)
-	if err != nil {
-		log.Printf("%v\n", err)
-		return
+	{
+		p := path.Join(*templateDir, "template_docker-compose.yml")
+		err := generateDockerCompose(p, *imageAndVersion, *exposedProfilingPort, *exposedPrometheusPort, *exposedDataFolderPort, *exposedTcpListenerPort, *exposedHttpListenerPort, *nkeySeedFile, *socketFolder)
+		if err != nil {
+			log.Printf("%v\n", err)
+			return
+		}
 	}
 }
