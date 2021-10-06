@@ -12,10 +12,6 @@ cd my_dir
 git clone https://github.com/RaaLabs/steward.git
 ```
 
-Then create the public and private nkey's by running:
-
-`go run ./steward/scripts/nats-server/generate-nkeys/main.go`
-
 To create the docker-compose and env.env run:
 
 ```bash

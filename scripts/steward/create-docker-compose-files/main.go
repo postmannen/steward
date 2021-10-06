@@ -32,16 +32,18 @@ func generateNkeys(fileDir string) error {
 		fmt.Println("scanning line : ", text)
 
 		if strings.HasPrefix(text, "S") {
-			fmt.Println("found S")
 			p := path.Join(fileDir, "seed.txt")
 			err := writekey(p, []byte(text))
-			return err
+			if err != nil {
+				return err
+			}
 		}
 		if strings.HasPrefix(text, "U") {
-			fmt.Println("found U")
 			p := path.Join(fileDir, "user.txt")
 			err := writekey(p, []byte(text))
-			return err
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -148,6 +150,7 @@ func main() {
 	socketFolder := flag.String("socketFolder", "./tmp/", "the complete path of the socket folder to mount")
 
 	templateDir := flag.String("templateDir", "./steward/scripts/steward/create-docker-compose-files/", "the directory path to where the template files are located")
+
 	flag.Parse()
 
 	if *brokerAddress == "" {
