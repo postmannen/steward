@@ -375,7 +375,6 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 
 		switch message.Operation.OpCmd {
 		case "ps":
-			proc.processes.mu.Lock()
 			// Loop the the processes map, and find all that is active to
 			// be returned in the reply message.
 
@@ -389,7 +388,6 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 				}
 
 			}
-			proc.processes.mu.Unlock()
 
 		case "startProc":
 			// Set the empty interface type dst to &OpStart.

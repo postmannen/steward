@@ -19,7 +19,7 @@ type processes struct {
 	// The active spawned processes
 	active procsMap
 	// mutex to lock the map
-	mu sync.RWMutex
+	// mu sync.RWMutex
 	// The last processID created
 	lastProcessID int
 	// The instance global prometheus registry.

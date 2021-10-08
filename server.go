@@ -431,7 +431,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 				// message channel.
 				if valueOK {
 					// fmt.Printf(" * DEBUG1.3 * MUTEX.LOCK before range existingProcIDMap, samDBValue.id: %#v, existingProcIDMap length: %v\n", samTmp.samDBValue.ID, len(existingProcIDMap))
-					s.processes.mu.Lock()
+
 					// var pid int
 					var proc process
 					// forLoopCounter := 1
@@ -449,7 +449,6 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 
 						// forLoopCounter++
 					}
-					s.processes.mu.Unlock()
 
 					// We have found the process to route the message to, deliver it.
 					proc.subject.messageCh <- m
