@@ -422,14 +422,14 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 
 				// Check if there is a map of type map[int]process registered
 				// for the processName, and if it exists then return it.
-				s.processes.mu.Lock()
-				existingProcIDMap, ok := s.processes.active[pn]
-				s.processes.mu.Unlock()
+				kv := s.processes.active.get(pn)
+				existingProcIDMap := kv.v
+				valueOK := kv.ok
 
 				// If found a map above, range it, and are there already a process
 				// for that subject, put the message on that processes incomming
 				// message channel.
-				if ok {
+				if valueOK {
 					// fmt.Printf(" * DEBUG1.3 * MUTEX.LOCK before range existingProcIDMap, samDBValue.id: %#v, existingProcIDMap length: %v\n", samTmp.samDBValue.ID, len(existingProcIDMap))
 					s.processes.mu.Lock()
 					// var pid int

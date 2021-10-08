@@ -378,8 +378,11 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			proc.processes.mu.Lock()
 			// Loop the the processes map, and find all that is active to
 			// be returned in the reply message.
-			for _, idMap := range proc.processes.active {
-				for _, v := range idMap {
+
+			activeProcs := proc.processes.active.getAll()
+
+			for _, idMap := range activeProcs {
+				for _, v := range idMap.v {
 					s := fmt.Sprintf("%v, proc: %v, id: %v, name: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), v.processKind, v.processID, v.subject.name())
 					sb := []byte(s)
 					out = append(out, sb...)
@@ -464,13 +467,13 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 				return
 			}
 
-			proc.processes.mu.Lock()
-
 			// Remove the process from the processes active map if found.
-			toStopProc, ok := proc.processes.active[processName][arg.ID]
+			p1 := proc.processes.active.get(processName)
+			toStopProc, ok := p1.v[arg.ID]
+
 			if ok {
 				// Delete the process from the processes map
-				delete(proc.processes.active, processName)
+				proc.processes.active.del(keyValue{k: processName})
 				// Stop started go routines that belong to the process.
 				toStopProc.ctxCancel()
 				// Stop subscribing for messages on the process's subject.
@@ -497,9 +500,6 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 
 				newReplyMessage(proc, message, []byte(er.Error()))
 			}
-
-			proc.processes.mu.Unlock()
-
 		}
 
 		newReplyMessage(proc, message, out)
@@ -529,18 +529,17 @@ func (m methodREQOpProcessList) handler(proc process, message Message, node stri
 
 		out := []byte{}
 
-		proc.processes.mu.Lock()
 		// Loop the the processes map, and find all that is active to
 		// be returned in the reply message.
-		for _, idMap := range proc.processes.active {
-			for _, v := range idMap {
+		procsAll := proc.processes.active.getAll()
+		for _, idMap := range procsAll {
+			for _, v := range idMap.v {
 				s := fmt.Sprintf("%v, process: %v, id: %v, name: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), v.processKind, v.processID, v.subject.name())
 				sb := []byte(s)
 				out = append(out, sb...)
 			}
 
 		}
-		proc.processes.mu.Unlock()
 
 		newReplyMessage(proc, message, out)
 	}()
@@ -683,13 +682,13 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 		sub := newSubject(method, string(node))
 		processName := processNameGet(sub.name(), processKind(kind))
 
-		proc.processes.mu.Lock()
-
 		// Remove the process from the processes active map if found.
-		toStopProc, ok := proc.processes.active[processName][id]
+		p1 := proc.processes.active.get(processName)
+		toStopProc, ok := p1.v[id]
+
 		if ok {
 			// Delete the process from the processes map
-			delete(proc.processes.active, processName)
+			proc.processes.active.del(keyValue{k: processName})
 			// Stop started go routines that belong to the process.
 			toStopProc.ctxCancel()
 			// Stop subscribing for messages on the process's subject.
@@ -721,7 +720,6 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 			newReplyMessage(proc, message, out)
 		}
 
-		proc.processes.mu.Unlock()
 	}()
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))

@@ -17,7 +17,7 @@ type processes struct {
 	// cancel func to send cancel signal to the subscriber processes context.
 	cancel context.CancelFunc
 	// The active spawned processes
-	active map[processName]map[int]process
+	active procsMap
 	// mutex to lock the map
 	mu sync.RWMutex
 	// The last processID created
@@ -32,11 +32,16 @@ type processes struct {
 // is map containing all the currently running processes.
 func newProcesses(ctx context.Context, metrics *metrics) *processes {
 	p := processes{
-		active: make(map[processName]map[int]process),
+		active: *newProcsMap(),
 	}
 
 	// Prepare the parent context for the subscribers.
 	ctx, cancel := context.WithCancel(ctx)
+
+	// Start the processes map.
+	go func() {
+		p.active.run(ctx)
+	}()
 
 	p.ctx = ctx
 	p.cancel = cancel
@@ -49,20 +54,20 @@ func newProcesses(ctx context.Context, metrics *metrics) *processes {
 // ----------------------
 
 type keyValue struct {
-	k  int
-	v  string
+	k  processName
+	v  map[int]process
 	ok bool
 }
 
 type kvCh chan keyValue
 
 type getValue struct {
-	k    int
+	k    processName
 	kvCh kvCh
 }
 
 type procsMap struct {
-	m         map[int]string
+	m         map[processName]map[int]process
 	mInCh     chan kvCh
 	mGetCh    chan getValue
 	mDelCh    chan kvCh
@@ -71,7 +76,7 @@ type procsMap struct {
 
 func newProcsMap() *procsMap {
 	cM := procsMap{
-		m:         map[int]string{},
+		m:         make(map[processName]map[int]process),
 		mInCh:     make(chan kvCh),
 		mGetCh:    make(chan getValue),
 		mDelCh:    make(chan kvCh),
@@ -106,7 +111,7 @@ func (c *procsMap) run(ctx context.Context) {
 			gaCh <- kvSlice
 
 		case <-ctx.Done():
-			// log.Printf("info: cMap: got ctx.Done\n")
+			log.Printf("info: processes active.Run: got ctx.Done\n")
 			return
 		}
 	}
@@ -118,7 +123,7 @@ func (c *procsMap) put(kv keyValue) {
 	c.mInCh <- kvCh
 }
 
-func (c *procsMap) get(key int) keyValue {
+func (c *procsMap) get(key processName) keyValue {
 	kvCh := make(chan keyValue, 1)
 
 	gv := getValue{
@@ -443,14 +448,15 @@ func (s startup) subREQToSocket(p process) {
 // Print the content of the processes map.
 func (p *processes) printProcessesMap() {
 	log.Printf("*** Output of processes map :\n")
-	p.mu.Lock()
-	for _, vSub := range p.active {
-		for _, vID := range vSub {
+
+	activeProcs := p.active.getAll()
+
+	for _, vSub := range activeProcs {
+		for _, vID := range vSub.v {
 			log.Printf("* proc - : %v, id: %v, name: %v\n", vID.processKind, vID.processID, vID.subject.name())
 		}
 	}
-	p.mu.Unlock()
 
-	p.metrics.promProcessesTotal.Set(float64(len(p.active)))
+	p.metrics.promProcessesTotal.Set(float64(len(activeProcs)))
 
 }

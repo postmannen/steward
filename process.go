@@ -187,9 +187,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 	idProcMap := make(map[int]process)
 	idProcMap[p.processID] = p
 
-	procs.mu.Lock()
-	procs.active[pn] = idProcMap
-	procs.mu.Unlock()
+	procs.active.put(keyValue{k: pn, v: idProcMap})
 }
 
 // messageDeliverNats will take care of the delivering the message
@@ -423,10 +421,14 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		m.done <- struct{}{}
 
 		// Increment the counter for the next message to be sent.
+		//
+		// TODO: Check if it is possible, or makes sense to move the
+		// counter out of the map.
 		p.messageID++
-		p.processes.mu.Lock()
-		p.processes.active[pn][p.processID] = p
-		p.processes.mu.Unlock()
+
+		p1 := p.processes.active.get(pn)
+		p1.v[p.processID] = p
+		p.processes.active.put(keyValue{k: pn, v: p1.v})
 
 		// Handle the error.
 		//
