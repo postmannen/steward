@@ -46,6 +46,108 @@ func newProcesses(ctx context.Context, metrics *metrics) *processes {
 	return &p
 }
 
+// ----------------------
+
+type keyValue struct {
+	k  int
+	v  string
+	ok bool
+}
+
+type kvCh chan keyValue
+
+type getValue struct {
+	k    int
+	kvCh kvCh
+}
+
+type procsMap struct {
+	m         map[int]string
+	mInCh     chan kvCh
+	mGetCh    chan getValue
+	mDelCh    chan kvCh
+	mGetAllCh chan chan []keyValue
+}
+
+func newProcsMap() *procsMap {
+	cM := procsMap{
+		m:         map[int]string{},
+		mInCh:     make(chan kvCh),
+		mGetCh:    make(chan getValue),
+		mDelCh:    make(chan kvCh),
+		mGetAllCh: make(chan chan []keyValue),
+	}
+	return &cM
+}
+
+func (c *procsMap) run(ctx context.Context) {
+	for {
+		select {
+		case kvCh := <-c.mInCh:
+			kv := <-kvCh
+			c.m[kv.k] = kv.v
+
+		case gv := <-c.mGetCh:
+			v, ok := c.m[gv.k]
+			gv.kvCh <- keyValue{gv.k, v, ok}
+
+		case kvCh := <-c.mDelCh:
+			kv := <-kvCh
+			delete(c.m, kv.k)
+
+		case gaCh := <-c.mGetAllCh:
+			kvSlice := []keyValue{}
+
+			for k, v := range c.m {
+				kv := keyValue{k: k, v: v}
+				kvSlice = append(kvSlice, kv)
+			}
+
+			gaCh <- kvSlice
+
+		case <-ctx.Done():
+			// log.Printf("info: cMap: got ctx.Done\n")
+			return
+		}
+	}
+}
+
+func (c *procsMap) put(kv keyValue) {
+	kvCh := make(chan keyValue, 1)
+	kvCh <- kv
+	c.mInCh <- kvCh
+}
+
+func (c *procsMap) get(key int) keyValue {
+	kvCh := make(chan keyValue, 1)
+
+	gv := getValue{
+		k:    key,
+		kvCh: kvCh,
+	}
+
+	c.mGetCh <- gv
+
+	return <-kvCh
+}
+
+func (c *procsMap) del(kv keyValue) {
+	kvCh := make(chan keyValue, 1)
+	kvCh <- kv
+	c.mDelCh <- kvCh
+
+}
+
+func (c *procsMap) getAll() []keyValue {
+	gaCh := make(chan []keyValue, 1)
+	c.mGetAllCh <- gaCh
+
+	all := <-gaCh
+	return all
+}
+
+// ----------------------
+
 // Start all the subscriber processes.
 // Takes an initial process as it's input. All processes
 // will be tied to this single process's context.
