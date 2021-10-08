@@ -38,10 +38,10 @@ func newProcesses(ctx context.Context, metrics *metrics) *processes {
 	// Prepare the parent context for the subscribers.
 	ctx, cancel := context.WithCancel(ctx)
 
-	// Start the processes map.
-	go func() {
-		p.active.run(ctx)
-	}()
+	// // Start the processes map.
+	// go func() {
+	// 	p.active.run(ctx)
+	// }()
 
 	p.ctx = ctx
 	p.cancel = cancel
@@ -67,88 +67,81 @@ type getValue struct {
 }
 
 type procsMap struct {
-	m         map[processName]map[int]process
-	mInCh     chan kvCh
-	mGetCh    chan getValue
-	mDelCh    chan kvCh
-	mGetAllCh chan chan []keyValue
+	m  map[processName]map[int]process
+	mu sync.Mutex
 }
 
 func newProcsMap() *procsMap {
 	cM := procsMap{
-		m:         make(map[processName]map[int]process),
-		mInCh:     make(chan kvCh),
-		mGetCh:    make(chan getValue),
-		mDelCh:    make(chan kvCh),
-		mGetAllCh: make(chan chan []keyValue),
+		m: make(map[processName]map[int]process),
 	}
 	return &cM
 }
 
-func (c *procsMap) run(ctx context.Context) {
-	for {
-		select {
-		case kvCh := <-c.mInCh:
-			kv := <-kvCh
-			c.m[kv.k] = kv.v
-
-		case gv := <-c.mGetCh:
-			v, ok := c.m[gv.k]
-			gv.kvCh <- keyValue{gv.k, v, ok}
-
-		case kvCh := <-c.mDelCh:
-			kv := <-kvCh
-			delete(c.m, kv.k)
-
-		case gaCh := <-c.mGetAllCh:
-			kvSlice := []keyValue{}
-
-			for k, v := range c.m {
-				kv := keyValue{k: k, v: v}
-				kvSlice = append(kvSlice, kv)
-			}
-
-			gaCh <- kvSlice
-
-		case <-ctx.Done():
-			log.Printf("info: processes active.Run: got ctx.Done\n")
-			return
-		}
-	}
-}
+//func (c *procsMap) run(ctx context.Context) {
+//	for {
+//		select {
+//		case kvCh := <-c.mInCh:
+//			kv := <-kvCh
+//			c.m[kv.k] = kv.v
+//
+//		case gv := <-c.mGetCh:
+//			v, ok := c.m[gv.k]
+//			gv.kvCh <- keyValue{gv.k, v, ok}
+//
+//		case kvCh := <-c.mDelCh:
+//			kv := <-kvCh
+//			delete(c.m, kv.k)
+//
+//		case gaCh := <-c.mGetAllCh:
+//			kvSlice := []keyValue{}
+//
+//			for k, v := range c.m {
+//				kv := keyValue{k: k, v: v}
+//				kvSlice = append(kvSlice, kv)
+//			}
+//
+//			gaCh <- kvSlice
+//
+//		case <-ctx.Done():
+//			log.Printf("info: processes active.Run: got ctx.Done\n")
+//			return
+//		}
+//	}
+//}
 
 func (c *procsMap) put(kv keyValue) {
-	kvCh := make(chan keyValue, 1)
-	kvCh <- kv
-	c.mInCh <- kvCh
+	c.mu.Lock()
+	c.m[kv.k] = kv.v
+	c.mu.Unlock()
 }
 
 func (c *procsMap) get(key processName) keyValue {
-	kvCh := make(chan keyValue, 1)
+	var kv keyValue
 
-	gv := getValue{
-		k:    key,
-		kvCh: kvCh,
-	}
+	c.mu.Lock()
+	kv.v, kv.ok = c.m[key]
+	c.mu.Unlock()
 
-	c.mGetCh <- gv
-
-	return <-kvCh
+	return kv
 }
 
 func (c *procsMap) del(kv keyValue) {
-	kvCh := make(chan keyValue, 1)
-	kvCh <- kv
-	c.mDelCh <- kvCh
-
+	c.mu.Lock()
+	delete(c.m, kv.k)
+	c.mu.Unlock()
 }
 
 func (c *procsMap) getAll() []keyValue {
-	gaCh := make(chan []keyValue, 1)
-	c.mGetAllCh <- gaCh
+	var kvs []keyValue
 
-	all := <-gaCh
-	return all
+	c.mu.Lock()
+	for k, v := range c.m {
+		kvs = append(kvs, keyValue{k: k, v: v})
+	}
+	c.mu.Unlock()
+
+	return kvs
 }
 
 // ----------------------
