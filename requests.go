@@ -246,10 +246,8 @@ type MethodsAvailable struct {
 func (ma MethodsAvailable) CheckIfExists(m Method) (methodHandler, bool) {
 	mFunc, ok := ma.Methodhandlers[m]
 	if ok {
-		// fmt.Printf("******THE TOPIC EXISTS: %v******\n", m)
 		return mFunc, true
 	} else {
-		// fmt.Printf("******THE TOPIC DO NOT EXIST: %v******\n", m)
 		return nil, false
 	}
 }
@@ -402,8 +400,6 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 
 			// Assert it into the correct non pointer value.
 			arg := *dst.(*OpCmdStartProc)
-
-			//fmt.Printf(" ** Content of Arg = %#v\n", arg)
 
 			if len(arg.AllowedNodes) == 0 {
 				er := fmt.Errorf("error: startProc: no allowed publisher nodes specified: %v" + fmt.Sprint(message))

@@ -245,7 +245,6 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 
 		// If the message is an ACK type of message we must check that a
 		// reply, and if it is not we don't wait here at all.
-		// fmt.Printf("info: messageDeliverNats: preparing to send message: %v\n", message)
 		if p.subject.CommandOrEvent == CommandACK || p.subject.CommandOrEvent == EventACK {
 			// Wait up until ACKTimeout specified for a reply,
 			// continue and resend if no reply received,
@@ -392,14 +391,10 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 	for {
 		var err error
 		var m Message
-		// fmt.Printf(" * DEBUG2.1 : publishMessages, proc.id: %v\n", p.processID)
-
-		// fmt.Printf(" * DEBUG2.2 * before selecting read p.subject.messageCh: %#v, message.id: %#v, proc.id: %v\n", &p.subject.messageCh, p.messageID, p.processID)
 
 		// Wait and read the next message on the message channel, or
 		// exit this function if Cancel are received via ctx.
 		select {
-		// * DEBUG2 NOTE: Can it be that it have chosen the wrong process earler, and are waiting on the wrong channel here ?
 		case m = <-p.subject.messageCh:
 		case <-p.ctx.Done():
 			er := fmt.Errorf("info: canceling publisher: %v", p.subject.name())
@@ -408,7 +403,6 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 			return
 		}
 
-		// fmt.Printf(" * DEBUG2.3 * after selecting read p.subject.messageCh: %#v, message.id: %#v, proc.id: %v\n", p.subject.messageCh, p.messageID, p.processID)
 		// Get the process name so we can look up the process in the
 		// processes map, and increment the message counter.
 		pn := processNameGet(p.subject.name(), processKindPublisher)

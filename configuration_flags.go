@@ -437,7 +437,6 @@ func (c *Configuration) ReadConfigFile(configFolder string) (Configuration, erro
 	// Check that all values read are ok.
 	conf := checkConfigValues(cFile)
 
-	// fmt.Printf("%+v\n", c)
 	return conf, nil
 }
 

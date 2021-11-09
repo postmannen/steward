@@ -270,9 +270,6 @@ func (s *server) Start() {
 
 // Will stop all processes started during startup.
 func (s *server) Stop() {
-	// fmt.Printf(" * DEBUG100 * processMap \n")
-	// s.processes.printProcessesMap()
-
 	// Stop the started pub/sub message processes.
 	s.processes.Stop()
 	log.Printf("info: stopped all subscribers\n")
@@ -396,12 +393,8 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 
 	go func() {
 		for samDBVal := range ringBufferOutCh {
-			// fmt.Printf(" * DEBUG1.1 * before signaling back to the ringbuffer that message was picked from ring buffer, samTmp.delivered: %#v\n", samTmp.samDBValue.ID)
-
 			// Signal back to the ringbuffer that message have been picked up.
 			samDBVal.delivered()
-
-			// fmt.Printf(" * DEBUG1.2 * after signaling back to the ringbuffer that message was picked from ring buffer, samTmp.delivered: %#v\n", samTmp.samDBValue.ID)
 
 			sam := samDBVal.samDBValue.Data
 			// Check if the format of the message is correct.
@@ -425,7 +418,6 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 
 				m := sam.Message
 				subjName := sam.Subject.name()
-				// DEBUG: fmt.Printf("** handleNewOperatorMessages: message: %v, ** subject: %#v\n", m, sam.Subject)
 				pn := processNameGet(subjName, processKindPublisher)
 
 				// Check if there is a map of type map[int]process registered
@@ -438,29 +430,15 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 				// for that subject, put the message on that processes incomming
 				// message channel.
 				if valueOK {
-					// fmt.Printf(" * DEBUG1.3 * MUTEX.LOCK before range existingProcIDMap, samDBValue.id: %#v, existingProcIDMap length: %v\n", samTmp.samDBValue.ID, len(existingProcIDMap))
-
 					// var pid int
 					var proc process
 					// forLoopCounter := 1
 					for _, existingProc := range existingProcIDMap {
-						// fmt.Printf(" * DEBUG1.3 * forLoopCounter: %v\n", forLoopCounter)
-
-						// pid = existingProc.processID
-						// log.Printf("info: processNewMessages: found the specific subject: %v, proc.ID: %v\n", subjName, existingProc.processID)
-
-						// fmt.Printf(" * DEBUG1.4 * before putting on channel to found process, process ch: %#v,existingproc.id: %v\n", &existingProc.subject.messageCh, existingProc.processID)
-
 						proc = existingProc
-
-						// fmt.Printf(" * DEBUG1.5 * after putting on channel to found process, process ch: %#v,existingproc.id: %v\n", &existingProc.subject.messageCh, existingProc.processID)
-
-						// forLoopCounter++
 					}
 
 					// We have found the process to route the message to, deliver it.
 					proc.subject.messageCh <- m
-					// fmt.Printf(" *** DEBUG1.6 * MUTEX.UNLOCK after range existing Proc ID Map, samDBValue.id: %#v, proc.id: %v\n", samTmp.samDBValue.ID, pid)
 
 					// If no process to handle the specific subject exist,
 					// the we create and spawn one.
@@ -473,7 +451,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 
 					sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
 					proc := newProcess(s.ctx, s.metrics, s.natsConn, s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil)
-					// fmt.Printf("*** %#v\n", proc)
+
 					proc.spawnWorker(s.processes, s.natsConn)
 					log.Printf("info: processNewMessages: new process started, subject: %v, processID: %v\n", subjName, proc.processID)
 

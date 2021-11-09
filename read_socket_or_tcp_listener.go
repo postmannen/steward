@@ -133,11 +133,6 @@ func (s *server) readTCPListener() {
 	}
 }
 
-// TODO: Create the writer go routine for this socket.
-func (s *server) writeStewSocket(toStewSocketCh []byte) {
-	//s.StewSockListener
-}
-
 func (s *server) readHTTPlistenerHandler(w http.ResponseWriter, r *http.Request) {
 
 	var readBytes []byte
@@ -217,7 +212,6 @@ func (s *server) convertBytesToSAMs(b []byte) ([]subjectAndMessage, error) {
 
 	err := json.Unmarshal(b, &MsgSlice)
 	if err != nil {
-		//fmt.Printf(" *** %v", string(b))
 		return nil, fmt.Errorf("error: unmarshal of file failed: %#v", err)
 	}
 
@@ -291,8 +285,6 @@ func newSubjectAndMessage(m Message) (subjectAndMessage, error) {
 	// We need to create a tempory method type to look up the kind for the
 	// real method for the message.
 	var mt Method
-
-	//fmt.Printf("-- \n getKind contains: %v\n\n", mt.getHandler(m.Method).getKind())
 
 	tmpH := mt.getHandler(m.Method)
 	if tmpH == nil {

@@ -276,15 +276,9 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 				// message will be able to signal back here that the message have
 				// been processed, and that we then can delete it out of the K/V Store.
 
-				select {
-				case <-v.Data.done:
-					log.Printf("info: processBufferMessages: done with message, deleting key from bucket, %v\n", v.ID)
-					r.metrics.promMessagesProcessedIDLast.Set(float64(v.ID))
-					// case <-time.After(time.Second * 3):
-					// 	// Testing with a timeout here to figure out if messages are stuck
-					// 	// waiting for done signal.
-					// 	fmt.Printf(" *** Ingo: message %v seems to be stuck, dropping message\n", v.ID)
-				}
+				<-v.Data.done
+				log.Printf("info: processBufferMessages: done with message, deleting key from bucket, %v\n", v.ID)
+				r.metrics.promMessagesProcessedIDLast.Set(float64(v.ID))
 
 				// Since we are now done with the specific message we can delete
 				// it out of the K/V Store.
@@ -292,11 +286,6 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 
 				r.permStore <- fmt.Sprintf("%v : %+v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), v)
 
-				// TODO: REMOVE: Dump the whole KV store
-				// err := r.printBucketContent(samValueBucket)
-				// if err != nil {
-				// 	log.Printf("* Error: dump of db failed: %v\n", err)
-				// }
 			}(v)
 		case <-ctx.Done():
 			//close(outCh)
@@ -346,27 +335,27 @@ func (r *ringBuffer) dumpBucket(bucket string) ([]samDBValue, error) {
 	return samDBValues, err
 }
 
-// printBucketContent will print out all they keys and values in the
-// specified bucket.
-func (r *ringBuffer) printBucketContent(bucket string) error {
-	err := r.db.View(func(tx *bolt.Tx) error {
-		bu := tx.Bucket([]byte(bucket))
-
-		bu.ForEach(func(k, v []byte) error {
-			var vv samDBValue
-			err := json.Unmarshal(v, &vv)
-			if err != nil {
-				log.Printf("error: printBucketContent json.Umarshal failed: %v\n", err)
-			}
-			log.Printf("k: %s, v: %v\n", k, vv)
-			return nil
-		})
-
-		return nil
-	})
-
-	return err
-}
+// // printBucketContent will print out all they keys and values in the
+// // specified bucket.
+// func (r *ringBuffer) printBucketContent(bucket string) error {
+// 	err := r.db.View(func(tx *bolt.Tx) error {
+// 		bu := tx.Bucket([]byte(bucket))
+//
+// 		bu.ForEach(func(k, v []byte) error {
+// 			var vv samDBValue
+// 			err := json.Unmarshal(v, &vv)
+// 			if err != nil {
+// 				log.Printf("error: printBucketContent json.Umarshal failed: %v\n", err)
+// 			}
+// 			log.Printf("k: %s, v: %v\n", k, vv)
+// 			return nil
+// 		})
+//
+// 		return nil
+// 	})
+//
+// 	return err
+// }
 
 // deleteKeyFromBucket will delete the specified key from the specified
 // bucket if it exists.
@@ -410,8 +399,6 @@ func (r *ringBuffer) getIndexValue() int {
 	if err != nil && string(indexB) == "" {
 		log.Printf("info: getIndexValue: no index value found, probaly empty database, and no previous entries in db to process : %v\n", err)
 	}
-
-	// fmt.Printf("\n**** ringBuffer.getIndexValue: got index value = %v\n\n", index)
 
 	return index
 }
