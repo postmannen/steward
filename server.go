@@ -43,7 +43,15 @@ type server struct {
 	// The name of the node
 	nodeName string
 	// newMessagesCh are the channel where new messages to be handled
-	// by the system are put.
+	// by the system are put. So if any process want's to send a message
+	// like an error message you just put the message on the newMessagesCh.
+	//
+	// In general the ringbuffer will read this
+	// channel for messages to put on the buffer.
+	//
+	// Example:
+	// A message is read from the socket, then put on the newMessagesCh
+	// and then put on the ringbuffer.
 	newMessagesCh chan []subjectAndMessage
 	// errorKernel is doing all the error handling like what to do if
 	// an error occurs.
@@ -387,15 +395,15 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 	methodsAvailable := method.GetMethodsAvailable()
 
 	go func() {
-		for samTmp := range ringBufferOutCh {
+		for samDBVal := range ringBufferOutCh {
 			// fmt.Printf(" * DEBUG1.1 * before signaling back to the ringbuffer that message was picked from ring buffer, samTmp.delivered: %#v\n", samTmp.samDBValue.ID)
 
 			// Signal back to the ringbuffer that message have been picked up.
-			samTmp.delivered()
+			samDBVal.delivered()
 
 			// fmt.Printf(" * DEBUG1.2 * after signaling back to the ringbuffer that message was picked from ring buffer, samTmp.delivered: %#v\n", samTmp.samDBValue.ID)
 
-			sam := samTmp.samDBValue.Data
+			sam := samDBVal.samDBValue.Data
 			// Check if the format of the message is correct.
 			if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
 				er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
