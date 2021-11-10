@@ -49,6 +49,7 @@ import (
 	"time"
 
 	"github.com/hpcloud/tail"
+	"github.com/kr/pretty"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -1073,7 +1074,7 @@ func (m methodREQCliCommand) getKind() CommandOrEvent {
 // return the output of the command run back to the calling publisher
 // as a new message.
 func (m methodREQCliCommand) handler(proc process, message Message, node string) ([]byte, error) {
-	log.Printf("<--- CLICommandREQUEST received from: %v, containing: %v", message.FromNode, message.Data)
+	log.Printf("<--- CLICommandREQUEST received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 
 	// Execute the CLI command in it's own go routine, so we are able
 	// to return immediately with an ack reply that the messag was
@@ -1543,7 +1544,23 @@ func (m methodREQRelay) getKind() CommandOrEvent {
 func (m methodREQRelay) handler(proc process, message Message, node string) ([]byte, error) {
 	// relay the message here to the actual host here.
 
-	fmt.Printf("\n * Got relay message: %v\n\n ", message)
+	fmt.Printf("\n * Got relay message: %#v\n\n ", pretty.Formatter(message))
+
+	message.ToNode = message.RelayToNode
+	message.FromNode = Node(node)
+	fmt.Printf(" * THE VALUES OF, proc.configuration.NodeName: %v, node:%v\n ", proc.configuration.NodeName, node)
+	message.Method = message.RelayOriginalMethod
+
+	sam, err := newSubjectAndMessage(message)
+	if err != nil {
+		// In theory the system should drop the message before it reaches here.
+		er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
+		sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+		log.Printf("%v\n", er)
+	}
+
+	fmt.Printf("\n * Created sam: %#v\n\n ", pretty.Formatter(sam))
+	proc.toRingbufferCh <- []subjectAndMessage{sam}
 
 	// Send back an ACK message.
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))

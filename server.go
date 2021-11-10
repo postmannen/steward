@@ -424,7 +424,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 				// ----
 
 				// Check if it is a relay message
-				if m.RelayViaNode != "" {
+				if m.RelayViaNode != "" && m.RelayViaNode != Node(s.nodeName) {
 					// Keep the original values.
 					m.RelayFromNode = m.FromNode
 					m.RelayToNode = m.ToNode
