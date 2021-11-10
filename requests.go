@@ -1134,13 +1134,10 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 			var stderr bytes.Buffer
 			cmd.Stdout = &out
 			cmd.Stderr = &stderr
+
 			err := cmd.Run()
 			if err != nil {
-				if err != nil {
-					log.Printf("error: failed cmd.Run: %v\n", err)
-				}
-
-				er := fmt.Errorf("error: methodREQCliCommand: cmd.Run : %v, methodArgs: %v, error_output: %v", err, message.MethodArgs, stderr.String())
+				er := fmt.Errorf("error: methodREQCliCommand: cmd.Run failed : %v, methodArgs: %v, error_output: %v", err, message.MethodArgs, stderr.String())
 				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 				log.Printf("%v\n", er)
 			}

@@ -439,6 +439,14 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 				}
 
 				// --------------------------
+
+				// TODO: Check out if we actually need the SAM structure anymore in
+				// the flow before we come here to this point. Reason for thinking
+				// about this is that we replace the SAM.subject in the relay above,
+				// and maybe it makes more sense to move the creation here instead
+				// so we could for example just store messages in the k/v database
+				// to make things simpler.
+
 				subjName := sam.Subject.name()
 				pn := processNameGet(subjName, processKindPublisher)
 
