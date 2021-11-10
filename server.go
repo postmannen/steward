@@ -411,12 +411,33 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 			}
 
 			for {
-				// looping here so we are able to redo the sending
-				// of the last message if a process with specified subject
+				// Looping here so we are able to redo the sending
+				// of the last message if a process for the specified subject
 				// is not present. The process will then be created, and
 				// the code will loop back here.
 
 				m := sam.Message
+				// ---------- HERE ----------
+				// We've got'n the message from the ringbuffer.
+				// NB: Think we should swap the ToNode field here with the value
+				// in RelayNode ???
+				// ----
+
+				// Check if it is a relay message
+				if m.RelayViaNode != "" {
+					// Keep the original values.
+					m.RelayFromNode = m.FromNode
+					m.RelayToNode = m.ToNode
+					m.RelayOriginalMethod = m.Method
+
+					// Convert it to a relay message.
+					m.Method = REQRelay
+					// Change destination to the relayViaNode.
+					m.ToNode = m.RelayViaNode
+
+				}
+
+				// --------------------------
 				subjName := sam.Subject.name()
 				pn := processNameGet(subjName, processKindPublisher)
 
@@ -436,12 +457,6 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 					for _, existingProc := range existingProcIDMap {
 						proc = existingProc
 					}
-
-					// HERE ?
-					// We've got'n the message from the ringbuffer, and now found the
-					// process to send it on.
-					// NB: Think we should swap the ToNode field here with the value
-					// in RelayNode ???
 
 					// We have found the process to route the message to, deliver it.
 					proc.subject.messageCh <- m

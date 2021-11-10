@@ -234,6 +234,10 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQCliCommandCont(proc)
 	}
 
+	if proc.configuration.StartSubREQRelay {
+		proc.startup.subREQRelay(proc)
+	}
+
 	proc.startup.subREQToSocket(proc)
 }
 
@@ -415,6 +419,14 @@ func (s startup) subREQTailFile(p process) {
 func (s startup) subREQCliCommandCont(p process) {
 	log.Printf("Starting cli command with continous delivery: %#v\n", p.node)
 	sub := newSubject(REQCliCommandCont, string(p.node))
+	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, nil)
+
+	go proc.spawnWorker(p.processes, p.natsConn)
+}
+
+func (s startup) subREQRelay(p process) {
+	log.Printf("Starting Relay: %#v\n", p.node)
+	sub := newSubject(REQRelay, string(p.node))
 	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, nil)
 
 	go proc.spawnWorker(p.processes, p.natsConn)

@@ -1543,6 +1543,8 @@ func (m methodREQRelay) getKind() CommandOrEvent {
 func (m methodREQRelay) handler(proc process, message Message, node string) ([]byte, error) {
 	// relay the message here to the actual host here.
 
+	fmt.Printf("\n * Got relay message: %v\n\n ", message)
+
 	// Send back an ACK message.
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil

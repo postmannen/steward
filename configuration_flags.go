@@ -84,6 +84,8 @@ type Configuration struct {
 	StartSubREQTailFile bool
 	// Subscriber for continously delivery of output from cli commands.
 	StartSubREQCliCommandCont bool
+	// Subscriber for relay messages.
+	StartSubREQRelay bool
 }
 
 // ConfigurationFromFile should have the same structure as
@@ -122,6 +124,7 @@ type ConfigurationFromFile struct {
 	StartSubREQHttpGet        *bool
 	StartSubREQTailFile       *bool
 	StartSubREQCliCommandCont *bool
+	StartSubREQRelay          *bool
 }
 
 // NewConfiguration will return a *Configuration.
@@ -164,6 +167,7 @@ func newConfigurationDefaults() Configuration {
 		StartSubREQHttpGet:        true,
 		StartSubREQTailFile:       true,
 		StartSubREQCliCommandCont: true,
+		StartSubREQRelay:          false,
 	}
 	return c
 }
@@ -329,6 +333,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.StartSubREQCliCommandCont = *cf.StartSubREQCliCommandCont
 	}
+	if cf.StartSubREQRelay == nil {
+		conf.StartSubREQRelay = cd.StartSubREQRelay
+	} else {
+		conf.StartSubREQRelay = *cf.StartSubREQRelay
+	}
 
 	return conf
 }
@@ -394,6 +403,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.StartSubREQHttpGet, "startSubREQHttpGet", fc.StartSubREQHttpGet, "true/false")
 	flag.BoolVar(&c.StartSubREQTailFile, "startSubREQTailFile", fc.StartSubREQTailFile, "true/false")
 	flag.BoolVar(&c.StartSubREQCliCommandCont, "startSubREQCliCommandCont", fc.StartSubREQCliCommandCont, "true/false")
+	flag.BoolVar(&c.StartSubREQRelay, "startSubREQRelay", fc.StartSubREQRelay, "true/false")
 
 	flag.Parse()
 

@@ -78,12 +78,14 @@ type Message struct {
 	PreviousMessage *Message
 
 	// The node to relay the message via.
-	RelayViaNode Node
+	RelayViaNode Node `json:"relayViaNode" yaml:"relayViaNode"`
 	// The node where the relayed message originated, and where we want
 	// to send back the end result.
-	RelayFromNode Node
+	RelayFromNode Node `json:"relayFromNode" yaml:"relayFromNode"`
 	// The original value of the ToNode field of the original message.
-	RelayToNode Node
+	RelayToNode Node `json:"relayToNode" yaml:"relayToNode"`
+	// The original method of the message.
+	RelayOriginalMethod Method `json:"relayOriginalMethod" yaml:"relayOriginalMethod"`
 
 	// done is used to signal when a message is fully processed.
 	// This is used for signaling back to the ringbuffer that we are
