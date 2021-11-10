@@ -435,6 +435,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 					// Change destination to the relayViaNode.
 					m.ToNode = m.RelayViaNode
 
+					sam.Subject = newSubject(REQRelay, string(m.RelayViaNode))
 				}
 
 				// --------------------------
