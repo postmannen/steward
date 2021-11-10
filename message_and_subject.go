@@ -77,11 +77,13 @@ type Message struct {
 	// initial request message.
 	PreviousMessage *Message
 
-	// The node to send the message via.
-	viaTo Node
-	// The node where the via message originated, and where we want
-	// to send the end result.
-	viaFrom Node
+	// The node to relay the message via.
+	RelayViaNode Node
+	// The node where the relayed message originated, and where we want
+	// to send back the end result.
+	RelayFromNode Node
+	// The original value of the ToNode field of the original message.
+	RelayToNode Node
 
 	// done is used to signal when a message is fully processed.
 	// This is used for signaling back to the ringbuffer that we are

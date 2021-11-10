@@ -437,16 +437,18 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 						proc = existingProc
 					}
 
+					// HERE ?
+					// We've got'n the message from the ringbuffer, and now found the
+					// process to send it on.
+					// NB: Think we should swap the ToNode field here with the value
+					// in RelayNode ???
+
 					// We have found the process to route the message to, deliver it.
 					proc.subject.messageCh <- m
 
-					// If no process to handle the specific subject exist,
-					// the we create and spawn one.
-
 					break
 				} else {
-					// If a publisher process do not exist for the given subject, create it, and
-					// by using the goto at the end redo the process for this specific message.
+					// If a publisher process do not exist for the given subject, create it.
 					log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 					sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
@@ -455,7 +457,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 					proc.spawnWorker(s.processes, s.natsConn)
 					log.Printf("info: processNewMessages: new process started, subject: %v, processID: %v\n", subjName, proc.processID)
 
-					// Now when the process is spawned we jump back to the redo: label,
+					// Now when the process is spawned we continue,
 					// and send the message to that new process.
 					continue
 				}

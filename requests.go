@@ -120,6 +120,8 @@ const (
 	REQTailFile Method = "REQTailFile"
 	// Write to steward socket
 	REQToSocket Method = "REQToSocket"
+	// Send a message via a node
+	REQRelay Method = "REQRelay"
 )
 
 // The mapping of all the method constants specified, what type
@@ -185,6 +187,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				commandOrEvent: EventACK,
 			},
 			REQToSocket: methodREQToSocket{
+				commandOrEvent: EventACK,
+			},
+			REQRelay: methodREQRelay{
 				commandOrEvent: EventACK,
 			},
 		},
@@ -1520,6 +1525,25 @@ func (m methodREQToSocket) handler(proc process, message Message, node string) (
 		fmt.Printf("Info: Data to write to socket: %v\n", d)
 	}
 
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+// ----
+
+type methodREQRelay struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodREQRelay) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
+
+// Handler to relay messages via a host.
+func (m methodREQRelay) handler(proc process, message Message, node string) ([]byte, error) {
+	// relay the message here to the actual host here.
+
+	// Send back an ACK message.
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
 }
