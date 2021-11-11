@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/kr/pretty"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -321,6 +322,35 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		er := fmt.Errorf("error: gob decoding failed: %v", err)
 		sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 	}
+
+	// ----------- HERE -------------
+
+	// Check if the previos message was a relayed message, and if true
+	// make a copy of the current message where the to field is set to
+	// the value of the previous message's RelayFromNode field, so we
+	// also can send the a copy of the reply back to where it originated.
+
+	if message.PreviousMessage != nil && message.PreviousMessage.RelayViaNode != "" {
+		fmt.Printf("\n message.PreviousMessage.RelayViaNode: %v\n\n", message.PreviousMessage.RelayViaNode)
+		// make a copy of the message
+		msgCopy := message
+		msgCopy.ToNode = msgCopy.PreviousMessage.RelayFromNode
+
+		// Reset the previosMessage relay fields so the message don't loop.
+		message.PreviousMessage.RelayViaNode = ""
+
+		sam, err := newSubjectAndMessage(msgCopy)
+		if err != nil {
+			er := fmt.Errorf("error: newSubjectAndMessage : %v, message copy: %v", err, msgCopy)
+			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, p.node, er)
+			log.Printf("%v\n", er)
+		}
+
+		fmt.Printf("\n * Created sam: %#v\n\n ", pretty.Formatter(sam))
+		p.toRingbufferCh <- []subjectAndMessage{sam}
+	}
+
+	// ------------------------------
 
 	// Check if it is an ACK or NACK message, and do the appropriate action accordingly.
 	switch {

@@ -1550,7 +1550,6 @@ func (m methodREQRelay) handler(proc process, message Message, node string) ([]b
 
 	sam, err := newSubjectAndMessage(message)
 	if err != nil {
-		// In theory the system should drop the message before it reaches here.
 		er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
 		sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 		log.Printf("%v\n", er)
