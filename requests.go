@@ -49,7 +49,6 @@ import (
 	"time"
 
 	"github.com/hpcloud/tail"
-	"github.com/kr/pretty"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -1189,6 +1188,12 @@ func (m methodREQToConsole) getKind() CommandOrEvent {
 // Handler to write directly to console.
 func (m methodREQToConsole) handler(proc process, message Message, node string) ([]byte, error) {
 
+	for _, v := range message.Data {
+		fmt.Fprintf(os.Stdout, "%v", string(v))
+	}
+
+	fmt.Println()
+
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
 }
@@ -1541,11 +1546,11 @@ func (m methodREQRelay) getKind() CommandOrEvent {
 func (m methodREQRelay) handler(proc process, message Message, node string) ([]byte, error) {
 	// relay the message here to the actual host here.
 
-	fmt.Printf("\n * Got relay message: %#v\n\n ", pretty.Formatter(message))
+	// fmt.Printf("\n * DEBUG Got relay message: %#v\n\n ", pretty.Formatter(message))
 
 	message.ToNode = message.RelayToNode
 	message.FromNode = Node(node)
-	fmt.Printf(" * THE VALUES OF, proc.configuration.NodeName: %v, node:%v\n ", proc.configuration.NodeName, node)
+	// fmt.Printf(" * DEBUG THE VALUES OF, proc.configuration.NodeName: %v, node:%v\n ", proc.configuration.NodeName, node)
 	message.Method = message.RelayOriginalMethod
 
 	sam, err := newSubjectAndMessage(message)
@@ -1555,7 +1560,7 @@ func (m methodREQRelay) handler(proc process, message Message, node string) ([]b
 		log.Printf("%v\n", er)
 	}
 
-	fmt.Printf("\n * Created sam: %#v\n\n ", pretty.Formatter(sam))
+	// fmt.Printf("\n * DEBUG: Created sam: %#v\n\n ", pretty.Formatter(sam))
 	proc.toRingbufferCh <- []subjectAndMessage{sam}
 
 	// Send back an ACK message.

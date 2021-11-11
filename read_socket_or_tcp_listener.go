@@ -288,7 +288,14 @@ func newSubjectAndMessage(m Message) (subjectAndMessage, error) {
 
 	tmpH := mt.getHandler(m.Method)
 	if tmpH == nil {
-		return subjectAndMessage{}, fmt.Errorf("error: no such request type defined: %v", m.Method)
+		return subjectAndMessage{}, fmt.Errorf("error: newSubjectAndMessage: no such request type defined: %v", m.Method)
+	}
+
+	switch {
+	case m.ToNode == "":
+		return subjectAndMessage{}, fmt.Errorf("error: newSubjectAndMessage: ToNode empty: %+v", m)
+	case m.Method == "":
+		return subjectAndMessage{}, fmt.Errorf("error: newSubjectAndMessage: Method empty: %v", m)
 	}
 
 	sub := Subject{
