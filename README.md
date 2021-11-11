@@ -19,6 +19,7 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
     - [Error messages from nodes](#error-messages-from-nodes)
     - [Message handling and threads](#message-handling-and-threads)
     - [Timeouts and retries](#timeouts-and-retries)
+      - [REQRelay](#reqrelay)
     - [Flags and configuration file](#flags-and-configuration-file)
     - [Schema for the messages to send into Steward via the API's](#schema-for-the-messages-to-send-into-steward-via-the-apis)
     - [Request Methods](#request-methods)
@@ -32,7 +33,6 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
       - [REQHttpGet](#reqhttpget)
       - [REQHello](#reqhello)
       - [REQErrorLog](#reqerrorlog)
-      - [REQRelay](#reqrelay)
     - [Request Methods used for reply messages](#request-methods-used-for-reply-messages)
       - [REQToConsole](#reqtoconsole-1)
       - [REQToFileAppend](#reqtofileappend)
@@ -229,6 +229,60 @@ In the above example, the values set meaning:
 - **ACKTimeout** : Wait 3 seconds for an **ACK** message.
 - **retries** : If an **ACK** is not received, retry sending the message 3 times.
 - **methodTimeout** : Let the bash command `tail -f ./tmp.log` run for 60 seconds before it is terminated.
+
+#### REQRelay
+
+Instead of injecting the new Requests on the central server, you can relay messages via another node as long as the NATS authorization conf permits it. This is what REQRelay is for.
+
+Example:
+
+```json
+[
+    {
+        "directory":"/var/tail-logs/",
+        "fileName": "my-wifi.log",
+        "toNode": "node1",
+        "relayViaNode": "central",
+        "relayReplyMethod": "REQToConsole",
+        "methodArgs": ["bash","-c","tail -f /var/log/wifi.log"],
+        "method":"REQCliCommandCont",
+        "replyMethod":"REQToFileAppend",
+        "ACKTimeout":5,
+        "retries":3,
+        "replyACKTimeout":5,
+        "replyRetries":3,
+        "methodTimeout": 10
+    }
+]
+```
+
+```text
+   Inject new                  Relay the message               Send actual REQ              
+ Request message               to central server                  to node2                  
+                                                                                            
+        1                              2                              3                     
+                 ┌─────────────┐                ┌─────────────┐              ┌─────────────┐
+ ---------------▷│             │---------------▷│             │-------------▷│             │
+                 │ node1       │                │ central     │              │ node2       │
+ ◁---------------│             │◁---------------│             │◁-------------│             │
+                 └─────────────┘                └─────────────┘              └─────────────┘
+                                                                                            
+        6                              5                              4                     
+  Ececute reply                                                                             
+ handler, f.ex.                Send relay reply                Send reply REQ               
+ REQToConsole to                 REQ to origin                with result back              
+ print to STDOUT                     node                                                   
+```
+
+Steps Explained:
+
+1. On **node1**, inject a message like in the example above.
+2. The message will then be relayed to the node in the `relayViaNode` field.
+  On **central** the actual request **method** and **toNode** specified will be checked, and forwarded to node2.
+3. Node2 recevies the request, and executed the method with the arguments specified.
+4. The result is sent back to **central** where it is handled according to the **replyMethod** specified.
+5. A copy of the reply message will also be created on **central**, and forwarded to **node1** where it originated.
+6. On **node1** the **relayReplyMethod** is used to check what to do with the message. In this case it is printed to the consoles STDOUT.
 
 ### Flags and configuration file
 
@@ -439,60 +493,6 @@ All nodes have the flag option to start sending Hello message to the central ser
 Method for receiving error logs for Central error logger.
 
 This is **not** to be used by users. Use **REQToFileAppend** instead.
-
-#### REQRelay
-
-Instead of injecting the new Requests on the central server, you can relay messages via another node as long as the NATS authorization conf permits it. This is what REQRelay is for.
-
-Example:
-
-```json
-[
-    {
-        "directory":"/var/tail-logs/",
-        "fileName": "my-wifi.log",
-        "toNode": "node1",
-        "relayViaNode": "central",
-        "relayReplyMethod": "REQToConsole",
-        "methodArgs": ["bash","-c","tail -f /var/log/wifi.log"],
-        "method":"REQCliCommandCont",
-        "replyMethod":"REQToFileAppend",
-        "ACKTimeout":5,
-        "retries":3,
-        "replyACKTimeout":5,
-        "replyRetries":3,
-        "methodTimeout": 10
-    }
-]
-```
-
-```text
-   Inject new                  Relay the message               Send actual REQ              
- Request message               to central server                  to node2                  
-                                                                                            
-        1                              2                              3                     
-                 ┌─────────────┐                ┌─────────────┐              ┌─────────────┐
- ---------------▷│             │---------------▷│             │-------------▷│             │
-                 │ node1       │                │ central     │              │ node2       │
- ◁---------------│             │◁---------------│             │◁-------------│             │
-                 └─────────────┘                └─────────────┘              └─────────────┘
-                                                                                            
-        6                              5                              4                     
-  Ececute reply                                                                             
- handler, f.ex.                Send relay reply                Send reply REQ               
- REQToConsole to                 REQ to origin                with result back              
- print to STDOUT                     node                                                   
-```
-
-Steps Explained:
-
-1. On **node1**, inject a message like in the example above.
-2. The message will then be relayed to the node in the `relayViaNode` field.
-  On **central** the actual request **method** and **toNode** specified will be checked, and forwarded to node2.
-3. Node2 recevies the request, and executed the method with the arguments specified.
-4. The result is sent back to **central** where it is handled according to the **replyMethod** specified.
-5. A copy of the reply message will also be created on **central**, and forwarded to **node1** where it originated.
-6. On **node1** the **relayReplyMethod** is used to check what to do with the message. In this case it is printed to the consoles STDOUT.
 
 ### Request Methods used for reply messages
 
