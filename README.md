@@ -27,15 +27,17 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
       - [REQOpProcessStop](#reqopprocessstop)
       - [REQCliCommand](#reqclicommand)
       - [REQCliCommandCont](#reqclicommandcont)
+      - [REQToConsole](#reqtoconsole)
       - [REQTailFile](#reqtailfile)
       - [REQHttpGet](#reqhttpget)
       - [REQHello](#reqhello)
       - [REQErrorLog](#reqerrorlog)
     - [Request Methods used for reply messages](#request-methods-used-for-reply-messages)
-      - [REQToConsole](#reqtoconsole)
+      - [REQToConsole](#reqtoconsole-1)
       - [REQToFileAppend](#reqtofileappend)
       - [REQToFile](#reqtofile)
       - [ReqCliCommand](#reqclicommand-1)
+      - [REQRelay](#reqrelay)
     - [Errors reporting](#errors-reporting)
     - [Prometheus metrics](#prometheus-metrics)
     - [Other](#other)
@@ -360,6 +362,26 @@ When testing the problem seems to appear when using sudo, or tcpdump without
 the -l option. So for now, don't use sudo, and remember to use -l with tcpdump
 which makes stdout line buffered.
 
+#### REQToConsole
+
+This is a pure replyMethod that can be used to get the data of the reply message printed to stdout where Steward is running.
+
+```json
+[
+    {
+        "directory": "web",
+        "fileName": "web.html",
+        "toNode": "ship2",
+        "method":"REQHttpGet",
+        "methodArgs": ["https://web.ics.purdue.edu/~gchopra/class/public/pages/webdesign/05_simple.html"],
+        "replyMethod":"REQToConsole",
+        "ACKTimeout":10,
+        "retries": 3,
+        "methodTimeout": 3
+    }
+]
+```
+
 #### REQTailFile
 
 Tail log files on some node, and get the result for each new line read sent back in a reply message. Uses the methodTimeout to define for how long the command will run.
@@ -520,6 +542,60 @@ Or the same using bash's herestring:
     }
 ]
 ```
+
+#### REQRelay
+
+Instead of injecting the new Requests on the central server, you can relay messages via another node as long as the NATS authorization conf permits it. This is what REQRelay is for.
+
+Example:
+
+```json
+[
+    {
+        "directory":"/var/tail-logs/",
+        "fileName": "my-wifi.log",
+        "toNode": "node1",
+        "relayViaNode": "central",
+        "relayReplyMethod": "REQToConsole",
+        "methodArgs": ["bash","-c","tail -f /var/log/wifi.log"],
+        "method":"REQCliCommandCont",
+        "replyMethod":"REQToFileAppend",
+        "ACKTimeout":5,
+        "retries":3,
+        "replyACKTimeout":5,
+        "replyRetries":3,
+        "methodTimeout": 10
+    }
+]
+```
+
+```text
+   Inject new                  Relay the message               Send actual REQ              
+ Request message               to central server                  to node2                  
+                                                                                            
+        1                              2                              3                     
+                 ┌─────────────┐                ┌─────────────┐              ┌─────────────┐
+ ---------------▷│             │---------------▷│             │-------------▷│             │
+                 │ node1       │                │ central     │              │ node2       │
+ ◁---------------│             │◁---------------│             │◁-------------│             │
+                 └─────────────┘                └─────────────┘              └─────────────┘
+                                                                                            
+        6                              5                              4                     
+  Ececute reply                                                                             
+ handler, f.ex.                Send relay reply                Send reply REQ               
+ REQToConsole to                 REQ to origin                with result back              
+ print to STDOUT                     node                                                   
+```
+
+Steps Explained:
+
+1. On **node1**, inject a message like in the example above.
+2. The message will then be relayed to the node in the `relayViaNode` field.
+  On **central** the actual request **method** and **toNode** specified will be checked, and forwarded to node2.
+3. Node2 recevies the request, and executed the method with the arguments specified.
+4. The result is sent back to **central** where it is handled according to the **replyMethod** specified.
+5. A copy of the reply message will also be created on **central**, and forwarded to **node1** where it originated.
+6. On **node1** the **relayReplyMethod** is used to check what to do with the message. In this case it is printed to the consoles STDOUT.
 
 ### Errors reporting
 
