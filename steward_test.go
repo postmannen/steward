@@ -140,7 +140,7 @@ func checkREQOpCommandTest(stewardServer *server, conf *Configuration, t *testin
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "opCommand", "central", "fileName.result")
 	_, err := findStringInFileTest("central.REQOpCommand.CommandACK", resultFile, conf, t)
 	if err != nil {
-		return fmt.Errorf(" [FAILED]	: checkREQOpCommandTest: %v", err)
+		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQOpCommandTest: %v", err)
 	}
 
 	t.Logf(" \U0001f600 [SUCCESS]	: checkREQOpCommandTest\n")
@@ -154,7 +154,7 @@ func checkREQCliCommandTest(stewardServer *server, conf *Configuration, t *testi
 			"directory":"commands-executed",
 			"fileName":"fileName.result",
 			"toNode": "central",
-			"data": ["bash","-c","echo apekatt"],
+			"methodArgs": ["bash","-c","echo apekatt"],
 			"replyMethod":"REQToFileAppend",
 			"method":"REQCliCommand",
 			"ACKTimeout":3,
@@ -168,7 +168,7 @@ func checkREQCliCommandTest(stewardServer *server, conf *Configuration, t *testi
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "fileName.result")
 	_, err := findStringInFileTest("apekatt", resultFile, conf, t)
 	if err != nil {
-		return fmt.Errorf(" [FAILED]	: checkREQCliCommandTest: %v", err)
+		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQCliCommandTest: %v", err)
 	}
 
 	t.Logf(" \U0001f600 [SUCCESS]	: checkREQCliCommandTest\n")
@@ -182,7 +182,7 @@ func checkREQCliCommandContTest(stewardServer *server, conf *Configuration, t *t
 			"directory":"commands-executed",
 			"fileName":"fileName.result",
 			"toNode": "central",
-			"data": ["bash","-c","echo apekatt && sleep 5 && echo gris"],
+			"methodArgs": ["bash","-c","echo apekatt && sleep 5 && echo gris"],
 			"replyMethod":"REQToFileAppend",
 			"method":"REQCliCommandCont",
 			"ACKTimeout":3,
@@ -196,7 +196,7 @@ func checkREQCliCommandContTest(stewardServer *server, conf *Configuration, t *t
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "fileName.result")
 	_, err := findStringInFileTest("apekatt", resultFile, conf, t)
 	if err != nil {
-		return fmt.Errorf(" [FAILED]	: checkREQCliCommandContTest: %v", err)
+		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQCliCommandContTest: %v", err)
 	}
 
 	t.Logf(" \U0001f600 [SUCCESS]	: checkREQCliCommandContTest\n")
@@ -220,7 +220,7 @@ func checkREQHelloTest(stewardServer *server, conf *Configuration, t *testing.T)
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "fileName.result")
 	_, err := findStringInFileTest("Received hello from", resultFile, conf, t)
 	if err != nil {
-		return fmt.Errorf(" [FAILED]	: checkREQHelloTest: %v", err)
+		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQHelloTest: %v", err)
 	}
 
 	t.Logf(" \U0001f600 [SUCCESS]	: checkREQHelloTest\n")
@@ -244,7 +244,7 @@ func checkREQErrorLogTest(stewardServer *server, conf *Configuration, t *testing
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "errorCentral", "fileName.result")
 	_, err := findStringInFileTest("some error", resultFile, conf, t)
 	if err != nil {
-		return fmt.Errorf(" [FAILED]	: checkREQErrorLogTest: %v", err)
+		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQErrorLogTest: %v", err)
 	}
 
 	t.Logf(" \U0001f600 [SUCCESS]	: checkREQErrorLogTest\n")
@@ -270,7 +270,7 @@ func checkREQHttpGetTest(stewardServer *server, conf *Configuration, t *testing.
 			"directory": "httpget",
 			"fileName":"fileName.result",
 			"toNode": "central",
-			"data": ["http://127.0.0.1:10080/"],
+			"methodArgs": ["http://127.0.0.1:10080/"],
 			"method": "REQHttpGet",
 			"replyMethod":"REQToFile",
         	"ACKTimeout":5,
@@ -283,7 +283,7 @@ func checkREQHttpGetTest(stewardServer *server, conf *Configuration, t *testing.
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "httpget", "central", "fileName.result")
 	_, err := findStringInFileTest("web page content", resultFile, conf, t)
 	if err != nil {
-		return fmt.Errorf(" [FAILED]	: checkREQHttpGetTest: %v", err)
+		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQHttpGetTest: %v", err)
 	}
 
 	t.Logf(" \U0001f600 [SUCCESS]	: checkREQHttpGetTest\n")
@@ -325,7 +325,7 @@ func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing
 	wd, err := os.Getwd()
 	if err != nil {
 		cancel()
-		return fmt.Errorf(" [FAILED]	: checkREQTailFileTest: : getting current working directory: %v", err)
+		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQTailFileTest: : getting current working directory: %v", err)
 	}
 
 	file := filepath.Join(wd, "test.file")
@@ -336,7 +336,7 @@ func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing
 			"directory": "tail-files",
 			"fileName": "fileName.result",
 			"toNode": "central",
-			"data": ["` + file + `"],
+			"methodArgs": ["` + file + `"],
 			"method":"REQTailFile",
 			"ACKTimeout":5,
 			"retries":3,
@@ -361,7 +361,7 @@ func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing
 
 		if os.IsNotExist(err) && i >= n {
 			cancel()
-			return fmt.Errorf(" [FAILED]	: checkREQTailFileTest:  no result file created for request within the given time")
+			return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQTailFileTest:  no result file created for request within the given time")
 		}
 	}
 
@@ -369,7 +369,7 @@ func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing
 
 	_, err = findStringInFileTest("some file content", resultFile, conf, t)
 	if err != nil {
-		return fmt.Errorf(" [FAILED]	: checkREQTailFileTest: %v", err)
+		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQTailFileTest: %v", err)
 	}
 
 	t.Logf(" \U0001f600 [SUCCESS]	: checkREQTailFileTest\n")
@@ -408,7 +408,7 @@ func checkErrorKernelMalformedJSONtest(stewardServer *server, conf *Configuratio
 		}
 
 		if os.IsNotExist(err) && i >= n {
-			return fmt.Errorf(" [FAILED]	: checkErrorKernelMalformedJSONtest: no result file created for request within the given time")
+			return fmt.Errorf(" \U0001F631  [FAILED]	: checkErrorKernelMalformedJSONtest: no result file created for request within the given time")
 		}
 	}
 
@@ -426,7 +426,7 @@ func checkErrorKernelMalformedJSONtest(stewardServer *server, conf *Configuratio
 			// looking for.
 			found, err := findStringInFileTest("error: malformed json", resultFile, conf, t)
 			if !found && err != nil {
-				return fmt.Errorf(" [FAILED]	: checkErrorKernelMalformedJSONtest: %v", err)
+				return fmt.Errorf(" \U0001F631  [FAILED]	: checkErrorKernelMalformedJSONtest: %v", err)
 			}
 
 			if !found && err == nil {
