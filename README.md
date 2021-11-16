@@ -34,7 +34,7 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
       - [REQHello](#reqhello)
       - [REQErrorLog](#reqerrorlog)
     - [Request Methods used for reply messages](#request-methods-used-for-reply-messages)
-      - [REQToConsole](#reqtoconsole-1)
+      - [REQToConsole for printing to STDOUT](#reqtoconsole-for-printing-to-stdout)
       - [REQToFileAppend](#reqtofileappend)
       - [REQToFile](#reqtofile)
       - [ReqCliCommand](#reqclicommand-1)
@@ -58,9 +58,6 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
         - [Example JSON for appending a message of type command into the `socket` file](#example-json-for-appending-a-message-of-type-command-into-the-socket-file)
         - [Specify more messages at once do](#specify-more-messages-at-once-do)
         - [Send the same message to several hosts by using the toHosts field](#send-the-same-message-to-several-hosts-by-using-the-tohosts-field)
-        - [Send an Op Command message for process listing with custom timeout and amount of retries](#send-an-op-command-message-for-process-listing-with-custom-timeout-and-amount-of-retries)
-        - [Send and Op Command to stop a subscriber on a node](#send-and-op-command-to-stop-a-subscriber-on-a-node)
-        - [Send and Op Command to start a subscriber on a node](#send-and-op-command-to-start-a-subscriber-on-a-node)
         - [Tail a log file on a node, and save the result of the tail centrally at the directory specified](#tail-a-log-file-on-a-node-and-save-the-result-of-the-tail-centrally-at-the-directory-specified)
   - [Concepts/Ideas](#conceptsideas)
     - [Naming](#naming)
@@ -496,7 +493,7 @@ This is **not** to be used by users. Use **REQToFileAppend** instead.
 
 ### Request Methods used for reply messages
 
-#### REQToConsole
+#### REQToConsole for printing to STDOUT
 
 Print the output of the reply message to the STDOUT where the receiving steward instance are running.
 
@@ -863,8 +860,6 @@ directory
 // on a file being saved as the result of data being handled
 // by a method handler.
 fileName
-// operation are used to give an opCmd and opArg's.
-operation
 ```
 
 ### How to send a Message
@@ -939,80 +934,6 @@ The API for sending a message from one node to another node is by sending a stru
         "ACKTimeout":5,
         "retries":3,
         "methodTimeout": 5
-    }
-]
-```
-
-##### Send an Op Command message for process listing with custom timeout and amount of retries
-
-```json
-[
-    {
-        "directory":"opcommand_logs",
-        "fileName": "some.log",
-        "toNode": "ship2",
-        "data": [],
-        "method":"REQOpCommand",
-        "operation":{
-            "opCmd":"ps"
-        },
-        "ACKTimeout":3,
-        "retries":3,
-        "replyACKTimeout":3,
-        "replyRetries":3,
-        "methodTimeout": 7
-    }
-]
-```
-
-##### Send and Op Command to stop a subscriber on a node
-
-```json
-[
-    {
-        "directory":"opcommand_logs",
-        "fileName": "some.log",
-        "toNode": "ship2",
-        "data": [],
-        "method":"REQOpCommand",
-        "operation":{
-            "opCmd":"stopProc",
-            "opArg": {
-                "method": "REQHttpGet",
-                "kind": "subscriber",
-                "receivingNode": "ship2"
-            }
-        },
-        "ACKTimeout":3,
-        "retries":3,
-        "replyACKTimeout":3,
-        "replyRetries":3,
-        "methodTimeout": 7
-    }
-]
-```
-
-##### Send and Op Command to start a subscriber on a node
-
-```json
-[
-    {
-        "directory":"opcommand_logs",
-        "fileName": "some.log",
-        "toNode": "ship2",
-        "data": [],
-        "method":"REQOpCommand",
-        "operation":{
-            "opCmd":"startProc",
-            "opArg": {
-                "method": "REQHttpGet"
-            }
-        },
-        "ACKTimeout":3,
-        "retries":3,
-        "replyACKTimeout":3,
-        "replyRetries":3,
-        "methodTimeout": 7
     }
 ]
 ```

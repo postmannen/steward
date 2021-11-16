@@ -3,7 +3,6 @@ package steward
 import (
 	"bytes"
 	"encoding/gob"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -70,8 +69,6 @@ type Message struct {
 	// on a file being saved as the result of data being handled
 	// by a method handler.
 	FileName string `json:"fileName" yaml:"fileName"`
-	// operation are used to give an opCmd and opArg's.
-	Operation Operation `json:"operation"`
 	// PreviousMessage are used for example if a reply message is
 	// generated and we also need a copy of  the details of the the
 	// initial request message.
@@ -95,14 +92,6 @@ type Message struct {
 	// done with processing a message, and the message can be removed
 	// from the ringbuffer and into the time series log.
 	done chan struct{}
-}
-
-// ---
-
-// operation are used to specify opCmd and opArg's.
-type Operation struct {
-	OpCmd string          `json:"opCmd"`
-	OpArg json.RawMessage `json:"opArg"`
 }
 
 // ---

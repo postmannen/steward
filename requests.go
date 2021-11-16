@@ -36,7 +36,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -61,10 +60,6 @@ type Method string
 const (
 	// Initial parent method used to start other processes.
 	REQInitial Method = "REQInitial"
-	// Command for client operation request of the system. The op
-	// command to execute shall be given in the data field of the
-	// message as string value. For example "ps".
-	REQOpCommand Method = "REQOpCommand"
 	// Get a list of all the running processes.
 	REQOpProcessList Method = "REQOpProcessList"
 	// Start up a process.
@@ -138,9 +133,6 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 	ma := MethodsAvailable{
 		Methodhandlers: map[Method]methodHandler{
 			REQInitial: methodREQInitial{
-				commandOrEvent: CommandACK,
-			},
-			REQOpCommand: methodREQOpCommand{
 				commandOrEvent: CommandACK,
 			},
 			REQOpProcessList: methodREQOpProcessList{
@@ -338,172 +330,6 @@ type methodHandler interface {
 }
 
 // -----
-
-type methodREQOpCommand struct {
-	commandOrEvent CommandOrEvent
-}
-
-func (m methodREQOpCommand) getKind() CommandOrEvent {
-	return m.commandOrEvent
-}
-
-type OpCmdStartProc struct {
-	Method Method `json:"method"`
-}
-
-type OpCmdStopProc struct {
-	RecevingNode Node        `json:"receivingNode"`
-	Method       Method      `json:"method"`
-	Kind         processKind `json:"kind"`
-	ID           int         `json:"id"`
-}
-
-// handler to run a CLI command with timeout context. The handler will
-// return the output of the command run back to the calling publisher
-// in the ack message.
-func (m methodREQOpCommand) handler(proc process, message Message, nodeName string) ([]byte, error) {
-	proc.processes.wg.Add(1)
-	go func() {
-		defer proc.processes.wg.Done()
-
-		out := []byte{}
-
-		// unmarshal the json.RawMessage field called OpArgs.
-		//
-		// Dst interface is the generic type to Unmarshal OpArgs into, and we will
-		// set the type it should contain depending on the value specified in Cmd.
-		var dst interface{}
-
-		switch message.Operation.OpCmd {
-		case "ps":
-			// Loop the the processes map, and find all that is active to
-			// be returned in the reply message.
-
-			proc.processes.active.mu.Lock()
-			for _, pTmp := range proc.processes.active.procNames {
-				s := fmt.Sprintf("%v, proc: %v, id: %v, name: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), pTmp.processKind, pTmp.processID, pTmp.subject.name())
-				sb := []byte(s)
-				out = append(out, sb...)
-
-			}
-			proc.processes.active.mu.Unlock()
-
-		case "startProc":
-			// Set the empty interface type dst to &OpStart.
-			dst = &OpCmdStartProc{}
-
-			err := json.Unmarshal(message.Operation.OpArg, &dst)
-			if err != nil {
-				er := fmt.Errorf("error: methodREQOpCommand startProc json.Umarshal failed : %v, OpArg: %v", err, message.Operation.OpArg)
-				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-				log.Printf("%v\n", er)
-			}
-
-			// Assert it into the correct non pointer value.
-			arg := *dst.(*OpCmdStartProc)
-
-			if arg.Method == "" {
-				er := fmt.Errorf("error: startProc: no method specified: %v" + fmt.Sprint(message))
-				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-				log.Printf("%v\n", er)
-				return
-			}
-
-			// Create the process and start it.
-			sub := newSubject(arg.Method, proc.configuration.NodeName)
-			procNew := newProcess(proc.ctx, proc.processes.metrics, proc.natsConn, proc.processes, proc.toRingbufferCh, proc.configuration, sub, proc.errorCh, processKindSubscriber, nil)
-			go procNew.spawnWorker(proc.processes, proc.natsConn)
-
-			er := fmt.Errorf("info: startProc: started id: %v, subject: %v: node: %v", procNew.processID, sub, message.ToNode)
-			sendInfoLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-
-		case "stopProc":
-			// Set the interface type dst to &OpStart.
-			dst = &OpCmdStopProc{}
-
-			err := json.Unmarshal(message.Operation.OpArg, &dst)
-			if err != nil {
-				er := fmt.Errorf("error: methodREQOpCommand stopProc json.Umarshal failed : %v, message: %v", err, message)
-				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-				log.Printf("%v\n", er)
-			}
-
-			// Assert it into the correct non pointer value.
-			arg := *dst.(*OpCmdStopProc)
-
-			// Based on the arg values received in the message we create a
-			// processName structure as used in naming the real processes.
-			// We can then use this processName to get the real values for the
-			// actual process we want to stop.
-			sub := newSubject(arg.Method, string(arg.RecevingNode))
-			processName := processNameGet(sub.name(), arg.Kind)
-
-			// Check if the message contains an id.
-			err = func() error {
-				if arg.ID == 0 {
-					er := fmt.Errorf("error: stopProc: did not find process to stop: %v on %v", sub, message.ToNode)
-					sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-					return er
-				}
-				return nil
-			}()
-
-			if err != nil {
-				er := fmt.Errorf("error: stopProc: err was not nil: %v : %v on %v", err, sub, message.ToNode)
-				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-				log.Printf("%v\n", er)
-				return
-			}
-
-			// Remove the process from the processes active map if found.
-
-			proc.processes.active.mu.Lock()
-			toStopProc, ok := proc.processes.active.procNames[processName]
-
-			if ok {
-				// Delete the process from the processes map
-				delete(proc.processes.active.procNames, processName)
-
-				// Stop started go routines that belong to the process.
-				toStopProc.ctxCancel()
-				// Stop subscribing for messages on the process's subject.
-				err := toStopProc.natsSubscription.Unsubscribe()
-
-				if err != nil {
-					er := fmt.Errorf("error: methodREQOpCommand, toStopProc, failed to stop nats.Subscription: %v, message: %v", err, message)
-					sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-					log.Printf("%v\n", er)
-				}
-
-				// Remove the prometheus label
-				proc.processes.metrics.promProcessesAllRunning.Delete(prometheus.Labels{"processName": string(processName)})
-
-				er := fmt.Errorf("info: stopProc: stopped %v on %v", sub, message.ToNode)
-				sendInfoLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-				log.Printf("%v\n", er)
-
-				newReplyMessage(proc, message, []byte(er.Error()))
-
-			} else {
-				er := fmt.Errorf("error: stopProc: methodREQOpCommand, did not find process to stop: %v on %v", sub, message.ToNode)
-				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-				log.Printf("%v\n", er)
-
-				newReplyMessage(proc, message, []byte(er.Error()))
-			}
-
-			proc.processes.active.mu.Unlock()
-
-		}
-
-		newReplyMessage(proc, message, out)
-	}()
-
-	ackMsg := []byte(fmt.Sprintf("confirmed from node: %v: messageID: %v\n---\n", proc.node, message.ID))
-	return ackMsg, nil
-}
-
-// ---- New operations
 
 // --- OpProcessList
 type methodREQOpProcessList struct {

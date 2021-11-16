@@ -148,145 +148,6 @@ func messageSlide(app *tview.Application) tview.Primitive {
 		case "FileName":
 			value := ".log"
 			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
-		case "Operation":
-			// Prepare the selectedFunc that will be triggered for the operations
-			// when a field in the dropdown is selected.
-			// This selectedFunc will generate the sub fields of the selected
-			// operation, and will also remove any previously drawn operation
-			// sub fields from the current form.
-			values := []string{"ps", "startProc", "stopProc"}
-			selectedFunc := func(option string, optionIndex int) {
-
-				// Prepare the map structure that knows what tview items the
-				// operation should contain.
-				// Then we can pick from this map later, to know what fields
-				// to draw, and also which fields to delete if another operation
-				// is selected from the dropdown.
-
-				type formItem struct {
-					label    string
-					formItem tview.FormItem
-				}
-
-				operationFormItems := map[string][]formItem{}
-
-				operationFormItems["ps"] = nil
-
-				operationFormItems["startProc"] = func() []formItem {
-					formItems := []formItem{}
-
-					// Get values values to be used for the "Method" dropdown.
-					var m steward.Method
-					ma := m.GetMethodsAvailable()
-					values := []string{}
-					for k := range ma.Methodhandlers {
-						values = append(values, string(k))
-					}
-
-					// Create the individual form items, and append them to the
-					// formItems slice to be drawn later.
-					{
-						label := "startProc Method"
-						item := tview.NewDropDown()
-						item.SetLabel(label).SetOptions(values, nil).SetLabelWidth(25)
-						formItems = append(formItems, formItem{label: label, formItem: item})
-					}
-
-					return formItems
-				}()
-
-				operationFormItems["stopProc"] = func() []formItem {
-					formItems := []formItem{}
-
-					// RecevingNode node        `json:"receivingNode"`
-					// Method       Method      `json:"method"`
-					// Kind         processKind `json:"kind"`
-					// ID           int         `json:"id"`
-
-					// Get nodes from file.
-					values, err = getNodeNames("nodeslist.cfg")
-					if err != nil {
-						fmt.Fprintf(p.logForm, "%v: error: unable to get nodes\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
-						return nil
-					}
-
-					{
-						label := "stopProc ToNode"
-						item := tview.NewDropDown()
-						item.SetLabel(label).SetOptions(values, nil).SetLabelWidth(25)
-						formItems = append(formItems, formItem{label: label, formItem: item})
-
-					}
-
-					// Get values values to be used for the "Method" dropdown.
-					var m steward.Method
-					ma := m.GetMethodsAvailable()
-					values := []string{}
-					for k := range ma.Methodhandlers {
-						values = append(values, string(k))
-					}
-
-					// Create the individual form items, and append them to the
-					// formItems slice.
-					{
-						label := "stopProc Method"
-						item := tview.NewDropDown()
-						item.SetLabel(label).SetOptions(values, nil).SetLabelWidth(25)
-						formItems = append(formItems, formItem{label: label, formItem: item})
-
-					}
-
-					processKind := []string{"publisher", "subscriber"}
-
-					{
-						label := "stopProc processKind"
-						item := tview.NewDropDown()
-						item.SetLabel(label).SetOptions(processKind, nil).SetLabelWidth(25)
-						formItems = append(formItems, formItem{label: label, formItem: item})
-
-					}
-
-					{
-						label := "stopProc ID"
-						item := tview.NewInputField()
-						item.SetLabel(label).SetFieldWidth(30).SetLabelWidth(25)
-						formItems = append(formItems, formItem{label: label, formItem: item})
-					}
-
-					return formItems
-				}()
-
-				itemDraw := func(label string) {
-					// Delete previously drawn sub operation form items.
-					for _, vSlice := range operationFormItems {
-						for _, v := range vSlice {
-							i := p.msgInputForm.GetFormItemIndex(v.label)
-							if i > -1 {
-								p.msgInputForm.RemoveFormItem(i)
-							}
-						}
-					}
-
-					// Get and draw the form items to the form.
-					formItems := operationFormItems[label]
-					for _, v := range formItems {
-						p.msgInputForm.AddFormItem(v.formItem)
-					}
-				}
-
-				switch option {
-				case "ps":
-					itemDraw("ps")
-				case "startProc":
-					itemDraw("startProc")
-				case "stopProc":
-					itemDraw("stopProc")
-				default:
-					fmt.Fprintf(p.logForm, "%v: error: missing menu item for %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), option)
-				}
-			}
-
-			p.msgInputForm.AddDropDown(fieldName, values, 0, selectedFunc).SetItemPadding(1)
 
 		default:
 			// Add a no definition fields to the form if a a field within the
@@ -305,11 +166,6 @@ func messageSlide(app *tview.Application) tview.Primitive {
 		//
 		// TODO: Should also add a write directly to socket here.
 		AddButton("generate to console", func() {
-			// ---
-			opCmdStartProc := steward.OpCmdStartProc{}
-			opCmdStopProc := steward.OpCmdStopProc{}
-			// ---
-
 			// fh, err := os.Create("message.json")
 			// if err != nil {
 			// 	log.Fatalf("error: failed to create test.log file: %v\n", err)
@@ -379,25 +235,6 @@ func messageSlide(app *tview.Application) tview.Primitive {
 					m.Directory = value
 				case "FileName":
 					m.FileName = value
-				case "Operation":
-					// We need to check what type of operation it is, and pick
-					// the correct struct type, and fill it with values
-					switch value {
-					case "ps":
-						//TODO
-					case "startProc":
-						m.Operation = &opCmdStartProc
-					case "stopProc":
-						m.Operation = &opCmdStopProc
-					default:
-						m.Operation = nil
-					}
-				case "startProc Method":
-					if value == "" {
-						fmt.Fprintf(p.logForm, "%v : error: missing startProc Method\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
-						return
-					}
-					opCmdStartProc.Method = steward.Method(value)
 
 				default:
 					fmt.Fprintf(p.logForm, "%v : error: did not find case defenition for how to handle the \"%v\" within the switch statement\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), label)
@@ -560,6 +397,4 @@ type msg struct {
 	// on a file being saved as the result of data being handled
 	// by a method handler.
 	FileName string `json:"fileName" yaml:"fileName"`
-	// operation are used to give an opCmd and opArg's.
-	Operation interface{} `json:"operation,omitempty"`
 }
