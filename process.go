@@ -187,7 +187,9 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 	idProcMap := make(map[int]process)
 	idProcMap[p.processID] = p
 
-	procs.active.put(keyValue{k: pn, v: idProcMap})
+	procs.active.mu.Lock()
+	procs.active.procNames[pn] = idProcMap
+	procs.active.mu.Unlock()
 }
 
 // messageDeliverNats will take care of the delivering the message
@@ -469,9 +471,16 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		// counter out of the map.
 		p.messageID++
 
-		p1 := p.processes.active.get(pn)
-		p1.v[p.processID] = p
-		p.processes.active.put(keyValue{k: pn, v: p1.v})
+		{
+			p.processes.active.mu.Lock()
+			procToUpdate, ok := p.processes.active.procNames[pn]
+			if !ok {
+				fmt.Printf(" * debugError: found no proc to update by that name: %v\n", pn)
+			}
+
+			procToUpdate[p.processID] = p
+			p.processes.active.mu.Unlock()
+		}
 
 		// Handle the error.
 		//

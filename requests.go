@@ -381,16 +381,16 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			// Loop the the processes map, and find all that is active to
 			// be returned in the reply message.
 
-			activeProcs := proc.processes.active.getAll()
-
-			for _, idMap := range activeProcs {
-				for _, v := range idMap.v {
-					s := fmt.Sprintf("%v, proc: %v, id: %v, name: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), v.processKind, v.processID, v.subject.name())
+			proc.processes.active.mu.Lock()
+			for _, idMap := range proc.processes.active.procNames {
+				for _, idMapValue := range idMap {
+					s := fmt.Sprintf("%v, proc: %v, id: %v, name: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), idMapValue.processKind, idMapValue.processID, idMapValue.subject.name())
 					sb := []byte(s)
 					out = append(out, sb...)
 				}
 
 			}
+			proc.processes.active.mu.Unlock()
 
 		case "startProc":
 			// Set the empty interface type dst to &OpStart.
@@ -467,16 +467,19 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			}
 
 			// Remove the process from the processes active map if found.
-			p1 := proc.processes.active.get(processName)
-			toStopProc, ok := p1.v[arg.ID]
+
+			proc.processes.active.mu.Lock()
+			toStopProc, ok := proc.processes.active.procNames[processName][arg.ID]
 
 			if ok {
 				// Delete the process from the processes map
-				proc.processes.active.del(keyValue{k: processName})
+				delete(proc.processes.active.procNames, processName)
+
 				// Stop started go routines that belong to the process.
 				toStopProc.ctxCancel()
 				// Stop subscribing for messages on the process's subject.
 				err := toStopProc.natsSubscription.Unsubscribe()
+
 				if err != nil {
 					er := fmt.Errorf("error: methodREQOpCommand, toStopProc, failed to stop nats.Subscription: %v, message: %v", err, message)
 					sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
@@ -499,6 +502,9 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 
 				newReplyMessage(proc, message, []byte(er.Error()))
 			}
+
+			proc.processes.active.mu.Unlock()
+
 		}
 
 		newReplyMessage(proc, message, out)
@@ -530,15 +536,17 @@ func (m methodREQOpProcessList) handler(proc process, message Message, node stri
 
 		// Loop the the processes map, and find all that is active to
 		// be returned in the reply message.
-		procsAll := proc.processes.active.getAll()
-		for _, idMap := range procsAll {
-			for _, v := range idMap.v {
-				s := fmt.Sprintf("%v, process: %v, id: %v, name: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), v.processKind, v.processID, v.subject.name())
+
+		proc.processes.active.mu.Lock()
+		for _, pidMap := range proc.processes.active.procNames {
+			for _, pid := range pidMap {
+				s := fmt.Sprintf("%v, process: %v, id: %v, name: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), pid.processKind, pid.processID, pid.subject.name())
 				sb := []byte(s)
 				out = append(out, sb...)
 			}
 
 		}
+		proc.processes.active.mu.Unlock()
 
 		newReplyMessage(proc, message, out)
 	}()
@@ -682,12 +690,12 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 		processName := processNameGet(sub.name(), processKind(kind))
 
 		// Remove the process from the processes active map if found.
-		p1 := proc.processes.active.get(processName)
-		toStopProc, ok := p1.v[id]
+		proc.processes.active.mu.Lock()
+		toStopProc, ok := proc.processes.active.procNames[processName][id]
 
 		if ok {
 			// Delete the process from the processes map
-			proc.processes.active.del(keyValue{k: processName})
+			delete(proc.processes.active.procNames, processName)
 			// Stop started go routines that belong to the process.
 			toStopProc.ctxCancel()
 			// Stop subscribing for messages on the process's subject.
@@ -718,6 +726,8 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 			out = []byte(txt + "\n")
 			newReplyMessage(proc, message, out)
 		}
+
+		proc.processes.active.mu.Unlock()
 
 	}()
 

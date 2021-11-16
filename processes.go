@@ -53,88 +53,16 @@ func newProcesses(ctx context.Context, metrics *metrics) *processes {
 
 // ----------------------
 
-type keyValue struct {
-	k  processName
-	v  map[int]process
-	ok bool
-}
-
 type procsMap struct {
-	m  map[processName]map[int]process
-	mu sync.Mutex
+	procNames map[processName]map[int]process
+	mu        sync.Mutex
 }
 
 func newProcsMap() *procsMap {
 	cM := procsMap{
-		m: make(map[processName]map[int]process),
+		procNames: make(map[processName]map[int]process),
 	}
 	return &cM
-}
-
-//func (c *procsMap) run(ctx context.Context) {
-//	for {
-//		select {
-//		case kvCh := <-c.mInCh:
-//			kv := <-kvCh
-//			c.m[kv.k] = kv.v
-//
-//		case gv := <-c.mGetCh:
-//			v, ok := c.m[gv.k]
-//			gv.kvCh <- keyValue{gv.k, v, ok}
-//
-//		case kvCh := <-c.mDelCh:
-//			kv := <-kvCh
-//			delete(c.m, kv.k)
-//
-//		case gaCh := <-c.mGetAllCh:
-//			kvSlice := []keyValue{}
-//
-//			for k, v := range c.m {
-//				kv := keyValue{k: k, v: v}
-//				kvSlice = append(kvSlice, kv)
-//			}
-//
-//			gaCh <- kvSlice
-//
-//		case <-ctx.Done():
-//			log.Printf("info: processes active.Run: got ctx.Done\n")
-//			return
-//		}
-//	}
-//}
-
-func (c *procsMap) put(kv keyValue) {
-	c.mu.Lock()
-	c.m[kv.k] = kv.v
-	c.mu.Unlock()
-}
-
-func (c *procsMap) get(key processName) keyValue {
-	var kv keyValue
-
-	c.mu.Lock()
-	kv.v, kv.ok = c.m[key]
-	c.mu.Unlock()
-
-	return kv
-}
-
-func (c *procsMap) del(kv keyValue) {
-	c.mu.Lock()
-	delete(c.m, kv.k)
-	c.mu.Unlock()
-}
-
-func (c *procsMap) getAll() []keyValue {
-	var kvs []keyValue
-
-	c.mu.Lock()
-	for k, v := range c.m {
-		kvs = append(kvs, keyValue{k: k, v: v})
-	}
-	c.mu.Unlock()
-
-	return kvs
 }
 
 // ----------------------
@@ -446,14 +374,18 @@ func (s startup) subREQToSocket(p process) {
 func (p *processes) printProcessesMap() {
 	log.Printf("*** Output of processes map :\n")
 
-	activeProcs := p.active.getAll()
+	{
+		p.active.mu.Lock()
 
-	for _, vSub := range activeProcs {
-		for _, vID := range vSub.v {
-			log.Printf("* proc - : %v, id: %v, name: %v\n", vID.processKind, vID.processID, vID.subject.name())
+		for pName, pidMap := range p.active.procNames {
+			for pid, proc := range pidMap {
+				log.Printf("* proc - pub/sub: %v, procName in map: %v ,pid in map: %v,id: %v, subject: %v\n", proc.processKind, pName, pid, proc.processID, proc.subject.name())
+			}
 		}
-	}
 
-	p.metrics.promProcessesTotal.Set(float64(len(activeProcs)))
+		p.metrics.promProcessesTotal.Set(float64(len(p.active.procNames)))
+
+		p.active.mu.Unlock()
+	}
 
 }

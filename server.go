@@ -452,20 +452,21 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 
 				// Check if there is a map of type map[int]process registered
 				// for the processName, and if it exists then return it.
-				kv := s.processes.active.get(pn)
-				existingProcIDMap := kv.v
-				valueOK := kv.ok
+				s.processes.active.mu.Lock()
+				existingProcIDMap, ok := s.processes.active.procNames[pn]
+				s.processes.active.mu.Unlock()
 
 				// If found a map above, range it, and are there already a process
 				// for that subject, put the message on that processes incomming
 				// message channel.
-				if valueOK {
-					// var pid int
+				if ok {
 					var proc process
-					// forLoopCounter := 1
+
+					s.processes.active.mu.Lock()
 					for _, existingProc := range existingProcIDMap {
 						proc = existingProc
 					}
+					s.processes.active.mu.Unlock()
 
 					// We have found the process to route the message to, deliver it.
 					proc.subject.messageCh <- m
