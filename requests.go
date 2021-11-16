@@ -1548,11 +1548,8 @@ func (m methodREQRelay) getKind() CommandOrEvent {
 func (m methodREQRelay) handler(proc process, message Message, node string) ([]byte, error) {
 	// relay the message here to the actual host here.
 
-	// fmt.Printf("\n * DEBUG Got relay message: %#v\n\n ", pretty.Formatter(message))
-
 	message.ToNode = message.RelayToNode
 	message.FromNode = Node(node)
-	// fmt.Printf(" * DEBUG THE VALUES OF, proc.configuration.NodeName: %v, node:%v\n ", proc.configuration.NodeName, node)
 	message.Method = message.RelayOriginalMethod
 
 	sam, err := newSubjectAndMessage(message)
@@ -1562,7 +1559,6 @@ func (m methodREQRelay) handler(proc process, message Message, node string) ([]b
 		log.Printf("%v\n", er)
 	}
 
-	// fmt.Printf("\n * DEBUG: Created sam: %#v\n\n ", pretty.Formatter(sam))
 	proc.toRingbufferCh <- []subjectAndMessage{sam}
 
 	// Send back an ACK message.

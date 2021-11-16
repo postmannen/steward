@@ -332,34 +332,23 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 	// also can send the a copy of the reply back to where it originated.
 
 	if message.PreviousMessage != nil && message.PreviousMessage.RelayViaNode != "" {
-		// fmt.Printf("\n message.PreviousMessage.RelayViaNode: %v\n\n", message.PreviousMessage.RelayViaNode)
 		// make a copy of the message
 		msgCopy := message
-		// fmt.Printf("\n *DEBUG0 msgCopy: %#v\n\n ", pretty.Formatter(msgCopy))
 		msgCopy.ToNode = msgCopy.PreviousMessage.RelayFromNode
 
 		// If no RelayReplyMethod is set, we default to the replyMethod
 		// of the initial message.
 
-		//fmt.Printf(" * replyMethod: %v\n", message.ReplyMethod)
-		//fmt.Printf(" * previous replyMethod: %v\n", message.PreviousMessage.ReplyMethod)
-		//
-		//fmt.Printf(" * message.RelayReplyMethod: %v\n", message.RelayReplyMethod)
-		//fmt.Printf(" * previous message.PreviousMessage.RelayReplyMethod: %v\n", message.PreviousMessage.RelayReplyMethod)
-
 		switch {
 		case msgCopy.PreviousMessage.RelayReplyMethod == "":
-			fmt.Printf("\n *DEBUG0.1 msgCopy: \n ")
 			msgCopy.Method = msgCopy.PreviousMessage.ReplyMethod
 		case msgCopy.PreviousMessage.RelayReplyMethod != "":
 			msgCopy.Method = msgCopy.PreviousMessage.RelayReplyMethod
 		}
-		// fmt.Printf("\n *DEBUG1 msgCopy: %#v\n\n ", pretty.Formatter(msgCopy))
 
 		// Reset the previosMessage relay fields so the message don't loop.
 		message.PreviousMessage.RelayViaNode = ""
 
-		// fmt.Printf("\n *DEBUG2 msgCopy: %#v\n\n ", pretty.Formatter(msgCopy))
 		sam, err := newSubjectAndMessage(msgCopy)
 		if err != nil {
 			er := fmt.Errorf("error: newSubjectAndMessage : %v, message copy: %v", err, msgCopy)
@@ -367,7 +356,6 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 			log.Printf("%v\n", er)
 		}
 
-		// fmt.Printf("\n *DEBUG3 Created sam: %#v\n\n ", pretty.Formatter(sam))
 		p.toRingbufferCh <- []subjectAndMessage{sam}
 	}
 
@@ -475,7 +463,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 			p.processes.active.mu.Lock()
 			procToUpdate, ok := p.processes.active.procNames[pn]
 			if !ok {
-				fmt.Printf(" * debugError: found no proc to update by that name: %v\n", pn)
+				log.Printf(" * debugError: found no proc to update by that name: %v\n", pn)
 			}
 
 			procToUpdate[p.processID] = p
