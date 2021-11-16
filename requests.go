@@ -44,7 +44,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -626,45 +625,27 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 		// real method for the message.
 		var mt Method
 
-		if v := len(message.MethodArgs); v != 4 {
-			er := fmt.Errorf("error: OpProcessStop: methodArgs should contain 4 elements, found %v", v)
-			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-			return
-		}
-
 		// --- Parse and check the method arguments given.
 		// The Reason for also having the node as one of the arguments is
 		// that publisher processes are named by the node they are sending the
 		// message to. Subscriber processes names are named by the node name
 		// they are running on.
 
-		switch {
-		case len(message.MethodArgs) != 4:
-			er := fmt.Errorf("error: methodREQCliCommand: got <4 number methodArgs, want: method,node,kind,id")
+		if v := len(message.MethodArgs); v != 3 {
+			er := fmt.Errorf("error: methodREQCliCommand: got <4 number methodArgs, want: method,node,kind")
 			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 			log.Printf("%v\n", er)
-			return
 		}
 
 		methodString := message.MethodArgs[0]
 		node := message.MethodArgs[1]
 		kind := message.MethodArgs[2]
-		idString := message.MethodArgs[3]
 
 		method := Method(methodString)
 		tmpH := mt.getHandler(Method(method))
 		if tmpH == nil {
 			er := fmt.Errorf("error: OpProcessStop: no such request type defined: %v, check that the methodArgs are correct: " + methodString)
 			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-			return
-		}
-
-		// Check if id is a valid number.
-		id, err := strconv.Atoi(idString)
-		if err != nil {
-			er := fmt.Errorf("error: OpProcessStop: id: %v, is not a number, check that the methodArgs are correct: %v", idString, err)
-			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-			log.Printf("%v\n", er)
 			return
 		}
 
@@ -697,7 +678,7 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 			// Remove the prometheus label
 			proc.processes.metrics.promProcessesAllRunning.Delete(prometheus.Labels{"processName": string(processName)})
 
-			txt := fmt.Sprintf("info: OpProcessStop: process stopped id: %v, method: %v on: %v", id, sub, message.ToNode)
+			txt := fmt.Sprintf("info: OpProcessStop: process stopped id: %v, method: %v on: %v", toStopProc.processID, sub, message.ToNode)
 			er := fmt.Errorf(txt)
 			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 			log.Printf("%v\n", er)
