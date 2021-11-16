@@ -8,8 +8,7 @@
         "operation":{
             "opCmd":"startProc",
             "opArg": {
-                "method": "REQHttpGet",
-                "allowedNodes": ["central","node1"]
+                "method": "REQHttpGet"
             }
         },
         "replyMethod":"REQToFileAppend",

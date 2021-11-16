@@ -349,8 +349,7 @@ func (m methodREQOpCommand) getKind() CommandOrEvent {
 }
 
 type OpCmdStartProc struct {
-	Method       Method `json:"method"`
-	AllowedNodes []Node `json:"allowedNodes"`
+	Method Method `json:"method"`
 }
 
 type OpCmdStopProc struct {
@@ -405,13 +404,6 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 
 			// Assert it into the correct non pointer value.
 			arg := *dst.(*OpCmdStartProc)
-
-			if len(arg.AllowedNodes) == 0 {
-				er := fmt.Errorf("error: startProc: no allowed publisher nodes specified: %v" + fmt.Sprint(message))
-				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-				log.Printf("%v\n", er)
-				return
-			}
 
 			if arg.Method == "" {
 				er := fmt.Errorf("error: startProc: no method specified: %v" + fmt.Sprint(message))

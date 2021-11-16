@@ -1005,8 +1005,7 @@ The API for sending a message from one node to another node is by sending a stru
         "operation":{
             "opCmd":"startProc",
             "opArg": {
-                "method": "REQHttpGet",
-                "allowedNodes": ["central","node1"]
+                "method": "REQHttpGet"
             }
         },
         "ACKTimeout":3,

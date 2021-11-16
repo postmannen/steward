@@ -191,12 +191,6 @@ func messageSlide(app *tview.Application) tview.Primitive {
 						item.SetLabel(label).SetOptions(values, nil).SetLabelWidth(25)
 						formItems = append(formItems, formItem{label: label, formItem: item})
 					}
-					{
-						label := "startProc AllowedNodes"
-						item := tview.NewInputField()
-						item.SetLabel(label).SetFieldWidth(30).SetLabelWidth(25)
-						formItems = append(formItems, formItem{label: label, formItem: item})
-					}
 
 					return formItems
 				}()
@@ -404,29 +398,7 @@ func messageSlide(app *tview.Application) tview.Primitive {
 						return
 					}
 					opCmdStartProc.Method = steward.Method(value)
-				case "startProc AllowedNodes":
-					// Split the comma separated string into a
-					// and remove the start and end ampersand.
-					sp := strings.Split(value, ",")
 
-					var allowedNodes []steward.Node
-
-					for _, v := range sp {
-						// Check if format is correct, return if not.
-						pre := strings.HasPrefix(v, "\"") || !strings.HasPrefix(v, ",") || !strings.HasPrefix(v, "\",") || !strings.HasPrefix(v, ",\"")
-						suf := strings.HasSuffix(v, "\"")
-						if !pre || !suf {
-							fmt.Fprintf(p.logForm, "%v : error: malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
-							return
-						}
-						// Remove leading and ending ampersand.
-						v = v[1:]
-						v = strings.TrimSuffix(v, "\"")
-
-						allowedNodes = append(allowedNodes, steward.Node(v))
-					}
-
-					opCmdStartProc.AllowedNodes = allowedNodes
 				default:
 					fmt.Fprintf(p.logForm, "%v : error: did not find case defenition for how to handle the \"%v\" within the switch statement\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), label)
 				}
