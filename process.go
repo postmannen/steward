@@ -184,11 +184,8 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 	p.processName = pn
 
 	// Add information about the new process to the started processes map.
-	idProcMap := make(map[int]process)
-	idProcMap[p.processID] = p
-
 	procs.active.mu.Lock()
-	procs.active.procNames[pn] = idProcMap
+	procs.active.procNames[pn] = p
 	procs.active.mu.Unlock()
 }
 
@@ -461,12 +458,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 
 		{
 			p.processes.active.mu.Lock()
-			procToUpdate, ok := p.processes.active.procNames[pn]
-			if !ok {
-				log.Printf(" * debugError: found no proc to update by that name: %v\n", pn)
-			}
-
-			procToUpdate[p.processID] = p
+			p.processes.active.procNames[pn] = p
 			p.processes.active.mu.Unlock()
 		}
 

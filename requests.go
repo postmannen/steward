@@ -381,12 +381,10 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			// be returned in the reply message.
 
 			proc.processes.active.mu.Lock()
-			for _, idMap := range proc.processes.active.procNames {
-				for _, idMapValue := range idMap {
-					s := fmt.Sprintf("%v, proc: %v, id: %v, name: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), idMapValue.processKind, idMapValue.processID, idMapValue.subject.name())
-					sb := []byte(s)
-					out = append(out, sb...)
-				}
+			for _, pTmp := range proc.processes.active.procNames {
+				s := fmt.Sprintf("%v, proc: %v, id: %v, name: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), pTmp.processKind, pTmp.processID, pTmp.subject.name())
+				sb := []byte(s)
+				out = append(out, sb...)
 
 			}
 			proc.processes.active.mu.Unlock()
@@ -461,7 +459,7 @@ func (m methodREQOpCommand) handler(proc process, message Message, nodeName stri
 			// Remove the process from the processes active map if found.
 
 			proc.processes.active.mu.Lock()
-			toStopProc, ok := proc.processes.active.procNames[processName][arg.ID]
+			toStopProc, ok := proc.processes.active.procNames[processName]
 
 			if ok {
 				// Delete the process from the processes map
@@ -530,12 +528,10 @@ func (m methodREQOpProcessList) handler(proc process, message Message, node stri
 		// be returned in the reply message.
 
 		proc.processes.active.mu.Lock()
-		for _, pidMap := range proc.processes.active.procNames {
-			for _, pid := range pidMap {
-				s := fmt.Sprintf("%v, process: %v, id: %v, name: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), pid.processKind, pid.processID, pid.subject.name())
-				sb := []byte(s)
-				out = append(out, sb...)
-			}
+		for _, pTmp := range proc.processes.active.procNames {
+			s := fmt.Sprintf("%v, process: %v, id: %v, name: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), pTmp.processKind, pTmp.processID, pTmp.subject.name())
+			sb := []byte(s)
+			out = append(out, sb...)
 
 		}
 		proc.processes.active.mu.Unlock()
@@ -683,7 +679,7 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 
 		// Remove the process from the processes active map if found.
 		proc.processes.active.mu.Lock()
-		toStopProc, ok := proc.processes.active.procNames[processName][id]
+		toStopProc, ok := proc.processes.active.procNames[processName]
 
 		if ok {
 			// Delete the process from the processes map

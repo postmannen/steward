@@ -54,13 +54,13 @@ func newProcesses(ctx context.Context, metrics *metrics) *processes {
 // ----------------------
 
 type procsMap struct {
-	procNames map[processName]map[int]process
+	procNames map[processName]process
 	mu        sync.Mutex
 }
 
 func newProcsMap() *procsMap {
 	cM := procsMap{
-		procNames: make(map[processName]map[int]process),
+		procNames: make(map[processName]process),
 	}
 	return &cM
 }
@@ -377,10 +377,8 @@ func (p *processes) printProcessesMap() {
 	{
 		p.active.mu.Lock()
 
-		for pName, pidMap := range p.active.procNames {
-			for pid, proc := range pidMap {
-				log.Printf("* proc - pub/sub: %v, procName in map: %v ,pid in map: %v,id: %v, subject: %v\n", proc.processKind, pName, pid, proc.processID, proc.subject.name())
-			}
+		for pName, proc := range p.active.procNames {
+			log.Printf("* proc - pub/sub: %v, procName in map: %v , id: %v, subject: %v\n", proc.processKind, pName, proc.processID, proc.subject.name())
 		}
 
 		p.metrics.promProcessesTotal.Set(float64(len(p.active.procNames)))
