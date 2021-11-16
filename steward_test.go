@@ -80,7 +80,7 @@ func TestStewardServer(t *testing.T) {
 
 	// Specify all the test funcs to run in the slice.
 	funcs := []testFunc{
-		checkREQOpCommandTest,
+		checkREQOpProcessListTest,
 		checkREQCliCommandTest,
 		checkREQCliCommandContTest,
 		// checkREQToConsoleTest(conf, t), NB: No tests will be made for console ouput.
@@ -117,17 +117,14 @@ func TestStewardServer(t *testing.T) {
 // ----------------------------------------------------------------------------
 
 // Testing op (operator) Commands.
-func checkREQOpCommandTest(stewardServer *server, conf *Configuration, t *testing.T) error {
+func checkREQOpProcessListTest(stewardServer *server, conf *Configuration, t *testing.T) error {
 	m := `[
 		{
 			"directory":"opCommand",
 			"fileName": "fileName.result",
 			"toNode": "central",
 			"data": [],
-			"method":"REQOpCommand",
-			"operation":{
-				"opCmd":"ps"
-			},
+			"method":"REQOpProcessList",
 			"replyMethod":"REQToFile",
 			"ACKTimeout":3,
 			"retries":3,
@@ -140,9 +137,9 @@ func checkREQOpCommandTest(stewardServer *server, conf *Configuration, t *testin
 	writeToSocketTest(conf, m, t)
 
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "opCommand", "central", "fileName.result")
-	_, err := findStringInFileTest("central.REQOpCommand.CommandACK", resultFile, conf, t)
+	_, err := findStringInFileTest("central.REQHttpGet.CommandACK", resultFile, conf, t)
 	if err != nil {
-		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQOpCommandTest: %v", err)
+		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQOpProcessListTest: %v", err)
 	}
 
 	t.Logf(" \U0001f600 [SUCCESS]	: checkREQOpCommandTest\n")
