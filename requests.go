@@ -682,7 +682,8 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 		DstNode := message.MethodArgs[1]
 		DstFilePath := message.MethodArgs[2]
 
-		ctx, cancel := context.WithTimeout(proc.ctx, time.Second*2)
+		ctx, cancel := context.WithTimeout(proc.ctx, time.Second*time.Duration(message.MethodTimeout))
+		defer cancel()
 
 		outCh := make(chan []byte)
 		errCh := make(chan error)
@@ -740,7 +741,7 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 		select {
 		case <-ctx.Done():
 			fmt.Printf(" ** DEBUG: got ctx.Done\n")
-			cancel()
+
 			er := fmt.Errorf("error: methodREQCopyFile: got <-ctx.Done(): %v", message.MethodArgs)
 			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 
@@ -748,12 +749,10 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 		case er := <-errCh:
 			fmt.Printf(" ** DEBUG: received on errCh: <-errCh\n")
 			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-			cancel()
 
 			return
 		case out := <-outCh:
 			fmt.Printf(" ** DEBUG: got data on out channel: case out:=<-outCh\n")
-			cancel()
 
 			dstDir := filepath.Dir(DstFilePath)
 			dstFile := filepath.Base(DstFilePath)
@@ -780,13 +779,18 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 				log.Printf("%v\n", er)
 			}
 
-			fmt.Printf(" * DEBUG: sending SAM: %#v\n", sam)
+			fmt.Printf(" ** DEBUG: sending SAM: %#v\n", sam)
 
 			proc.toRingbufferCh <- []subjectAndMessage{sam}
 
 			// TODO: Should we also send a reply message with the result back
 			// to where the message originated ?
 
+			replyData := fmt.Sprintf("info: succesfully read the file %v, and sent the content to %v\n", SrcFilePath, DstNode)
+
+			newReplyMessage(proc, message, []byte(replyData))
+
+			fmt.Printf(" ** DEBUG: sent reply message\n")
 		}
 
 	}()
