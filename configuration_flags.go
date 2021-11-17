@@ -70,6 +70,8 @@ type Configuration struct {
 	StartSubREQToFileAppend bool
 	// Subscriber for writing to file
 	StartSubREQToFile bool
+	// Subscriber for reading files to copy
+	StartSubREQCopyFileFrom bool
 	// Subscriber for Echo Request
 	StartSubREQPing bool
 	// Subscriber for Echo Reply
@@ -117,6 +119,7 @@ type ConfigurationFromFile struct {
 	StartSubREQHello          *bool
 	StartSubREQToFileAppend   *bool
 	StartSubREQToFile         *bool
+	StartSubREQCopyFileFrom   *bool
 	StartSubREQPing           *bool
 	StartSubREQPong           *bool
 	StartSubREQCliCommand     *bool
@@ -160,6 +163,7 @@ func newConfigurationDefaults() Configuration {
 		StartSubREQHello:          true,
 		StartSubREQToFileAppend:   true,
 		StartSubREQToFile:         true,
+		StartSubREQCopyFileFrom:   true,
 		StartSubREQPing:           true,
 		StartSubREQPong:           true,
 		StartSubREQCliCommand:     true,
@@ -298,6 +302,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.StartSubREQToFile = *cf.StartSubREQToFile
 	}
+	if cf.StartSubREQCopyFileFrom == nil {
+		conf.StartSubREQCopyFileFrom = cd.StartSubREQCopyFileFrom
+	} else {
+		conf.StartSubREQCopyFileFrom = *cf.StartSubREQCopyFileFrom
+	}
 	if cf.StartSubREQPing == nil {
 		conf.StartSubREQPing = cd.StartSubREQPing
 	} else {
@@ -396,6 +405,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.StartSubREQHello, "startSubREQHello", fc.StartSubREQHello, "true/false")
 	flag.BoolVar(&c.StartSubREQToFileAppend, "startSubREQToFileAppend", fc.StartSubREQToFileAppend, "true/false")
 	flag.BoolVar(&c.StartSubREQToFile, "startSubREQToFile", fc.StartSubREQToFile, "true/false")
+	flag.BoolVar(&c.StartSubREQCopyFileFrom, "startSubREQCopyFileFrom", fc.StartSubREQCopyFileFrom, "true/false")
 	flag.BoolVar(&c.StartSubREQPing, "startSubREQPing", fc.StartSubREQPing, "true/false")
 	flag.BoolVar(&c.StartSubREQPong, "startSubREQPong", fc.StartSubREQPong, "true/false")
 	flag.BoolVar(&c.StartSubREQCliCommand, "startSubREQCliCommand", fc.StartSubREQCliCommand, "true/false")
