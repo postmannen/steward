@@ -32,6 +32,7 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
       - [REQTailFile](#reqtailfile)
       - [REQHttpGet](#reqhttpget)
       - [REQHello](#reqhello)
+      - [REQCopyFileFrom](#reqcopyfilefrom)
       - [REQErrorLog](#reqerrorlog)
     - [Request Methods used for reply messages](#request-methods-used-for-reply-messages)
       - [REQToConsole for printing to STDOUT](#reqtoconsole-for-printing-to-stdout)
@@ -485,6 +486,29 @@ All nodes have the flag option to start sending Hello message to the central ser
 ]
 ```
 
+#### REQCopyFileFrom
+
+Copy a file from one node to another node.
+
+- Source node to copy from is specified in the toNode/toNodes field
+- The file to copy and the destination node is specified in the **methodArgs** field:
+  1. The first field is the full path of the source file.
+  2. The second field is the destination node for where to copy the file to.
+  3. The third field is the full path for where to write the copied file.
+
+```json
+[
+    {
+        "directory": "copy",
+        "fileName": "copy.log",
+        "toNodes": ["central"],
+        "method":"REQCopyFileFrom",
+        "methodArgs": ["./tmp2.txt","ship2","/tmp/tmp2.txt"],
+        "replyMethod":"REQToFileAppend"
+    }
+]
+```
+
 #### REQErrorLog
 
 Method for receiving error logs for Central error logger.
@@ -628,67 +652,79 @@ The location of the config file are given via an env variable at startup (defaul
 `env CONFIG_FOLDER </myconfig/folder/here>`
 
 ```text
-  // The configuration folder on disk
-  ConfigFolder string
-  // The folder where the socket file should live
-  SocketFolder string
-  // TCP Listener for sending messages to the system
-  TCPListener string
-  // The folder where the database should live
-  DatabaseFolder string
-  // some unique string to identify this Edge unit
-  NodeName string
-  // the address of the message broker
-  BrokerAddress string
-  // nats connect retry
-  NatsConnectRetryInterval int
-  // The number of the profiling port
-  ProfilingPort string
-  // host and port for prometheus listener, e.g. localhost:2112
-  PromHostAndPort string
-  // set to true if this is the node that should receive the error log's from other nodes
-  DefaultMessageTimeout int
-  // default amount of retries that will be done before a message is thrown away, and out of the system
-  DefaultMessageRetries int
-  // Publisher data folder
-  SubscribersDataFolder string
-  // central node to receive messages published from nodes
-  CentralNodeName string
-  // Path to the certificate of the root CA
-  RootCAPath string
-  // Full path to the NKEY's seed file
-  NkeySeedFile string
-  // The host and port to expose the data folder
-  ExposeDataFolder string
-  // Timeout for error messages
-  ErrorMessageTimeout int
-  // Retries for error messages.
-  ErrorMessageRetries int
-  // Make the current node send hello messages to central at given interval in seconds
-  StartPubREQHello int
-  // Start the central error logger.
-  // Takes a comma separated string of nodes to receive from or "*" for all nodes.
-  StartSubREQErrorLog bool
-  // Subscriber for hello messages
-  StartSubREQHello bool
-  // Subscriber for text logging
-  StartSubREQToFileAppend bool
-  // Subscriber for writing to file
-  StartSubREQToFile bool
-  // Subscriber for Echo Request
-  StartSubREQPing bool
-  // Subscriber for Echo Reply
-  StartSubREQPong bool
-  // Subscriber for CLICommandRequest
-  StartSubREQCliCommand bool
-  // Subscriber for REQToConsole
-  StartSubREQToConsole bool
-  // Subscriber for REQHttpGet
-  StartSubREQHttpGet bool
-  // Subscriber for tailing log files
-  StartSubREQTailFile bool
-  // Subscriber for continously delivery of output from cli commands.
-  StartSubREQCliCommandCont bool
+// The configuration folder on disk
+ConfigFolder string
+// The folder where the socket file should live
+SocketFolder string
+// TCP Listener for sending messages to the system
+TCPListener string
+// HTTP Listener for sending messages to the system
+HTTPListener string
+// The folder where the database should live
+DatabaseFolder string
+// some unique string to identify this Edge unit
+NodeName string
+// the address of the message broker
+BrokerAddress string
+// nats connect retry
+NatsConnectRetryInterval int
+// The number of the profiling port
+ProfilingPort string
+// host and port for prometheus listener, e.g. localhost:2112
+PromHostAndPort string
+// set to true if this is the node that should receive the error log's from other nodes
+DefaultMessageTimeout int
+// Default value for how long can a request method max be allowed to run.
+DefaultMethodTimeout int
+// default amount of retries that will be done before a message is thrown away, and out of the system
+DefaultMessageRetries int
+// Publisher data folder
+SubscribersDataFolder string
+// central node to receive messages published from nodes
+CentralNodeName string
+// Path to the certificate of the root CA
+RootCAPath string
+// Full path to the NKEY's seed file
+NkeySeedFile string
+// The host and port to expose the data folder
+ExposeDataFolder string
+// Timeout for error messages
+ErrorMessageTimeout int
+// Retries for error messages.
+ErrorMessageRetries int
+// NOTE:
+// Op commands will not be specified as a flag since they can't be turned off.
+// Make the current node send hello messages to central at given interval in seconds
+StartPubREQHello int
+// Start the central error logger.
+// Takes a comma separated string of nodes to receive from or "*" for all nodes.
+StartSubREQErrorLog bool
+// Subscriber for hello messages
+StartSubREQHello bool
+// Subscriber for text logging
+StartSubREQToFileAppend bool
+// Subscriber for writing to file
+StartSubREQToFile bool
+// Subscriber for reading files to copy
+StartSubREQCopyFileFrom bool
+// Subscriber for writing copied files to disk
+StartSubREQCopyFileTo bool
+// Subscriber for Echo Request
+StartSubREQPing bool
+// Subscriber for Echo Reply
+StartSubREQPong bool
+// Subscriber for CLICommandRequest
+StartSubREQCliCommand bool
+// Subscriber for REQToConsole
+StartSubREQToConsole bool
+// Subscriber for REQHttpGet
+StartSubREQHttpGet bool
+// Subscriber for tailing log files
+StartSubREQTailFile bool
+// Subscriber for continously delivery of output from cli commands.
+StartSubREQCliCommandCont bool
+// Subscriber for relay messages.
+StartSubREQRelay bool
 ```
 
 ### How to Run
@@ -815,51 +851,82 @@ env CONFIG_FOLDER=./etc/ ./steward \
 ### Message fields explanation
 
 ```go
-// The node to send the message to
-toNode
+// The node to send the message to.
+ToNode Node `json:"toNode" yaml:"toNode"`
 // ToNodes to specify several hosts to send message to in the
 // form of an slice/array.
-toNodes
+ToNodes []Node `json:"toNodes,omitempty" yaml:"toNodes,omitempty"`
 // The actual data in the message. This is typically where we
 // specify the cli commands to execute on a node, and this is
 // also the field where we put the returned data in a reply
 // message.
-data
+Data []string `json:"data" yaml:"data"`
 // Method, what request type to use, like REQCliCommand, REQHttpGet..
-method
+Method Method `json:"method" yaml:"method"`
 // Additional arguments that might be needed when executing the
 // method. Can be f.ex. an ip address if it is a tcp sender, or the
 // shell command to execute in a cli session.
-MethodArgs []string
+// TODO:
+MethodArgs []string `json:"methodArgs" yaml:"methodArgs"`
 // ReplyMethod, is the method to use for the reply message.
 // By default the reply method will be set to log to file, but
 // you can override it setting your own here.
-replyMethod
+ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
 // Additional arguments that might be needed when executing the reply
 // method. Can be f.ex. an ip address if it is a tcp sender, or the
 // shell command to execute in a cli session.
-ReplyMethodArgs []string 
-// Initial message Reply ACK wait timeout
-ACKTimeout
-// Normal Resend retries
-retries
+// TODO:
+ReplyMethodArgs []string `json:"replyMethodArgs" yaml:"replyMethodArgs"`
+// IsReply are used to tell that this is a reply message. By default
+// the system sends the output of a request method back to the node
+// the message originated from. If it is a reply method we want the
+// result of the reply message to be sent to the central server, so
+// we can use this value if set to swap the toNode, and fromNode
+// fields.
+IsReply bool `json:"isReply" yaml:"isReply"`
+// From what node the message originated
+FromNode Node
+// ACKTimeout for waiting for an ack message
+ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
+// Resend retries
+Retries int `json:"retries" yaml:"retries"`
 // The ACK timeout of the new message created via a request event.
-replyACKTimeout
+ReplyACKTimeout int `json:"replyACKTimeout" yaml:"replyACKTimeout"`
 // The retries of the new message created via a request event.
-replyRetries
+ReplyRetries int `json:"replyRetries" yaml:"replyRetries"`
 // Timeout for long a process should be allowed to operate
-methodTimeout
+MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
 // Timeout for long a process should be allowed to operate
-ReplyMethodTimeout int
+ReplyMethodTimeout int `json:"replyMethodTimeout" yaml:"replyMethodTimeout"`
 // Directory is a string that can be used to create the
 //directory structure when saving the result of some method.
 // For example "syslog","metrics", or "metrics/mysensor"
 // The type is typically used in the handler of a method.
-directory
+Directory string `json:"directory" yaml:"directory"`
 // FileName is used to be able to set a wanted name
 // on a file being saved as the result of data being handled
 // by a method handler.
-fileName
+FileName string `json:"fileName" yaml:"fileName"`
+// PreviousMessage are used for example if a reply message is
+// generated and we also need a copy of  the details of the the
+// initial request message.
+PreviousMessage *Message
+// The node to relay the message via.
+RelayViaNode Node `json:"relayViaNode" yaml:"relayViaNode"`
+// The node where the relayed message originated, and where we want
+// to send back the end result.
+RelayFromNode Node `json:"relayFromNode" yaml:"relayFromNode"`
+// The original value of the ToNode field of the original message.
+RelayToNode Node `json:"relayToNode" yaml:"relayToNode"`
+// The original method of the message.
+RelayOriginalMethod Method `json:"relayOriginalMethod" yaml:"relayOriginalMethod"`
+// The method to use when the reply of the relayed message came
+// back to where originated from.
+RelayReplyMethod Method `json:"relayReplyMethod" yaml:"relayReplyMethod"`
+// done is used to signal when a message is fully processed.
+// This is used for signaling back to the ringbuffer that we are
+// done with processing a message, and the message can be removed
+// from the ringbuffer and into the time series log.
 ```
 
 ### How to send a Message
