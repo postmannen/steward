@@ -42,6 +42,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -764,8 +765,8 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 			// and set new values for fields to change.
 			msg := message
 			msg.ToNode = Node(DstNode)
-			msg.Method = REQToFile
-			// TODO: msg.Method = REQCopyFileTo
+			//msg.Method = REQToFile
+			msg.Method = REQCopyFileTo
 			msg.Data = []string{string(out)}
 			msg.Directory = dstDir
 			msg.FileName = dstFile
@@ -813,46 +814,92 @@ func (m methodREQCopyFileTo) getKind() CommandOrEvent {
 // exist.
 // Same as the REQToFile, but this requst type don't use the default data folder path
 // for where to store files or add information about node names.
+// This method also sends a msgReply back to the publisher if the method was done
+// successfully, where REQToFile do not.
+// This method will truncate and overwrite any existing files.
 func (m methodREQCopyFileTo) handler(proc process, message Message, node string) ([]byte, error) {
 
-	// If it was a request type message we want to check what the initial messages
-	// method, so we can use that in creating the file name to store the data.
-	fileName, folderTree := message.FileName, message.Directory
+	proc.processes.wg.Add(1)
+	go func() {
+		defer proc.processes.wg.Done()
 
-	// Check if folder structure exist, if not create it.
-	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
-		err := os.MkdirAll(folderTree, 0700)
-		if err != nil {
-			er := fmt.Errorf("error: methodREQToFile failed to create toFile directory tree: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
+		ctx, cancel := context.WithTimeout(proc.ctx, time.Second*time.Duration(message.MethodTimeout))
+		defer cancel()
+
+		// Put data that should be the result of the action done in the inner
+		// go routine on the outCh.
+		outCh := make(chan []byte)
+		// Put errors from the inner go routine on the errCh.
+		errCh := make(chan error)
+
+		proc.processes.wg.Add(1)
+		go func() {
+			defer proc.processes.wg.Done()
+
+			// ---
+
+			fileName, folderTree := message.FileName, message.Directory
+			fileRealPath := path.Join(folderTree, fileName)
+
+			// Check if folder structure exist, if not create it.
+			if _, err := os.Stat(folderTree); os.IsNotExist(err) {
+				err := os.MkdirAll(folderTree, 0700)
+				if err != nil {
+					er := fmt.Errorf("failed to create toFile directory tree: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
+					errCh <- er
+					return
+				}
+
+				log.Printf("info: MethodREQCopyFileTo: Creating folders %v\n", folderTree)
+			}
+
+			// Open file and write data. Truncate and overwrite any existing files.
+			file := filepath.Join(folderTree, fileName)
+			f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
+			if err != nil {
+				er := fmt.Errorf("failed to open file, check that you've specified a value for fileName in the message: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
+				errCh <- er
+				return
+			}
+			defer f.Close()
+
+			for _, d := range message.Data {
+				_, err := f.Write([]byte(d))
+				f.Sync()
+				if err != nil {
+					er := fmt.Errorf("failed to write to file: file: %v, error: %v", file, err)
+					errCh <- er
+				}
+			}
+
+			// All went ok, send a signal to the outer select statement.
+			outCh <- []byte(fileRealPath)
+
+			// ---
+
+		}()
+
+		// Wait for messages received from the inner go routine.
+		select {
+		case <-ctx.Done():
+			fmt.Printf(" ** DEBUG: got ctx.Done\n")
+
+			er := fmt.Errorf("error: methodREQCopyFileTo: got <-ctx.Done(): %v", message.MethodArgs)
 			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-			log.Printf("%v\n", er)
+			return
 
-			return nil, er
+		case err := <-errCh:
+			er := fmt.Errorf("error: methodREQCopyFileTo: %v", err)
+			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+			return
+
+		case out := <-outCh:
+			replyData := fmt.Sprintf("info: succesfully created and wrote the file %v\n", out)
+			newReplyMessage(proc, message, []byte(replyData))
+			return
 		}
 
-		log.Printf("info: Creating subscribers data folder at %v\n", folderTree)
-	}
-
-	// Open file and write data.
-	file := filepath.Join(folderTree, fileName)
-	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
-	if err != nil {
-		er := fmt.Errorf("error: methodREQToFile.handler: failed to open file, check that you've specified a value for fileName in the message: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
-		sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-		log.Printf("%v\n", er)
-		return nil, err
-	}
-	defer f.Close()
-
-	for _, d := range message.Data {
-		_, err := f.Write([]byte(d))
-		f.Sync()
-		if err != nil {
-			er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file: file: %v, %v", file, err)
-			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
-			log.Printf("%v\n", er)
-		}
-	}
+	}()
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
@@ -1586,3 +1633,53 @@ func (m methodREQRelay) handler(proc process, message Message, node string) ([]b
 }
 
 // ----
+
+// ---- Template that can be used for creating request methods
+
+// func (m methodREQCopyFileTo) handler(proc process, message Message, node string) ([]byte, error) {
+//
+// 	proc.processes.wg.Add(1)
+// 	go func() {
+// 		defer proc.processes.wg.Done()
+//
+// 		ctx, cancel := context.WithTimeout(proc.ctx, time.Second*time.Duration(message.MethodTimeout))
+// 		defer cancel()
+//
+// 		// Put data that should be the result of the action done in the inner
+// 		// go routine on the outCh.
+// 		outCh := make(chan []byte)
+// 		// Put errors from the inner go routine on the errCh.
+// 		errCh := make(chan error)
+//
+// 		proc.processes.wg.Add(1)
+// 		go func() {
+// 			defer proc.processes.wg.Done()
+//
+// 			// Do some work here....
+//
+// 		}()
+//
+// 		// Wait for messages received from the inner go routine.
+// 		select {
+// 		case <-ctx.Done():
+// 			fmt.Printf(" ** DEBUG: got ctx.Done\n")
+//
+// 			er := fmt.Errorf("error: methodREQ...: got <-ctx.Done(): %v", message.MethodArgs)
+// 			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+// 			return
+//
+// 		case er := <-errCh:
+// 			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+// 			return
+//
+// 		case out := <-outCh:
+// 			replyData := fmt.Sprintf("info: succesfully created and wrote the file %v\n", out)
+// 			newReplyMessage(proc, message, []byte(replyData))
+// 			return
+// 		}
+//
+// 	}()
+//
+// 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+// 	return ackMsg, nil
+// }

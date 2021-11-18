@@ -112,6 +112,11 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQCopyFileFrom(proc)
 	}
 
+	// Start a subscriber for writing copied file to disk
+	if proc.configuration.StartSubREQCopyFileTo {
+		proc.startup.subREQCopyFileTo(proc)
+	}
+
 	// Start a subscriber for Hello messages
 	if proc.configuration.StartSubREQHello {
 		proc.startup.subREQHello(proc)
@@ -328,6 +333,14 @@ func (s startup) subREQToFile(p process) {
 func (s startup) subREQCopyFileFrom(p process) {
 	log.Printf("Starting copy file from subscriber: %#v\n", p.node)
 	sub := newSubject(REQCopyFileFrom, string(p.node))
+	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, nil)
+
+	go proc.spawnWorker(p.processes, p.natsConn)
+}
+
+func (s startup) subREQCopyFileTo(p process) {
+	log.Printf("Starting copy file to subscriber: %#v\n", p.node)
+	sub := newSubject(REQCopyFileTo, string(p.node))
 	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, nil)
 
 	go proc.spawnWorker(p.processes, p.natsConn)
