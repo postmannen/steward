@@ -368,7 +368,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 	ringBufferInCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValueAndDelivered)
 	// start the ringbuffer.
-	s.ringBuffer.start(s.ctx, ringBufferInCh, ringBufferOutCh, s.configuration.DefaultMessageTimeout, s.configuration.DefaultMessageRetries)
+	s.ringBuffer.start(s.ctx, ringBufferInCh, ringBufferOutCh)
 
 	// Start reading new fresh messages received on the incomming message
 	// pipe/file requested, and fill them into the buffer.
