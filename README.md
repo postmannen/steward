@@ -490,6 +490,8 @@ All nodes have the flag option to start sending Hello message to the central ser
 
 Copy a file from one node to another node.
 
+**NB**: This request type can not be used with a relay method.
+
 - Source node to copy from is specified in the toNode/toNodes field
 - The file to copy and the destination node is specified in the **methodArgs** field:
   1. The first field is the full path of the source file.
