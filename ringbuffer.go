@@ -171,11 +171,15 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 			}
 
 			// Check if message values for timers override default values
+			// TODO: Replace with values from configuration here.
 			if v.Message.ACKTimeout < 1 {
 				v.Message.ACKTimeout = defaultMessageTimeout
 			}
 			if v.Message.Retries < 1 {
 				v.Message.Retries = defaultMessageRetries
+			}
+			if v.Message.MethodTimeout < 1 {
+				v.Message.MethodTimeout = r.configuration.DefaultMethodTimeout
 			}
 
 			// --- Store the incomming message in the k/v store ---

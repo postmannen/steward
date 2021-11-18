@@ -39,6 +39,8 @@ type Configuration struct {
 	PromHostAndPort string
 	// set to true if this is the node that should receive the error log's from other nodes
 	DefaultMessageTimeout int
+	// Default value for how long can a request method max be allowed to run.
+	DefaultMethodTimeout int
 	// default amount of retries that will be done before a message is thrown away, and out of the system
 	DefaultMessageRetries int
 	// Publisher data folder
@@ -107,6 +109,7 @@ type ConfigurationFromFile struct {
 	PromHostAndPort           *string
 	DefaultMessageTimeout     *int
 	DefaultMessageRetries     *int
+	DefaultMethodTimeout      *int
 	SubscribersDataFolder     *string
 	CentralNodeName           *string
 	RootCAPath                *string
@@ -150,6 +153,7 @@ func newConfigurationDefaults() Configuration {
 		PromHostAndPort:          "",
 		DefaultMessageTimeout:    10,
 		DefaultMessageRetries:    1,
+		DefaultMethodTimeout:     10,
 		StartPubREQHello:         30,
 		SubscribersDataFolder:    "./data",
 		CentralNodeName:          "",
@@ -241,6 +245,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 		conf.DefaultMessageRetries = cd.DefaultMessageRetries
 	} else {
 		conf.DefaultMessageRetries = *cf.DefaultMessageRetries
+	}
+	if cf.DefaultMethodTimeout == nil {
+		conf.DefaultMethodTimeout = cd.DefaultMethodTimeout
+	} else {
+		conf.DefaultMethodTimeout = *cf.DefaultMethodTimeout
 	}
 	if cf.SubscribersDataFolder == nil {
 		conf.SubscribersDataFolder = cd.SubscribersDataFolder
@@ -391,6 +400,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.PromHostAndPort, "promHostAndPort", fc.PromHostAndPort, "host and port for prometheus listener, e.g. localhost:2112")
 	flag.IntVar(&c.DefaultMessageTimeout, "defaultMessageTimeout", fc.DefaultMessageTimeout, "default message timeout in seconds. This can be overridden on the message level")
 	flag.IntVar(&c.DefaultMessageRetries, "defaultMessageRetries", fc.DefaultMessageRetries, "default amount of retries that will be done before a message is thrown away, and out of the system")
+	flag.IntVar(&c.DefaultMethodTimeout, "defaultMethodTimeout", fc.DefaultMethodTimeout, "default amount of seconds a request method max will be allowed to run")
 	flag.StringVar(&c.SubscribersDataFolder, "subscribersDataFolder", fc.SubscribersDataFolder, "The data folder where subscribers are allowed to write their data if needed")
 	flag.StringVar(&c.CentralNodeName, "centralNodeName", fc.CentralNodeName, "The name of the central node to receive messages published by this node")
 	flag.StringVar(&c.RootCAPath, "rootCAPath", fc.RootCAPath, "If TLS, enter the path for where to find the root CA certificate")
