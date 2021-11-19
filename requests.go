@@ -121,6 +121,8 @@ const (
 	REQToSocket Method = "REQToSocket"
 	// Send a message via a node
 	REQRelay Method = "REQRelay"
+	// The method handler for the first step in a relay chain.
+	REQRelayInitial Method = "REQRelayInitial"
 )
 
 // The mapping of all the method constants specified, what type
@@ -192,6 +194,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				commandOrEvent: EventACK,
 			},
 			REQRelay: methodREQRelay{
+				commandOrEvent: EventACK,
+			},
+			REQRelayInitial: methodREQRelayInitial{
 				commandOrEvent: EventACK,
 			},
 		},
@@ -1602,6 +1607,42 @@ func (m methodREQToSocket) handler(proc process, message Message, node string) (
 
 // ----
 
+type methodREQRelayInitial struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodREQRelayInitial) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
+
+// Handler to relay messages via a host.
+func (m methodREQRelayInitial) handler(proc process, message Message, node string) ([]byte, error) {
+	// relay the message to the actual host here.
+
+	fmt.Printf("********** DEBUG Method RelayInitial 1 ***********\n %#v\n************************\n", message)
+
+	message.ToNode = message.RelayOriginalViaNode
+	message.FromNode = Node(node)
+	message.Method = REQRelay
+
+	fmt.Printf("********** DEBUG Method RelayInitial2 ***********\n %#v\n************************\n", message)
+
+	sam, err := newSubjectAndMessage(message)
+	if err != nil {
+		er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
+		sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+		log.Printf("%v\n", er)
+	}
+
+	proc.toRingbufferCh <- []subjectAndMessage{sam}
+
+	// Send back an ACK message.
+	ackMsg := []byte("confirmed REQRelay from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+// ----
+
 type methodREQRelay struct {
 	commandOrEvent CommandOrEvent
 }
@@ -1614,9 +1655,13 @@ func (m methodREQRelay) getKind() CommandOrEvent {
 func (m methodREQRelay) handler(proc process, message Message, node string) ([]byte, error) {
 	// relay the message here to the actual host here.
 
+	fmt.Printf("********** DEBUG Method Relay 1 ***********\n %#v\n************************\n", message)
+
 	message.ToNode = message.RelayToNode
 	message.FromNode = Node(node)
 	message.Method = message.RelayOriginalMethod
+
+	fmt.Printf("********** DEBUG Method Relay 2 ***********\n %#v\n************************\n", message)
 
 	sam, err := newSubjectAndMessage(message)
 	if err != nil {

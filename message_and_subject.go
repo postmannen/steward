@@ -76,6 +76,8 @@ type Message struct {
 
 	// The node to relay the message via.
 	RelayViaNode Node `json:"relayViaNode" yaml:"relayViaNode"`
+	// The original value of the RelayViaNode.
+	RelayOriginalViaNode Node `json:"relayOriginalViaNode" yaml:"relayOriginalViaNode"`
 	// The node where the relayed message originated, and where we want
 	// to send back the end result.
 	RelayFromNode Node `json:"relayFromNode" yaml:"relayFromNode"`
