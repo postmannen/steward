@@ -321,13 +321,12 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 		sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 	}
 
-	// ----------- HERE -------------
-
+	// Send final reply for a relayed message back to the originating node.
+	//
 	// Check if the previous message was a relayed message, and if true
 	// make a copy of the current message where the to field is set to
 	// the value of the previous message's RelayFromNode field, so we
 	// also can send the a copy of the reply back to where it originated.
-
 	if message.PreviousMessage != nil && message.PreviousMessage.RelayOriginalViaNode != "" {
 
 		// make a copy of the message
@@ -336,10 +335,10 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 
 		// We set the replyMethod of the initial message.
 		// If no RelayReplyMethod was found, we default to the reply
-		// method of the previos message.
+		// method of the previous message.
 		switch {
 		case msgCopy.PreviousMessage.RelayReplyMethod == "":
-			er := fmt.Errorf("error: subscriberHandler: no PreviousMessage.RelayReplyMethod found, defaulting to the reply method of previos message: %v ", msgCopy)
+			er := fmt.Errorf("error: subscriberHandler: no PreviousMessage.RelayReplyMethod found, defaulting to the reply method of previous message: %v ", msgCopy)
 			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, p.node, er)
 			log.Printf("%v\n", er)
 			msgCopy.Method = msgCopy.PreviousMessage.ReplyMethod
@@ -347,7 +346,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 			msgCopy.Method = msgCopy.PreviousMessage.RelayReplyMethod
 		}
 
-		// Reset the previosMessage relay fields so the message don't loop.
+		// Reset the previousMessage relay fields so the message don't loop.
 		message.PreviousMessage.RelayViaNode = ""
 		message.PreviousMessage.RelayOriginalViaNode = ""
 
@@ -362,8 +361,6 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 
 		p.toRingbufferCh <- []subjectAndMessage{sam}
 	}
-
-	// ------------------------------
 
 	// Check if it is an ACK or NACK message, and do the appropriate action accordingly.
 	switch {
