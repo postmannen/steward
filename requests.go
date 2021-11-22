@@ -1644,6 +1644,7 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 			}
 
 			SrcFilePath := message.MethodArgs[0]
+			DstFilePath := message.MethodArgs[2]
 
 			// Read the file, and put the result on the out channel to be sent when done reading.
 			proc.processes.wg.Add(1)
@@ -1652,7 +1653,11 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 			// Since we now have read the source file we don't need the REQCopyFileFrom
 			// request method anymore, so we change the original method of the message
 			// so it will write the data after the relaying.
+			dstDir := filepath.Dir(DstFilePath)
+			dstFile := filepath.Base(DstFilePath)
 			message.RelayOriginalMethod = REQCopyFileTo
+			message.FileName = dstFile
+			message.Directory = dstDir
 		default:
 			// No request type that need special handling if relayed.
 		}
