@@ -264,14 +264,22 @@ func (ma MethodsAvailable) CheckIfExists(m Method) (methodHandler, bool) {
 	}
 }
 
-// Create a new message for the reply containing the output of the
-// action executed put in outData, and put it on the ringbuffer to
-// be published.
-// The method to use for the reply message should initially be
-// specified within the first message as the replyMethod, and we will
+// newReplyMessage will create and send a reply message back to where
+// the original provided message came from. The primary use of this
+// function is to report back to a node who sent a message with the
+// result of the request method of the original message.
+//
+// The method to use for the reply message when reporting back should
+// be specified within a message in the  replyMethod field. We will
 // pick up that value here, and use it as the method for the new
 // request message. If no replyMethod is set we default to the
 // REQToFileAppend method type.
+//
+// There will also be a copy of the original message put in the
+// previousMessage field. For the copy of the original message the data
+// field will be set to nil before the whole message is put in the
+// previousMessage field so we don't copy around the original data in
+// the reply response when it is not needed anymore.
 func newReplyMessage(proc process, message Message, outData []byte) {
 
 	// If no replyMethod is set we default to writing to writing to
@@ -279,6 +287,13 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 	if message.ReplyMethod == "" {
 		message.ReplyMethod = REQToFileAppend
 	}
+
+	// Make a copy of the message as it is right now to use
+	// in the previous message field, but set the data field
+	// to nil so we don't copy around the original data when
+	// we don't need to for the reply message.
+	thisMsg := message
+	thisMsg.Data = nil
 
 	// Create a new message for the reply, and put it on the
 	// ringbuffer to be published.
@@ -297,7 +312,7 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 
 		// Put in a copy of the initial request message, so we can use it's properties if
 		// needed to for example create the file structure naming on the subscriber.
-		PreviousMessage: &message,
+		PreviousMessage: &thisMsg,
 	}
 
 	sam, err := newSubjectAndMessage(newMsg)

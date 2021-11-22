@@ -323,21 +323,29 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 
 	// ----------- HERE -------------
 
-	// Check if the previos message was a relayed message, and if true
+	// Check if the previous message was a relayed message, and if true
 	// make a copy of the current message where the to field is set to
 	// the value of the previous message's RelayFromNode field, so we
 	// also can send the a copy of the reply back to where it originated.
 
-	if message.PreviousMessage != nil && message.PreviousMessage.RelayViaNode != "" {
+	//fmt.Printf("\n *** DEBUG: process.subscriberHandler: message.previousMessage: %#v \n\n", message.PreviousMessage)
+
+	if message.PreviousMessage != nil && message.PreviousMessage.RelayOriginalViaNode != "" {
+
+		//fmt.Printf("\n *** DEBUG: process.subscriberHandler: got match on if sentence \n\n")
+
 		// make a copy of the message
 		msgCopy := message
 		msgCopy.ToNode = msgCopy.PreviousMessage.RelayFromNode
 
-		// If no RelayReplyMethod is set, we default to the replyMethod
-		// of the initial message.
-
+		// We set the replyMethod of the initial message.
+		// If no RelayReplyMethod was found, we default to the reply
+		// method of the previos message.
 		switch {
 		case msgCopy.PreviousMessage.RelayReplyMethod == "":
+			er := fmt.Errorf("error: subscriberHandler: no PreviousMessage.RelayReplyMethod found, defaulting to the reply method of previos message: %v ", msgCopy)
+			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, p.node, er)
+			log.Printf("%v\n", er)
 			msgCopy.Method = msgCopy.PreviousMessage.ReplyMethod
 		case msgCopy.PreviousMessage.RelayReplyMethod != "":
 			msgCopy.Method = msgCopy.PreviousMessage.RelayReplyMethod
@@ -345,10 +353,13 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 
 		// Reset the previosMessage relay fields so the message don't loop.
 		message.PreviousMessage.RelayViaNode = ""
+		message.PreviousMessage.RelayOriginalViaNode = ""
 
+		// Create a SAM for the msg copy that will be sent back the where the
+		// relayed message originated from.
 		sam, err := newSubjectAndMessage(msgCopy)
 		if err != nil {
-			er := fmt.Errorf("error: newSubjectAndMessage : %v, message copy: %v", err, msgCopy)
+			er := fmt.Errorf("error: subscriberHandler: newSubjectAndMessage : %v, message copy: %v", err, msgCopy)
 			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, p.node, er)
 			log.Printf("%v\n", er)
 		}
