@@ -845,24 +845,38 @@ func (m methodREQCopyFileTo) handler(proc process, message Message, node string)
 			defer proc.processes.wg.Done()
 
 			// ---
+			switch {
+			case len(message.MethodArgs) < 3:
+				er := fmt.Errorf("error: methodREQCliCommand: got <3 number methodArgs: want srcfilePath,dstNode,dstFilePath")
+				sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
+				return
+			}
 
-			fileName, folderTree := message.FileName, message.Directory
-			fileRealPath := path.Join(folderTree, fileName)
+			// Pick up the values for the directory and filename for where
+			// to store the file.
+			DstFilePath := message.MethodArgs[2]
+			dstDir := filepath.Dir(DstFilePath)
+			dstFile := filepath.Base(DstFilePath)
+
+			fileRealPath := path.Join(dstDir, dstFile)
+
+			fmt.Printf("\n *** DEBUG: methodArgs: %#v\n\n", message.MethodArgs)
 
 			// Check if folder structure exist, if not create it.
-			if _, err := os.Stat(folderTree); os.IsNotExist(err) {
-				err := os.MkdirAll(folderTree, 0700)
+			if _, err := os.Stat(dstDir); os.IsNotExist(err) {
+				err := os.MkdirAll(dstDir, 0700)
 				if err != nil {
-					er := fmt.Errorf("failed to create toFile directory tree: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
+					er := fmt.Errorf("failed to create toFile directory tree: subject:%v, folderTree: %v, %v", proc.subject, dstDir, err)
 					errCh <- er
 					return
 				}
 
-				log.Printf("info: MethodREQCopyFileTo: Creating folders %v\n", folderTree)
+				log.Printf("info: MethodREQCopyFileTo: Creating folders %v\n", dstDir)
 			}
 
 			// Open file and write data. Truncate and overwrite any existing files.
-			file := filepath.Join(folderTree, fileName)
+			file := filepath.Join(dstDir, dstFile)
 			f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
 			if err != nil {
 				er := fmt.Errorf("failed to open file, check that you've specified a value for fileName in the message: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
@@ -1644,7 +1658,7 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 			}
 
 			SrcFilePath := message.MethodArgs[0]
-			DstFilePath := message.MethodArgs[2]
+			//DstFilePath := message.MethodArgs[2]
 
 			// Read the file, and put the result on the out channel to be sent when done reading.
 			proc.processes.wg.Add(1)
@@ -1653,11 +1667,11 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 			// Since we now have read the source file we don't need the REQCopyFileFrom
 			// request method anymore, so we change the original method of the message
 			// so it will write the data after the relaying.
-			dstDir := filepath.Dir(DstFilePath)
-			dstFile := filepath.Base(DstFilePath)
+			//dstDir := filepath.Dir(DstFilePath)
+			//dstFile := filepath.Base(DstFilePath)
 			message.RelayOriginalMethod = REQCopyFileTo
-			message.FileName = dstFile
-			message.Directory = dstDir
+			//message.FileName = dstFile
+			//message.Directory = dstDir
 		default:
 			// No request type that need special handling if relayed.
 		}
