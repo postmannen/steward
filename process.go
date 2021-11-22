@@ -328,11 +328,7 @@ func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *na
 	// the value of the previous message's RelayFromNode field, so we
 	// also can send the a copy of the reply back to where it originated.
 
-	//fmt.Printf("\n *** DEBUG: process.subscriberHandler: message.previousMessage: %#v \n\n", message.PreviousMessage)
-
 	if message.PreviousMessage != nil && message.PreviousMessage.RelayOriginalViaNode != "" {
-
-		//fmt.Printf("\n *** DEBUG: process.subscriberHandler: got match on if sentence \n\n")
 
 		// make a copy of the message
 		msgCopy := message

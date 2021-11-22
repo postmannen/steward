@@ -426,8 +426,6 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 				// Check if it is a relay message
 				if m.RelayViaNode != "" && m.RelayViaNode != Node(s.nodeName) {
 
-					fmt.Printf("\n********** DEBUG routeMessagesToProcess ***********\n %#v\n************************\n\n", m)
-
 					// Keep the original values.
 					m.RelayFromNode = m.FromNode
 					m.RelayToNode = m.ToNode

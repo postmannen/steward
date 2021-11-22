@@ -712,7 +712,6 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 		// Read the file, and put the result on the out channel to be sent when done reading.
 		proc.processes.wg.Add(1)
 		go func() {
-			fmt.Printf(" * DEBUG: beginning of read file go routine\n")
 			defer proc.processes.wg.Done()
 
 			const natsMaxMsgSize = 1000000
@@ -736,21 +735,16 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 				return
 			}
 
-			fmt.Printf(" * DEBUG: before io.ReadAll\n")
-
 			b, err := io.ReadAll(fh)
 			if err != nil {
 				errCh <- fmt.Errorf("error: methodREQCopyFile: failed to read file: %v, %v", SrcFilePath, err)
 				return
 			}
 
-			fmt.Printf(" * DEBUG: after io.ReadAll: b contains: %v\n", string(b))
-
 			select {
 			case outCh <- b:
 				fmt.Printf(" * DEBUG: after io.ReadAll: outCh <- b\n")
 			case <-ctx.Done():
-				fmt.Printf(" * DEBUG: after io.ReadAll: ctx.Done\n")
 				return
 			}
 		}()
@@ -761,20 +755,15 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 		// kill all started go routines started by this message.
 		select {
 		case <-ctx.Done():
-			fmt.Printf(" ** DEBUG: got ctx.Done\n")
-
 			er := fmt.Errorf("error: methodREQCopyFile: got <-ctx.Done(): %v", message.MethodArgs)
 			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 
 			return
 		case er := <-errCh:
-			fmt.Printf(" ** DEBUG: received on errCh: <-errCh\n")
 			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 
 			return
 		case out := <-outCh:
-			fmt.Printf(" ** DEBUG: got data on out channel: case out:=<-outCh\n")
-
 			dstDir := filepath.Dir(DstFilePath)
 			dstFile := filepath.Base(DstFilePath)
 
@@ -800,8 +789,6 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 				log.Printf("%v\n", er)
 			}
 
-			fmt.Printf(" ** DEBUG: sending SAM: %#v\n", sam)
-
 			proc.toRingbufferCh <- []subjectAndMessage{sam}
 
 			// TODO: Should we also send a reply message with the result back
@@ -810,8 +797,6 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 			replyData := fmt.Sprintf("info: succesfully read the file %v, and sent the content to %v\n", SrcFilePath, DstNode)
 
 			newReplyMessage(proc, message, []byte(replyData))
-
-			fmt.Printf(" ** DEBUG: sent reply message\n")
 		}
 
 	}()
@@ -902,8 +887,6 @@ func (m methodREQCopyFileTo) handler(proc process, message Message, node string)
 		// Wait for messages received from the inner go routine.
 		select {
 		case <-ctx.Done():
-			fmt.Printf(" ** DEBUG: got ctx.Done\n")
-
 			er := fmt.Errorf("error: methodREQCopyFileTo: got <-ctx.Done(): %v", message.MethodArgs)
 			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 			return
@@ -1633,14 +1616,9 @@ func (m methodREQRelayInitial) getKind() CommandOrEvent {
 // Handler to relay messages via a host.
 func (m methodREQRelayInitial) handler(proc process, message Message, node string) ([]byte, error) {
 	// relay the message to the actual host here.
-
-	fmt.Printf("********** DEBUG Method RelayInitial 1 ***********\n %#v\n************************\n", message)
-
 	message.ToNode = message.RelayOriginalViaNode
 	message.FromNode = Node(node)
 	message.Method = REQRelay
-
-	fmt.Printf("********** DEBUG Method RelayInitial2 ***********\n %#v\n************************\n", message)
 
 	sam, err := newSubjectAndMessage(message)
 	if err != nil {
@@ -1670,13 +1648,9 @@ func (m methodREQRelay) getKind() CommandOrEvent {
 func (m methodREQRelay) handler(proc process, message Message, node string) ([]byte, error) {
 	// relay the message here to the actual host here.
 
-	fmt.Printf("********** DEBUG Method Relay 1 ***********\n %#v\n************************\n", message)
-
 	message.ToNode = message.RelayToNode
 	message.FromNode = Node(node)
 	message.Method = message.RelayOriginalMethod
-
-	fmt.Printf("********** DEBUG Method Relay 2 ***********\n %#v\n************************\n", message)
 
 	sam, err := newSubjectAndMessage(message)
 	if err != nil {
