@@ -1639,7 +1639,7 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 
 		outCh := make(chan []byte)
 		errCh := make(chan error)
-		noCh := make(chan struct{})
+		nothingCh := make(chan struct{}, 1)
 
 		var out []byte
 
@@ -1677,7 +1677,7 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 			// We need to do this signaling in it's own go routine here, so we don't block here
 			// since the select below  is in the same function.
 			go func() {
-				noCh <- struct{}{}
+				nothingCh <- struct{}{}
 			}()
 		}
 
@@ -1691,7 +1691,8 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 
 			return
-		case <-noCh:
+		case <-nothingCh:
+			// Do nothing.
 		case out = <-outCh:
 
 		}
@@ -1699,7 +1700,9 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 		// ------- old part of code
 
 		// relay the message to the actual host here.
+		//relayTo := fmt.Sprintf("relay.%v", message.RelayOriginalViaNode)
 		message.ToNode = message.RelayOriginalViaNode
+		//message.ToNode = Node(relayTo)
 		message.FromNode = Node(node)
 		message.Method = REQRelay
 		message.Data = []string{string(out)}
