@@ -861,8 +861,6 @@ func (m methodREQCopyFileTo) handler(proc process, message Message, node string)
 
 			fileRealPath := path.Join(dstDir, dstFile)
 
-			fmt.Printf("\n *** DEBUG: methodArgs: %#v\n\n", message.MethodArgs)
-
 			// Check if folder structure exist, if not create it.
 			if _, err := os.Stat(dstDir); os.IsNotExist(err) {
 				err := os.MkdirAll(dstDir, 0700)
@@ -1641,6 +1639,7 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 
 		outCh := make(chan []byte)
 		errCh := make(chan error)
+		noCh := make(chan struct{})
 
 		var out []byte
 
@@ -1673,7 +1672,13 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 			//message.FileName = dstFile
 			//message.Directory = dstDir
 		default:
-			// No request type that need special handling if relayed.
+			// No request type that need special handling if relayed, so we should signal that
+			// there is nothing to do for the select below.
+			// We need to do this signaling in it's own go routine here, so we don't block here
+			// since the select below  is in the same function.
+			go func() {
+				noCh <- struct{}{}
+			}()
 		}
 
 		select {
@@ -1686,6 +1691,7 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 			sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 
 			return
+		case <-noCh:
 		case out = <-outCh:
 
 		}
