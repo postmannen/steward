@@ -6,10 +6,10 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gdamore/tcell/v2 v2.3.3
 	github.com/hpcloud/tail v1.0.0
-	github.com/klauspost/compress v1.13.2 // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect
-	github.com/nats-io/nats-server/v2 v2.3.4
-	github.com/nats-io/nats.go v1.11.1-0.20210623165838-4b75fc59ae30
+	github.com/nats-io/jwt v1.2.2 // indirect
+	github.com/nats-io/nats-server/v2 v2.6.5
+	github.com/nats-io/nats.go v1.13.1-0.20211018182449-f2416a8b1483
 	github.com/pelletier/go-toml v1.8.1
 	github.com/prometheus/client_golang v1.11.0
 	github.com/rivo/tview v0.0.0-20210608105643-d4fb0348227b
