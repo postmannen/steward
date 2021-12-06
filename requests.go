@@ -1697,12 +1697,11 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 
 		}
 
-		// ------- old part of code
-
-		// relay the message to the actual host here.
-		//relayTo := fmt.Sprintf("relay.%v", message.RelayOriginalViaNode)
-		message.ToNode = message.RelayOriginalViaNode
-		//message.ToNode = Node(relayTo)
+		// relay the message to the actual host here by prefixing the the RelayToNode
+		// to the subject.
+		relayTo := fmt.Sprintf("%v.%v", message.RelayToNode, message.RelayOriginalViaNode)
+		// message.ToNode = message.RelayOriginalViaNode
+		message.ToNode = Node(relayTo)
 		message.FromNode = Node(node)
 		message.Method = REQRelay
 		message.Data = []string{string(out)}

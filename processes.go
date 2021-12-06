@@ -373,8 +373,9 @@ func (s startup) subREQCliCommandCont(p process) {
 }
 
 func (s startup) subREQRelay(p process) {
-	log.Printf("Starting Relay: %#v\n", p.node)
-	sub := newSubject(REQRelay, string(p.node))
+	nodeWithRelay := fmt.Sprintf("*.%v", p.node)
+	log.Printf("Starting Relay: %#v\n", nodeWithRelay)
+	sub := newSubject(REQRelay, string(nodeWithRelay))
 	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, nil)
 
 	go proc.spawnWorker(p.processes, p.natsConn)

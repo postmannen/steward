@@ -7,7 +7,6 @@ require (
 	github.com/gdamore/tcell/v2 v2.3.3
 	github.com/hpcloud/tail v1.0.0
 	github.com/minio/highwayhash v1.0.2 // indirect
-	github.com/nats-io/jwt v1.2.2 // indirect
 	github.com/nats-io/nats-server/v2 v2.6.5
 	github.com/nats-io/nats.go v1.13.1-0.20211018182449-f2416a8b1483
 	github.com/pelletier/go-toml v1.8.1
