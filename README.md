@@ -20,6 +20,12 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
     - [Message handling and threads](#message-handling-and-threads)
     - [Timeouts and retries](#timeouts-and-retries)
       - [REQRelay](#reqrelay)
+        - [Step 1](#step-1)
+        - [Step 2](#step-2)
+        - [Step 3](#step-3)
+        - [Step 4](#step-4)
+        - [Step 5](#step-5)
+        - [Step 6](#step-6)
     - [Flags and configuration file](#flags-and-configuration-file)
     - [Schema for the messages to send into Steward via the API's](#schema-for-the-messages-to-send-into-steward-via-the-apis)
     - [Request Methods](#request-methods)
@@ -230,7 +236,9 @@ In the above example, the values set meaning:
 
 #### REQRelay
 
-Instead of injecting the new Requests on the central server, you can relay messages via another node as long as the NATS authorization conf permits it. This is what REQRelay is for.
+Instead of injecting the new Requests on the central server, you can relay messages via another node as long as the nats-server authorization conf permits it. This is what REQRelay is for.
+
+Example configuration of relay authorization for nats-server can be found in the [doc folder](doc/).
 
 Example:
 
@@ -255,32 +263,43 @@ Example:
 ```
 
 ```text
-   Inject new                  Relay the message               Send actual REQ              
- Request message               to central server                  to node2                  
-                                                                                            
-        1                              2                              3                     
-                 ┌─────────────┐                ┌─────────────┐              ┌─────────────┐
- ---------------▷│             │---------------▷│             │-------------▷│             │
-                 │ node1       │                │ central     │              │ node2       │
- ◁---------------│             │◁---------------│             │◁-------------│             │
-                 └─────────────┘                └─────────────┘              └─────────────┘
-                                                                                            
-        6                              5                              4                     
-  Ececute reply                                                                             
- handler, f.ex.                Send relay reply                Send reply REQ               
- REQToConsole to                 REQ to origin                with result back              
- print to STDOUT                     node                                                   
+                    1                           2                           3       
+             ┌─────────────┐             ┌─────────────┐             ┌─────────────┐
+------------▷│             │------------▷│             │------------▷│             │
+             │   node1     │             │   central   │             │ node2       │
+◁------------│             │◁------------│             │◁------------│             │
+             └─────────────┘             └─────────────┘             └─────────────┘
+                    6                           5                           4       
 ```
 
 Steps Explained:
 
-1. On **node1**, inject a message like in the example above.
-2. The message will then be relayed to the node in the `relayViaNode` field.
-  On **central** the actual request **method** and **toNode** specified will be checked, and forwarded to node2.
-3. Node2 recevies the request, and executed the method with the arguments specified.
-4. The result is sent back to **central** where it is handled according to the **replyMethod** specified.
-5. A copy of the reply message will also be created on **central**, and forwarded to **node1** where it originated.
-6. On **node1** the **relayReplyMethod** is used to check what to do with the message. In this case it is printed to the consoles STDOUT.
+##### Step 1
+
+- The **relayViaNode** field of the message is checked, and If set the message will be encapsulated within a **REQRelayInitial** message where the original message field values are kept, and put back on the message queue on **node1**.
+- The new **REQRelayInitial** message will again be picked up on **node1** and handled by the **REQRelayInitial handler**.
+- The **REQRelayInitial handler** will set the message method to **REQRelay**, and forward the message to the node value in the **relayViaNode** field.
+
+##### Step 2
+
+- On **central** the **REQRelay method handler** will recreate the **original** message, and forward it to **node2**.
+
+##### Step 3
+
+- **Node2** receives the request, and executes the **original** method with the arguments specified.
+
+##### Step 4
+
+- The result is sent back to **central** in the form of a normal reply message.
+
+##### Step 5
+
+- When the **reply** message is received on central a copy of the **reply** message will be created , and forwarded to **node1** where it originated.
+- The the **original reply method** `"replyMethod":"REQToFileAppend"` is handled on central.
+
+##### Step 6
+
+- On **node1** the **relayReplyMethod** is checked for how to handle the message. In this case it is printed to the consoles STDOUT.
 
 ### Flags and configuration file
 
