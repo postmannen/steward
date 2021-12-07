@@ -2,9 +2,9 @@
 
 ## docker-compose
 
- Create a directory where you want your docker compose files, and enter that directory
- 
- Clone the steward repository:
+Create a directory where you want your docker compose files, and enter that directory.
+
+Clone the steward repository:
 
 ```bash
 mkdir my_dir
