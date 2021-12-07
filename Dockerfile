@@ -50,6 +50,9 @@ ENV START_SUB_REQ_TO_CONSOLE ""
 ENV START_SUB_REQ_HTTP_GET ""
 ENV START_SUB_REQ_TAIL_FILE ""
 ENV START_SUB_REQ_CLI_COMMAND_CONT ""
+ENV START_SUB_REQ_COPY_FILE_FROM ""
+ENV START_SUB_REQ_COPY_FILE_TO ""
+ENV START_SUB_REQ_RELAY ""
 
 CMD ["ash","-c","env CONFIGFOLDER=./etc/ /app/steward\
     -socketFolder=$SOCKET_FOLDER\
@@ -82,4 +85,7 @@ CMD ["ash","-c","env CONFIGFOLDER=./etc/ /app/steward\
     -startSubREQHttpGet=$START_SUB_REQ_HTTP_GET\
     -startSubREQTailFile=$START_SUB_REQ_TAIL_FILE\
     -startSubREQCliCommandCont=$START_SUB_REQ_CLI_COMMAND_CONT\
+    -startSubREQCopyFileFrom=$START_SUB_REQ_COPY_FILE_FROM\
+    -startSubREQCopyFileTo=$START_SUB_REQ_COPY_FILE_TO\
+    -startSubREQRelay=$START_SUB_REQ_RELAY\
     "]
