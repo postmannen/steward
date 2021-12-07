@@ -4,11 +4,25 @@ This folder contains several scripts to help out setting up the nats-server conf
 
 You can run each script individually, or you can use one of the wrapper scripts.
 
-## docker-compose
+## Setup
 
- Create a directory where you want your docker compose files, and enter that directory
+### Create LetsEncrypt certificate
+
+Create a directory where you want your docker compose files, and enter that directory
+
+First we need to create the LetsEncrypt certificates. We do that with <https://github.com/RaaLabs/certupdater>. To build the docker container certupdater follow the instructions in it's README.md file.
+
+To create the certificates for your domain you will need to have your domain registered at your current public IP with your provider, and have forwarded port tcp/80 and tcp/443 to the host you are running the scripts on.
+
+The command to generate the scripts are:
+
+```bash
+docker run -it --rm -v '<path to current folder here>:/certs/:rw' -p 80:80 -p 443:443 -e DAEMON=false -e USER_FOLDER=/certs -e PROD=true -e DOMAIN=my.super.cool.domain.com certupdater:0.1.0
+```
  
- Clone the steward repository:
+### Generate docker-compose files
+
+Clone the steward repository:
 
 ```bash
 mkdir my_dir
