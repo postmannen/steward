@@ -114,7 +114,7 @@ func main() {
 	}
 
 	{
-		p := path.Join(*templateDir, "template_env.env")
+		p := path.Join(*templateDir, "env.env.tpl")
 
 		err := generateEnv(p, eData)
 		if err != nil {
@@ -124,7 +124,7 @@ func main() {
 	}
 
 	{
-		p := path.Join(*templateDir, "template_docker-compose.yml")
+		p := path.Join(*templateDir, "docker-compose.yml.tpl")
 		err := generateDockerCompose(p, cData)
 		if err != nil {
 			log.Printf("%v\n", err)
