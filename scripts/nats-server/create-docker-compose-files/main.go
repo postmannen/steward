@@ -74,7 +74,7 @@ func main() {
 	leKeyPath := flag.String("leKeyPath", "", "the full path to the LetsEncrypt key file")
 	exposedNatsPort := flag.String("exposedNatsPort", "", "the port docker will expose nats on")
 
-	flags := flag.String("Flags", "-d", "flags to start nats-server with")
+	flags := flag.String("Flags", "-D", "flags to start nats-server with")
 
 	templateDir := flag.String("templateDir", "./steward/scripts/nats-server/create-docker-compose-files/", "the directory path to where the template files are located")
 
