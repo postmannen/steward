@@ -67,7 +67,7 @@ func writekey(fileName string, b []byte) error {
 
 // generateEnv will generate the env.env file.
 func generateEnv(fileDir string, templateDir string, brokerAddress string) error {
-	templateFile := path.Join(templateDir, "template_env.env")
+	templateFile := path.Join(templateDir, "env.env.tpl")
 	tpl, err := template.ParseFiles(templateFile)
 	if err != nil {
 		return fmt.Errorf("error: parsing template file, you might need to set the -templateDir path: %v, err: %v", templateFile, err)
@@ -175,7 +175,7 @@ func main() {
 	}
 
 	{
-		template := path.Join(*templateDir, "template_docker-compose.yml")
+		template := path.Join(*templateDir, "docker-compose.yml.tpl")
 		err := generateDockerCompose(*fileDir, template, *imageAndVersion, *exposedProfilingPort, *exposedPrometheusPort, *exposedDataFolderPort, *exposedTcpListenerPort, *exposedHttpListenerPort, *nkeySeedFile, *socketFolder)
 		if err != nil {
 			log.Printf("%v\n", err)
