@@ -141,11 +141,11 @@ func main() {
 
 	brokerAddress := flag.String("brokerAddress", "", "the address:port of the broker to connect to")
 	imageAndVersion := flag.String("imageAndVersion", "", "The name:version of the docker image to use")
-	exposedProfilingPort := flag.String("exposedProfilingPort", "6666", "the address:port to expose")
-	exposedPrometheusPort := flag.String("exposedPrometheusPort", "2111", "the address:port to expose")
-	exposedDataFolderPort := flag.String("exposedDataFolderPort", "8090", "the address:port to expose")
-	exposedTcpListenerPort := flag.String("exposedTcpListenerPort", "8091", "the address:port to expose")
-	exposedHttpListenerPort := flag.String("exposedHttpListenerPort", "8092", "the address:port to expose")
+	exposedProfilingPort := flag.String("exposedProfilingPort", "", "the address:port to expose")
+	exposedPrometheusPort := flag.String("exposedPrometheusPort", "", "the address:port to expose")
+	exposedDataFolderPort := flag.String("exposedDataFolderPort", "", "the address:port to expose")
+	exposedTcpListenerPort := flag.String("exposedTcpListenerPort", "", "the address:port to expose")
+	exposedHttpListenerPort := flag.String("exposedHttpListenerPort", "", "the address:port to expose")
 	nkeySeedFile := flag.String("nkeySeedFile", "./seed.txt", "the complete path of the seed file to mount")
 	socketFolder := flag.String("socketFolder", "./tmp/", "the complete path of the socket folder to mount")
 

@@ -12,11 +12,21 @@ services:
     image: {{.ImageAndVersion}}
     restart: always
     ports:
+    {{if .ExposedProfilingPort}}
       - "{{.ExposedProfilingPort}}:6666"
+    {{end}}
+    {{if .ExposedPrometheusPort}}
       - "{{.ExposedPrometheusPort}}:2111"
+    {{end}}
+    {{if .ExposedDataFolderPort}}
       - "{{.ExposedDataFolderPort}}:8090"
+    {{end}}
+    {{if .ExposedTcpListenerPort}}
       - "{{.ExposedTcpListenerPort}}:8091"
+    {{end}}
+    {{if .ExposedHttpListenerPort}}
       - "{{.ExposedHttpListenerPort}}:8092"
+    {{end}}
     volumes:
       # - {{.NkeySeedFile}}:/app/seed.txt
       - {{.SocketFolder}}:/app/tmp/:rw
