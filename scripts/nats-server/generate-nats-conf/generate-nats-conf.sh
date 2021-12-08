@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cat >./nats.conf <<EOF
-port: 4022
+port: 4222
 tls {
   cert_file: "/app/le.crt"
   key_file: "/app/le.key"
