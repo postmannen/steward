@@ -15,7 +15,7 @@ else
     exit 1
 fi
 
-if docker run -it --rm -v "$PWD:/certs/:rw" -p 80:80 -p 443:443 -e DAEMON=false -e USER_FOLDER=/certs -e PROD=false -e DOMAIN="$FQDN" certupdater:0.1.0; then
+if docker run -it --rm -v "$PWD:/certs/:rw" -p 80:80 -p 443:443 -e DAEMON=false -e USER_FOLDER=/certs -e PROD=true -e DOMAIN="$FQDN" certupdater:0.1.0; then
     echo " * successfully generated LetsEncrypt certificate"
 else
     echo " * failed to generate LetsEncrypt certificate."
