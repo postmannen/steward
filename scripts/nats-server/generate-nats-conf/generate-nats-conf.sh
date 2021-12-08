@@ -10,9 +10,6 @@ tls {
 authorization: {
     users = [
         {
-    
-        }
-        {
             # central
             nkey: FILL-IN-CENTRAL-USER-KEY-HERE
             permissions: {
