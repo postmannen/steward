@@ -1313,7 +1313,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 		url := message.MethodArgs[0]
 
 		client := http.Client{
-			Timeout: time.Second * 5,
+			Timeout: time.Duration(message.MethodTimeout),
 		}
 
 		ctx, cancel := context.WithTimeout(proc.ctx, time.Second*time.Duration(message.MethodTimeout))
