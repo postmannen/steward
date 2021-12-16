@@ -91,7 +91,7 @@ func NewServer(c *Configuration, version string) (*server, error) {
 	for {
 		var err error
 		// Setting MaxReconnects to -1 which equals unlimited.
-		conn, err = nats.Connect(c.BrokerAddress, opt, nats.MaxReconnects(-1))
+		conn, err = nats.Connect(c.BrokerAddress, opt, nats.MaxReconnects(-1), nats.ReconnectJitter(time.Duration(c.NatsReconnectJitter)*time.Millisecond, time.Duration(c.NatsReconnectJitterTLS)*time.Second))
 		// If no servers where available, we loop and retry until succesful.
 		if err != nil {
 			log.Printf("error: could not connect, waiting %v seconds, and retrying: %v\n", c.NatsConnectRetryInterval, err)
@@ -101,6 +101,9 @@ func NewServer(c *Configuration, version string) (*server, error) {
 
 		break
 	}
+
+	log.Printf(" * conn.Opts.ReconnectJitterTLS: %v\n", conn.Opts.ReconnectJitterTLS)
+	log.Printf(" * conn.Opts.ReconnectJitter: %v\n", conn.Opts.ReconnectJitter)
 
 	// Prepare the connection to the  Steward socket file
 

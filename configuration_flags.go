@@ -33,6 +33,10 @@ type Configuration struct {
 	BrokerAddress string
 	// nats connect retry
 	NatsConnectRetryInterval int
+	// NatsReconnectJitter in milliseconds
+	NatsReconnectJitter int
+	// NatsReconnectJitterTLS in seconds
+	NatsReconnectJitterTLS int
 	// The number of the profiling port
 	ProfilingPort string
 	// host and port for prometheus listener, e.g. localhost:2112
@@ -107,6 +111,8 @@ type ConfigurationFromFile struct {
 	NodeName                  *string
 	BrokerAddress             *string
 	NatsConnectRetryInterval  *int
+	NatsReconnectJitter       *int
+	NatsReconnectJitterTLS    *int
 	ProfilingPort             *string
 	PromHostAndPort           *string
 	DefaultMessageTimeout     *int
@@ -152,6 +158,8 @@ func newConfigurationDefaults() Configuration {
 		DatabaseFolder:           "./var/lib",
 		BrokerAddress:            "127.0.0.1:4222",
 		NatsConnectRetryInterval: 10,
+		NatsReconnectJitter:      100,
+		NatsReconnectJitterTLS:   1,
 		ProfilingPort:            "",
 		PromHostAndPort:          "",
 		DefaultMessageTimeout:    10,
@@ -229,6 +237,16 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 		conf.NatsConnectRetryInterval = cd.NatsConnectRetryInterval
 	} else {
 		conf.NatsConnectRetryInterval = *cf.NatsConnectRetryInterval
+	}
+	if cf.NatsReconnectJitter == nil {
+		conf.NatsReconnectJitter = cd.NatsReconnectJitter
+	} else {
+		conf.NatsReconnectJitter = *cf.NatsReconnectJitter
+	}
+	if cf.NatsReconnectJitterTLS == nil {
+		conf.NatsReconnectJitterTLS = cd.NatsReconnectJitterTLS
+	} else {
+		conf.NatsReconnectJitterTLS = *cf.NatsReconnectJitterTLS
 	}
 	if cf.ProfilingPort == nil {
 		conf.ProfilingPort = cd.ProfilingPort
@@ -405,6 +423,8 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.NodeName, "nodeName", fc.NodeName, "some unique string to identify this Edge unit")
 	flag.StringVar(&c.BrokerAddress, "brokerAddress", fc.BrokerAddress, "the address of the message broker")
 	flag.IntVar(&c.NatsConnectRetryInterval, "natsConnectRetryInterval", fc.NatsConnectRetryInterval, "default nats retry connect interval in seconds.")
+	flag.IntVar(&c.NatsReconnectJitter, "natsReconnectJitter", fc.NatsReconnectJitter, "default nats ReconnectJitter interval in milliseconds.")
+	flag.IntVar(&c.NatsReconnectJitterTLS, "natsReconnectJitterTLS", fc.NatsReconnectJitterTLS, "default nats ReconnectJitterTLS interval in seconds.")
 	flag.StringVar(&c.ProfilingPort, "profilingPort", fc.ProfilingPort, "The number of the profiling port")
 	flag.StringVar(&c.PromHostAndPort, "promHostAndPort", fc.PromHostAndPort, "host and port for prometheus listener, e.g. localhost:2112")
 	flag.IntVar(&c.DefaultMessageTimeout, "defaultMessageTimeout", fc.DefaultMessageTimeout, "default message timeout in seconds. This can be overridden on the message level")
