@@ -31,6 +31,8 @@ type Configuration struct {
 	NodeName string
 	// the address of the message broker
 	BrokerAddress string
+	// NatsConnOptTimeout the timeout for trying the connect to nats broker
+	NatsConnOptTimeout int
 	// nats connect retry
 	NatsConnectRetryInterval int
 	// NatsReconnectJitter in milliseconds
@@ -110,6 +112,7 @@ type ConfigurationFromFile struct {
 	DatabaseFolder            *string
 	NodeName                  *string
 	BrokerAddress             *string
+	NatsConnOptTimeout        *int
 	NatsConnectRetryInterval  *int
 	NatsReconnectJitter       *int
 	NatsReconnectJitterTLS    *int
@@ -157,6 +160,7 @@ func newConfigurationDefaults() Configuration {
 		HTTPListener:             "",
 		DatabaseFolder:           "./var/lib",
 		BrokerAddress:            "127.0.0.1:4222",
+		NatsConnOptTimeout:       20,
 		NatsConnectRetryInterval: 10,
 		NatsReconnectJitter:      100,
 		NatsReconnectJitterTLS:   1,
@@ -232,6 +236,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 		conf.BrokerAddress = cd.BrokerAddress
 	} else {
 		conf.BrokerAddress = *cf.BrokerAddress
+	}
+	if cf.NatsConnOptTimeout == nil {
+		conf.NatsConnOptTimeout = cd.NatsConnOptTimeout
+	} else {
+		conf.NatsConnOptTimeout = *cf.NatsConnOptTimeout
 	}
 	if cf.NatsConnectRetryInterval == nil {
 		conf.NatsConnectRetryInterval = cd.NatsConnectRetryInterval
@@ -422,6 +431,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.DatabaseFolder, "databaseFolder", fc.DatabaseFolder, "folder who contains the database file. Defaults to ./var/lib/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.NodeName, "nodeName", fc.NodeName, "some unique string to identify this Edge unit")
 	flag.StringVar(&c.BrokerAddress, "brokerAddress", fc.BrokerAddress, "the address of the message broker")
+	flag.IntVar(&c.NatsConnOptTimeout, "natsConnOptTimeout", fc.NatsConnOptTimeout, "default nats client conn timeout")
 	flag.IntVar(&c.NatsConnectRetryInterval, "natsConnectRetryInterval", fc.NatsConnectRetryInterval, "default nats retry connect interval in seconds.")
 	flag.IntVar(&c.NatsReconnectJitter, "natsReconnectJitter", fc.NatsReconnectJitter, "default nats ReconnectJitter interval in milliseconds.")
 	flag.IntVar(&c.NatsReconnectJitterTLS, "natsReconnectJitterTLS", fc.NatsReconnectJitterTLS, "default nats ReconnectJitterTLS interval in seconds.")
