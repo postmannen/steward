@@ -17,6 +17,8 @@ import (
 // an if check should be added to the checkConfigValues function
 // to set default values when reading from config file.
 type Configuration struct {
+	// RingBufferSize
+	RingBufferSize int
 	// The configuration folder on disk
 	ConfigFolder string
 	// The folder where the socket file should live
@@ -105,6 +107,7 @@ type Configuration struct {
 // configuration values from file, so we are able to detect
 // if a value were given or not when parsing.
 type ConfigurationFromFile struct {
+	RingBufferSize            *int
 	ConfigFolder              *string
 	SocketFolder              *string
 	TCPListener               *string
@@ -154,6 +157,7 @@ func NewConfiguration() *Configuration {
 // Get a Configuration struct with the default values set.
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
+		RingBufferSize:           1000,
 		ConfigFolder:             "./etc/",
 		SocketFolder:             "./tmp",
 		TCPListener:              "",
@@ -202,6 +206,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	var conf Configuration
 	cd := newConfigurationDefaults()
 
+	if cf.RingBufferSize == nil {
+		conf.RingBufferSize = cd.RingBufferSize
+	} else {
+		conf.RingBufferSize = *cf.RingBufferSize
+	}
 	if cf.ConfigFolder == nil {
 		conf.ConfigFolder = cd.ConfigFolder
 	} else {
@@ -425,6 +434,7 @@ func (c *Configuration) CheckFlags() error {
 	*c = fc
 
 	//flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "Defaults to ./usr/local/steward/etc/. *NB* This flag is not used, if your config file are located somwhere else than default set the location in an env variable named CONFIGFOLDER")
+	flag.IntVar(&c.RingBufferSize, "ringBufferSize", fc.RingBufferSize, "size of the ringbuffer")
 	flag.StringVar(&c.SocketFolder, "socketFolder", fc.SocketFolder, "folder who contains the socket file. Defaults to ./tmp/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.TCPListener, "tcpListener", fc.TCPListener, "start up a TCP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")
 	flag.StringVar(&c.HTTPListener, "httpListener", fc.HTTPListener, "start up a HTTP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")

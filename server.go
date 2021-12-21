@@ -367,7 +367,7 @@ type samDBValueAndDelivered struct {
 // for publisher subjects if it does not exist.
 func (s *server) routeMessagesToProcess(dbFileName string) {
 	// Prepare and start a new ring buffer
-	const bufferSize int = 1000
+	var bufferSize int = s.configuration.RingBufferSize
 	const samValueBucket string = "samValueBucket"
 	const indexValueBucket string = "indexValueBucket"
 
