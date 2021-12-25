@@ -1,8 +1,6 @@
 package steward
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	"log"
 	"os"
@@ -94,21 +92,6 @@ type Message struct {
 	// done with processing a message, and the message can be removed
 	// from the ringbuffer and into the time series log.
 	done chan struct{}
-}
-
-// ---
-
-// gobEncodePayload will encode the message structure into gob
-// binary format before putting it into a nats message.
-func gobEncodeMessage(m Message) ([]byte, error) {
-	var buf bytes.Buffer
-	gobEnc := gob.NewEncoder(&buf)
-	err := gobEnc.Encode(m)
-	if err != nil {
-		return nil, fmt.Errorf("error: gob.Encode failed: %v", err)
-	}
-
-	return buf.Bytes(), nil
 }
 
 // --- Subject

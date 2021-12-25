@@ -193,7 +193,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 // that is converted to gob format as a nats.Message. It will also
 // take care of checking timeouts and retries specified for the
 // message.
-func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
+func (p process) messageDeliverNats(bufGob *bytes.Buffer, natsConn *nats.Conn, message Message) {
 	retryAttempts := 0
 
 	const publishTimer time.Duration = 5
@@ -202,12 +202,7 @@ func (p process) messageDeliverNats(natsConn *nats.Conn, message Message) {
 	// The for loop will run until the message is delivered successfully,
 	// or that retries are reached.
 	for {
-		dataPayload, err := gobEncodeMessage(message)
-		if err != nil {
-			er := fmt.Errorf("error: messageDeliverNats: createDataPayload failed: %v", err)
-			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(p.node), er)
-			continue
-		}
+		dataPayload := bufGob.Bytes()
 
 		msg := &nats.Msg{
 			Subject: string(p.subject.name()),
@@ -426,7 +421,8 @@ func (p process) subscribeMessages() *nats.Subscription {
 }
 
 // publishMessages will do the publishing of messages for one single
-// process.
+// process. The function should be run as a goroutine, and will run
+// as long as the process it belongs to is running.
 func (p process) publishMessages(natsConn *nats.Conn) {
 	for {
 		var err error
@@ -443,12 +439,26 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 			return
 		}
 
+		// encode the message structure into gob binary format before putting
+		// it into a nats message.
+		// Prepare a gob encoder with a buffer before we start the loop
+		var bufGob bytes.Buffer
+		gobEnc := gob.NewEncoder(&bufGob)
+		err = gobEnc.Encode(m)
+		if err != nil {
+			er := fmt.Errorf("error: messageDeliverNats: gob encode message failed: %v", err)
+			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(p.node), er)
+			continue
+		}
+
 		// Get the process name so we can look up the process in the
 		// processes map, and increment the message counter.
 		pn := processNameGet(p.subject.name(), processKindPublisher)
 		m.ID = p.messageID
 
-		p.messageDeliverNats(natsConn, m)
+		p.messageDeliverNats(&bufGob, natsConn, m)
+
+		fmt.Printf(" * DEBUG 2: %v\n", len(bufGob.Bytes()))
 
 		// Signaling back to the ringbuffer that we are done with the
 		// current message, and it can remove it from the ringbuffer.
