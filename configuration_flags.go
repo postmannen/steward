@@ -65,6 +65,8 @@ type Configuration struct {
 	ErrorMessageTimeout int
 	// Retries for error messages.
 	ErrorMessageRetries int
+	// compression
+	Compression int
 
 	// NOTE:
 	// Op commands will not be specified as a flag since they can't be turned off.
@@ -131,6 +133,7 @@ type ConfigurationFromFile struct {
 	ExposeDataFolder          *string
 	ErrorMessageTimeout       *int
 	ErrorMessageRetries       *int
+	Compression               *int
 	StartPubREQHello          *int
 	StartSubREQErrorLog       *bool
 	StartSubREQHello          *bool
@@ -181,6 +184,7 @@ func newConfigurationDefaults() Configuration {
 		ExposeDataFolder:         "",
 		ErrorMessageTimeout:      60,
 		ErrorMessageRetries:      10,
+		Compression:              0,
 
 		StartSubREQErrorLog:       true,
 		StartSubREQHello:          true,
@@ -326,6 +330,12 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.ErrorMessageRetries = *cf.ErrorMessageRetries
 	}
+	if cf.Compression == nil {
+		conf.Compression = cd.Compression
+	} else {
+		conf.Compression = *cf.Compression
+	}
+
 	if cf.StartPubREQHello == nil {
 		conf.StartPubREQHello = cd.StartPubREQHello
 	} else {
@@ -457,6 +467,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.ExposeDataFolder, "exposeDataFolder", fc.ExposeDataFolder, "If set the data folder will be exposed on the given host:port. Default value is not exposed at all")
 	flag.IntVar(&c.ErrorMessageTimeout, "errorMessageTimeout", fc.ErrorMessageTimeout, "The number of seconds to wait for an error message to time out")
 	flag.IntVar(&c.ErrorMessageRetries, "errorMessageRetries", fc.ErrorMessageRetries, "The number of if times to retry an error message before we drop it")
+	flag.IntVar(&c.Compression, "compression", fc.Compression, "compression method to use. 0 = no compression")
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 
