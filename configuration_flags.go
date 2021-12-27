@@ -66,7 +66,7 @@ type Configuration struct {
 	// Retries for error messages.
 	ErrorMessageRetries int
 	// compression
-	Compression int
+	Compression string
 
 	// NOTE:
 	// Op commands will not be specified as a flag since they can't be turned off.
@@ -109,31 +109,32 @@ type Configuration struct {
 // configuration values from file, so we are able to detect
 // if a value were given or not when parsing.
 type ConfigurationFromFile struct {
-	RingBufferSize            *int
-	ConfigFolder              *string
-	SocketFolder              *string
-	TCPListener               *string
-	HTTPListener              *string
-	DatabaseFolder            *string
-	NodeName                  *string
-	BrokerAddress             *string
-	NatsConnOptTimeout        *int
-	NatsConnectRetryInterval  *int
-	NatsReconnectJitter       *int
-	NatsReconnectJitterTLS    *int
-	ProfilingPort             *string
-	PromHostAndPort           *string
-	DefaultMessageTimeout     *int
-	DefaultMessageRetries     *int
-	DefaultMethodTimeout      *int
-	SubscribersDataFolder     *string
-	CentralNodeName           *string
-	RootCAPath                *string
-	NkeySeedFile              *string
-	ExposeDataFolder          *string
-	ErrorMessageTimeout       *int
-	ErrorMessageRetries       *int
-	Compression               *int
+	RingBufferSize           *int
+	ConfigFolder             *string
+	SocketFolder             *string
+	TCPListener              *string
+	HTTPListener             *string
+	DatabaseFolder           *string
+	NodeName                 *string
+	BrokerAddress            *string
+	NatsConnOptTimeout       *int
+	NatsConnectRetryInterval *int
+	NatsReconnectJitter      *int
+	NatsReconnectJitterTLS   *int
+	ProfilingPort            *string
+	PromHostAndPort          *string
+	DefaultMessageTimeout    *int
+	DefaultMessageRetries    *int
+	DefaultMethodTimeout     *int
+	SubscribersDataFolder    *string
+	CentralNodeName          *string
+	RootCAPath               *string
+	NkeySeedFile             *string
+	ExposeDataFolder         *string
+	ErrorMessageTimeout      *int
+	ErrorMessageRetries      *int
+	Compression              *string
+
 	StartPubREQHello          *int
 	StartSubREQErrorLog       *bool
 	StartSubREQHello          *bool
@@ -184,7 +185,7 @@ func newConfigurationDefaults() Configuration {
 		ExposeDataFolder:         "",
 		ErrorMessageTimeout:      60,
 		ErrorMessageRetries:      10,
-		Compression:              0,
+		Compression:              "",
 
 		StartSubREQErrorLog:       true,
 		StartSubREQHello:          true,
@@ -467,7 +468,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.ExposeDataFolder, "exposeDataFolder", fc.ExposeDataFolder, "If set the data folder will be exposed on the given host:port. Default value is not exposed at all")
 	flag.IntVar(&c.ErrorMessageTimeout, "errorMessageTimeout", fc.ErrorMessageTimeout, "The number of seconds to wait for an error message to time out")
 	flag.IntVar(&c.ErrorMessageRetries, "errorMessageRetries", fc.ErrorMessageRetries, "The number of if times to retry an error message before we drop it")
-	flag.IntVar(&c.Compression, "compression", fc.Compression, "compression method to use. 0 = no compression")
+	flag.StringVar(&c.Compression, "compression", fc.Compression, "compression method to use. defaults to no compression, z = zstd. Undefined value will default to no compression")
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 

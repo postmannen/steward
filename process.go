@@ -6,8 +6,10 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
+	"github.com/klauspost/compress/zstd"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -189,11 +191,11 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 	procs.active.mu.Unlock()
 }
 
-// messageDeliverNats will take care of the delivering the message
-// that is converted to gob format as a nats.Message. It will also
-// take care of checking timeouts and retries specified for the
-// message.
-func (p process) messageDeliverNats(bufGob *bytes.Buffer, natsConn *nats.Conn, message Message) {
+// messageDeliverNats will create the Nats message with headers and payload.
+// It will also take care of the delivering the message that is converted to
+// gob format as a nats.Message. It will also take care of checking timeouts
+// and retries specified for the message.
+func (p process) messageDeliverNats(natsMsgPayload []byte, natsConn *nats.Conn, message Message) {
 	retryAttempts := 0
 
 	const publishTimer time.Duration = 5
@@ -202,15 +204,16 @@ func (p process) messageDeliverNats(bufGob *bytes.Buffer, natsConn *nats.Conn, m
 	// The for loop will run until the message is delivered successfully,
 	// or that retries are reached.
 	for {
-		dataPayload := bufGob.Bytes()
-
 		msg := &nats.Msg{
 			Subject: string(p.subject.name()),
 			// Subject: fmt.Sprintf("%s.%s.%s", proc.node, "command", "CLICommandRequest"),
 			// Structure of the reply message are:
 			// <nodename>.<message type>.<method>.reply
 			Reply: fmt.Sprintf("%s.reply", p.subject.name()),
-			Data:  dataPayload,
+			Data:  natsMsgPayload,
+			Header: nats.Header{
+				"cmp": []string{p.configuration.Compression},
+			},
 		}
 
 		// The SubscribeSync used in the subscriber, will get messages that
@@ -424,6 +427,8 @@ func (p process) subscribeMessages() *nats.Subscription {
 // process. The function should be run as a goroutine, and will run
 // as long as the process it belongs to is running.
 func (p process) publishMessages(natsConn *nats.Conn) {
+	var once sync.Once
+
 	for {
 		var err error
 		var m Message
@@ -456,7 +461,39 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		pn := processNameGet(p.subject.name(), processKindPublisher)
 		m.ID = p.messageID
 
-		p.messageDeliverNats(&bufGob, natsConn, m)
+		var natsMsgPayload []byte
+
+		// Compress the data payload if selected with configuration flag.
+		// The compression chosen is later set in the nats msg header when
+		// calling p.messageDeliverNats below.
+		switch p.configuration.Compression {
+		case "z": // zstd
+			enc, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
+			if err != nil {
+				log.Printf("error: zstd write failed: %v\n", err)
+			}
+			natsMsgPayload = enc.EncodeAll(bufGob.Bytes(), nil)
+			fmt.Printf("* len of zstd mJson : %v\n", len(natsMsgPayload))
+
+		case "": // no compression
+			natsMsgPayload = bufGob.Bytes()
+
+		default: // no compression
+			// Allways log the error to console.
+			er := fmt.Errorf("error: compression type not defined: %v, setting default to zero compression", err)
+			log.Printf("%v\n", er)
+
+			// We only wan't to send the error message to errorCentral once.
+			once.Do(func() {
+				sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(p.node), er)
+			})
+
+			natsMsgPayload = bufGob.Bytes()
+		}
+
+		// Create the Nats message with headers and payload, and do the
+		// sending of the message.
+		p.messageDeliverNats(natsMsgPayload, natsConn, m)
 
 		fmt.Printf(" * DEBUG 2: %v\n", len(bufGob.Bytes()))
 
