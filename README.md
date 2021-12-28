@@ -372,9 +372,9 @@ You can choose to enable compression of the payload in the Nats messages.
         compression method to use. defaults to no compression, z = zstd. Undefined value will default to no compression
 ```
 
-When starting a Steward instance with compression enabled it is the publishing of the message paload that is compressed.
+When starting a Steward instance with compression enabled it is the publishing of the message payload that is compressed.
 
-The subscribing instance of Steward will automatically detect if the message is compressed or not,and decompress it if needed.
+The subscribing instance of Steward will automatically detect if the message is compressed or not, and decompress it if needed.
 
 With other words, Steward will by default receive and handle both compressed and uncompressed messages, and you decide on the publishing side if you want to enable compression or not.
 
