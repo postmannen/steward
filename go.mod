@@ -11,7 +11,6 @@ require (
 	github.com/nats-io/nats-server/v2 v2.6.5
 	github.com/nats-io/nats.go v1.13.1-0.20211018182449-f2416a8b1483
 	github.com/pelletier/go-toml v1.8.1
-	github.com/pkg/profile v1.6.0 // indirect
 	github.com/prometheus/client_golang v1.11.0
 	github.com/rivo/tview v0.0.0-20210608105643-d4fb0348227b
 	go.etcd.io/bbolt v1.3.5

@@ -353,6 +353,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		er := fmt.Errorf("error: gob decoding failed: %v", err)
 		log.Printf("%v\n", er)
 		sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
+		return
 	}
 
 	// Send final reply for a relayed message back to the originating node.
