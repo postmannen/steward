@@ -211,10 +211,15 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsConn *nats.Conn, 
 			// <nodename>.<message type>.<method>.reply
 			Reply: fmt.Sprintf("%s.reply", p.subject.name()),
 			Data:  natsMsgPayload,
-			Header: nats.Header{
-				"cmp": []string{p.configuration.Compression},
-			},
 		}
+
+		if p.configuration.Compression != "" {
+			msg.Header = nats.Header{
+				"cmp": []string{p.configuration.Compression},
+			}
+			// fmt.Printf(" * DEBUG: compression enabled, trying to set header: %v\n", msg.Header)
+		}
+		// fmt.Printf(" * DEBUG: header value after if block: %v\n", msg.Header)
 
 		// The SubscribeSync used in the subscriber, will get messages that
 		// are sent after it started subscribing.
@@ -295,7 +300,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsConn *nats.Conn, 
 	}
 }
 
-// subscriberHandler will deserialize the message when a new message is
+// messageSubscriberHandler will deserialize the message when a new message is
 // received, check the MessageType field in the message to decide what
 // kind of message it is and then it will check how to handle that message type,
 // and then call the correct method handler for it.
@@ -305,17 +310,48 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsConn *nats.Conn, 
 // the state of the message being processed, and then reply back to the
 // correct sending process's reply, meaning so we ACK back to the correct
 // publisher.
-func (p process) subscriberHandler(natsConn *nats.Conn, thisNode string, msg *nats.Msg) {
+func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, msg *nats.Msg) {
+
+	// Variable to hold a copy of the message data, so we don't mess with
+	// the original data since the original is a pointer value.
+	msgData := make([]byte, len(msg.Data))
+	copy(msgData, msg.Data)
+
+	// fmt.Printf(" * DEBUG: header value on subscriberHandler: %v\n", msg.Header)
+
+	// If compression is used, decompress it to get the gob data. If
+	// compression is not used it is the gob encoded data we already
+	// got in msgData so we do nothing with it.
+	if val, ok := msg.Header["cmp"]; ok {
+		// fmt.Printf(" * DEBUG: ok = %v, map = %v, len of val = %v\n", ok, msg.Header, len(val))
+		switch val[0] {
+		case "z":
+			zr, err := zstd.NewReader(nil)
+			if err != nil {
+				log.Printf("error: zstd NewReader failed: %v\n", err)
+				return
+			}
+			msgData, err = zr.DecodeAll(msg.Data, nil)
+			if err != nil {
+				er := fmt.Errorf("error: zstd decoding failed: %v", err)
+				log.Printf("%v\n", er)
+				sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
+				return
+			}
+
+		}
+	}
 
 	message := Message{}
 
 	// Create a buffer to decode the gob encoded binary data back
 	// to it's original structure.
-	buf := bytes.NewBuffer(msg.Data)
+	buf := bytes.NewBuffer(msgData)
 	gobDec := gob.NewDecoder(buf)
 	err := gobDec.Decode(&message)
 	if err != nil {
 		er := fmt.Errorf("error: gob decoding failed: %v", err)
+		log.Printf("%v\n", er)
 		sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
 	}
 
@@ -413,7 +449,7 @@ func (p process) subscribeMessages() *nats.Subscription {
 		//_, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
 
 		// Start up the subscriber handler.
-		go p.subscriberHandler(p.natsConn, p.configuration.NodeName, msg)
+		go p.messageSubscriberHandler(p.natsConn, p.configuration.NodeName, msg)
 	})
 	if err != nil {
 		log.Printf("error: Subscribe failed: %v\n", err)

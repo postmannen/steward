@@ -18,7 +18,7 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
   - [Features](#features)
     - [Error messages from nodes](#error-messages-from-nodes)
     - [Message handling and threads](#message-handling-and-threads)
-    - [Timeouts and retries](#timeouts-and-retries)
+    - [Timeouts and retries for requests](#timeouts-and-retries-for-requests)
       - [REQRelay](#reqrelay)
         - [Step 1](#step-1)
         - [Step 2](#step-2)
@@ -28,6 +28,8 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
         - [Step 6](#step-6)
     - [Flags and configuration file](#flags-and-configuration-file)
     - [Schema for the messages to send into Steward via the API's](#schema-for-the-messages-to-send-into-steward-via-the-apis)
+    - [Nats messaging timeouts](#nats-messaging-timeouts)
+    - [Compression of the Nats message payload](#compression-of-the-nats-message-payload)
     - [Request Methods](#request-methods)
       - [REQOpProcessList](#reqopprocesslist)
       - [REQOpProcessStart](#reqopprocessstart)
@@ -202,7 +204,7 @@ Tue Sep 21 09:17:55 2021, info: toNode: ship2, fromNode: central, method: REQOpP
 - Message types of both **ACK** and **NACK**, so we can decide if we want or don't want an Acknowledge if a message was delivered succesfully.
 Example: We probably want an **ACK** when sending some **REQCLICommand** to be executed, but we don't care for an acknowledge **NACK** when we send an **REQHello** event.
 
-### Timeouts and retries
+### Timeouts and retries for requests
 
 - Default timeouts to wait for ACK messages and max attempts to retry sending a message are specified upon startup. This can be overridden on the message level.
 
@@ -333,6 +335,48 @@ Steward supports both the use of flags/arguments set at startup, and the use of 
 - replyMethodTimeout : `int`
 - directory : `string`
 - fileName : `string`
+
+### Nats messaging timeouts
+
+The various timeouts for the Nats messages can be controlled via the configuration file or flags.
+
+If the network media is a high latency. satellite links it will make sense to adjust the client timeout to reflect the latency
+
+```text
+  -natsConnOptTimeout int
+        default nats client conn timeout in seconds (default 20)
+```
+
+The interval in seconds the nats client should try to reconnect to the nats-server if the connection is lost.
+
+```text
+  -natsConnectRetryInterval int
+        default nats retry connect interval in seconds. (default 10)
+```
+
+Jitter values.
+
+```text
+  -natsReconnectJitter int
+        default nats ReconnectJitter interval in milliseconds. (default 100)
+  -natsReconnectJitterTLS int
+        default nats ReconnectJitterTLS interval in seconds. (default 5)
+```
+
+### Compression of the Nats message payload
+
+You can choose to enable compression of the payload in the Nats messages.
+
+```text
+  -compression string
+        compression method to use. defaults to no compression, z = zstd. Undefined value will default to no compression
+```
+
+When starting a Steward instance with compression enabled it is the publishing of the message paload that is compressed.
+
+The subscribing instance of Steward will automatically detect if the message is compressed or not,and decompress it if needed.
+
+With other words, Steward will by default receive and handle both compressed and uncompressed messages, and you decide on the publishing side if you want to enable compression or not.
 
 ### Request Methods
 
