@@ -65,8 +65,10 @@ type Configuration struct {
 	ErrorMessageTimeout int
 	// Retries for error messages.
 	ErrorMessageRetries int
-	// compression
+	// Compression
 	Compression string
+	// Serialization
+	Serialization string
 
 	// NOTE:
 	// Op commands will not be specified as a flag since they can't be turned off.
@@ -134,6 +136,7 @@ type ConfigurationFromFile struct {
 	ErrorMessageTimeout      *int
 	ErrorMessageRetries      *int
 	Compression              *string
+	Serialization            *string
 
 	StartPubREQHello          *int
 	StartSubREQErrorLog       *bool
@@ -186,6 +189,7 @@ func newConfigurationDefaults() Configuration {
 		ErrorMessageTimeout:      60,
 		ErrorMessageRetries:      10,
 		Compression:              "",
+		Serialization:            "",
 
 		StartSubREQErrorLog:       true,
 		StartSubREQHello:          true,
@@ -336,6 +340,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.Compression = *cf.Compression
 	}
+	if cf.Serialization == nil {
+		conf.Serialization = cd.Serialization
+	} else {
+		conf.Serialization = *cf.Serialization
+	}
 
 	if cf.StartPubREQHello == nil {
 		conf.StartPubREQHello = cd.StartPubREQHello
@@ -469,6 +478,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.IntVar(&c.ErrorMessageTimeout, "errorMessageTimeout", fc.ErrorMessageTimeout, "The number of seconds to wait for an error message to time out")
 	flag.IntVar(&c.ErrorMessageRetries, "errorMessageRetries", fc.ErrorMessageRetries, "The number of if times to retry an error message before we drop it")
 	flag.StringVar(&c.Compression, "compression", fc.Compression, "compression method to use. defaults to no compression, z = zstd. Undefined value will default to no compression")
+	flag.StringVar(&c.Serialization, "serialization", fc.Serialization, "Serialization method to use. defaults to gob, other values are = cbor. Undefined value will default to gob")
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 

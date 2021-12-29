@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/fsnotify/fsnotify v1.4.9
+	github.com/fxamacker/cbor/v2 v2.3.1 // indirect
 	github.com/gdamore/tcell/v2 v2.3.3
 	github.com/hpcloud/tail v1.0.0
 	github.com/klauspost/compress v1.13.6
