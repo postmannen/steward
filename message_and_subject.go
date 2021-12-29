@@ -9,6 +9,7 @@ import (
 // --- Message
 
 type Message struct {
+	_ struct{} `cbor:",toarray"`
 	// The node to send the message to.
 	ToNode Node `json:"toNode" yaml:"toNode"`
 	// ToNodes to specify several hosts to send message to in the

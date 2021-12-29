@@ -338,7 +338,8 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 
 	message := Message{}
 
-	// Is serializatio
+	// Check if serialization is specified.
+	// Will default to gob serialization if nothing is specified.
 	if val, ok := msg.Header["serial"]; ok {
 		// fmt.Printf(" * DEBUG: ok = %v, map = %v, len of val = %v\n", ok, msg.Header, len(val))
 		switch val[0] {
@@ -351,8 +352,9 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 				return
 			}
 		default: // Deaults to gob if no match was found.
-			buf := bytes.NewBuffer(msgData)
-			gobDec := gob.NewDecoder(buf)
+			r := bytes.NewReader(msgData)
+			gobDec := gob.NewDecoder(r)
+
 			err := gobDec.Decode(&message)
 			if err != nil {
 				er := fmt.Errorf("error: gob decoding failed: %v", err)
@@ -364,8 +366,9 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 
 	} else {
 		// Default to gob if serialization flag was not specified.
-		buf := bytes.NewBuffer(msgData)
-		gobDec := gob.NewDecoder(buf)
+		r := bytes.NewReader(msgData)
+		gobDec := gob.NewDecoder(r)
+
 		err := gobDec.Decode(&message)
 		if err != nil {
 			er := fmt.Errorf("error: gob decoding failed: %v", err)
