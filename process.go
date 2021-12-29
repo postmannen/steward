@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/klauspost/compress/zstd"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
@@ -486,7 +487,16 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		// Prepare a gob encoder with a buffer before we start the loop
 		switch p.configuration.Serialization {
 		case "cbor":
-			//
+			b, err := cbor.Marshal(m)
+			if err != nil {
+				er := fmt.Errorf("error: messageDeliverNats: cbor encode message failed: %v", err)
+				sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(p.node), er)
+				continue
+			}
+
+			natsMsgPayloadSerialized = b
+			natsMsgHeader["serial"] = []string{p.configuration.Serialization}
+
 		default:
 			var bufGob bytes.Buffer
 			gobEnc := gob.NewEncoder(&bufGob)
