@@ -215,6 +215,19 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 			Header: natsMsgHeader,
 		}
 
+		//
+
+		if p.subject.CommandOrEvent == CommandNACK || p.subject.CommandOrEvent == EventNACK {
+			err := natsConn.PublishMsg(msg)
+			if err != nil {
+				er := fmt.Errorf("error: nats publish of hello failed: %v", err)
+				log.Printf("%v\n", er)
+				return
+			}
+			p.processes.metrics.promNatsDeliveredTotal.Inc()
+			return
+		}
+
 		// The SubscribeSync used in the subscriber, will get messages that
 		// are sent after it started subscribing.
 		//
