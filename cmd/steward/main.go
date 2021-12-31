@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"time"
 
 	_ "net/http/pprof"
@@ -36,6 +37,10 @@ func main() {
 			http.ListenAndServe("localhost:"+c.ProfilingPort, nil)
 		}()
 
+	}
+
+	if c.SetBlockProfileRate != 0 {
+		runtime.SetBlockProfileRate(1)
 	}
 
 	s, err := steward.NewServer(c, version)

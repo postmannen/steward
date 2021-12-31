@@ -281,7 +281,7 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 				// been processed, and that we then can delete it out of the K/V Store.
 
 				<-v.Data.done
-				log.Printf("info: processBufferMessages: done with message, deleting key from bucket, %v\n", v.ID)
+				// log.Printf("info: processBufferMessages: done with message, deleting key from bucket, %v\n", v.ID)
 				r.metrics.promMessagesProcessedIDLast.Set(float64(v.ID))
 
 				// Since we are now done with the specific message we can delete

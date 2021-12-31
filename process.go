@@ -258,7 +258,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 			// Wait up until ACKTimeout specified for a reply,
 			// continue and resend if no reply received,
 			// or exit if max retries for the message reached.
-			msgReply, err := subReply.NextMsg(time.Second * time.Duration(message.ACKTimeout))
+			_, err := subReply.NextMsg(time.Second * time.Duration(message.ACKTimeout))
 			if err != nil {
 				er := fmt.Errorf("error: ack receive failed: subject=%v: %v", p.subject.name(), err)
 				// sendErrorLogMessage(p.toRingbufferCh, p.node, er)
@@ -296,7 +296,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 					continue
 				}
 			}
-			log.Printf("<--- publisher: received ACK from:%v, for: %v, data: %s\n", message.ToNode, message.Method, msgReply.Data)
+			// REMOVED: log.Printf("<--- publisher: received ACK from:%v, for: %v, data: %s\n", message.ToNode, message.Method, msgReply.Data)
 		}
 
 		subReply.Unsubscribe()

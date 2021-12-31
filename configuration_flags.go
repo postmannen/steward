@@ -69,6 +69,8 @@ type Configuration struct {
 	Compression string
 	// Serialization
 	Serialization string
+	// SetBlockProfileRate for block profiling
+	SetBlockProfileRate int
 
 	// NOTE:
 	// Op commands will not be specified as a flag since they can't be turned off.
@@ -137,6 +139,7 @@ type ConfigurationFromFile struct {
 	ErrorMessageRetries      *int
 	Compression              *string
 	Serialization            *string
+	SetBlockProfileRate      *int
 
 	StartPubREQHello          *int
 	StartSubREQErrorLog       *bool
@@ -190,6 +193,7 @@ func newConfigurationDefaults() Configuration {
 		ErrorMessageRetries:      10,
 		Compression:              "",
 		Serialization:            "",
+		SetBlockProfileRate:      0,
 
 		StartSubREQErrorLog:       true,
 		StartSubREQHello:          true,
@@ -345,6 +349,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.Serialization = *cf.Serialization
 	}
+	if cf.SetBlockProfileRate == nil {
+		conf.SetBlockProfileRate = cd.SetBlockProfileRate
+	} else {
+		conf.SetBlockProfileRate = *cf.SetBlockProfileRate
+	}
 
 	if cf.StartPubREQHello == nil {
 		conf.StartPubREQHello = cd.StartPubREQHello
@@ -479,6 +488,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.IntVar(&c.ErrorMessageRetries, "errorMessageRetries", fc.ErrorMessageRetries, "The number of if times to retry an error message before we drop it")
 	flag.StringVar(&c.Compression, "compression", fc.Compression, "compression method to use. defaults to no compression, z = zstd. Undefined value will default to no compression")
 	flag.StringVar(&c.Serialization, "serialization", fc.Serialization, "Serialization method to use. defaults to gob, other values are = cbor. Undefined value will default to gob")
+	flag.IntVar(&c.SetBlockProfileRate, "setBlockProfileRate", fc.SetBlockProfileRate, "Enable block profiling by setting the value to f.ex. 1. 0 = disabled")
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 
