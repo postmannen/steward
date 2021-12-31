@@ -40,7 +40,7 @@ func main() {
 	}
 
 	if c.SetBlockProfileRate != 0 {
-		runtime.SetBlockProfileRate(1)
+		runtime.SetBlockProfileRate(c.SetBlockProfileRate)
 	}
 
 	s, err := steward.NewServer(c, version)
