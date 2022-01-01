@@ -286,6 +286,13 @@ func (s startup) subREQErrorLog(p process) {
 	go proc.spawnWorker(p.processes, p.natsConn)
 }
 
+// subREQHello is the handler that is triggered when we are receiving a hello
+// message. To keep the state of all the hello's received from nodes we need
+// to also start a procFunc that will live as a go routine tied to this process,
+// where the procFunc will receive messages from the handler when a message is
+// received, the handler will deliver the message to the procFunc on the
+// proc.procFuncCh, and we can then read that message from the procFuncCh in
+// the procFunc running.
 func (s startup) subREQHello(p process) {
 	log.Printf("Starting Hello subscriber: %#v\n", p.node)
 	sub := newSubject(REQHello, string(p.node))

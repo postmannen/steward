@@ -110,14 +110,25 @@ func newProcess(ctx context.Context, metrics *metrics, natsConn *nats.Conn, proc
 	return proc
 }
 
-// procFunc is a helper function that will do some extra work for
-// a message received for a process. This allows us to ACK back
-// to the publisher that the message was received, but we can let
-// the processFunc keep on working.
-// This can also be used to wrap in other types which we want to
-// work with that come from the outside. An example can be handling
-// of metrics which the message have no notion of, but a procFunc
-// can have that wrapped in from when it was constructed.
+// procFunc is a function that will be started when a worker process
+// is started. If a procFunc is registered when creating a new process
+// the procFunc will be started as a go routine when the process is started,
+// and stopped when the process is stopped.
+//
+// A procFunc can be started both for publishing and subscriber processes.
+//
+// When used with a subscriber process the usecase is most likely to handle
+// some kind of state needed for a request type, since the handlers themselves
+// can not hold state.
+// With a subscriber handler you generally take the message in the handler and
+// pass it on to the procFunc by putting it on the procFuncCh<-, and the
+// message can then be read from the procFuncCh inside the procFunc, and we
+// can do some further work on it, for example update registry for metrics that
+// is needed for that specific request type.
+//
+// procFunc's can also be used to wrap in other types which we want to
+// work with. An example can be handling of metrics which the message
+// have no notion of, but a procFunc can have that wrapped in from when it was constructed.
 type procFunc func(ctx context.Context) error
 
 // The purpose of this function is to check if we should start a
