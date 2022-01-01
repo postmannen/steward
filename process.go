@@ -118,13 +118,20 @@ func newProcess(ctx context.Context, metrics *metrics, natsConn *nats.Conn, proc
 // A procFunc can be started both for publishing and subscriber processes.
 //
 // When used with a subscriber process the usecase is most likely to handle
-// some kind of state needed for a request type, since the handlers themselves
-// can not hold state.
+// some kind of state needed for a request type. The handlers themselves
+// can not hold state since they are only called once per message received,
+// and exits when the message is handled leaving no state behind. With a procfunc
+// we can have a process function running at all times tied to the process, and
+// this function can be able to hold the state needed in a certain scenario.
+//
 // With a subscriber handler you generally take the message in the handler and
 // pass it on to the procFunc by putting it on the procFuncCh<-, and the
 // message can then be read from the procFuncCh inside the procFunc, and we
 // can do some further work on it, for example update registry for metrics that
 // is needed for that specific request type.
+//
+// With a publisher process you can attach a static function that will do some
+// work to a request type, and publish the result.
 //
 // procFunc's can also be used to wrap in other types which we want to
 // work with. An example can be handling of metrics which the message
