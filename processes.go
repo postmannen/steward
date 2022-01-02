@@ -213,7 +213,7 @@ func (s startup) pubREQHello(p process) {
 
 	// Define the procFunc to be used for the process.
 	proc.procFunc = procFunc(
-		func(ctx context.Context) error {
+		func(ctx context.Context, procFuncCh chan Message) error {
 			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.StartPubREQHello))
 			for {
 
@@ -297,13 +297,12 @@ func (s startup) subREQHello(p process) {
 	log.Printf("Starting Hello subscriber: %#v\n", p.node)
 	sub := newSubject(REQHello, string(p.node))
 	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, nil)
-	proc.procFuncCh = make(chan Message)
 
 	// The reason for running the say hello subscriber as a procFunc is that
 	// a handler are not able to hold state, and we need to hold the state
 	// of the nodes we've received hello's from in the sayHelloNodes map,
 	// which is the information we pass along to generate metrics.
-	proc.procFunc = func(ctx context.Context) error {
+	proc.procFunc = func(ctx context.Context, procFuncCh chan Message) error {
 		sayHelloNodes := make(map[Node]struct{})
 
 		for {
@@ -311,7 +310,7 @@ func (s startup) subREQHello(p process) {
 			var m Message
 
 			select {
-			case m = <-proc.procFuncCh:
+			case m = <-procFuncCh:
 			case <-ctx.Done():
 				er := fmt.Errorf("info: stopped handleFunc for: subscriber %v", proc.subject.name())
 				// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)

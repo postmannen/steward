@@ -56,7 +56,8 @@ type process struct {
 	// a whole for sharing a map from the *server level.
 	procFunc procFunc
 	// The channel to send a messages to the procFunc go routine.
-	// This is typically used within the methodHandler.
+	// This is typically used within the methodHandler for so we
+	// can pass messages between the procFunc and the handler.
 	procFuncCh chan Message
 	// copy of the configuration from server
 	configuration *Configuration
@@ -136,7 +137,7 @@ func newProcess(ctx context.Context, metrics *metrics, natsConn *nats.Conn, proc
 // procFunc's can also be used to wrap in other types which we want to
 // work with. An example can be handling of metrics which the message
 // have no notion of, but a procFunc can have that wrapped in from when it was constructed.
-type procFunc func(ctx context.Context) error
+type procFunc func(ctx context.Context, procFuncCh chan Message) error
 
 // The purpose of this function is to check if we should start a
 // publisher or subscriber process, where a process is a go routine
@@ -168,10 +169,14 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 
 		// If there is a procFunc for the process, start it.
 		if p.procFunc != nil {
+			// Initialize the channel for communication between the proc and
+			// the procFunc.
+			p.procFuncCh = make(chan Message)
+
 			// Start the procFunc in it's own anonymous func so we are able
 			// to get the return error.
 			go func() {
-				err := p.procFunc(p.ctx)
+				err := p.procFunc(p.ctx, p.procFuncCh)
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
 					sendErrorLogMessage(p.configuration, procs.metrics, p.toRingbufferCh, Node(p.node), er)
@@ -187,11 +192,14 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 	if p.processKind == processKindSubscriber {
 		// If there is a procFunc for the process, start it.
 		if p.procFunc != nil {
+			// Initialize the channel for communication between the proc and
+			// the procFunc.
+			p.procFuncCh = make(chan Message)
 
 			// Start the procFunc in it's own anonymous func so we are able
 			// to get the return error.
 			go func() {
-				err := p.procFunc(p.ctx)
+				err := p.procFunc(p.ctx, p.procFuncCh)
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
 					sendErrorLogMessage(p.configuration, procs.metrics, p.toRingbufferCh, Node(p.node), er)
