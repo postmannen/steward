@@ -931,7 +931,6 @@ Method Method `json:"method" yaml:"method"`
 // Additional arguments that might be needed when executing the
 // method. Can be f.ex. an ip address if it is a tcp sender, or the
 // shell command to execute in a cli session.
-// TODO:
 MethodArgs []string `json:"methodArgs" yaml:"methodArgs"`
 // ReplyMethod, is the method to use for the reply message.
 // By default the reply method will be set to log to file, but
@@ -940,7 +939,6 @@ ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
 // Additional arguments that might be needed when executing the reply
 // method. Can be f.ex. an ip address if it is a tcp sender, or the
 // shell command to execute in a cli session.
-// TODO:
 ReplyMethodArgs []string `json:"replyMethodArgs" yaml:"replyMethodArgs"`
 // IsReply are used to tell that this is a reply message. By default
 // the system sends the output of a request method back to the node

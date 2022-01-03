@@ -733,7 +733,6 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 			dstFile := filepath.Base(DstFilePath)
 
 			// Prepare for sending a new message with the output
-			// TODO: Maybe changing the type of Message.Data to []byte ?
 
 			// Copy the original message to get the defaults for timeouts etc,
 			// and set new values for fields to change.
@@ -1605,7 +1604,7 @@ func (m methodREQToSocket) getKind() CommandOrEvent {
 	return m.commandOrEvent
 }
 
-// TODO:
+// TODO: Not implemented.
 // Handler to write to unix socket file.
 func (m methodREQToSocket) handler(proc process, message Message, node string) ([]byte, error) {
 

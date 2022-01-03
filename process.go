@@ -643,9 +643,6 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		m.done <- struct{}{}
 
 		// Increment the counter for the next message to be sent.
-		//
-		// TODO: Check if it is possible, or makes sense to move the
-		// counter out of the map.
 		p.messageID++
 
 		{
