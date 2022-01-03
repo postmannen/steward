@@ -362,7 +362,6 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		// fmt.Printf(" * DEBUG: ok = %v, map = %v, len of val = %v\n", ok, msg.Header, len(val))
 		switch val[0] {
 		case "z":
-			fmt.Println(" ******** READING ZSTD ************")
 			zr, err := zstd.NewReader(nil)
 			if err != nil {
 				log.Printf("error: zstd NewReader failed: %v\n", err)
@@ -380,7 +379,6 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			zr.Close()
 
 		case "g":
-			fmt.Println(" ******** READING GZIP ************")
 			r := bytes.NewReader(msgData)
 			gr, err := gzip.NewReader(r)
 			if err != nil {
@@ -575,7 +573,8 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 	// encoder for all messages.
 	switch p.configuration.Compression {
 	case "z": // zstd
-		enc, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
+		// enc, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
+		enc, err := zstd.NewWriter(nil)
 		if err != nil {
 			log.Printf("error: zstd new encoder failed: %v\n", err)
 			os.Exit(1)
@@ -657,6 +656,8 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		case "z": // zstd
 			natsMsgPayloadCompressed = zEnc.EncodeAll(natsMsgPayloadSerialized, nil)
 			natsMsgHeader["cmp"] = []string{p.configuration.Compression}
+
+			zEnc.Reset(nil)
 
 		case "g": // gzip
 			var buf bytes.Buffer
