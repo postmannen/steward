@@ -323,6 +323,7 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 		sendErrorLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
 		log.Printf("%v\n", er)
 	}
+
 	proc.toRingbufferCh <- []subjectAndMessage{sam}
 }
 
@@ -769,6 +770,8 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 	return ackMsg, nil
 }
 
+// copyFileFrom will read a file to be copied from the specified SrcFilePath.
+// The result of be delivered on the provided outCh.
 func copyFileFrom(ctx context.Context, wg *sync.WaitGroup, SrcFilePath string, errCh chan error, outCh chan []byte) {
 	defer wg.Done()
 

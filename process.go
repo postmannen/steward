@@ -544,6 +544,10 @@ func (p process) subscribeMessages() *nats.Subscription {
 func (p process) publishMessages(natsConn *nats.Conn) {
 	var once sync.Once
 
+	// Loop and handle 1 message at a time. If some part of the code
+	// fails in the loop we should throw an error and use `continue`
+	// to jump back here to the beginning of the loop and continue
+	// with the next message.
 	for {
 		var err error
 		var m Message
@@ -615,6 +619,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 				log.Printf("error: zstd write failed: %v\n", err)
 			}
 			natsMsgPayloadCompressed = enc.EncodeAll(natsMsgPayloadSerialized, nil)
+			enc.Close()
 
 			natsMsgHeader["cmp"] = []string{p.configuration.Compression}
 
