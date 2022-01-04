@@ -953,7 +953,8 @@ func (m methodREQHello) handler(proc process, message Message, node string) ([]b
 
 	// Open file and write data.
 	file := filepath.Join(folderTree, fileName)
-	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
+	//f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
+	f, err := os.OpenFile(file, os.O_TRUNC|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
 
 	if err != nil {
 		log.Printf("error: methodREQHello.handler: failed to open file: %v\n", err)
