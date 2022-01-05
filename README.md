@@ -811,7 +811,6 @@ Start the nats server listening on local interfaces and port 4222.
 
 ##### Steward
 
-
 Steward is written in Go, so you need Go installed to compile it. You can get Go at <https://golang.org/dl/>.
 
 When Go is installed:
@@ -875,7 +874,6 @@ env CONFIG_FOLDER=./etc/ ./steward \
  -promHostAndPort=":12112" \
  -brokerAddress="127.0.0.1:4222"
 ```
-
 
 #### Nkey Authentication
 
@@ -952,7 +950,6 @@ The official docs for nkeys can be found here <https://docs.nats.io/nats-server/
   - `nk -inkey seed.txt -pubout > user.txt`
 
 More example configurations for the nats-server are located in the [doc](https://github.com/RaaLabs/steward/tree/main/doc) folder in this repository.
-
 
 ### Message fields explanation
 
