@@ -51,15 +51,16 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
     - [Prometheus metrics](#prometheus-metrics)
     - [Other](#other)
   - [Howto](#howto)
-    - [Build and Run](#build-and-run)
     - [Options for running](#options-for-running)
     - [How to Run](#how-to-run)
+      - [Run Steward in the simplest possible way for testing](#run-steward-in-the-simplest-possible-way-for-testing)
+        - [Nats-server](#nats-server)
+        - [Steward](#steward-1)
+        - [Send messages with Steward](#send-messages-with-steward)
+      - [Example for starting steward with some more options set](#example-for-starting-steward-with-some-more-options-set)
       - [Nkey Authentication](#nkey-authentication)
       - [nats-server (the message broker)](#nats-server-the-message-broker)
-        - [Server config with nkey authentication](#server-config-with-nkey-authentication)
-      - [Examples for running Steward](#examples-for-running-steward)
-        - [Minimum config example](#minimum-config-example)
-        - [More details config example](#more-details-config-example)
+        - [Nats-server config with nkey authentication example](#nats-server-config-with-nkey-authentication-example)
     - [Message fields explanation](#message-fields-explanation)
     - [How to send a Message](#how-to-send-a-message)
       - [Send to socket with netcat](#send-to-socket-with-netcat)
@@ -688,184 +689,143 @@ Or the same using bash's herestring:
 
 ## Howto
 
-### Build and Run
-
-Steward is written in go, so you need Go installed to compile it. You can get go at <https://golang.org/dl/>.
-
-- Clone the repository:
-  - `git clone https://github.com/RaaLabs/steward.git`.
-- Change directory and build:
-  - `cd ./steward/cmd`
-  - `go build -o steward`
-- Run the application with `env CONFIG_FOLDER </myconfig/folder/here> ./steward`
-
-You can get all the options with `./steward --help`
-
 ### Options for running
 
 The location of the config file are given via an env variable at startup (default "./etc/).
 
 `env CONFIG_FOLDER </myconfig/folder/here>`
 
+The different fields and their type in the config file. The fields of the config file can also be set by providing flag values at startup. Use the `-help` flag to get all the options.
+
 ```text
-// The configuration folder on disk
-ConfigFolder string
-// The folder where the socket file should live
-SocketFolder string
-// TCP Listener for sending messages to the system
-TCPListener string
-// HTTP Listener for sending messages to the system
-HTTPListener string
-// The folder where the database should live
-DatabaseFolder string
-// some unique string to identify this Edge unit
-NodeName string
-// the address of the message broker
-BrokerAddress string
-// nats connect retry
-NatsConnectRetryInterval int
-// The number of the profiling port
-ProfilingPort string
-// host and port for prometheus listener, e.g. localhost:2112
-PromHostAndPort string
-// set to true if this is the node that should receive the error log's from other nodes
-DefaultMessageTimeout int
-// Default value for how long can a request method max be allowed to run.
-DefaultMethodTimeout int
-// default amount of retries that will be done before a message is thrown away, and out of the system
-DefaultMessageRetries int
-// Publisher data folder
-SubscribersDataFolder string
-// central node to receive messages published from nodes
-CentralNodeName string
-// Path to the certificate of the root CA
-RootCAPath string
-// Full path to the NKEY's seed file
-NkeySeedFile string
-// The host and port to expose the data folder
-ExposeDataFolder string
-// Timeout for error messages
-ErrorMessageTimeout int
-// Retries for error messages.
-ErrorMessageRetries int
-// NOTE:
-// Op commands will not be specified as a flag since they can't be turned off.
-// Make the current node send hello messages to central at given interval in seconds
-StartPubREQHello int
-// Start the central error logger.
-// Takes a comma separated string of nodes to receive from or "*" for all nodes.
-StartSubREQErrorLog bool
-// Subscriber for hello messages
-StartSubREQHello bool
-// Subscriber for text logging
-StartSubREQToFileAppend bool
-// Subscriber for writing to file
-StartSubREQToFile bool
-// Subscriber for reading files to copy
-StartSubREQCopyFileFrom bool
-// Subscriber for writing copied files to disk
-StartSubREQCopyFileTo bool
-// Subscriber for Echo Request
-StartSubREQPing bool
-// Subscriber for Echo Reply
-StartSubREQPong bool
-// Subscriber for CLICommandRequest
-StartSubREQCliCommand bool
-// Subscriber for REQToConsole
-StartSubREQToConsole bool
-// Subscriber for REQHttpGet
-StartSubREQHttpGet bool
-// Subscriber for tailing log files
-StartSubREQTailFile bool
-// Subscriber for continously delivery of output from cli commands.
-StartSubREQCliCommandCont bool
-// Subscriber for relay messages.
-StartSubREQRelay bool
+    // RingBufferSize
+    RingBufferSize int
+    // The configuration folder on disk
+    ConfigFolder string
+    // The folder where the socket file should live
+    SocketFolder string
+    // TCP Listener for sending messages to the system
+    TCPListener string
+    // HTTP Listener for sending messages to the system
+    HTTPListener string
+    // The folder where the database should live
+    DatabaseFolder string
+    // some unique string to identify this Edge unit
+    NodeName string
+    // the address of the message broker
+    BrokerAddress string
+    // NatsConnOptTimeout the timeout for trying the connect to nats broker
+    NatsConnOptTimeout int
+    // nats connect retry
+    NatsConnectRetryInterval int
+    // NatsReconnectJitter in milliseconds
+    NatsReconnectJitter int
+    // NatsReconnectJitterTLS in seconds
+    NatsReconnectJitterTLS int
+    // The number of the profiling port
+    ProfilingPort string
+    // host and port for prometheus listener, e.g. localhost:2112
+    PromHostAndPort string
+    // set to true if this is the node that should receive the error log's from other nodes
+    DefaultMessageTimeout int
+    // Default value for how long can a request method max be allowed to run.
+    DefaultMethodTimeout int
+    // default amount of retries that will be done before a message is thrown away, and out of the system
+    DefaultMessageRetries int
+    // Publisher data folder
+    SubscribersDataFolder string
+    // central node to receive messages published from nodes
+    CentralNodeName string
+    // Path to the certificate of the root CA
+    RootCAPath string
+    // Full path to the NKEY's seed file
+    NkeySeedFile string
+    // The host and port to expose the data folder
+    ExposeDataFolder string
+    // Timeout for error messages
+    ErrorMessageTimeout int
+    // Retries for error messages.
+    ErrorMessageRetries int
+    // Compression
+    Compression string
+    // Serialization
+    Serialization string
+    // SetBlockProfileRate for block profiling
+    SetBlockProfileRate int 
+    // NOTE:
+    // Op commands will not be specified as a flag since they can't be turned off.  
+    // Make the current node send hello messages to central at given interval in seconds
+    StartPubREQHello int
+    // Start the central error logger.
+    // Takes a comma separated string of nodes to receive from or "*" for all nodes.
+    StartSubREQErrorLog bool
+    // Subscriber for hello messages
+    StartSubREQHello bool
+    // Subscriber for text logging
+    StartSubREQToFileAppend bool
+    // Subscriber for writing to file
+    StartSubREQToFile bool
+    // Subscriber for reading files to copy
+    StartSubREQCopyFileFrom bool
+    // Subscriber for writing copied files to disk
+    StartSubREQCopyFileTo bool
+    // Subscriber for Echo Request
+    StartSubREQPing bool
+    // Subscriber for Echo Reply
+    StartSubREQPong bool
+    // Subscriber for CLICommandRequest
+    StartSubREQCliCommand bool
+    // Subscriber for REQToConsole
+    StartSubREQToConsole bool
+    // Subscriber for REQHttpGet
+    StartSubREQHttpGet bool
+    // Subscriber for tailing log files
+    StartSubREQTailFile bool
+    // Subscriber for continously delivery of output from cli commands.
+    StartSubREQCliCommandCont bool
+    // Subscriber for relay messages.
+    StartSubREQRelay bool
 ```
 
 ### How to Run
 
-#### Nkey Authentication
+#### Run Steward in the simplest possible way for testing
 
-Nkey's can be used for authentication, and you use the `nkeySeedFile` flag to specify the seed file to use.
+**NB** Running Steward like this is perfect for testing in a local test environment, but is not something you would wan't to do in production.
 
-Read more in the sections below on how to generate nkey's.
+##### Nats-server
 
-#### nats-server (the message broker)
+Download the **nats-server** from <https://github.com/nats-io/nats-server/releases/>
 
-The broker for messaging is Nats-server from <https://nats.io>. Download, run it, and use the `-brokerAddress` flag on **Steward** to point to the ip and port:
+Or use the curl (replace the version information with wanted version):
 
-`-brokerAddress="nats://10.0.0.124:4222"`
+`curl -L https://github.com/nats-io/nats-server/releases/download/vX.Y.Z/nats-server-vX.Y.Z-linux-amd64.zip -o nats-server.zip`
 
-There is a lot of different variants of how you can setup and confiure Nats. Full mesh, leaf node, TLS, Authentication, and more. You can read more about how to configure the Nats broker called nats-server at <https://nats.io/>.
+Unpack:
 
-##### Server config with nkey authentication
+`unzip nats-server.zip -d nats-server`
 
-```config
-port: 4222
-tls {
-  cert_file: "some.crt"
-  key_file: "some.key"
-}
+Start the nats server listening on local interfaces and port 4222.
+
+`./nats-server -D`
+
+##### Steward
 
 
-authorization: {
-    users = [
-        {
-            # central
-            nkey: <USER_NKEY_HERE>
-            permissions: {
-                publish: {
-      allow: ["ww.>","errorCentral.>"]
-    }
-            subscribe: {
-      allow: ["ww.>","errorCentral.>"]
-    }
-            }
-        }
-        {
-            # mixer
-            nkey: <USER_NKEY_HERE>
-            permissions: {
-                publish: {
-                        allow: ["central.>"]
-                }
-                subscribe: {
-                        allow: ["central.>","mixer.>"]
-                }
-            }
-        }
-        {
-            # node10
-            nkey: <USER_NKEY_HERE>
-            permissions: {
-                publish: {
-                        allow: ["ww.central.>","errorCentral.>","ww.morningconductor.>"]
-                }
-                subscribe: {
-                        allow: ["ww.central.>","ww.morningconductor.>"]
-                }
-            }
-        }
-    ]
-}
+Steward is written in Go, so you need Go installed to compile it. You can get Go at <https://golang.org/dl/>.
+
+When Go is installed:
+
+Clone the repository:
+
+`git clone https://github.com/RaaLabs/steward.git`.
+
+Change directory and build:
+
+```bash
+cd ./steward/cmd
+go build -o steward
 ```
-
-The official docs for nkeys can be found here <https://docs.nats.io/nats-server/configuration/securing_nats/auth_intro/nkey_auth>.
-
-- Generate private (seed) and public (user) key pair:
-  - `nk -gen user -pubout`
-
-- Generate a public (user) key from a private (seed) key file called `seed.txt`.
-  - `nk -inkey seed.txt -pubout > user.txt`
-
-More example configurations for the nats-server are located in the [doc](https://github.com/RaaLabs/steward/tree/main/doc) folder in this repository.
-
-#### Examples for running Steward
-
-To set the location of the config folder other than default, you should use the **ENV** variable `CONFIG_FOLDER`.
-
-##### Minimum config example
 
 Start up a  **central** server which will act as your command and control server.
 
@@ -873,11 +833,23 @@ Start up a  **central** server which will act as your command and control server
 
 Start up a node that will attach to the **central** node
 
-`env CONFIG_FOLDER=./etc/ ./steward ./steward --nodeName="ship1" --centralNodeName="central"` & `./steward --node="ship2"` and so on.
+`env CONFIG_FOLDER=./etc/ ./steward --nodeName="ship1" --centralNodeName="central"` & `./steward --node="ship2"`
 
-Use the `-help` flag to get all possibilities.
+You can get all the options with `./steward --help`
 
-##### More details config example
+Steward will by default create the data and config directories needed in the current folder. This can be changed by using the different flags or editing the config file.
+
+You can also run multiple instances of Steward on the same machine. For testing you can create sub folders for each steward instance, go into each folder and start steward. When starting each Steward instance make sure you give each node a unique `--nodeName`.
+
+##### Send messages with Steward
+
+You can now go to one of the folders for nodes started, and inject messages into the socket file `./tmp/steward.sock` with the **nc** tool.
+
+Example:
+
+`nc -U ./tmp/steward.sock < reqnone.msg`
+
+#### Example for starting steward with some more options set
 
 A complete example to start a central node called `central`.
 
@@ -903,6 +875,84 @@ env CONFIG_FOLDER=./etc/ ./steward \
  -promHostAndPort=":12112" \
  -brokerAddress="127.0.0.1:4222"
 ```
+
+
+#### Nkey Authentication
+
+Nkey's can be used for authentication, and you use the `nkeySeedFile` flag to specify the seed file to use.
+
+Read more in the sections below on how to generate nkey's.
+
+#### nats-server (the message broker)
+
+The broker for messaging is Nats-server from <https://nats.io>. Download, run it, and use the `-brokerAddress` flag on **Steward** to point to the ip and port:
+
+`-brokerAddress="nats://10.0.0.124:4222"`
+
+There is a lot of different variants of how you can setup and confiure Nats. Full mesh, leaf node, TLS, Authentication, and more. You can read more about how to configure the Nats broker called nats-server at <https://nats.io/>.
+
+##### Nats-server config with nkey authentication example
+
+```config
+port: 4222
+tls {
+  cert_file: "some.crt"
+  key_file: "some.key"
+}
+
+
+authorization: {
+    users = [
+        {
+            # central
+            nkey: <USER_NKEY_HERE>
+            permissions: {
+                publish: {
+      allow: ["some.>","errorCentral.>"]
+    }
+            subscribe: {
+      allow: ["some.>","errorCentral.>"]
+    }
+            }
+        }
+        {
+            # node1
+            nkey: <USER_NKEY_HERE>
+            permissions: {
+                publish: {
+                        allow: ["central.>"]
+                }
+                subscribe: {
+                        allow: ["central.>","some.node1.>","some.node10'.>"]
+                }
+            }
+        }
+        {
+            # node10
+            nkey: <USER_NKEY_HERE>
+            permissions: {
+                publish: {
+                        allow: ["some.node1.>","errorCentral.>"]
+                }
+                subscribe: {
+                        allow: ["central.>"]
+                }
+            }
+        }
+    ]
+}
+```
+
+The official docs for nkeys can be found here <https://docs.nats.io/nats-server/configuration/securing_nats/auth_intro/nkey_auth>.
+
+- Generate private (seed) and public (user) key pair:
+  - `nk -gen user -pubout`
+
+- Generate a public (user) key from a private (seed) key file called `seed.txt`.
+  - `nk -inkey seed.txt -pubout > user.txt`
+
+More example configurations for the nats-server are located in the [doc](https://github.com/RaaLabs/steward/tree/main/doc) folder in this repository.
+
 
 ### Message fields explanation
 
