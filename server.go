@@ -290,11 +290,22 @@ func (s *server) Stop() {
 	s.cancel()
 	log.Printf("info: stopped the main context\n")
 
-	// Delete the socket file when the program exits.
+	// Delete the steward socket file when the program exits.
 	socketFilepath := filepath.Join(s.configuration.SocketFolder, "steward.sock")
 
 	if _, err := os.Stat(socketFilepath); !os.IsNotExist(err) {
 		err = os.Remove(socketFilepath)
+		if err != nil {
+			er := fmt.Errorf("error: could not delete sock file: %v", err)
+			log.Printf("%v\n", er)
+		}
+	}
+
+	// Delete the steward socket file when the program exits.
+	stewSocketFilepath := filepath.Join(s.configuration.SocketFolder, "stew.sock")
+
+	if _, err := os.Stat(stewSocketFilepath); !os.IsNotExist(err) {
+		err = os.Remove(stewSocketFilepath)
 		if err != nil {
 			er := fmt.Errorf("error: could not delete sock file: %v", err)
 			log.Printf("%v\n", er)
