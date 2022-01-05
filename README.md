@@ -823,7 +823,7 @@ Clone the repository:
 Change directory and build:
 
 ```bash
-cd ./steward/cmd
+cd ./steward/cmd/steward
 go build -o steward
 ```
 
