@@ -124,6 +124,8 @@ const (
 	REQRelay Method = "REQRelay"
 	// The method handler for the first step in a relay chain.
 	REQRelayInitial Method = "REQRelayInitial"
+	// REQNone is used when there should be no reply.
+	REQNone Method = "REQNone"
 )
 
 // The mapping of all the method constants specified, what type
@@ -282,6 +284,11 @@ func (ma MethodsAvailable) CheckIfExists(m Method) (methodHandler, bool) {
 // previousMessage field so we don't copy around the original data in
 // the reply response when it is not needed anymore.
 func newReplyMessage(proc process, message Message, outData []byte) {
+	// If REQNone is specified, we don't want to send a reply message
+	// so we silently just return without sending anything.
+	if message.ReplyMethod == "REQNone" {
+		return
+	}
 
 	// If no replyMethod is set we default to writing to writing to
 	// a log file.

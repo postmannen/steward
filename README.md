@@ -36,14 +36,14 @@ The idea behind Steward is to help out with exactly these issues, allowing you t
       - [REQOpProcessStop](#reqopprocessstop)
       - [REQCliCommand](#reqclicommand)
       - [REQCliCommandCont](#reqclicommandcont)
-      - [REQToConsole](#reqtoconsole)
       - [REQTailFile](#reqtailfile)
       - [REQHttpGet](#reqhttpget)
       - [REQHello](#reqhello)
       - [REQCopyFileFrom](#reqcopyfilefrom)
       - [REQErrorLog](#reqerrorlog)
     - [Request Methods used for reply messages](#request-methods-used-for-reply-messages)
-      - [REQToConsole for printing to STDOUT](#reqtoconsole-for-printing-to-stdout)
+      - [REQNone](#reqnone)
+      - [REQToConsole](#reqtoconsole)
       - [REQToFileAppend](#reqtofileappend)
       - [REQToFile](#reqtofile)
       - [ReqCliCommand](#reqclicommand-1)
@@ -477,26 +477,6 @@ When testing the problem seems to appear when using sudo, or tcpdump without
 the -l option. So for now, don't use sudo, and remember to use -l with tcpdump
 which makes stdout line buffered.
 
-#### REQToConsole
-
-This is a pure replyMethod that can be used to get the data of the reply message printed to stdout where Steward is running.
-
-```json
-[
-    {
-        "directory": "web",
-        "fileName": "web.html",
-        "toNode": "ship2",
-        "method":"REQHttpGet",
-        "methodArgs": ["https://web.ics.purdue.edu/~gchopra/class/public/pages/webdesign/05_simple.html"],
-        "replyMethod":"REQToConsole",
-        "ACKTimeout":10,
-        "retries": 3,
-        "methodTimeout": 3
-    }
-]
-```
-
 #### REQTailFile
 
 Tail log files on some node, and get the result for each new line read sent back in a reply message. Uses the methodTimeout to define for how long the command will run.
@@ -578,21 +558,32 @@ Copy a file from one node to another node.
 
 Method for receiving error logs for Central error logger.
 
-This is **not** to be used by users. Use **REQToFileAppend** instead.
+**NB**: This is **not** to be used by users. Use **REQToFileAppend** instead.
 
 ### Request Methods used for reply messages
 
-#### REQToConsole for printing to STDOUT
+#### REQNone
 
-Print the output of the reply message to the STDOUT where the receiving steward instance are running.
+Don't send a reply message.
+
+An example could be that you send a `REQCliCommand` message to some node, and you specify `replyMethod: REQNone` if you don't care about the resulting output from the original method.
+
+#### REQToConsole
+
+This is a pure replyMethod that can be used to get the data of the reply message printed to stdout where Steward is running.
 
 ```json
 [
     {
+        "directory": "web",
+        "fileName": "web.html",
         "toNode": "ship2",
-        "method":"REQOpProcessList",
-        "methodArgs": [],
+        "method":"REQHttpGet",
+        "methodArgs": ["https://web.ics.purdue.edu/~gchopra/class/public/pages/webdesign/05_simple.html"],
         "replyMethod":"REQToConsole",
+        "ACKTimeout":10,
+        "retries": 3,
+        "methodTimeout": 3
     }
 ]
 ```
@@ -1111,7 +1102,7 @@ Description of the differences are mentioned earlier.
 Info: The command/event called **MessageType** are present in both the **Subject** structure and the **Message** structure.
 This is due to MessageType being used in both the naming of a subject, and for specifying message type to allow for specific processing of a message.
 
-**Method**: Are the functionality the message provide. Example could be `CLICommand` or `Syslogforwarding`
+**Method**: Are the functionality the message provide. Example could be for example `REQCliCommand` or `REQHttpGet`
 
 ##### Complete subject example
 
