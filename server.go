@@ -110,11 +110,16 @@ func NewServer(c *Configuration, version string) (*server, error) {
 	log.Printf(" * conn.Opts.ReconnectJitterTLS: %v\n", conn.Opts.ReconnectJitterTLS)
 	log.Printf(" * conn.Opts.ReconnectJitter: %v\n", conn.Opts.ReconnectJitter)
 
+	var stewardSocket net.Listener
+	var err error
+
 	// Open the steward socket file, and start the listener if enabled.
-	stewardSocket, err := createSocket(c.SocketFolder, "steward.sock")
-	if err != nil {
-		cancel()
-		return nil, err
+	if c.EnableSocket {
+		stewardSocket, err = createSocket(c.SocketFolder, "steward.sock")
+		if err != nil {
+			cancel()
+			return nil, err
+		}
 	}
 
 	// Open the stew socket file, and start the listener if enabled.
@@ -218,7 +223,9 @@ func (s *server) Start() {
 	}()
 
 	// Start the checking the input socket for new messages from operator.
-	go s.readSocket()
+	if s.configuration.EnableSocket {
+		go s.readSocket()
+	}
 
 	// Check if we should start the tcp listener for new messages from operator.
 	if s.configuration.TCPListener != "" {
