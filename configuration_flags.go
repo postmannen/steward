@@ -71,6 +71,8 @@ type Configuration struct {
 	Serialization string
 	// SetBlockProfileRate for block profiling
 	SetBlockProfileRate int
+	// EnableSocket for enabling the creation of a steward.sock file
+	EnableSocket bool
 
 	// NOTE:
 	// Op commands will not be specified as a flag since they can't be turned off.
@@ -140,6 +142,7 @@ type ConfigurationFromFile struct {
 	Compression              *string
 	Serialization            *string
 	SetBlockProfileRate      *int
+	EnableSocket             *bool
 
 	StartPubREQHello          *int
 	StartSubREQErrorLog       *bool
@@ -194,6 +197,7 @@ func newConfigurationDefaults() Configuration {
 		Compression:              "",
 		Serialization:            "",
 		SetBlockProfileRate:      0,
+		EnableSocket:             true,
 
 		StartSubREQErrorLog:       true,
 		StartSubREQHello:          true,
@@ -354,6 +358,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.SetBlockProfileRate = *cf.SetBlockProfileRate
 	}
+	if cf.EnableSocket == nil {
+		conf.EnableSocket = cd.EnableSocket
+	} else {
+		conf.EnableSocket = *cf.EnableSocket
+	}
 
 	if cf.StartPubREQHello == nil {
 		conf.StartPubREQHello = cd.StartPubREQHello
@@ -489,6 +498,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.Compression, "compression", fc.Compression, "compression method to use. defaults to no compression, z = zstd, g = gzip. Undefined value will default to no compression")
 	flag.StringVar(&c.Serialization, "serialization", fc.Serialization, "Serialization method to use. defaults to gob, other values are = cbor. Undefined value will default to gob")
 	flag.IntVar(&c.SetBlockProfileRate, "setBlockProfileRate", fc.SetBlockProfileRate, "Enable block profiling by setting the value to f.ex. 1. 0 = disabled")
+	flag.BoolVar(&c.EnableSocket, "enableSocket", fc.EnableSocket, "true/false for enabling the creation of a steward.sock file")
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 

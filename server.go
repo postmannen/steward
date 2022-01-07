@@ -110,69 +110,19 @@ func NewServer(c *Configuration, version string) (*server, error) {
 	log.Printf(" * conn.Opts.ReconnectJitterTLS: %v\n", conn.Opts.ReconnectJitterTLS)
 	log.Printf(" * conn.Opts.ReconnectJitter: %v\n", conn.Opts.ReconnectJitter)
 
-	// Prepare the connection to the  Steward socket file
-
-	// Check if socket folder exists, if not create it
-	if _, err := os.Stat(c.SocketFolder); os.IsNotExist(err) {
-		err := os.MkdirAll(c.SocketFolder, 0700)
-		if err != nil {
-			cancel()
-			return nil, fmt.Errorf("error: failed to create socket folder directory %v: %v", c.SocketFolder, err)
-		}
-	}
-
-	// Just as an extra check we eventually delete any existing Steward socket files if found.
-	socketFilepath := filepath.Join(c.SocketFolder, "steward.sock")
-	if _, err := os.Stat(socketFilepath); !os.IsNotExist(err) {
-		err = os.Remove(socketFilepath)
-		if err != nil {
-			er := fmt.Errorf("error: could not delete sock file: %v", err)
-			cancel()
-			return nil, er
-		}
-	}
-
-	// Open the socket.
-	nl, err := net.Listen("unix", socketFilepath)
+	// Open the steward socket file, and start the listener if enabled.
+	stewardSocket, err := createSocket(c.SocketFolder, "steward.sock")
 	if err != nil {
-		er := fmt.Errorf("error: failed to open socket: %v", err)
 		cancel()
-		return nil, er
+		return nil, err
 	}
 
-	// ---
-
-	// Prepare the connection to the  Stew socket file
-
-	// Check if socket folder exists, if not create it
-	if _, err := os.Stat(c.SocketFolder); os.IsNotExist(err) {
-		err := os.MkdirAll(c.SocketFolder, 0700)
-		if err != nil {
-			cancel()
-			return nil, fmt.Errorf("error: failed to create socket folder directory %v: %v", c.SocketFolder, err)
-		}
-	}
-
-	stewSocketFilepath := filepath.Join(c.SocketFolder, "stew.sock")
-
-	// Just as an extra check we eventually delete any existing Stew socket files if found.
-	if _, err := os.Stat(stewSocketFilepath); !os.IsNotExist(err) {
-		err = os.Remove(stewSocketFilepath)
-		if err != nil {
-			er := fmt.Errorf("error: could not delete stew.sock file: %v", err)
-			cancel()
-			return nil, er
-		}
-	}
-
-	stewNL, err := net.Listen("unix", stewSocketFilepath)
+	// Open the stew socket file, and start the listener if enabled.
+	stewSocket, err := createSocket(c.SocketFolder, "stew.sock")
 	if err != nil {
-		er := fmt.Errorf("error: failed to open stew socket: %v", err)
 		cancel()
-		return nil, er
+		return nil, err
 	}
-
-	// ---
 
 	metrics := newMetrics(c.PromHostAndPort)
 
@@ -182,8 +132,8 @@ func NewServer(c *Configuration, version string) (*server, error) {
 		configuration: c,
 		nodeName:      c.NodeName,
 		natsConn:      conn,
-		StewardSocket: nl,
-		StewSocket:    stewNL,
+		StewardSocket: stewardSocket,
+		StewSocket:    stewSocket,
 		processes:     newProcesses(ctx, metrics),
 		newMessagesCh: make(chan []subjectAndMessage),
 		metrics:       metrics,
@@ -206,6 +156,37 @@ func NewServer(c *Configuration, version string) (*server, error) {
 
 	return s, nil
 
+}
+
+// create socket will create a socket file, and return the net.Listener to
+// communicate with that socket.
+func createSocket(socketFolder string, socketFileName string) (net.Listener, error) {
+	// Check if socket folder exists, if not create it
+	if _, err := os.Stat(socketFolder); os.IsNotExist(err) {
+		err := os.MkdirAll(socketFolder, 0700)
+		if err != nil {
+			return nil, fmt.Errorf("error: failed to create socket folder directory %v: %v", socketFolder, err)
+		}
+	}
+
+	// Just as an extra check we eventually delete any existing Steward socket files if found.
+	socketFilepath := filepath.Join(socketFolder, socketFileName)
+	if _, err := os.Stat(socketFilepath); !os.IsNotExist(err) {
+		err = os.Remove(socketFilepath)
+		if err != nil {
+			er := fmt.Errorf("error: could not delete sock file: %v", err)
+			return nil, er
+		}
+	}
+
+	// Open the socket.
+	nl, err := net.Listen("unix", socketFilepath)
+	if err != nil {
+		er := fmt.Errorf("error: failed to open socket: %v", err)
+		return nil, er
+	}
+
+	return nl, nil
 }
 
 // Start will spawn up all the predefined subscriber processes.
