@@ -36,8 +36,6 @@ type server struct {
 	natsConn *nats.Conn
 	// net listener for communicating via the steward socket
 	StewardSocket net.Listener
-	// net listener for the communication with Stew
-	StewSocket net.Listener
 	// processes holds all the information about running processes
 	processes *processes
 	// The name of the node
@@ -122,13 +120,6 @@ func NewServer(c *Configuration, version string) (*server, error) {
 		}
 	}
 
-	// Open the stew socket file, and start the listener if enabled.
-	stewSocket, err := createSocket(c.SocketFolder, "stew.sock")
-	if err != nil {
-		cancel()
-		return nil, err
-	}
-
 	metrics := newMetrics(c.PromHostAndPort)
 
 	s := &server{
@@ -138,7 +129,6 @@ func NewServer(c *Configuration, version string) (*server, error) {
 		nodeName:      c.NodeName,
 		natsConn:      conn,
 		StewardSocket: stewardSocket,
-		StewSocket:    stewSocket,
 		processes:     newProcesses(ctx, metrics),
 		newMessagesCh: make(chan []subjectAndMessage),
 		metrics:       metrics,
@@ -283,17 +273,6 @@ func (s *server) Stop() {
 
 	if _, err := os.Stat(socketFilepath); !os.IsNotExist(err) {
 		err = os.Remove(socketFilepath)
-		if err != nil {
-			er := fmt.Errorf("error: could not delete sock file: %v", err)
-			log.Printf("%v\n", er)
-		}
-	}
-
-	// Delete the steward socket file when the program exits.
-	stewSocketFilepath := filepath.Join(s.configuration.SocketFolder, "stew.sock")
-
-	if _, err := os.Stat(stewSocketFilepath); !os.IsNotExist(err) {
-		err = os.Remove(stewSocketFilepath)
 		if err != nil {
 			er := fmt.Errorf("error: could not delete sock file: %v", err)
 			log.Printf("%v\n", er)

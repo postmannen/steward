@@ -10,7 +10,6 @@ import (
 )
 
 type Stew struct {
-	stewardSocket string
 }
 
 func NewStew() (*Stew, error) {
@@ -22,9 +21,7 @@ func NewStew() (*Stew, error) {
 		return nil, fmt.Errorf("error: specify the full path to the steward.sock file: %v", err)
 	}
 
-	s := Stew{
-		stewardSocket: *stewardSocket,
-	}
+	s := Stew{}
 	return &s, nil
 }
 
