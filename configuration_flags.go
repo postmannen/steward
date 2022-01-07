@@ -73,6 +73,8 @@ type Configuration struct {
 	SetBlockProfileRate int
 	// EnableSocket for enabling the creation of a steward.sock file
 	EnableSocket bool
+	// EnableTUI will enable the Terminal User Interface
+	EnableTUI bool
 
 	// NOTE:
 	// Op commands will not be specified as a flag since they can't be turned off.
@@ -143,6 +145,7 @@ type ConfigurationFromFile struct {
 	Serialization            *string
 	SetBlockProfileRate      *int
 	EnableSocket             *bool
+	EnableTUI                *bool
 
 	StartPubREQHello          *int
 	StartSubREQErrorLog       *bool
@@ -198,6 +201,7 @@ func newConfigurationDefaults() Configuration {
 		Serialization:            "",
 		SetBlockProfileRate:      0,
 		EnableSocket:             true,
+		EnableTUI:                false,
 
 		StartSubREQErrorLog:       true,
 		StartSubREQHello:          true,
@@ -363,6 +367,13 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.EnableSocket = *cf.EnableSocket
 	}
+	if cf.EnableTUI == nil {
+		conf.EnableTUI = cd.EnableTUI
+	} else {
+		conf.EnableTUI = *cf.EnableTUI
+	}
+
+	// --- Start pub/sub
 
 	if cf.StartPubREQHello == nil {
 		conf.StartPubREQHello = cd.StartPubREQHello
@@ -499,6 +510,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.Serialization, "serialization", fc.Serialization, "Serialization method to use. defaults to gob, other values are = cbor. Undefined value will default to gob")
 	flag.IntVar(&c.SetBlockProfileRate, "setBlockProfileRate", fc.SetBlockProfileRate, "Enable block profiling by setting the value to f.ex. 1. 0 = disabled")
 	flag.BoolVar(&c.EnableSocket, "enableSocket", fc.EnableSocket, "true/false for enabling the creation of a steward.sock file")
+	flag.BoolVar(&c.EnableTUI, "enableTUI", fc.EnableTUI, "true/false for enabling the Terminal User Interface")
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 
