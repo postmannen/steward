@@ -3,7 +3,6 @@ package steward
 import (
 	"bufio"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -16,19 +15,11 @@ import (
 	"github.com/rivo/tview"
 )
 
-type Stew struct {
+type tui struct {
 }
 
-func NewStew() (*Stew, error) {
-	stewardSocket := flag.String("stewardSocket", "/usr/local/steward/tmp/steward.sock", "specify the full path of the steward socket file")
-	flag.Parse()
-
-	_, err := os.Stat(*stewardSocket)
-	if err != nil {
-		return nil, fmt.Errorf("error: specify the full path to the steward.sock file: %v", err)
-	}
-
-	s := Stew{}
+func newTui() (*tui, error) {
+	s := tui{}
 	return &s, nil
 }
 
@@ -38,7 +29,7 @@ type slide struct {
 	primitive tview.Primitive
 }
 
-func (s *Stew) Start() error {
+func (s *tui) Start() error {
 	pages := tview.NewPages()
 
 	app := tview.NewApplication()

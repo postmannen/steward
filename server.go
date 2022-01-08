@@ -60,6 +60,8 @@ type server struct {
 	metrics *metrics
 	// Version of package
 	version string
+	// tui client
+	tui *tui
 }
 
 // newServer will prepare and return a server type
@@ -122,6 +124,17 @@ func NewServer(c *Configuration, version string) (*server, error) {
 
 	metrics := newMetrics(c.PromHostAndPort)
 
+	// Create the tui client structure if enabled.
+	var tuiClient *tui
+	if c.EnableTUI {
+		tuiClient, err = newTui()
+		if err != nil {
+			cancel()
+			return nil, err
+		}
+
+	}
+
 	s := &server{
 		ctx:           ctx,
 		cancel:        cancel,
@@ -133,6 +146,7 @@ func NewServer(c *Configuration, version string) (*server, error) {
 		newMessagesCh: make(chan []subjectAndMessage),
 		metrics:       metrics,
 		version:       version,
+		tui:           tuiClient,
 	}
 
 	// Create the default data folder for where subscribers should
@@ -245,6 +259,16 @@ func (s *server) Start() {
 	if s.configuration.ExposeDataFolder != "" {
 		log.Printf("info: Starting expose of data folder via HTTP\n")
 		go s.exposeDataFolder(s.ctx)
+	}
+
+	if s.configuration.EnableTUI {
+		go func() {
+			err := s.tui.Start()
+			if err != nil {
+				log.Printf("%v\n", err)
+				os.Exit(1)
+			}
+		}()
 	}
 
 	// Start the processing of new messages from an input channel.
