@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -51,12 +52,12 @@ func (s *tui) Start() error {
 
 	// The slides to draw, and their name.
 	// NB: This slice is being looped over further below, to create the menu
-	// elements. If adding a new slide, make sure that slides are ordererin
+	// elements. If adding a new slide, make sure that slides are ordered in
 	// chronological order, so we can auto generate the info menu with it's
 	// corresponding F key based on the slice index+1.
 	slides := []slide{
-		{name: "info", key: tcell.KeyF1, primitive: infoSlide(app)},
 		{name: "message", key: tcell.KeyF2, primitive: messageSlide(app)},
+		{name: "info", key: tcell.KeyF1, primitive: infoSlide(app)},
 	}
 
 	// Add on page for each slide.
@@ -78,8 +79,12 @@ func (s *tui) Start() error {
 		AddItem(pages, 0, 10, true).
 		AddItem(info, 1, 1, false)
 
-	if err := app.SetRoot(layout, true).EnableMouse(true).Run(); err != nil {
-		panic(err)
+	root := app.SetRoot(layout, true)
+	root.EnableMouse(true)
+
+	if err := root.Run(); err != nil {
+		log.Printf("error: root.Run(): %v\n", err)
+		os.Exit(1)
 	}
 
 	return nil
@@ -142,18 +147,10 @@ func messageSlide(app *tview.Application) tview.Primitive {
 			AddItem(p.logForm, 0, 2, false),
 			0, 2, false)
 
-	// Check that the message struct used within stew are up to date, and
-	// consistent with the fields used in the main Steward message file.
-	// If it throws an error here we need to update the msg struct type,
-	// or add a case for the field to except.
-	err := compareMsgAndMessage()
-	if err != nil {
-		log.Printf("%v\n", err)
-		os.Exit(1)
-	}
+	m := Message{}
 
-	m := msg{}
-
+	// Draw all the message input field with values on the screen.
+	//
 	// Loop trough all the fields of the Message struct, and create
 	// a an input field or dropdown selector for each field.
 	// If a field of the struct is not defined below, it will be
@@ -169,18 +166,17 @@ func messageSlide(app *tview.Application) tview.Primitive {
 	mRefVal := reflect.ValueOf(m)
 
 	for i := 0; i < mRefVal.NumField(); i++ {
-		var err error
-		values := []string{"1", "2"}
 
 		fieldName := mRefVal.Type().Field(i).Name
 
 		switch fieldName {
+		case "_":
 		case "ToNode":
 			// Get nodes from file.
-			values, err = getNodeNames("nodeslist.cfg")
+			values, err := getNodeNames("nodeslist.cfg")
 			if err != nil {
-				// TODO: Handle error here, exit ?
-				return nil
+				log.Printf("error: unable to open file: %v\n", err)
+				os.Exit(1)
 			}
 
 			item := tview.NewDropDown()
@@ -188,11 +184,11 @@ func messageSlide(app *tview.Application) tview.Primitive {
 			item.SetLabel(fieldName).SetOptions(values, nil)
 			p.msgInputForm.AddFormItem(item)
 			//c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
-		case "ID":
-			// This value is automatically assigned by steward.
-		case "Data":
-			value := `"bash","-c","..."`
+		case "ToNodes":
+			value := `"ship1","ship2","ship3"`
 			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
+		case "ID":
+		case "Data":
 		case "Method":
 			var m Method
 			ma := m.GetMethodsAvailable()
@@ -201,6 +197,9 @@ func messageSlide(app *tview.Application) tview.Primitive {
 				values = append(values, string(k))
 			}
 			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
+		case "MethodArgs":
+			value := ``
+			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
 		case "ReplyMethod":
 			var m Method
 			rm := m.GetReplyMethods()
@@ -209,6 +208,11 @@ func messageSlide(app *tview.Application) tview.Primitive {
 				values = append(values, string(k))
 			}
 			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
+		case "ReplyMethodArgs":
+			value := ``
+			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
+		case "IsReply":
+		case "FromNode":
 		case "ACKTimeout":
 			value := 30
 			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
@@ -224,18 +228,49 @@ func messageSlide(app *tview.Application) tview.Primitive {
 		case "MethodTimeout":
 			value := 120
 			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
+		case "ReplyMethodTimeout":
+			value := 120
+			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
 		case "Directory":
 			value := "/some-dir/"
 			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
 		case "FileName":
 			value := ".log"
 			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
+		case "PreviousMessage":
+		case "RelayViaNode":
+			// Get nodes from file.
+			values, err := getNodeNames("nodeslist.cfg")
+			if err != nil {
+				log.Printf("error: unable to open file: %v\n", err)
+				os.Exit(1)
+			}
+
+			item := tview.NewDropDown()
+			item.SetLabelColor(tcell.ColorIndianRed)
+			item.SetLabel(fieldName).SetOptions(values, nil)
+			p.msgInputForm.AddFormItem(item)
+			//c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
+		case "RelayReplyMethod":
+			var m Method
+			rm := m.GetReplyMethods()
+			values := []string{}
+			for _, k := range rm {
+				values = append(values, string(k))
+			}
+			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
+		case "RelayOriginalViaNode":
+		case "RelayFromNode":
+		case "RelayToNode":
+		case "RelayOriginalMethod":
+		case "done":
 
 		default:
 			// Add a no definition fields to the form if a a field within the
 			// struct were missing an action above, so we can easily detect
 			// if there is missing a case action for one of the struct fields.
-			p.msgInputForm.AddDropDown("error: no case for: "+fieldName, values, 0, nil).SetItemPadding(1)
+
+			p.msgInputForm.AddDropDown("error: no case for: "+fieldName, []string{"1", "2"}, 0, nil).SetItemPadding(1)
 		}
 
 	}
@@ -257,8 +292,9 @@ func messageSlide(app *tview.Application) tview.Primitive {
 			p.msgOutputForm.Clear()
 			fh := p.msgOutputForm
 
-			m := msg{}
-			// Loop trough all the form fields
+			m := Message{}
+			// Loop trough all the form fields, check the value of each
+			// form field, and add the value to m.
 			for i := 0; i < p.msgInputForm.GetFormItemCount(); i++ {
 				fi := p.msgInputForm.GetFormItem(i)
 				label, value := getLabelAndValue(fi)
@@ -271,12 +307,12 @@ func messageSlide(app *tview.Application) tview.Primitive {
 					}
 
 					m.ToNode = Node(value)
-				case "Data":
+				case "ToNodes":
 					// Split the comma separated string into a
 					// and remove the start and end ampersand.
 					sp := strings.Split(value, ",")
 
-					var data []string
+					var toNodes []Node
 
 					for _, v := range sp {
 						// Check if format is correct, return if not.
@@ -290,14 +326,67 @@ func messageSlide(app *tview.Application) tview.Primitive {
 						v = v[1:]
 						v = strings.TrimSuffix(v, "\"")
 
-						data = append(data, v)
+						toNodes = append(toNodes, Node(v))
 					}
 
-					m.Data = data
+					m.ToNodes = toNodes
+				case "ID":
+				case "Data":
 				case "Method":
 					m.Method = Method(value)
+				case "MethodArgs":
+					// Split the comma separated string into a
+					// and remove the start and end ampersand.
+
+					methodArgs := []string{}
+
+					if value != "" {
+
+						sp := strings.Split(value, ",")
+						for _, v := range sp {
+							// Check if format is correct, return if not.
+							pre := strings.HasPrefix(v, "\"")
+							suf := strings.HasSuffix(v, "\"")
+							if !pre || !suf {
+								fmt.Fprintf(p.logForm, "%v : error: missing or malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+								return
+							}
+							// Remove leading and ending ampersand.
+							v = v[1:]
+							v = strings.TrimSuffix(v, "\"")
+
+							methodArgs = append(methodArgs, v)
+						}
+					}
+
+					m.MethodArgs = methodArgs
 				case "ReplyMethod":
 					m.ReplyMethod = Method(value)
+				case "ReplyMethodArgs":
+					// Split the comma separated string into a
+					// and remove the start and end ampersand.
+					var methodArgs []string
+
+					if value != "" {
+						sp := strings.Split(value, ",")
+
+						for _, v := range sp {
+							// Check if format is correct, return if not.
+							pre := strings.HasPrefix(v, "\"")
+							suf := strings.HasSuffix(v, "\"")
+							if !pre || !suf {
+								fmt.Fprintf(p.logForm, "%v : error: missing or malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+								return
+							}
+							// Remove leading and ending ampersand.
+							v = v[1:]
+							v = strings.TrimSuffix(v, "\"")
+
+							methodArgs = append(methodArgs, v)
+						}
+					}
+
+					m.ReplyMethodArgs = methodArgs
 				case "ACKTimeout":
 					v, _ := strconv.Atoi(value)
 					m.ACKTimeout = v
@@ -313,16 +402,23 @@ func messageSlide(app *tview.Application) tview.Primitive {
 				case "MethodTimeout":
 					v, _ := strconv.Atoi(value)
 					m.MethodTimeout = v
+				case "ReplyMethodTimeout":
+					v, _ := strconv.Atoi(value)
+					m.ReplyMethodTimeout = v
 				case "Directory":
 					m.Directory = value
 				case "FileName":
 					m.FileName = value
+				case "RelayViaNode":
+					m.RelayViaNode = Node(value)
+				case "RelayReplyMethod":
+					m.RelayReplyMethod = Method(value)
 
 				default:
-					fmt.Fprintf(p.logForm, "%v : error: did not find case defenition for how to handle the \"%v\" within the switch statement\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), label)
+					fmt.Fprintf(p.logForm, "%v : error: did not find case definition for how to handle the \"%v\" within the switch statement\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), label)
 				}
 			}
-			msgs := []msg{}
+			msgs := []Message{}
 			msgs = append(msgs, m)
 
 			msgsIndented, err := json.MarshalIndent(msgs, "", "    ")
@@ -344,56 +440,6 @@ func messageSlide(app *tview.Application) tview.Primitive {
 	app.SetFocus(p.msgInputForm)
 
 	return p.flex
-}
-
-// Check and compare all the fields of the main message struct
-// used in Steward, and the message struct used in Stew that they are
-// equal.
-// If they are not equal an error will be returned to the user with
-// the name of the field that was missing in the Stew message struct.
-//
-// Some of the fields in the Steward Message struct are used by the
-// system for control, and not needed when creating an initial message
-// template, and we can add case statements for those fields below
-// that we do not wan't to check.
-func compareMsgAndMessage() error {
-	stewardMessage := Message{}
-	stewMsg := msg{}
-
-	stewardRefVal := reflect.ValueOf(stewardMessage)
-	stewRefVal := reflect.ValueOf(stewMsg)
-
-	// Loop trough all the fields of the Message struct.
-	for i := 0; i < stewardRefVal.NumField(); i++ {
-		found := false
-
-		for ii := 0; ii < stewRefVal.NumField(); ii++ {
-			if stewardRefVal.Type().Field(i).Name == stewRefVal.Type().Field(ii).Name {
-				found = true
-				break
-			}
-		}
-
-		// Case statements for the fields we don't care about for
-		// the message template.
-		if !found {
-			switch stewardRefVal.Type().Field(i).Name {
-			case "ID":
-				// Not used in message template.
-			case "FromNode":
-				// Not used in message template.
-			case "PreviousMessage":
-				// Not used in message template.
-			case "done":
-				// Not used in message template.
-			default:
-				return fmt.Errorf("error: %v within the steward Message struct were not found in the stew msg struct", stewardRefVal.Type().Field(i).Name)
-
-			}
-		}
-	}
-
-	return nil
 }
 
 // Will return the Label And the text Value of an input or dropdown form field.
@@ -423,11 +469,19 @@ func validateInteger(text string, ch rune) bool {
 
 // getNodes will load all the node names from a file, and return a slice of
 // string values, each representing a unique node.
-func getNodeNames(filePath string) ([]string, error) {
+func getNodeNames(fileName string) ([]string, error) {
+
+	dirPath, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("error: tui: unable to get working directory: %v", err)
+	}
+
+	filePath := filepath.Join(dirPath, fileName)
+	log.Printf(" * filepath : %v\n", filePath)
 
 	fh, err := os.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("error: unable to open node file: %v", err)
+		return nil, fmt.Errorf("error: tui: you should create a file named nodeslist.cfg with all your nodes : %v", err)
 	}
 	defer fh.Close()
 
@@ -440,43 +494,4 @@ func getNodeNames(filePath string) ([]string, error) {
 	}
 
 	return nodes, nil
-}
-
-// -----------------------
-
-// Creating a copy of the real Message struct here to use within the
-// field specification, but without the control kind of fields from
-// the original to avoid changing them to pointer values in the main
-// struct which would be needed when json marshaling to omit those
-// empty fields.
-type msg struct {
-	// The node to send the message to
-	ToNode Node `json:"toNode" yaml:"toNode"`
-	// The actual data in the message
-	Data []string `json:"data" yaml:"data"`
-	// Method, what is this message doing, etc. CLI, syslog, etc.
-	Method Method `json:"method" yaml:"method"`
-	// ReplyMethod, is the method to use for the reply message.
-	// By default the reply method will be set to log to file, but
-	// you can override it setting your own here.
-	ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
-	// From what node the message originated
-	ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
-	// Resend retries
-	Retries int `json:"retries" yaml:"retries"`
-	// The ACK timeout of the new message created via a request event.
-	ReplyACKTimeout int `json:"replyACKTimeout" yaml:"replyACKTimeout"`
-	// The retries of the new message created via a request event.
-	ReplyRetries int `json:"replyRetries" yaml:"replyRetries"`
-	// Timeout for long a process should be allowed to operate
-	MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
-	// Directory is a string that can be used to create the
-	//directory structure when saving the result of some method.
-	// For example "syslog","metrics", or "metrics/mysensor"
-	// The type is typically used in the handler of a method.
-	Directory string `json:"directory" yaml:"directory"`
-	// FileName is used to be able to set a wanted extension
-	// on a file being saved as the result of data being handled
-	// by a method handler.
-	FileName string `json:"fileName" yaml:"fileName"`
 }
