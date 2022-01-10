@@ -147,7 +147,7 @@ func messageSlide(app *tview.Application) tview.Primitive {
 			AddItem(p.logForm, 0, 2, false),
 			0, 2, false)
 
-	m := Message{}
+	m := tuiMessage{}
 
 	// Draw all the message input field with values on the screen.
 	//
@@ -176,7 +176,6 @@ func messageSlide(app *tview.Application) tview.Primitive {
 			values, err := getNodeNames("nodeslist.cfg")
 			if err != nil {
 				log.Printf("error: unable to open file: %v\n", err)
-				os.Exit(1)
 			}
 
 			item := tview.NewDropDown()
@@ -187,8 +186,6 @@ func messageSlide(app *tview.Application) tview.Primitive {
 		case "ToNodes":
 			value := `"ship1","ship2","ship3"`
 			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
-		case "ID":
-		case "Data":
 		case "Method":
 			var m Method
 			ma := m.GetMethodsAvailable()
@@ -211,8 +208,6 @@ func messageSlide(app *tview.Application) tview.Primitive {
 		case "ReplyMethodArgs":
 			value := ``
 			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
-		case "IsReply":
-		case "FromNode":
 		case "ACKTimeout":
 			value := 30
 			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
@@ -237,7 +232,6 @@ func messageSlide(app *tview.Application) tview.Primitive {
 		case "FileName":
 			value := ".log"
 			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
-		case "PreviousMessage":
 		case "RelayViaNode":
 			// Get nodes from file.
 			values, err := getNodeNames("nodeslist.cfg")
@@ -259,12 +253,6 @@ func messageSlide(app *tview.Application) tview.Primitive {
 				values = append(values, string(k))
 			}
 			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
-		case "RelayOriginalViaNode":
-		case "RelayFromNode":
-		case "RelayToNode":
-		case "RelayOriginalMethod":
-		case "done":
-
 		default:
 			// Add a no definition fields to the form if a a field within the
 			// struct were missing an action above, so we can easily detect
@@ -280,19 +268,11 @@ func messageSlide(app *tview.Application) tview.Primitive {
 		// Add a generate button, which when pressed will loop through all the
 		// message form items, and if found fill the value into a msg struct,
 		// and at last write it to a file.
-		//
-		// TODO: Should also add a write directly to socket here.
 		AddButton("generate to console", func() {
-			// fh, err := os.Create("message.json")
-			// if err != nil {
-			// 	log.Fatalf("error: failed to create test.log file: %v\n", err)
-			// }
-			// defer fh.Close()
-
 			p.msgOutputForm.Clear()
 			fh := p.msgOutputForm
 
-			m := Message{}
+			m := tuiMessage{}
 			// Loop trough all the form fields, check the value of each
 			// form field, and add the value to m.
 			for i := 0; i < p.msgInputForm.GetFormItemCount(); i++ {
@@ -301,124 +281,73 @@ func messageSlide(app *tview.Application) tview.Primitive {
 
 				switch label {
 				case "ToNode":
-					if value == "" {
-						fmt.Fprintf(p.logForm, "%v : error: missing ToNode \n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
+					v := Node(value)
+					m.ToNode = &v
+				case "ToNodes":
+					slice, err := stringToNode(value)
+					if err != nil {
+						fmt.Fprintf(p.logForm, "%v : error: ReplyMethodArgs missing or malformed format, should be \"arg0\",\"arg1\",\"arg2\", %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
 						return
 					}
 
-					m.ToNode = Node(value)
-				case "ToNodes":
-					// Split the comma separated string into a
-					// and remove the start and end ampersand.
-					sp := strings.Split(value, ",")
-
-					var toNodes []Node
-
-					for _, v := range sp {
-						// Check if format is correct, return if not.
-						pre := strings.HasPrefix(v, "\"")
-						suf := strings.HasSuffix(v, "\"")
-						if !pre || !suf {
-							fmt.Fprintf(p.logForm, "%v : error: missing or malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
-							return
-						}
-						// Remove leading and ending ampersand.
-						v = v[1:]
-						v = strings.TrimSuffix(v, "\"")
-
-						toNodes = append(toNodes, Node(v))
-					}
-
-					m.ToNodes = toNodes
-				case "ID":
-				case "Data":
+					m.ToNodes = slice
 				case "Method":
-					m.Method = Method(value)
+					v := Method(value)
+					m.Method = &v
 				case "MethodArgs":
-					// Split the comma separated string into a
-					// and remove the start and end ampersand.
-
-					methodArgs := []string{}
-
-					if value != "" {
-
-						sp := strings.Split(value, ",")
-						for _, v := range sp {
-							// Check if format is correct, return if not.
-							pre := strings.HasPrefix(v, "\"")
-							suf := strings.HasSuffix(v, "\"")
-							if !pre || !suf {
-								fmt.Fprintf(p.logForm, "%v : error: missing or malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
-								return
-							}
-							// Remove leading and ending ampersand.
-							v = v[1:]
-							v = strings.TrimSuffix(v, "\"")
-
-							methodArgs = append(methodArgs, v)
-						}
+					slice, err := stringToSlice(value)
+					if err != nil {
+						fmt.Fprintf(p.logForm, "%v : error: ReplyMethodArgs missing or malformed format, should be \"arg0\",\"arg1\",\"arg2\", %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
+						return
 					}
 
-					m.MethodArgs = methodArgs
+					m.MethodArgs = slice
 				case "ReplyMethod":
-					m.ReplyMethod = Method(value)
+					v := Method(value)
+					m.ReplyMethod = &v
 				case "ReplyMethodArgs":
-					// Split the comma separated string into a
-					// and remove the start and end ampersand.
-					var methodArgs []string
-
-					if value != "" {
-						sp := strings.Split(value, ",")
-
-						for _, v := range sp {
-							// Check if format is correct, return if not.
-							pre := strings.HasPrefix(v, "\"")
-							suf := strings.HasSuffix(v, "\"")
-							if !pre || !suf {
-								fmt.Fprintf(p.logForm, "%v : error: missing or malformed format for command, should be \"cmd\",\"arg1\",\"arg2\" ...\n", time.Now().Format("Mon Jan _2 15:04:05 2006"))
-								return
-							}
-							// Remove leading and ending ampersand.
-							v = v[1:]
-							v = strings.TrimSuffix(v, "\"")
-
-							methodArgs = append(methodArgs, v)
-						}
+					slice, err := stringToSlice(value)
+					if err != nil {
+						fmt.Fprintf(p.logForm, "%v : error: ReplyMethodArgs missing or malformed format, should be \"arg0\",\"arg1\",\"arg2\", %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
+						return
 					}
 
-					m.ReplyMethodArgs = methodArgs
+					m.ReplyMethodArgs = slice
 				case "ACKTimeout":
 					v, _ := strconv.Atoi(value)
-					m.ACKTimeout = v
+					m.ACKTimeout = &v
 				case "Retries":
 					v, _ := strconv.Atoi(value)
-					m.Retries = v
+					m.Retries = &v
 				case "ReplyACKTimeout":
 					v, _ := strconv.Atoi(value)
-					m.ReplyACKTimeout = v
+					m.ReplyACKTimeout = &v
 				case "ReplyRetries":
 					v, _ := strconv.Atoi(value)
-					m.ReplyRetries = v
+					m.ReplyRetries = &v
 				case "MethodTimeout":
 					v, _ := strconv.Atoi(value)
-					m.MethodTimeout = v
+					m.MethodTimeout = &v
 				case "ReplyMethodTimeout":
 					v, _ := strconv.Atoi(value)
-					m.ReplyMethodTimeout = v
+					m.ReplyMethodTimeout = &v
 				case "Directory":
-					m.Directory = value
+					m.Directory = &value
 				case "FileName":
-					m.FileName = value
+					m.FileName = &value
 				case "RelayViaNode":
-					m.RelayViaNode = Node(value)
+					v := Node(value)
+					m.RelayViaNode = &v
 				case "RelayReplyMethod":
-					m.RelayReplyMethod = Method(value)
+					v := Method(value)
+					m.RelayReplyMethod = &v
 
 				default:
 					fmt.Fprintf(p.logForm, "%v : error: did not find case definition for how to handle the \"%v\" within the switch statement\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), label)
+					return
 				}
 			}
-			msgs := []Message{}
+			msgs := []tuiMessage{}
 			msgs = append(msgs, m)
 
 			msgsIndented, err := json.MarshalIndent(msgs, "", "    ")
@@ -440,6 +369,62 @@ func messageSlide(app *tview.Application) tview.Primitive {
 	app.SetFocus(p.msgInputForm)
 
 	return p.flex
+}
+
+// stringToSlice will Split the comma separated string
+// into a and remove the start and end ampersand.
+func stringToSlice(s string) (*[]string, error) {
+	if s == "" {
+		return nil, nil
+	}
+
+	var stringSlice []string
+
+	sp := strings.Split(s, ",")
+
+	for _, v := range sp {
+		// Check if format is correct, return if not.
+		pre := strings.HasPrefix(v, "\"")
+		suf := strings.HasSuffix(v, "\"")
+		if !pre || !suf {
+			return nil, fmt.Errorf("stringToSlice: missing leading or ending ampersand")
+		}
+		// Remove leading and ending ampersand.
+		v = v[1:]
+		v = strings.TrimSuffix(v, "\"")
+
+		stringSlice = append(stringSlice, v)
+	}
+
+	return &stringSlice, nil
+}
+
+// stringToNodes will Split the comma separated slice
+// of nodes, and remove the start and end ampersand.
+func stringToNode(s string) (*[]Node, error) {
+	if s == "" {
+		return nil, nil
+	}
+
+	var nodeSlice []Node
+
+	sp := strings.Split(s, ",")
+
+	for _, v := range sp {
+		// Check if format is correct, return if not.
+		pre := strings.HasPrefix(v, "\"")
+		suf := strings.HasSuffix(v, "\"")
+		if !pre || !suf {
+			return nil, fmt.Errorf("stringToSlice: missing leading or ending ampersand")
+		}
+		// Remove leading and ending ampersand.
+		v = v[1:]
+		v = strings.TrimSuffix(v, "\"")
+
+		nodeSlice = append(nodeSlice, Node(v))
+	}
+
+	return &nodeSlice, nil
 }
 
 // Will return the Label And the text Value of an input or dropdown form field.
