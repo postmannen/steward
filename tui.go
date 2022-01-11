@@ -60,7 +60,7 @@ func (s *tui) Start() error {
 		{name: "info", key: tcell.KeyF1, primitive: infoSlide(app)},
 	}
 
-	// Add on page for each slide.
+	// Add a page for each slide.
 	for i, v := range slides {
 		if i == 0 {
 			pages.AddPage(v.name, v.primitive, true, true)
@@ -104,18 +104,24 @@ func infoSlide(app *tview.Application) tview.Primitive {
 }
 
 func messageSlide(app *tview.Application) tview.Primitive {
+
+	app = tview.NewApplication()
+
+	// pageMessage is a struct for holding all the main forms and
+	// views used in the message slide, so we can easily reference
+	// them later in the code.
 	type pageMessage struct {
 		flex          *tview.Flex
 		msgInputForm  *tview.Form
 		msgOutputForm *tview.TextView
 		logForm       *tview.TextView
+		saveForm      *tview.Form
 	}
 
 	p := pageMessage{}
-	app = tview.NewApplication()
 
 	p.msgInputForm = tview.NewForm()
-	p.msgInputForm.SetBorder(true).SetTitle("Request values").SetTitleAlign(tview.AlignLeft)
+	p.msgInputForm.SetBorder(true).SetTitle("Message input").SetTitleAlign(tview.AlignLeft)
 
 	p.msgOutputForm = tview.NewTextView()
 	p.msgOutputForm.SetBorder(true).SetTitle("Message output").SetTitleAlign(tview.AlignLeft)
@@ -133,19 +139,29 @@ func messageSlide(app *tview.Application) tview.Primitive {
 		app.Draw()
 	})
 
+	p.saveForm = tview.NewForm()
+	p.saveForm.SetBorder(true).SetTitle("Save message").SetTitleAlign(tview.AlignLeft)
+
 	// Create a flex layout.
 	//
-	// First create the outer flex layout.
+	// Create the outer flex layout.
 	p.flex = tview.NewFlex().SetDirection(tview.FlexRow).
-		// Add the top windows with columns.
+		// Add a flex for the top windows with columns.
 		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
 			AddItem(p.msgInputForm, 0, 10, false).
-			AddItem(p.msgOutputForm, 0, 10, false),
+			// Add a new flex for splitting output form horizontally.
+			AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+				// Add the message output form.
+				AddItem(p.msgOutputForm, 0, 10, false).
+				// Add the save message form.
+				AddItem(p.saveForm, 0, 2, false),
+				0, 10, false),
 			0, 10, false).
-		// Add the bottom log window.
+		// Add a flex for the bottom log window.
 		AddItem(tview.NewFlex().
+			// Add the log form.
 			AddItem(p.logForm, 0, 2, false),
-			0, 2, false)
+			0, 1, false)
 
 	m := tuiMessage{}
 
@@ -263,6 +279,11 @@ func messageSlide(app *tview.Application) tview.Primitive {
 
 	}
 
+	// Variable to hold the last output created when the generate button have
+	// been pushed.
+	var lastGeneratedMessage []byte
+	var saveFileName string
+
 	// Add Buttons below the message fields. Like Generate and Exit.
 	p.msgInputForm.
 		// Add a generate button, which when pressed will loop through all the
@@ -270,7 +291,6 @@ func messageSlide(app *tview.Application) tview.Primitive {
 		// and at last write it to a file.
 		AddButton("generate to console", func() {
 			p.msgOutputForm.Clear()
-			fh := p.msgOutputForm
 
 			m := tuiMessage{}
 			// Loop trough all the form fields, check the value of each
@@ -355,7 +375,11 @@ func messageSlide(app *tview.Application) tview.Primitive {
 				fmt.Fprintf(p.logForm, "%v : error: jsonIndent failed: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
 			}
 
-			_, err = fh.Write(msgsIndented)
+			// Copy the message to a variable outside this scope so we can use
+			// the content for example if we want to save the message to file.
+			lastGeneratedMessage = msgsIndented
+
+			_, err = p.msgOutputForm.Write(msgsIndented)
 			if err != nil {
 				fmt.Fprintf(p.logForm, "%v : error: write to fh failed: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
 			}
@@ -367,6 +391,42 @@ func messageSlide(app *tview.Application) tview.Primitive {
 		})
 
 	app.SetFocus(p.msgInputForm)
+
+	p.saveForm.
+		AddInputField("FileName", "", 40, nil, func(text string) {
+			saveFileName = text
+		}).
+		AddButton("save", func() {
+			messageFolder := "messages"
+
+			if saveFileName == "" {
+				fmt.Fprintf(p.logForm, "error: missing filename\n")
+				return
+			}
+
+			if _, err := os.Stat(messageFolder); os.IsNotExist(err) {
+				err := os.MkdirAll(messageFolder, 0700)
+				if err != nil {
+					fmt.Fprintf(p.logForm, "error: failed to create messages folder: %v\n", err)
+					return
+				}
+			}
+
+			file := filepath.Join(messageFolder, saveFileName)
+			fh, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
+			if err != nil {
+				fmt.Fprintf(p.logForm, "error: opening file for writing: %v\n", err)
+				return
+			}
+			defer fh.Close()
+
+			_, err = fh.Write([]byte(lastGeneratedMessage))
+			if err != nil {
+				fmt.Fprintf(p.logForm, "error: writing message to file: %v\n", err)
+				return
+			}
+
+		})
 
 	return p.flex
 }
@@ -471,6 +531,9 @@ func getNodeNames(fileName string) ([]string, error) {
 	defer fh.Close()
 
 	nodes := []string{}
+	// append a blank node at the beginning of the slice, so the dropdown
+	// can be set to blank
+	nodes = append(nodes, "")
 
 	scanner := bufio.NewScanner(fh)
 	for scanner.Scan() {
