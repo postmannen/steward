@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -16,6 +17,9 @@ import (
 	"github.com/rivo/tview"
 )
 
+// ---------------------------------------------------------------------
+// Main structure
+// ---------------------------------------------------------------------
 type tui struct {
 }
 
@@ -34,12 +38,18 @@ func (s *tui) Start() error {
 	pages := tview.NewPages()
 
 	app := tview.NewApplication()
+
+	// Check if F key is pressed, and switch slide accordingly.
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyF1 {
-			pages.SwitchToPage("info")
+		switch event.Key() {
+		case tcell.KeyF1:
+			pages.SwitchToPage("console")
 			return nil
-		} else if event.Key() == tcell.KeyF2 {
+		case tcell.KeyF2:
 			pages.SwitchToPage("message")
+			return nil
+		case tcell.KeyF3:
+			pages.SwitchToPage("info")
 			return nil
 		}
 		return event
@@ -56,8 +66,9 @@ func (s *tui) Start() error {
 	// chronological order, so we can auto generate the info menu with it's
 	// corresponding F key based on the slice index+1.
 	slides := []slide{
+		{name: "console", key: tcell.KeyF1, primitive: console(app)},
 		{name: "message", key: tcell.KeyF2, primitive: messageSlide(app)},
-		{name: "info", key: tcell.KeyF1, primitive: infoSlide(app)},
+		{name: "info", key: tcell.KeyF3, primitive: infoSlide(app)},
 	}
 
 	// Add a page for each slide.
@@ -90,6 +101,10 @@ func (s *tui) Start() error {
 	return nil
 }
 
+// ---------------------------------------------------------------------
+// Slides
+// ---------------------------------------------------------------------
+
 func infoSlide(app *tview.Application) tview.Primitive {
 	flex := tview.NewFlex()
 	flex.SetTitle("info")
@@ -104,8 +119,6 @@ func infoSlide(app *tview.Application) tview.Primitive {
 }
 
 func messageSlide(app *tview.Application) tview.Primitive {
-
-	app = tview.NewApplication()
 
 	// pageMessage is a struct for holding all the main forms and
 	// views used in the message slide, so we can easily reference
@@ -426,10 +439,86 @@ func messageSlide(app *tview.Application) tview.Primitive {
 				return
 			}
 
+			fmt.Fprintf(p.logForm, "info: succesfully wrote message to file: %v\n", file)
+
 		})
 
 	return p.flex
 }
+
+func console(app *tview.Application) tview.Primitive {
+
+	// pageMessage is a struct for holding all the main forms and
+	// views used in the message slide, so we can easily reference
+	// them later in the code.
+	type pageMessage struct {
+		flex       *tview.Flex
+		selectForm *tview.Form
+		outputForm *tview.TextView
+	}
+
+	p := pageMessage{}
+
+	p.selectForm = tview.NewForm()
+	p.selectForm.SetBorder(true).SetTitle("select").SetTitleAlign(tview.AlignLeft)
+
+	p.outputForm = tview.NewTextView()
+	p.outputForm.SetBorder(true).SetTitle("output").SetTitleAlign(tview.AlignLeft)
+	p.outputForm.SetChangedFunc(func() {
+		// Will cause the log window to be redrawn as soon as
+		// new output are detected.
+		app.Draw()
+	})
+
+	// Create a flex layout.
+	//
+	// Create the outer flex layout.
+	p.flex = tview.NewFlex().SetDirection(tview.FlexRow).
+		// Add a flex for the top windows with columns.
+		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
+			AddItem(p.selectForm, 0, 3, false).
+
+			// Add the message output form.
+			AddItem(p.outputForm, 0, 10, false),
+
+			0, 10, false)
+		// Add a flex for the bottom log window.
+
+	// Add items.
+
+	// Create nodes dropdown field.
+	nodesList, err := getNodeNames("nodeslist.cfg")
+	if err != nil {
+		fmt.Fprintf(p.outputForm, "error: failed to open nodeslist.cfg file\n")
+	}
+
+	item := tview.NewDropDown()
+	item.SetLabelColor(tcell.ColorIndianRed)
+	item.SetLabel("nodes").SetOptions(nodesList, nil)
+	p.selectForm.AddFormItem(item)
+
+	// Create messages dropdown field.
+	fInfo, err := ioutil.ReadDir("messages")
+	if err != nil {
+		fmt.Fprintf(p.outputForm, "error: failed to read files from messages dir\n")
+	}
+
+	values := []string{}
+	for _, v := range fInfo {
+		values = append(values, v.Name())
+	}
+	p.selectForm.AddDropDown("method", values, 0, nil).SetItemPadding(1)
+
+	p.selectForm.AddButton("send message", func() {
+		// here ........
+	})
+
+	return p.flex
+}
+
+// ---------------------------------------------------------------------
+// Helper functions
+// ---------------------------------------------------------------------
 
 // stringToSlice will Split the comma separated string
 // into a and remove the start and end ampersand.
