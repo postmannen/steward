@@ -502,13 +502,22 @@ func console(app *tview.Application) tview.Primitive {
 	msgDropdown := tview.NewDropDown()
 	msgDropdown.SetLabelColor(tcell.ColorIndianRed)
 	msgDropdown.SetLabel("message").SetOptions(msgsValues, nil)
-	msgDropdown.SetFocusFunc(func() {
+	p.selectForm.AddFormItem(msgDropdown)
+
+	// Add button for manually updating dropdown menus.
+	p.selectForm.AddButton("update dropdown menus", func() {
+		nodesList, err := getNodeNames("nodeslist.cfg")
+		if err != nil {
+			fmt.Fprintf(p.outputForm, "error: failed to open nodeslist.cfg file\n")
+		}
+		nodesDropdown.SetLabel("nodes").SetOptions(nodesList, nil)
+
 		msgsValues := getMessageNames(p.outputForm)
 		msgDropdown.SetLabel("message").SetOptions(msgsValues, nil)
 	})
-	p.selectForm.AddFormItem(msgDropdown)
 
-	p.selectForm.AddButton("update dropdown menus", func() {
+	// Update the dropdown menus when the flex view gets focus.
+	p.flex.SetFocusFunc(func() {
 		nodesList, err := getNodeNames("nodeslist.cfg")
 		if err != nil {
 			fmt.Fprintf(p.outputForm, "error: failed to open nodeslist.cfg file\n")
@@ -638,7 +647,6 @@ func getNodeNames(fileName string) ([]string, error) {
 	}
 
 	filePath := filepath.Join(dirPath, fileName)
-	log.Printf(" * filepath : %v\n", filePath)
 
 	fh, err := os.Open(filePath)
 	if err != nil {
