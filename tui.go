@@ -492,22 +492,32 @@ func console(app *tview.Application) tview.Primitive {
 		fmt.Fprintf(p.outputForm, "error: failed to open nodeslist.cfg file\n")
 	}
 
-	item := tview.NewDropDown()
-	item.SetLabelColor(tcell.ColorIndianRed)
-	item.SetLabel("nodes").SetOptions(nodesList, nil)
-	p.selectForm.AddFormItem(item)
+	nodesDropdown := tview.NewDropDown()
+	nodesDropdown.SetLabelColor(tcell.ColorIndianRed)
+	nodesDropdown.SetLabel("nodes").SetOptions(nodesList, nil)
+	p.selectForm.AddFormItem(nodesDropdown)
 
-	// Create messages dropdown field.
-	fInfo, err := ioutil.ReadDir("messages")
-	if err != nil {
-		fmt.Fprintf(p.outputForm, "error: failed to read files from messages dir\n")
-	}
+	msgsValues := getMessageNames(p.outputForm)
 
-	values := []string{}
-	for _, v := range fInfo {
-		values = append(values, v.Name())
-	}
-	p.selectForm.AddDropDown("method", values, 0, nil).SetItemPadding(1)
+	msgDropdown := tview.NewDropDown()
+	msgDropdown.SetLabelColor(tcell.ColorIndianRed)
+	msgDropdown.SetLabel("message").SetOptions(msgsValues, nil)
+	msgDropdown.SetFocusFunc(func() {
+		msgsValues := getMessageNames(p.outputForm)
+		msgDropdown.SetLabel("message").SetOptions(msgsValues, nil)
+	})
+	p.selectForm.AddFormItem(msgDropdown)
+
+	p.selectForm.AddButton("update dropdown menus", func() {
+		nodesList, err := getNodeNames("nodeslist.cfg")
+		if err != nil {
+			fmt.Fprintf(p.outputForm, "error: failed to open nodeslist.cfg file\n")
+		}
+		nodesDropdown.SetLabel("nodes").SetOptions(nodesList, nil)
+
+		msgsValues := getMessageNames(p.outputForm)
+		msgDropdown.SetLabel("message").SetOptions(msgsValues, nil)
+	})
 
 	p.selectForm.AddButton("send message", func() {
 		// here ........
@@ -519,6 +529,23 @@ func console(app *tview.Application) tview.Primitive {
 // ---------------------------------------------------------------------
 // Helper functions
 // ---------------------------------------------------------------------
+
+func getMessageNames(outputForm *tview.TextView) []string {
+	// Create messages dropdown field.
+	fInfo, err := ioutil.ReadDir("messages")
+	if err != nil {
+		fmt.Fprintf(outputForm, "error: failed to read files from messages dir\n")
+	}
+
+	msgsValues := []string{}
+	msgsValues = append(msgsValues, "")
+
+	for _, v := range fInfo {
+		msgsValues = append(msgsValues, v.Name())
+	}
+
+	return msgsValues
+}
 
 // stringToSlice will Split the comma separated string
 // into a and remove the start and end ampersand.
