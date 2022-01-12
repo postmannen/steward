@@ -142,7 +142,7 @@ func NewServer(c *Configuration, version string) (*server, error) {
 		nodeName:      c.NodeName,
 		natsConn:      conn,
 		StewardSocket: stewardSocket,
-		processes:     newProcesses(ctx, metrics),
+		processes:     newProcesses(ctx, metrics, tuiClient),
 		newMessagesCh: make(chan []subjectAndMessage),
 		metrics:       metrics,
 		version:       version,
@@ -263,7 +263,7 @@ func (s *server) Start() {
 
 	if s.configuration.EnableTUI {
 		go func() {
-			err := s.tui.Start()
+			err := s.tui.Start(s.ctx, s.newMessagesCh)
 			if err != nil {
 				log.Printf("%v\n", err)
 				os.Exit(1)

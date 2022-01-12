@@ -2,6 +2,7 @@ package steward
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -21,10 +22,16 @@ import (
 // Main structure
 // ---------------------------------------------------------------------
 type tui struct {
+	toConsoleCh    chan []string
+	toRingbufferCh chan []subjectAndMessage
+	ctx            context.Context
 }
 
 func newTui() (*tui, error) {
-	s := tui{}
+	ch := make(chan []string)
+	s := tui{
+		toConsoleCh: ch,
+	}
 	return &s, nil
 }
 
@@ -34,7 +41,10 @@ type slide struct {
 	primitive tview.Primitive
 }
 
-func (s *tui) Start() error {
+func (t *tui) Start(ctx context.Context, toRingBufferCh chan []subjectAndMessage) error {
+	t.ctx = ctx
+	t.toRingbufferCh = toRingBufferCh
+
 	pages := tview.NewPages()
 
 	app := tview.NewApplication()
@@ -66,9 +76,9 @@ func (s *tui) Start() error {
 	// chronological order, so we can auto generate the info menu with it's
 	// corresponding F key based on the slice index+1.
 	slides := []slide{
-		{name: "console", key: tcell.KeyF1, primitive: console(app)},
-		{name: "message", key: tcell.KeyF2, primitive: messageSlide(app)},
-		{name: "info", key: tcell.KeyF3, primitive: infoSlide(app)},
+		{name: "console", key: tcell.KeyF1, primitive: t.console(app)},
+		{name: "message", key: tcell.KeyF2, primitive: t.messageSlide(app)},
+		{name: "info", key: tcell.KeyF3, primitive: t.infoSlide(app)},
 	}
 
 	// Add a page for each slide.
@@ -105,7 +115,7 @@ func (s *tui) Start() error {
 // Slides
 // ---------------------------------------------------------------------
 
-func infoSlide(app *tview.Application) tview.Primitive {
+func (t *tui) infoSlide(app *tview.Application) tview.Primitive {
 	flex := tview.NewFlex()
 	flex.SetTitle("info")
 	flex.SetBorder(true)
@@ -118,7 +128,7 @@ func infoSlide(app *tview.Application) tview.Primitive {
 	return flex
 }
 
-func messageSlide(app *tview.Application) tview.Primitive {
+func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 
 	// pageMessage is a struct for holding all the main forms and
 	// views used in the message slide, so we can easily reference
@@ -446,7 +456,7 @@ func messageSlide(app *tview.Application) tview.Primitive {
 	return p.flex
 }
 
-func console(app *tview.Application) tview.Primitive {
+func (t *tui) console(app *tview.Application) tview.Primitive {
 
 	// pageMessage is a struct for holding all the main forms and
 	// views used in the message slide, so we can easily reference
@@ -531,6 +541,20 @@ func console(app *tview.Application) tview.Primitive {
 	p.selectForm.AddButton("send message", func() {
 		// here ........
 	})
+
+	go func() {
+		for {
+			select {
+			case messageData := <-t.toConsoleCh:
+				for _, v := range messageData {
+					fmt.Fprintf(p.outputForm, "%v", v)
+				}
+			case <-t.ctx.Done():
+				log.Printf("info: stopped tui toConsole worker\n")
+				return
+			}
+		}
+	}()
 
 	return p.flex
 }

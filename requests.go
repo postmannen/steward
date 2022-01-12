@@ -86,6 +86,8 @@ const (
 	// The data field is a slice of strings where the first string
 	// value should be the command, and the following the arguments.
 	REQToConsole Method = "REQToConsole"
+	// REQTuiToConsole
+	REQTuiToConsole Method = "REQTuiToConsole"
 	// Send text logging to some host by appending the output to a
 	// file, if the file do not exist we create it.
 	// A file with the full subject+hostName will be created on
@@ -163,6 +165,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQToConsole: methodREQToConsole{
 				commandOrEvent: EventACK,
 			},
+			REQTuiToConsole: methodREQTuiToConsole{
+				commandOrEvent: EventACK,
+			},
 			REQToFileAppend: methodREQToFileAppend{
 				commandOrEvent: EventACK,
 			},
@@ -212,7 +217,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 // the Stew client for knowing what of the req types are generally
 // used as reply methods.
 func (m Method) GetReplyMethods() []Method {
-	rm := []Method{REQToConsole, REQToFile, REQToFileAppend, REQToSocket}
+	rm := []Method{REQToConsole, REQTuiToConsole, REQCliCommand, REQCliCommandCont, REQToFile, REQToFileAppend, REQToSocket}
 	return rm
 }
 
@@ -1285,10 +1290,33 @@ func (m methodREQToConsole) getKind() CommandOrEvent {
 func (m methodREQToConsole) handler(proc process, message Message, node string) ([]byte, error) {
 
 	for _, v := range message.Data {
-		fmt.Fprintf(os.Stdout, "%v", string(v))
+		fmt.Fprintf(os.Stdout, "%v", v)
 	}
 
 	fmt.Println()
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+// ---
+
+type methodREQTuiToConsole struct {
+	commandOrEvent CommandOrEvent
+}
+
+func (m methodREQTuiToConsole) getKind() CommandOrEvent {
+	return m.commandOrEvent
+}
+
+// Handler to write directly to console.
+func (m methodREQTuiToConsole) handler(proc process, message Message, node string) ([]byte, error) {
+
+	if proc.processes.tui.toConsoleCh != nil {
+		proc.processes.tui.toConsoleCh <- message.Data
+	} else {
+		log.Printf("error: no tui client started\n")
+	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
