@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -25,12 +26,14 @@ type tui struct {
 	toConsoleCh    chan []string
 	toRingbufferCh chan []subjectAndMessage
 	ctx            context.Context
+	nodeName       Node
 }
 
-func newTui() (*tui, error) {
+func newTui(nodeName Node) (*tui, error) {
 	ch := make(chan []string)
 	s := tui{
 		toConsoleCh: ch,
+		nodeName:    nodeName,
 	}
 	return &s, nil
 }
@@ -539,7 +542,59 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 	})
 
 	p.selectForm.AddButton("send message", func() {
-		// here ........
+		// here........
+
+		nr, msgFileName := msgDropdown.GetCurrentOption()
+		if nr < 1 {
+			fmt.Fprintf(p.outputForm, "info: please select a message from the dropdown: %v\n", msgFileName)
+			return
+		}
+
+		nr, toNode := nodesDropdown.GetCurrentOption()
+		if nr < 1 {
+			fmt.Fprintf(p.outputForm, "info: please select a message from the dropdown: %v\n", msgFileName)
+			return
+		}
+
+		// fmt.Fprintf(p.outputForm, "info: nr=%v, text=%v\n", nr, text)
+
+		filePath := filepath.Join("messages", msgFileName)
+		fh, err := os.Open(filePath)
+		if err != nil {
+			fmt.Fprintf(p.outputForm, "error: failed to open message file: %v\n", err)
+			return
+		}
+		defer fh.Close()
+
+		fileContent, err := io.ReadAll(fh)
+		if err != nil {
+			fmt.Fprintf(p.outputForm, "error: failed to read message file: %v\n", err)
+			return
+		}
+
+		var msgs []Message
+		err = json.Unmarshal(fileContent, &msgs)
+		if err != nil {
+			fmt.Fprintf(p.outputForm, "error: json unmarshal of file content failed: %v\n", err)
+			return
+		}
+
+		msg := msgs[0]
+		msg.FromNode = t.nodeName
+		msg.ToNode = Node(toNode)
+
+		// fmt.Fprintf(p.outputForm, "%#v\n", msg)
+
+		sam, err := newSubjectAndMessage(msg)
+		if err != nil {
+			fmt.Fprintf(p.outputForm, "error: newSubjectAndMessage failed: %v\n", err)
+			return
+		}
+
+		sams := []subjectAndMessage{sam}
+
+		t.toRingbufferCh <- sams
+
 	})
 
 	go func() {

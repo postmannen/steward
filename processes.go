@@ -150,6 +150,11 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQToConsole(proc)
 	}
 
+	// Start a subscriber for CLICommandReply messages
+	if proc.configuration.EnableTUI {
+		proc.startup.subREQTuiToConsole(proc)
+	}
+
 	if proc.configuration.StartPubREQHello != 0 {
 		proc.startup.pubREQHello(proc)
 	}
@@ -257,6 +262,13 @@ func (s startup) pubREQHello(p process) {
 func (s startup) subREQToConsole(p process) {
 	log.Printf("Starting Text To Console subscriber: %#v\n", p.node)
 	sub := newSubject(REQToConsole, string(p.node))
+	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, nil)
+	go proc.spawnWorker(p.processes, p.natsConn)
+}
+
+func (s startup) subREQTuiToConsole(p process) {
+	log.Printf("Starting Tui To Console subscriber: %#v\n", p.node)
+	sub := newSubject(REQTuiToConsole, string(p.node))
 	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, p.errorCh, processKindSubscriber, nil)
 	go proc.spawnWorker(p.processes, p.natsConn)
 }

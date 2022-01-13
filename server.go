@@ -127,7 +127,7 @@ func NewServer(c *Configuration, version string) (*server, error) {
 	// Create the tui client structure if enabled.
 	var tuiClient *tui
 	if c.EnableTUI {
-		tuiClient, err = newTui()
+		tuiClient, err = newTui(Node(c.NodeName))
 		if err != nil {
 			cancel()
 			return nil, err
@@ -472,13 +472,13 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 					break
 				} else {
 					// If a publisher process do not exist for the given subject, create it.
-					log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
+					// log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 					sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
 					proc := newProcess(s.ctx, s.metrics, s.natsConn, s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil)
 
 					proc.spawnWorker(s.processes, s.natsConn)
-					log.Printf("info: processNewMessages: new process started, subject: %v, processID: %v\n", subjName, proc.processID)
+					// log.Printf("info: processNewMessages: new process started, subject: %v, processID: %v\n", subjName, proc.processID)
 
 					// Now when the process is spawned we continue,
 					// and send the message to that new process.
