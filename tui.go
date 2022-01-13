@@ -147,6 +147,9 @@ func (t *tui) infoSlide(app *tview.Application) tview.Primitive {
 // it will create a "no case" field in the console, to easily
 // detect that a struct field are missing a defenition below.
 func drawMessageInputFields(p pageMessage, m tuiMessage) {
+	m.ToNodes = &[]Node{"ape", "katt", "hest"}
+	m.MethodArgs = &[]string{"bash", "-c", "echo /etc/hostname && cat /etc/hosts"}
+
 	mRefVal := reflect.ValueOf(m)
 
 	for i := 0; i < mRefVal.NumField(); i++ {
@@ -168,8 +171,26 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 			p.msgInputForm.AddFormItem(item)
 			//c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		case "ToNodes":
-			value := `"ship1","ship2","ship3"`
-			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
+			if m.ToNodes == nil {
+				p.msgInputForm.AddInputField(fieldName, "", 30, nil, nil)
+				continue
+			}
+
+			if len(*m.ToNodes) != 0 {
+				val1 := *m.ToNodes
+				var val2 string
+				for i, v := range val1 {
+					if i == 0 {
+						val2 = fmt.Sprintf("\"%v\"", v)
+						continue
+					}
+
+					val2 = fmt.Sprintf("%v,\"%v\"", val2, v)
+				}
+
+				p.msgInputForm.AddInputField(fieldName, val2, 30, nil, nil)
+			}
+
 		case "Method":
 			var m Method
 			ma := m.GetMethodsAvailable()
@@ -179,8 +200,26 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 			}
 			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 		case "MethodArgs":
-			value := ``
-			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
+			if m.MethodArgs == nil {
+				p.msgInputForm.AddInputField(fieldName, "", 30, nil, nil)
+				continue
+			}
+
+			if len(*m.MethodArgs) != 0 {
+				val1 := *m.MethodArgs
+				var val2 string
+				for i, v := range val1 {
+					if i == 0 {
+						val2 = fmt.Sprintf("\"%v\"", v)
+						continue
+					}
+
+					val2 = fmt.Sprintf("%v,\"%v\"", val2, v)
+				}
+
+				p.msgInputForm.AddInputField(fieldName, val2, 30, nil, nil)
+			}
+
 		case "ReplyMethod":
 			var m Method
 			rm := m.GetReplyMethods()
@@ -190,8 +229,25 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 			}
 			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 		case "ReplyMethodArgs":
-			value := ``
-			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
+			if m.ReplyMethodArgs == nil {
+				p.msgInputForm.AddInputField(fieldName, "", 30, nil, nil)
+				continue
+			}
+
+			if len(*m.ReplyMethodArgs) != 0 {
+				val1 := *m.ReplyMethodArgs
+				var val2 string
+				for i, v := range val1 {
+					if i == 0 {
+						val2 = fmt.Sprintf("\"%v\"", v)
+						continue
+					}
+
+					val2 = fmt.Sprintf("%v,\"%v\"", val2, v)
+				}
+
+				p.msgInputForm.AddInputField(fieldName, val2, 30, nil, nil)
+			}
 		case "ACKTimeout":
 			value := 30
 			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
@@ -339,7 +395,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 				case "ToNodes":
 					slice, err := stringToNode(value)
 					if err != nil {
-						fmt.Fprintf(p.logForm, "%v : error: ReplyMethodArgs missing or malformed format, should be \"arg0\",\"arg1\",\"arg2\", %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
+						fmt.Fprintf(p.logForm, "%v : error: ToNodes missing or malformed format, should be \"arg0\",\"arg1\",\"arg2\", %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
 						return
 					}
 
@@ -350,7 +406,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 				case "MethodArgs":
 					slice, err := stringToSlice(value)
 					if err != nil {
-						fmt.Fprintf(p.logForm, "%v : error: ReplyMethodArgs missing or malformed format, should be \"arg0\",\"arg1\",\"arg2\", %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
+						fmt.Fprintf(p.logForm, "%v : error: MethodArgs missing or malformed format, should be \"arg0\",\"arg1\",\"arg2\", %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
 						return
 					}
 
