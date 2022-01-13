@@ -131,80 +131,22 @@ func (t *tui) infoSlide(app *tview.Application) tview.Primitive {
 	return flex
 }
 
-func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
-
-	// pageMessage is a struct for holding all the main forms and
-	// views used in the message slide, so we can easily reference
-	// them later in the code.
-	type pageMessage struct {
-		flex          *tview.Flex
-		msgInputForm  *tview.Form
-		msgOutputForm *tview.TextView
-		logForm       *tview.TextView
-		saveForm      *tview.Form
-	}
-
-	p := pageMessage{}
-
-	p.msgInputForm = tview.NewForm()
-	p.msgInputForm.SetBorder(true).SetTitle("Message input").SetTitleAlign(tview.AlignLeft)
-
-	p.msgOutputForm = tview.NewTextView()
-	p.msgOutputForm.SetBorder(true).SetTitle("Message output").SetTitleAlign(tview.AlignLeft)
-	p.msgOutputForm.SetChangedFunc(func() {
-		// Will cause the log window to be redrawn as soon as
-		// new output are detected.
-		app.Draw()
-	})
-
-	p.logForm = tview.NewTextView()
-	p.logForm.SetBorder(true).SetTitle("Log/Status").SetTitleAlign(tview.AlignLeft)
-	p.logForm.SetChangedFunc(func() {
-		// Will cause the log window to be redrawn as soon as
-		// new output are detected.
-		app.Draw()
-	})
-
-	p.saveForm = tview.NewForm()
-	p.saveForm.SetBorder(true).SetTitle("Save message").SetTitleAlign(tview.AlignLeft)
-
-	// Create a flex layout.
-	//
-	// Create the outer flex layout.
-	p.flex = tview.NewFlex().SetDirection(tview.FlexRow).
-		// Add a flex for the top windows with columns.
-		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
-			AddItem(p.msgInputForm, 0, 10, false).
-			// Add a new flex for splitting output form horizontally.
-			AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
-				// Add the message output form.
-				AddItem(p.msgOutputForm, 0, 10, false).
-				// Add the save message form.
-				AddItem(p.saveForm, 0, 2, false),
-				0, 10, false),
-			0, 10, false).
-		// Add a flex for the bottom log window.
-		AddItem(tview.NewFlex().
-			// Add the log form.
-			AddItem(p.logForm, 0, 2, false),
-			0, 1, false)
-
-	m := tuiMessage{}
-
-	// Draw all the message input field with values on the screen.
-	//
-	// Loop trough all the fields of the Message struct, and create
-	// a an input field or dropdown selector for each field.
-	// If a field of the struct is not defined below, it will be
-	// created a "no defenition" element, so it we can easily spot
-	// Message fields who miss an item in the form.
-	//
-	// INFO: The reason that reflect are being used here is to have
-	// a simple way of detecting that we are creating form fields
-	// for all the fields in the struct. If we have forgot'en one
-	// it will create a "no case" field in the console, to easily
-	// detect that a struct field are missing a defenition below.
-
+// drawMessageInputFields
+//
+// Draw all the message input field with values on the screen.
+//
+// Loop trough all the fields of the Message struct, and create
+// a an input field or dropdown selector for each field.
+// If a field of the struct is not defined below, it will be
+// created a "no defenition" element, so it we can easily spot
+// Message fields who miss an item in the form.
+//
+// INFO: The reason that reflect are being used here is to have
+// a simple way of detecting that we are creating form fields
+// for all the fields in the struct. If we have forgot'en one
+// it will create a "no case" field in the console, to easily
+// detect that a struct field are missing a defenition below.
+func drawMessageInputFields(p pageMessage, m tuiMessage) {
 	mRefVal := reflect.ValueOf(m)
 
 	for i := 0; i < mRefVal.NumField(); i++ {
@@ -304,6 +246,71 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 		}
 
 	}
+
+}
+
+// pageMessage is a struct for holding all the main forms and
+// views used in the message slide, so we can easily reference
+// them later in the code.
+type pageMessage struct {
+	flex          *tview.Flex
+	msgInputForm  *tview.Form
+	msgOutputForm *tview.TextView
+	logForm       *tview.TextView
+	saveForm      *tview.Form
+}
+
+func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
+
+	p := pageMessage{}
+
+	p.msgInputForm = tview.NewForm()
+	p.msgInputForm.SetBorder(true).SetTitle("Message input").SetTitleAlign(tview.AlignLeft)
+
+	p.msgOutputForm = tview.NewTextView()
+	p.msgOutputForm.SetBorder(true).SetTitle("Message output").SetTitleAlign(tview.AlignLeft)
+	p.msgOutputForm.SetChangedFunc(func() {
+		// Will cause the log window to be redrawn as soon as
+		// new output are detected.
+		app.Draw()
+	})
+
+	p.logForm = tview.NewTextView()
+	p.logForm.SetBorder(true).SetTitle("Log/Status").SetTitleAlign(tview.AlignLeft)
+	p.logForm.SetChangedFunc(func() {
+		// Will cause the log window to be redrawn as soon as
+		// new output are detected.
+		app.Draw()
+	})
+
+	p.saveForm = tview.NewForm()
+	p.saveForm.SetBorder(true).SetTitle("Save message").SetTitleAlign(tview.AlignLeft)
+
+	// Create a flex layout.
+	//
+	// Create the outer flex layout.
+	p.flex = tview.NewFlex().SetDirection(tview.FlexRow).
+		// Add a flex for the top windows with columns.
+		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
+			AddItem(p.msgInputForm, 0, 10, false).
+			// Add a new flex for splitting output form horizontally.
+			AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+				// Add the message output form.
+				AddItem(p.msgOutputForm, 0, 10, false).
+				// Add the save message form.
+				AddItem(p.saveForm, 0, 2, false),
+				0, 10, false),
+			0, 10, false).
+		// Add a flex for the bottom log window.
+		AddItem(tview.NewFlex().
+			// Add the log form.
+			AddItem(p.logForm, 0, 2, false),
+			0, 1, false)
+
+	m := tuiMessage{}
+
+	// Draw all the message input field with values on the screen.
+	drawMessageInputFields(p, m)
 
 	// Variable to hold the last output created when the generate button have
 	// been pushed.
