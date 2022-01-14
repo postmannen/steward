@@ -147,8 +147,22 @@ func (t *tui) infoSlide(app *tview.Application) tview.Primitive {
 // it will create a "no case" field in the console, to easily
 // detect that a struct field are missing a defenition below.
 func drawMessageInputFields(p pageMessage, m tuiMessage) {
+	tmpToNode := Node("nisse")
+	m.ToNode = &tmpToNode
 	m.ToNodes = &[]Node{"ape", "katt", "hest"}
+	tmpMethod := Method("ape method")
+	m.Method = &tmpMethod
 	m.MethodArgs = &[]string{"bash", "-c", "echo /etc/hostname && cat /etc/hosts"}
+	tmpReplyMethod := Method("ape reply method")
+	m.ReplyMethod = &tmpReplyMethod
+	tmpACKTimeout := 100
+	m.ACKTimeout = &tmpACKTimeout
+	tmpRelayReplyMethod := Method("ape relay reply method")
+	tmpRelayViaNode := Node("nissefar")
+	m.RelayViaNode = &tmpRelayViaNode
+	m.RelayReplyMethod = &tmpRelayReplyMethod
+
+	fieldWidth := 0
 
 	mRefVal := reflect.ValueOf(m)
 
@@ -165,14 +179,17 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 				log.Printf("error: unable to open file: %v\n", err)
 			}
 
-			item := tview.NewDropDown()
-			item.SetLabelColor(tcell.ColorIndianRed)
-			item.SetLabel(fieldName).SetOptions(values, nil)
-			p.msgInputForm.AddFormItem(item)
+			if m.ToNode != nil && *m.ToNode != "" {
+				tmp := []string{string(*m.ToNode)}
+				tmp = append(tmp, values...)
+				values = tmp
+			}
+
+			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 			//c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		case "ToNodes":
 			if m.ToNodes == nil {
-				p.msgInputForm.AddInputField(fieldName, "", 30, nil, nil)
+				p.msgInputForm.AddInputField(fieldName, "", fieldWidth, nil, nil)
 				continue
 			}
 
@@ -188,20 +205,27 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 					val2 = fmt.Sprintf("%v,\"%v\"", val2, v)
 				}
 
-				p.msgInputForm.AddInputField(fieldName, val2, 30, nil, nil)
+				p.msgInputForm.AddInputField(fieldName, val2, fieldWidth, nil, nil)
 			}
 
 		case "Method":
-			var m Method
-			ma := m.GetMethodsAvailable()
+			var v Method
+			ma := v.GetMethodsAvailable()
 			values := []string{}
 			for k := range ma.Methodhandlers {
 				values = append(values, string(k))
 			}
+
+			if m.Method != nil && *m.Method != "" {
+				tmp := []string{string(*m.Method)}
+				tmp = append(tmp, values...)
+				values = tmp
+			}
+
 			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 		case "MethodArgs":
 			if m.MethodArgs == nil {
-				p.msgInputForm.AddInputField(fieldName, "", 30, nil, nil)
+				p.msgInputForm.AddInputField(fieldName, "", 0, nil, nil)
 				continue
 			}
 
@@ -217,20 +241,27 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 					val2 = fmt.Sprintf("%v,\"%v\"", val2, v)
 				}
 
-				p.msgInputForm.AddInputField(fieldName, val2, 30, nil, nil)
+				p.msgInputForm.AddInputField(fieldName, val2, 0, nil, nil)
 			}
 
 		case "ReplyMethod":
-			var m Method
-			rm := m.GetReplyMethods()
+			var v Method
+			rm := v.GetReplyMethods()
 			values := []string{}
 			for _, k := range rm {
 				values = append(values, string(k))
 			}
+
+			if m.ReplyMethod != nil && *m.ReplyMethod != "" {
+				tmp := []string{string(*m.ReplyMethod)}
+				tmp = append(tmp, values...)
+				values = tmp
+			}
+
 			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 		case "ReplyMethodArgs":
 			if m.ReplyMethodArgs == nil {
-				p.msgInputForm.AddInputField(fieldName, "", 30, nil, nil)
+				p.msgInputForm.AddInputField(fieldName, "", fieldWidth, nil, nil)
 				continue
 			}
 
@@ -246,32 +277,72 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 					val2 = fmt.Sprintf("%v,\"%v\"", val2, v)
 				}
 
-				p.msgInputForm.AddInputField(fieldName, val2, 30, nil, nil)
+				p.msgInputForm.AddInputField(fieldName, val2, fieldWidth, nil, nil)
 			}
 		case "ACKTimeout":
 			value := 30
-			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
+
+			if m.ACKTimeout != nil && *m.ACKTimeout != 0 {
+				value = *m.ACKTimeout
+			}
+
+			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
 		case "Retries":
 			value := 1
-			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
+
+			if m.Retries != nil && *m.Retries != 0 {
+				value = *m.Retries
+			}
+
+			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
 		case "ReplyACKTimeout":
 			value := 30
-			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
+
+			if m.ReplyACKTimeout != nil && *m.ReplyACKTimeout != 0 {
+				value = *m.ReplyACKTimeout
+			}
+
+			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
 		case "ReplyRetries":
 			value := 1
-			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
+
+			if m.ReplyRetries != nil && *m.ReplyRetries != 0 {
+				value = *m.ReplyRetries
+			}
+
+			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
 		case "MethodTimeout":
 			value := 120
-			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
+
+			if m.MethodTimeout != nil && *m.MethodTimeout != 0 {
+				value = *m.MethodTimeout
+			}
+
+			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
 		case "ReplyMethodTimeout":
 			value := 120
-			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), 30, validateInteger, nil)
+
+			if m.ReplyMethodTimeout != nil && *m.ReplyMethodTimeout != 0 {
+				value = *m.ReplyMethodTimeout
+			}
+
+			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
 		case "Directory":
 			value := "/some-dir/"
-			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
+
+			if m.Directory != nil && *m.Directory != "" {
+				value = *m.Directory
+			}
+
+			p.msgInputForm.AddInputField(fieldName, value, fieldWidth, nil, nil)
 		case "FileName":
 			value := ".log"
-			p.msgInputForm.AddInputField(fieldName, value, 30, nil, nil)
+
+			if m.FileName != nil && *m.FileName != "" {
+				value = *m.FileName
+			}
+
+			p.msgInputForm.AddInputField(fieldName, value, fieldWidth, nil, nil)
 		case "RelayViaNode":
 			// Get nodes from file.
 			values, err := getNodeNames("nodeslist.cfg")
@@ -280,18 +351,28 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 				os.Exit(1)
 			}
 
-			item := tview.NewDropDown()
-			item.SetLabelColor(tcell.ColorIndianRed)
-			item.SetLabel(fieldName).SetOptions(values, nil)
-			p.msgInputForm.AddFormItem(item)
+			if m.RelayViaNode != nil && *m.RelayViaNode != "" {
+				tmp := []string{string(*m.RelayViaNode)}
+				tmp = append(tmp, values...)
+				values = tmp
+			}
+
+			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 			//c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		case "RelayReplyMethod":
-			var m Method
-			rm := m.GetReplyMethods()
+			var v Method
+			rm := v.GetReplyMethods()
 			values := []string{}
 			for _, k := range rm {
 				values = append(values, string(k))
 			}
+
+			if m.RelayReplyMethod != nil && *m.RelayReplyMethod != "" {
+				tmp := []string{string(*m.RelayReplyMethod)}
+				tmp = append(tmp, values...)
+				values = tmp
+			}
+
 			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 		default:
 			// Add a no definition fields to the form if a a field within the
