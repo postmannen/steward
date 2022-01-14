@@ -23,6 +23,8 @@ import (
 // ---------------------------------------------------------------------
 // Main structure
 // ---------------------------------------------------------------------
+
+// tui holds general types used within the tui.
 type tui struct {
 	toConsoleCh    chan []string
 	toRingbufferCh chan []subjectAndMessage
@@ -30,6 +32,7 @@ type tui struct {
 	nodeName       Node
 }
 
+// newTui returns a new tui.
 func newTui(nodeName Node) (*tui, error) {
 	ch := make(chan []string)
 	s := tui{
@@ -39,12 +42,14 @@ func newTui(nodeName Node) (*tui, error) {
 	return &s, nil
 }
 
+// slide holds the information about a slide
 type slide struct {
 	name      string
 	key       tcell.Key
 	primitive tview.Primitive
 }
 
+// Start will start the tui.
 func (t *tui) Start(ctx context.Context, toRingBufferCh chan []subjectAndMessage) error {
 	t.ctx = ctx
 	t.toRingbufferCh = toRingBufferCh
@@ -383,6 +388,7 @@ type pageMessage struct {
 	saveForm      *tview.Form
 }
 
+// messageSlide is the main function for setting up the slides.
 func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 
 	p := pageMessage{}
@@ -803,6 +809,8 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 // Helper functions
 // ---------------------------------------------------------------------
 
+// getMessageNames will get the names of all the messages in
+// the messages folder.
 func getMessageNames(outputForm *tview.TextView) []string {
 	// Create messages dropdown field.
 	fInfo, err := ioutil.ReadDir("messages")
