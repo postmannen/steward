@@ -2,6 +2,7 @@ package steward
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -147,21 +148,6 @@ func (t *tui) infoSlide(app *tview.Application) tview.Primitive {
 // it will create a "no case" field in the console, to easily
 // detect that a struct field are missing a defenition below.
 func drawMessageInputFields(p pageMessage, m tuiMessage) {
-	tmpToNode := Node("nisse")
-	m.ToNode = &tmpToNode
-	m.ToNodes = &[]Node{"ape", "katt", "hest"}
-	tmpMethod := Method("ape method")
-	m.Method = &tmpMethod
-	m.MethodArgs = &[]string{"bash", "-c", "echo /etc/hostname && cat /etc/hosts"}
-	tmpReplyMethod := Method("ape reply method")
-	m.ReplyMethod = &tmpReplyMethod
-	tmpACKTimeout := 100
-	m.ACKTimeout = &tmpACKTimeout
-	tmpRelayReplyMethod := Method("ape relay reply method")
-	tmpRelayViaNode := Node("nissefar")
-	m.RelayViaNode = &tmpRelayViaNode
-	m.RelayReplyMethod = &tmpRelayReplyMethod
-
 	fieldWidth := 0
 
 	mRefVal := reflect.ValueOf(m)
@@ -446,6 +432,53 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 
 	m := tuiMessage{}
 
+	// ---
+
+	// Add a dropdown menu to select message files to use.
+
+	msgsValues := getMessageNames(p.logForm)
+
+	msgDropdown := tview.NewDropDown()
+	msgDropdown.SetLabelColor(tcell.ColorIndianRed)
+	msgDropdown.SetLabel("message").SetOptions(msgsValues, func(msgFileName string, index int) {
+		filePath := filepath.Join("messages", msgFileName)
+		fh, err := os.Open(filePath)
+		if err != nil {
+			fmt.Fprintf(p.logForm, "error: failed to open message file: %v\n", err)
+			return
+		}
+		defer fh.Close()
+
+		fileContent, err := io.ReadAll(fh)
+		if err != nil {
+			fmt.Fprintf(p.logForm, "error: failed to read message file: %v\n", err)
+			return
+		}
+
+		fmt.Fprintf(p.logForm, " * DEBUG: %v\n", string(fileContent))
+
+		var msgs []tuiMessage
+
+		err = json.Unmarshal(fileContent, &msgs)
+		if err != nil {
+			fmt.Fprintf(p.logForm, "error: json unmarshal of file content failed: %v\n", err)
+			return
+		}
+
+		m = msgs[0]
+		fmt.Fprintf(p.logForm, " * DEBUG: %v\n", m.MethodArgs)
+
+		// Clear the form.
+		p.msgInputForm.Clear(false)
+		// Add a self dropdown when selected since it is not a
+		// part of drawing the input fields function.
+		p.msgInputForm.AddFormItem(msgDropdown)
+		drawMessageInputFields(p, m)
+	})
+	p.msgInputForm.AddFormItem(msgDropdown)
+
+	// ---
+
 	// Draw all the message input field with values on the screen.
 	drawMessageInputFields(p, m)
 
@@ -470,6 +503,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 				label, value := getLabelAndValue(fi)
 
 				switch label {
+				case "message":
 				case "ToNode":
 					v := Node(value)
 					m.ToNode = &v
@@ -540,10 +574,17 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 			msgs := []tuiMessage{}
 			msgs = append(msgs, m)
 
-			msgsIndented, err := json.MarshalIndent(msgs, "", "    ")
+			// msgsIndented, err := json.MarshalIndent(msgs, "", "    ")
+			buf := new(bytes.Buffer)
+			enc := json.NewEncoder(buf)
+			enc.SetEscapeHTML(false)
+			enc.SetIndent("", "    ")
+			err := enc.Encode(msgs)
 			if err != nil {
 				fmt.Fprintf(p.logForm, "%v : error: jsonIndent failed: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
 			}
+
+			msgsIndented := buf.Bytes()
 
 			// Copy the message to a variable outside this scope so we can use
 			// the content for example if we want to save the message to file.
