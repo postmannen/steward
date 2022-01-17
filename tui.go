@@ -152,7 +152,7 @@ func (t *tui) infoSlide(app *tview.Application) tview.Primitive {
 // for all the fields in the struct. If we have forgot'en one
 // it will create a "no case" field in the console, to easily
 // detect that a struct field are missing a defenition below.
-func drawMessageInputFields(p pageMessage, m tuiMessage) {
+func drawMessageInputFields(p slideMessageEdit, m tuiMessage) {
 	fmt.Fprintf(p.logForm, " * drawing message input fields\n")
 
 	fieldWidth := 0
@@ -178,11 +178,11 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 				values = tmp
 			}
 
-			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
+			p.inputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 			//c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		case "ToNodes":
 			if m.ToNodes == nil {
-				p.msgInputForm.AddInputField(fieldName, "", fieldWidth, nil, nil)
+				p.inputForm.AddInputField(fieldName, "", fieldWidth, nil, nil)
 				continue
 			}
 
@@ -198,7 +198,7 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 					val2 = fmt.Sprintf("%v,\"%v\"", val2, v)
 				}
 
-				p.msgInputForm.AddInputField(fieldName, val2, fieldWidth, nil, nil)
+				p.inputForm.AddInputField(fieldName, val2, fieldWidth, nil, nil)
 			}
 
 		case "Method":
@@ -215,10 +215,10 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 				values = tmp
 			}
 
-			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
+			p.inputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 		case "MethodArgs":
 			if m.MethodArgs == nil {
-				p.msgInputForm.AddInputField(fieldName, "", 0, nil, nil)
+				p.inputForm.AddInputField(fieldName, "", 0, nil, nil)
 				continue
 			}
 
@@ -234,7 +234,7 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 					val2 = fmt.Sprintf("%v,\"%v\"", val2, v)
 				}
 
-				p.msgInputForm.AddInputField(fieldName, val2, 0, nil, nil)
+				p.inputForm.AddInputField(fieldName, val2, 0, nil, nil)
 			}
 
 		case "ReplyMethod":
@@ -251,10 +251,10 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 				values = tmp
 			}
 
-			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
+			p.inputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 		case "ReplyMethodArgs":
 			if m.ReplyMethodArgs == nil {
-				p.msgInputForm.AddInputField(fieldName, "", fieldWidth, nil, nil)
+				p.inputForm.AddInputField(fieldName, "", fieldWidth, nil, nil)
 				continue
 			}
 
@@ -270,7 +270,7 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 					val2 = fmt.Sprintf("%v,\"%v\"", val2, v)
 				}
 
-				p.msgInputForm.AddInputField(fieldName, val2, fieldWidth, nil, nil)
+				p.inputForm.AddInputField(fieldName, val2, fieldWidth, nil, nil)
 			}
 		case "ACKTimeout":
 			value := 30
@@ -279,7 +279,7 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 				value = *m.ACKTimeout
 			}
 
-			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
+			p.inputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
 		case "Retries":
 			value := 1
 
@@ -287,7 +287,7 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 				value = *m.Retries
 			}
 
-			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
+			p.inputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
 		case "ReplyACKTimeout":
 			value := 30
 
@@ -295,7 +295,7 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 				value = *m.ReplyACKTimeout
 			}
 
-			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
+			p.inputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
 		case "ReplyRetries":
 			value := 1
 
@@ -303,7 +303,7 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 				value = *m.ReplyRetries
 			}
 
-			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
+			p.inputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
 		case "MethodTimeout":
 			value := 120
 
@@ -311,7 +311,7 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 				value = *m.MethodTimeout
 			}
 
-			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
+			p.inputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
 		case "ReplyMethodTimeout":
 			value := 120
 
@@ -319,7 +319,7 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 				value = *m.ReplyMethodTimeout
 			}
 
-			p.msgInputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
+			p.inputForm.AddInputField(fieldName, fmt.Sprintf("%d", value), fieldWidth, validateInteger, nil)
 		case "Directory":
 			value := "/some-dir/"
 
@@ -327,7 +327,7 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 				value = *m.Directory
 			}
 
-			p.msgInputForm.AddInputField(fieldName, value, fieldWidth, nil, nil)
+			p.inputForm.AddInputField(fieldName, value, fieldWidth, nil, nil)
 		case "FileName":
 			value := ".log"
 
@@ -335,7 +335,7 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 				value = *m.FileName
 			}
 
-			p.msgInputForm.AddInputField(fieldName, value, fieldWidth, nil, nil)
+			p.inputForm.AddInputField(fieldName, value, fieldWidth, nil, nil)
 		case "RelayViaNode":
 			// Get nodes from file.
 			values, err := getNodeNames("nodeslist.cfg")
@@ -350,7 +350,7 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 				values = tmp
 			}
 
-			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
+			p.inputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 			//c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
 		case "RelayReplyMethod":
 			var v Method
@@ -366,13 +366,13 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 				values = tmp
 			}
 
-			p.msgInputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
+			p.inputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 		default:
 			// Add a no definition fields to the form if a a field within the
 			// struct were missing an action above, so we can easily detect
 			// if there is missing a case action for one of the struct fields.
 
-			p.msgInputForm.AddDropDown("error: no case for: "+fieldName, []string{"1", "2"}, 0, nil).SetItemPadding(1)
+			p.inputForm.AddDropDown("error: no case for: "+fieldName, []string{"1", "2"}, 0, nil).SetItemPadding(1)
 		}
 
 	}
@@ -382,25 +382,25 @@ func drawMessageInputFields(p pageMessage, m tuiMessage) {
 // pageMessage is a struct for holding all the main forms and
 // views used in the message slide, so we can easily reference
 // them later in the code.
-type pageMessage struct {
-	flex          *tview.Flex
-	msgInputForm  *tview.Form
-	msgOutputForm *tview.TextView
-	logForm       *tview.TextView
-	saveForm      *tview.Form
+type slideMessageEdit struct {
+	flex       *tview.Flex
+	inputForm  *tview.Form
+	outputForm *tview.TextView
+	logForm    *tview.TextView
+	saveForm   *tview.Form
 }
 
 // messageSlide is the main function for setting up the slides.
 func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 
-	p := pageMessage{}
+	p := slideMessageEdit{}
 
-	p.msgInputForm = tview.NewForm()
-	p.msgInputForm.SetBorder(true).SetTitle("Message input").SetTitleAlign(tview.AlignLeft)
+	p.inputForm = tview.NewForm()
+	p.inputForm.SetBorder(true).SetTitle("Message input").SetTitleAlign(tview.AlignLeft)
 
-	p.msgOutputForm = tview.NewTextView()
-	p.msgOutputForm.SetBorder(true).SetTitle("Message output").SetTitleAlign(tview.AlignLeft)
-	p.msgOutputForm.SetChangedFunc(func() {
+	p.outputForm = tview.NewTextView()
+	p.outputForm.SetBorder(true).SetTitle("Message output").SetTitleAlign(tview.AlignLeft)
+	p.outputForm.SetChangedFunc(func() {
 		// Will cause the log window to be redrawn as soon as
 		// new output are detected.
 		app.Draw()
@@ -423,11 +423,11 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 	p.flex = tview.NewFlex().SetDirection(tview.FlexRow).
 		// Add a flex for the top windows with columns.
 		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
-			AddItem(p.msgInputForm, 0, 10, false).
+			AddItem(p.inputForm, 0, 10, false).
 			// Add a new flex for splitting output form horizontally.
 			AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 				// Add the message output form.
-				AddItem(p.msgOutputForm, 0, 10, false).
+				AddItem(p.outputForm, 0, 10, false).
 				// Add the save message form.
 				AddItem(p.saveForm, 0, 2, false),
 				0, 10, false),
@@ -477,16 +477,16 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 		fmt.Fprintf(p.logForm, " * DEBUG: %v\n", m.MethodArgs)
 
 		// Clear the form.
-		p.msgInputForm.Clear(false)
+		p.inputForm.Clear(false)
 		// Add a self dropdown when selected since it is not a
 		// part of drawing the input fields function.
-		p.msgInputForm.AddFormItem(messageDropdown)
+		p.inputForm.AddFormItem(messageDropdown)
 		fmt.Fprintf(p.logForm, " * message read: %v\n", m)
 		drawMessageInputFields(p, m)
 	})
-	p.msgInputForm.AddFormItem(messageDropdown)
+	p.inputForm.AddFormItem(messageDropdown)
 
-	p.msgInputForm.AddButton("update message dropdown menu", func() {
+	p.inputForm.AddButton("update message dropdown menu", func() {
 		// TODO: for message message dropdown
 		fmt.Fprintf(p.logForm, " * Update button pushed\n")
 		messageMessageValues := getMessageNames(p.logForm)
@@ -504,18 +504,18 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 	var saveFileName string
 
 	// Add Buttons below the message fields. Like Generate and Exit.
-	p.msgInputForm.
+	p.inputForm.
 		// Add a generate button, which when pressed will loop through all the
 		// message form items, and if found fill the value into a msg struct,
 		// and at last write it to a file.
 		AddButton("generate to console", func() {
-			p.msgOutputForm.Clear()
+			p.outputForm.Clear()
 
 			m := tuiMessage{}
 			// Loop trough all the form fields, check the value of each
 			// form field, and add the value to m.
-			for i := 0; i < p.msgInputForm.GetFormItemCount(); i++ {
-				fi := p.msgInputForm.GetFormItem(i)
+			for i := 0; i < p.inputForm.GetFormItemCount(); i++ {
+				fi := p.inputForm.GetFormItem(i)
 				label, value := getLabelAndValue(fi)
 
 				switch label {
@@ -606,7 +606,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 			// the content for example if we want to save the message to file.
 			lastGeneratedMessage = msgsIndented
 
-			_, err = p.msgOutputForm.Write(msgsIndented)
+			_, err = p.outputForm.Write(msgsIndented)
 			if err != nil {
 				fmt.Fprintf(p.logForm, "%v : error: write to fh failed: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
 			}
@@ -617,7 +617,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 			app.Stop()
 		})
 
-	app.SetFocus(p.msgInputForm)
+	app.SetFocus(p.inputForm)
 
 	p.saveForm.
 		AddInputField("FileName", "", 40, nil, func(text string) {
@@ -669,13 +669,13 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 	// pageMessage is a struct for holding all the main forms and
 	// views used in the message slide, so we can easily reference
 	// them later in the code.
-	type pageMessage struct {
+	type slideConsole struct {
 		flex       *tview.Flex
 		selectForm *tview.Form
 		outputForm *tview.TextView
 	}
 
-	p := pageMessage{}
+	p := slideConsole{}
 
 	p.selectForm = tview.NewForm()
 	p.selectForm.SetBorder(true).SetTitle("select").SetTitleAlign(tview.AlignLeft)
