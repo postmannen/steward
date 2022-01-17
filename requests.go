@@ -1287,13 +1287,23 @@ func (m methodREQToConsole) getKind() CommandOrEvent {
 }
 
 // Handler to write directly to console.
+// This handler handles the writing to console both for TUI and shell clients.
 func (m methodREQToConsole) handler(proc process, message Message, node string) ([]byte, error) {
 
-	for _, v := range message.Data {
-		fmt.Fprintf(os.Stdout, "%v", v)
-	}
+	switch {
+	case proc.configuration.EnableTUI:
+		if proc.processes.tui.toConsoleCh != nil {
+			proc.processes.tui.toConsoleCh <- message.Data
+		} else {
+			log.Printf("error: no tui client started\n")
+		}
+	default:
+		for _, v := range message.Data {
+			fmt.Fprintf(os.Stdout, "%v", v)
+		}
 
-	fmt.Println()
+		fmt.Println()
+	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
@@ -1310,6 +1320,7 @@ func (m methodREQTuiToConsole) getKind() CommandOrEvent {
 }
 
 // Handler to write directly to console.
+// DEPRECATED
 func (m methodREQTuiToConsole) handler(proc process, message Message, node string) ([]byte, error) {
 
 	if proc.processes.tui.toConsoleCh != nil {

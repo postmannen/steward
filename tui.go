@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -950,6 +951,8 @@ func getNodeNames(fileName string) ([]string, error) {
 		node := scanner.Text()
 		nodes = append(nodes, node)
 	}
+
+	sort.Strings(nodes)
 
 	return nodes, nil
 }
