@@ -153,6 +153,8 @@ func (t *tui) infoSlide(app *tview.Application) tview.Primitive {
 // it will create a "no case" field in the console, to easily
 // detect that a struct field are missing a defenition below.
 func drawMessageInputFields(p pageMessage, m tuiMessage) {
+	fmt.Fprintf(p.logForm, " * drawing message input fields\n")
+
 	fieldWidth := 0
 
 	mRefVal := reflect.ValueOf(m)
@@ -434,7 +436,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 		AddItem(tview.NewFlex().
 			// Add the log form.
 			AddItem(p.logForm, 0, 2, false),
-			0, 1, false)
+			0, 2, false)
 
 	m := tuiMessage{}
 
@@ -444,9 +446,9 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 
 	msgsValues := getMessageNames(p.logForm)
 
-	msgDropdown := tview.NewDropDown()
-	msgDropdown.SetLabelColor(tcell.ColorIndianRed)
-	msgDropdown.SetLabel("message").SetOptions(msgsValues, func(msgFileName string, index int) {
+	messageDropdown := tview.NewDropDown()
+	messageDropdown.SetLabelColor(tcell.ColorIndianRed)
+	messageDropdown.SetLabel("message").SetOptions(msgsValues, func(msgFileName string, index int) {
 		filePath := filepath.Join("messages", msgFileName)
 		fh, err := os.Open(filePath)
 		if err != nil {
@@ -478,10 +480,18 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 		p.msgInputForm.Clear(false)
 		// Add a self dropdown when selected since it is not a
 		// part of drawing the input fields function.
-		p.msgInputForm.AddFormItem(msgDropdown)
+		p.msgInputForm.AddFormItem(messageDropdown)
+		fmt.Fprintf(p.logForm, " * message read: %v\n", m)
 		drawMessageInputFields(p, m)
 	})
-	p.msgInputForm.AddFormItem(msgDropdown)
+	p.msgInputForm.AddFormItem(messageDropdown)
+
+	p.msgInputForm.AddButton("update message dropdown menu", func() {
+		// TODO: for message message dropdown
+		fmt.Fprintf(p.logForm, " * Update button pushed\n")
+		messageMessageValues := getMessageNames(p.logForm)
+		messageDropdown.SetLabel("message").SetOptions(messageMessageValues, nil)
+	})
 
 	// ---
 
@@ -645,6 +655,10 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 
 			fmt.Fprintf(p.logForm, "info: succesfully wrote message to file: %v\n", file)
 
+			// update the select message dropdown
+			messageMessageValues := getMessageNames(p.logForm)
+			messageDropdown.SetLabel("message").SetOptions(messageMessageValues, nil)
+
 		})
 
 	return p.flex
@@ -703,10 +717,10 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 
 	msgsValues := getMessageNames(p.outputForm)
 
-	msgDropdown := tview.NewDropDown()
-	msgDropdown.SetLabelColor(tcell.ColorIndianRed)
-	msgDropdown.SetLabel("message").SetOptions(msgsValues, nil)
-	p.selectForm.AddFormItem(msgDropdown)
+	messageDropdown := tview.NewDropDown()
+	messageDropdown.SetLabelColor(tcell.ColorIndianRed)
+	messageDropdown.SetLabel("message").SetOptions(msgsValues, nil)
+	p.selectForm.AddFormItem(messageDropdown)
 
 	// Add button for manually updating dropdown menus.
 	p.selectForm.AddButton("update dropdown menus", func() {
@@ -717,7 +731,7 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 		nodesDropdown.SetLabel("nodes").SetOptions(nodesList, nil)
 
 		msgsValues := getMessageNames(p.outputForm)
-		msgDropdown.SetLabel("message").SetOptions(msgsValues, nil)
+		messageDropdown.SetLabel("message").SetOptions(msgsValues, nil)
 	})
 
 	// Update the dropdown menus when the flex view gets focus.
@@ -728,14 +742,14 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 		}
 		nodesDropdown.SetLabel("nodes").SetOptions(nodesList, nil)
 
-		msgsValues := getMessageNames(p.outputForm)
-		msgDropdown.SetLabel("message").SetOptions(msgsValues, nil)
+		messageValues := getMessageNames(p.outputForm)
+		messageDropdown.SetLabel("message").SetOptions(messageValues, nil)
 	})
 
 	p.selectForm.AddButton("send message", func() {
 		// here........
 
-		nr, msgFileName := msgDropdown.GetCurrentOption()
+		nr, msgFileName := messageDropdown.GetCurrentOption()
 		if nr < 1 {
 			fmt.Fprintf(p.outputForm, "info: please select a message from the dropdown: %v\n", msgFileName)
 			return
