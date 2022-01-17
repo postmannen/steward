@@ -485,6 +485,8 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 		fmt.Fprintf(p.logForm, " * message read: %v\n", m)
 		drawMessageInputFields(p, m)
 	})
+	// Clear the form.
+	p.inputForm.Clear(false)
 	p.inputForm.AddFormItem(messageDropdown)
 
 	p.inputForm.AddButton("update message dropdown menu", func() {
@@ -618,7 +620,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 			app.Stop()
 		})
 
-	app.SetFocus(p.inputForm)
+	// app.SetFocus(p.inputForm)
 
 	p.saveForm.
 		AddInputField("FileName", "", 40, nil, func(text string) {
