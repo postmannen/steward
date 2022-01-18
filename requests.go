@@ -217,7 +217,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 // the Stew client for knowing what of the req types are generally
 // used as reply methods.
 func (m Method) GetReplyMethods() []Method {
-	rm := []Method{REQToConsole, REQTuiToConsole, REQCliCommand, REQCliCommandCont, REQToFile, REQToFileAppend, REQToSocket}
+	rm := []Method{REQToConsole, REQTuiToConsole, REQCliCommand, REQCliCommandCont, REQToFile, REQToFileAppend, REQToSocket, REQNone}
 	return rm
 }
 
