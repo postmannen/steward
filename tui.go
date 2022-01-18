@@ -448,7 +448,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 		AddItem(tview.NewFlex().
 			// Add the log form.
 			AddItem(p.logForm, 0, 1, false),
-			0, 2, false)
+			0, 1, false)
 
 	m := tuiMessage{}
 
@@ -687,6 +687,8 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 
 	p.selectForm = tview.NewForm()
 	p.selectForm.SetBorder(true).SetTitle("select").SetTitleAlign(tview.AlignLeft)
+	p.selectForm.SetButtonsAlign(tview.AlignCenter)
+	p.selectForm.SetHorizontal(false)
 
 	p.outputForm = tview.NewTextView()
 	p.outputForm.SetBorder(true).SetTitle("output").SetTitleAlign(tview.AlignLeft)
@@ -731,7 +733,7 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 	p.selectForm.AddFormItem(messageDropdown)
 
 	// Add button for manually updating dropdown menus.
-	p.selectForm.AddButton("update dropdown menus", func() {
+	p.selectForm.AddButton("update", func() {
 		nodesList, err := getNodeNames("nodeslist.cfg")
 		if err != nil {
 			fmt.Fprintf(p.outputForm, "error: failed to open nodeslist.cfg file\n")
@@ -740,6 +742,11 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 
 		msgsValues := getMessageNames(p.outputForm)
 		messageDropdown.SetLabel("message").SetOptions(msgsValues, nil)
+	})
+
+	// Add button for clearing the output form.
+	p.selectForm.AddButton("clear", func() {
+		p.outputForm.Clear()
 	})
 
 	// Update the dropdown menus when the flex view gets focus.
