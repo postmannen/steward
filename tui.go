@@ -136,7 +136,7 @@ func (t *tui) infoSlide(app *tview.Application) tview.Primitive {
 	textView := tview.NewTextView()
 	flex.AddItem(textView, 0, 1, false)
 
-	fmt.Fprintf(textView, "Information page for Stew.\n")
+	fmt.Fprintf(textView, "Information page for Steward TUI.\n")
 
 	return flex
 }
@@ -157,8 +157,6 @@ func (t *tui) infoSlide(app *tview.Application) tview.Primitive {
 // it will create a "no case" field in the console, to easily
 // detect that a struct field are missing a defenition below.
 func drawMessageInputFields(p slideMessageEdit, m tuiMessage) {
-	fmt.Fprintf(p.logForm, " * drawing message input fields\n")
-
 	fieldWidth := 0
 
 	mRefVal := reflect.ValueOf(m)
@@ -434,7 +432,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 			// Add a new flex for splitting output form horizontally.
 			AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 				// Add the select message form.
-				AddItem(p.selectMessage, 0, 2, false).
+				AddItem(p.selectMessage, 5, 0, false).
 				// Add the input message form.
 				AddItem(p.inputForm, 0, 10, false),
 				0, 10, false).
@@ -449,7 +447,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 		// Add a flex for the bottom log window.
 		AddItem(tview.NewFlex().
 			// Add the log form.
-			AddItem(p.logForm, 0, 2, false),
+			AddItem(p.logForm, 0, 1, false),
 			0, 2, false)
 
 	m := tuiMessage{}
@@ -460,9 +458,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 
 	msgsValues := getMessageNames(p.logForm)
 
-	messageDropdown := tview.NewDropDown()
-	messageDropdown.SetLabelColor(tcell.ColorIndianRed)
-	messageDropdown.SetLabel("message").SetOptions(msgsValues, func(msgFileName string, index int) {
+	msgDropdownFunc := func(msgFileName string, index int) {
 		filePath := filepath.Join("messages", msgFileName)
 		fh, err := os.Open(filePath)
 		if err != nil {
@@ -477,8 +473,6 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 			return
 		}
 
-		fmt.Fprintf(p.logForm, " * DEBUG: %v\n", string(fileContent))
-
 		var msgs []tuiMessage
 
 		err = json.Unmarshal(fileContent, &msgs)
@@ -488,31 +482,28 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 		}
 
 		m = msgs[0]
-		fmt.Fprintf(p.logForm, " * DEBUG: %v\n", m.MethodArgs)
 
 		// Clear the form.
 		p.inputForm.Clear(false)
-		// Add a self dropdown when selected since it is not a
-		// part of drawing the input fields function.
-		p.selectMessage.AddFormItem(messageDropdown)
-		fmt.Fprintf(p.logForm, " * message read: %v\n", m)
+
+		// Draw all the message input field with values on the screen.
+		p.inputForm.Clear(false)
 		drawMessageInputFields(p, m)
-	})
+	}
+
+	messageDropdown := tview.NewDropDown()
+	messageDropdown.SetLabelColor(tcell.ColorIndianRed)
+	messageDropdown.SetLabel("message").SetOptions(msgsValues, msgDropdownFunc)
 	// Clear the form.
 	p.inputForm.Clear(false)
 	p.selectMessage.AddFormItem(messageDropdown)
 
 	p.inputForm.AddButton("update message dropdown menu", func() {
-		// TODO: for message message dropdown
-		fmt.Fprintf(p.logForm, " * Update button pushed\n")
 		messageMessageValues := getMessageNames(p.logForm)
-		messageDropdown.SetLabel("message").SetOptions(messageMessageValues, nil)
+		messageDropdown.SetLabel("message").SetOptions(messageMessageValues, msgDropdownFunc)
 	})
 
 	// ---
-
-	// Draw all the message input field with values on the screen.
-	drawMessageInputFields(p, m)
 
 	// Variable to hold the last output created when the generate button have
 	// been pushed.
@@ -673,7 +664,8 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 
 			// update the select message dropdown
 			messageMessageValues := getMessageNames(p.logForm)
-			messageDropdown.SetLabel("message").SetOptions(messageMessageValues, nil)
+			messageDropdown.SetLabel("message").SetOptions(messageMessageValues, msgDropdownFunc)
+			p.inputForm.Clear(false)
 
 		})
 
@@ -776,8 +768,6 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 			fmt.Fprintf(p.outputForm, "info: please select a message from the dropdown: %v\n", msgFileName)
 			return
 		}
-
-		// fmt.Fprintf(p.outputForm, "info: nr=%v, text=%v\n", nr, text)
 
 		filePath := filepath.Join("messages", msgFileName)
 		fh, err := os.Open(filePath)
