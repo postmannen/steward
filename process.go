@@ -46,7 +46,7 @@ type process struct {
 	// within a process we can send errors to the error kernel,
 	// the EK desided what to do, and sends the action about
 	// what to do back to the process where the error came from.
-	errorCh     chan errProcess
+	errorCh     chan errorEvent
 	processKind processKind
 	// Who are we allowed to receive from ?
 	// allowedReceivers map[Node]struct{}
@@ -86,7 +86,7 @@ type process struct {
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func newProcess(ctx context.Context, metrics *metrics, natsConn *nats.Conn, processes *processes, toRingbufferCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, errCh chan errProcess, processKind processKind, procFunc func() error) process {
+func newProcess(ctx context.Context, metrics *metrics, natsConn *nats.Conn, processes *processes, toRingbufferCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, errCh chan errorEvent, processKind processKind, procFunc func() error) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
 	processes.lastProcessID++
 
@@ -713,8 +713,8 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		if err != nil {
 			// Create an error type which also creates a channel which the
 			// errorKernel will send back the action about what to do.
-			ep := errProcess{
-				infoText:      "process failed",
+			ep := errorEvent{
+				//errorType:     logOnly,
 				process:       p,
 				message:       m,
 				errorActionCh: make(chan errorAction),
