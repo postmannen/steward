@@ -387,17 +387,21 @@ func drawMessageInputFields(p slideMessageEdit, m tuiMessage) {
 // views used in the message slide, so we can easily reference
 // them later in the code.
 type slideMessageEdit struct {
-	flex       *tview.Flex
-	inputForm  *tview.Form
-	outputForm *tview.TextView
-	logForm    *tview.TextView
-	saveForm   *tview.Form
+	flex          *tview.Flex
+	selectMessage *tview.Form
+	inputForm     *tview.Form
+	outputForm    *tview.TextView
+	logForm       *tview.TextView
+	saveForm      *tview.Form
 }
 
 // messageSlide is the main function for setting up the slides.
 func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 
 	p := slideMessageEdit{}
+
+	p.selectMessage = tview.NewForm()
+	p.selectMessage.SetBorder(true).SetTitle("Select Message").SetTitleAlign(tview.AlignLeft)
 
 	p.inputForm = tview.NewForm()
 	p.inputForm.SetBorder(true).SetTitle("Message input").SetTitleAlign(tview.AlignLeft)
@@ -427,7 +431,13 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 	p.flex = tview.NewFlex().SetDirection(tview.FlexRow).
 		// Add a flex for the top windows with columns.
 		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
-			AddItem(p.inputForm, 0, 10, false).
+			// Add a new flex for splitting output form horizontally.
+			AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+				// Add the select message form.
+				AddItem(p.selectMessage, 0, 2, false).
+				// Add the input message form.
+				AddItem(p.inputForm, 0, 10, false),
+				0, 10, false).
 			// Add a new flex for splitting output form horizontally.
 			AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 				// Add the message output form.
@@ -484,13 +494,13 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 		p.inputForm.Clear(false)
 		// Add a self dropdown when selected since it is not a
 		// part of drawing the input fields function.
-		p.inputForm.AddFormItem(messageDropdown)
+		p.selectMessage.AddFormItem(messageDropdown)
 		fmt.Fprintf(p.logForm, " * message read: %v\n", m)
 		drawMessageInputFields(p, m)
 	})
 	// Clear the form.
 	p.inputForm.Clear(false)
-	p.inputForm.AddFormItem(messageDropdown)
+	p.selectMessage.AddFormItem(messageDropdown)
 
 	p.inputForm.AddButton("update message dropdown menu", func() {
 		// TODO: for message message dropdown
