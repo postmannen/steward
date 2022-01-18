@@ -71,6 +71,9 @@ func (t *tui) Start(ctx context.Context, toRingBufferCh chan []subjectAndMessage
 		case tcell.KeyF3:
 			pages.SwitchToPage("info")
 			return nil
+		case tcell.KeyCtrlC:
+			app.Stop()
+			log.Printf("info: detected ctrl+c, stopping TUI\n")
 		}
 		return event
 	})
