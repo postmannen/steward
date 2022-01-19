@@ -69,6 +69,12 @@ func NewServer(c *Configuration, version string) (*server, error) {
 	// Set up the main background context.
 	ctx, cancel := context.WithCancel(context.Background())
 
+	metrics := newMetrics(c.PromHostAndPort)
+
+	// Start the error kernel that will do all the error handling
+	// that is not done within a process.
+	errorKernel := newErrorKernel(ctx, metrics)
+
 	var opt nats.Option
 
 	if c.RootCAPath != "" {
@@ -122,8 +128,6 @@ func NewServer(c *Configuration, version string) (*server, error) {
 		}
 	}
 
-	metrics := newMetrics(c.PromHostAndPort)
-
 	// Create the tui client structure if enabled.
 	var tuiClient *tui
 	if c.EnableTUI {
@@ -142,11 +146,12 @@ func NewServer(c *Configuration, version string) (*server, error) {
 		nodeName:      c.NodeName,
 		natsConn:      conn,
 		StewardSocket: stewardSocket,
-		processes:     newProcesses(ctx, metrics, tuiClient),
+		processes:     newProcesses(ctx, metrics, tuiClient, errorKernel),
 		newMessagesCh: make(chan []subjectAndMessage),
 		metrics:       metrics,
 		version:       version,
 		tui:           tuiClient,
+		errorKernel:   errorKernel,
 	}
 
 	// Create the default data folder for where subscribers should
@@ -205,10 +210,6 @@ func createSocket(socketFolder string, socketFileName string) (net.Listener, err
 func (s *server) Start() {
 	log.Printf("Starting steward, version=%+v\n", s.version)
 	s.metrics.promVersion.With(prometheus.Labels{"version": string(s.version)})
-
-	// Start the error kernel that will do all the error handling
-	// that is not done within a process.
-	s.errorKernel = newErrorKernel(s.ctx)
 
 	go func() {
 		err := s.errorKernel.start(s.newMessagesCh)

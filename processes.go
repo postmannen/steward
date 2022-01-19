@@ -28,14 +28,17 @@ type processes struct {
 	wg sync.WaitGroup
 	// tui
 	tui *tui
+	// errorKernel
+	errorKernel *errorKernel
 }
 
 // newProcesses will prepare and return a *processes which
 // is map containing all the currently running processes.
-func newProcesses(ctx context.Context, metrics *metrics, tui *tui) *processes {
+func newProcesses(ctx context.Context, metrics *metrics, tui *tui, errorKernel *errorKernel) *processes {
 	p := processes{
-		active: *newProcsMap(),
-		tui:    tui,
+		active:      *newProcsMap(),
+		tui:         tui,
+		errorKernel: errorKernel,
 	}
 
 	// Prepare the parent context for the subscribers.

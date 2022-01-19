@@ -25,18 +25,20 @@ type errorKernel struct {
 	// errorCh is used to report errors from a process
 	errorCh chan errorEvent
 
-	ctx    context.Context
-	cancel context.CancelFunc
+	ctx     context.Context
+	cancel  context.CancelFunc
+	metrics *metrics
 }
 
 // newErrorKernel will initialize and return a new error kernel
-func newErrorKernel(ctx context.Context) *errorKernel {
+func newErrorKernel(ctx context.Context, m *metrics) *errorKernel {
 	ctxC, cancel := context.WithCancel(ctx)
 
 	return &errorKernel{
 		errorCh: make(chan errorEvent, 2),
 		ctx:     ctxC,
 		cancel:  cancel,
+		metrics: m,
 	}
 }
 
@@ -100,7 +102,7 @@ func (e *errorKernel) start(newMessagesCh chan<- []subjectAndMessage) error {
 
 				newMessagesCh <- []subjectAndMessage{sam}
 
-				//metrics.promErrorMessagesSentTotal.Inc()
+				e.metrics.promErrorMessagesSentTotal.Inc()
 			}()
 
 		default:
