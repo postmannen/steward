@@ -50,13 +50,15 @@ type ringBuffer struct {
 	// newMessagesCh from *server are also implemented here,
 	// so the ringbuffer can send it's error messages the same
 	// way as all messages are handled.
-	newMessagesCh chan []subjectAndMessage
-	metrics       *metrics
-	configuration *Configuration
+	newMessagesCh  chan []subjectAndMessage
+	metrics        *metrics
+	configuration  *Configuration
+	errorKernel    *errorKernel
+	processInitial process
 }
 
 // newringBuffer returns a push/pop storage for values.
-func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configuration, size int, dbFileName string, nodeName Node, newMessagesCh chan []subjectAndMessage, samValueBucket string, indexValueBucket string) *ringBuffer {
+func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configuration, size int, dbFileName string, nodeName Node, newMessagesCh chan []subjectAndMessage, samValueBucket string, indexValueBucket string, errorKernel *errorKernel, processInitial process) *ringBuffer {
 
 	// Check if socket folder exists, if not create it
 	if _, err := os.Stat(configuration.DatabaseFolder); os.IsNotExist(err) {
@@ -87,6 +89,7 @@ func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configu
 		newMessagesCh:    newMessagesCh,
 		metrics:          metrics,
 		configuration:    configuration,
+		processInitial:   processInitial,
 	}
 }
 
@@ -163,7 +166,7 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 			// Check if the command or event exists in commandOrEvent.go
 			if !coeAvailable.CheckIfExists(v.CommandOrEvent, v.Subject) {
 				er := fmt.Errorf("error: fillBuffer: the event or command type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v, where given: coe=%v, with subject=%v", coeAvailableValues, v.CommandOrEvent, v.Subject)
-				sendErrorLogMessage(r.configuration, r.metrics, r.newMessagesCh, Node(r.nodeName), er)
+				r.errorKernel.errSend(r.processInitial, Message{}, er)
 
 				// if it was not a valid value, we jump back up, and
 				// continue the range iteration.
@@ -199,14 +202,14 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 			js, err := json.Marshal(samV)
 			if err != nil {
 				er := fmt.Errorf("error:fillBuffer: json marshaling: %v", err)
-				sendErrorLogMessage(r.configuration, r.metrics, r.newMessagesCh, Node(r.nodeName), er)
+				r.errorKernel.errSend(r.processInitial, Message{}, er)
 			}
 
 			// Store the incomming message in key/value store
 			err = r.dbUpdate(r.db, r.samValueBucket, strconv.Itoa(dbID), js)
 			if err != nil {
 				er := fmt.Errorf("error: dbUpdate samValue failed: %v", err)
-				sendErrorLogMessage(r.configuration, r.metrics, r.newMessagesCh, Node(r.nodeName), er)
+				r.errorKernel.errSend(r.processInitial, Message{}, er)
 
 			}
 

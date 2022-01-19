@@ -182,7 +182,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 				err := p.procFunc(p.ctx, p.procFuncCh)
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
-					sendErrorLogMessage(p.configuration, procs.metrics, p.toRingbufferCh, Node(p.node), er)
+					p.processes.errorKernel.errSend(p, Message{}, er)
 				}
 			}()
 		}
@@ -205,7 +205,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 				err := p.procFunc(p.ctx, p.procFuncCh)
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
-					sendErrorLogMessage(p.configuration, procs.metrics, p.toRingbufferCh, Node(p.node), er)
+					p.processes.errorKernel.errSend(p, Message{}, er)
 				}
 			}()
 		}
@@ -371,7 +371,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			if err != nil {
 				er := fmt.Errorf("error: zstd decoding failed: %v", err)
 				log.Printf("%v\n", er)
-				sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
+				p.processes.errorKernel.errSend(p, Message{}, er)
 				zr.Close()
 				return
 			}
@@ -410,7 +410,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			if err != nil {
 				er := fmt.Errorf("error: cbor decoding failed: %v", err)
 				log.Printf("%v\n", er)
-				sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
+				p.processes.errorKernel.errSend(p, message, er)
 				return
 			}
 		default: // Deaults to gob if no match was found.
@@ -421,7 +421,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			if err != nil {
 				er := fmt.Errorf("error: gob decoding failed: %v", err)
 				log.Printf("%v\n", er)
-				sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
+				p.processes.errorKernel.errSend(p, message, er)
 				return
 			}
 		}
@@ -435,7 +435,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		if err != nil {
 			er := fmt.Errorf("error: gob decoding failed: %v", err)
 			log.Printf("%v\n", er)
-			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
+			p.processes.errorKernel.errSend(p, message, er)
 			return
 		}
 	}
@@ -458,7 +458,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		switch {
 		case msgCopy.PreviousMessage.RelayReplyMethod == "":
 			er := fmt.Errorf("error: subscriberHandler: no PreviousMessage.RelayReplyMethod found, defaulting to the reply method of previous message: %v ", msgCopy)
-			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, p.node, er)
+			p.processes.errorKernel.errSend(p, message, er)
 			log.Printf("%v\n", er)
 			msgCopy.Method = msgCopy.PreviousMessage.ReplyMethod
 		case msgCopy.PreviousMessage.RelayReplyMethod != "":
@@ -474,7 +474,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		sam, err := newSubjectAndMessage(msgCopy)
 		if err != nil {
 			er := fmt.Errorf("error: subscriberHandler: newSubjectAndMessage : %v, message copy: %v", err, msgCopy)
-			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, p.node, er)
+			p.processes.errorKernel.errSend(p, message, er)
 			log.Printf("%v\n", er)
 		}
 
@@ -503,7 +503,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		mh, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: no such method type: %v", p.subject.CommandOrEvent)
-			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
+			p.processes.errorKernel.errSend(p, message, er)
 		}
 
 		var out []byte
@@ -514,7 +514,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 
 		if err != nil {
 			er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
+			p.processes.errorKernel.errSend(p, message, er)
 		}
 
 		// Send a confirmation message back to the publisher
@@ -525,14 +525,14 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		mf, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.CommandOrEvent)
-			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
+			p.processes.errorKernel.errSend(p, message, er)
 		}
 
 		_, err := mf.handler(p, message, thisNode)
 
 		if err != nil {
 			er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-			sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(thisNode), er)
+			p.processes.errorKernel.errSend(p, message, er)
 		}
 
 	default:
@@ -618,7 +618,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 			b, err := cbor.Marshal(m)
 			if err != nil {
 				er := fmt.Errorf("error: messageDeliverNats: cbor encode message failed: %v", err)
-				sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(p.node), er)
+				p.processes.errorKernel.errSend(p, m, er)
 				continue
 			}
 
@@ -631,7 +631,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 			err = gobEnc.Encode(m)
 			if err != nil {
 				er := fmt.Errorf("error: messageDeliverNats: gob encode message failed: %v", err)
-				sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(p.node), er)
+				p.processes.errorKernel.errSend(p, m, er)
 				continue
 			}
 
@@ -682,7 +682,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 
 			// We only wan't to send the error message to errorCentral once.
 			once.Do(func() {
-				sendErrorLogMessage(p.configuration, p.processes.metrics, p.toRingbufferCh, Node(p.node), er)
+				p.processes.errorKernel.errSend(p, m, er)
 			})
 
 			natsMsgPayloadCompressed = natsMsgPayloadSerialized

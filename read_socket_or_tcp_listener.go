@@ -20,7 +20,7 @@ func (s *server) readSocket() {
 		conn, err := s.StewardSocket.Accept()
 		if err != nil {
 			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
-			sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
+			s.processes.errorKernel.errSend(s.processInitial, Message{}, er)
 		}
 
 		go func(conn net.Conn) {
@@ -33,7 +33,7 @@ func (s *server) readSocket() {
 				_, err = conn.Read(b)
 				if err != nil && err != io.EOF {
 					er := fmt.Errorf("error: failed to read data from tcp listener: %v", err)
-					sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
+					s.processes.errorKernel.errSend(s.processInitial, Message{}, er)
 					return
 				}
 
@@ -50,7 +50,7 @@ func (s *server) readSocket() {
 			sams, err := s.convertBytesToSAMs(readBytes)
 			if err != nil {
 				er := fmt.Errorf("error: malformed json received on socket: %v", err)
-				sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
+				s.processes.errorKernel.errSend(s.processInitial, Message{}, er)
 				return
 			}
 
@@ -84,7 +84,7 @@ func (s *server) readTCPListener() {
 		conn, err := ln.Accept()
 		if err != nil {
 			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
-			sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
+			s.processes.errorKernel.errSend(s.processInitial, Message{}, er)
 			continue
 		}
 
@@ -98,7 +98,7 @@ func (s *server) readTCPListener() {
 				_, err = conn.Read(b)
 				if err != nil && err != io.EOF {
 					er := fmt.Errorf("error: failed to read data from tcp listener: %v", err)
-					sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
+					s.processes.errorKernel.errSend(s.processInitial, Message{}, er)
 					return
 				}
 
@@ -115,7 +115,7 @@ func (s *server) readTCPListener() {
 			sam, err := s.convertBytesToSAMs(readBytes)
 			if err != nil {
 				er := fmt.Errorf("error: malformed json received on tcp listener: %v", err)
-				sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
+				s.processes.errorKernel.errSend(s.processInitial, Message{}, er)
 				return
 			}
 
@@ -142,7 +142,7 @@ func (s *server) readHTTPlistenerHandler(w http.ResponseWriter, r *http.Request)
 		_, err := r.Body.Read(b)
 		if err != nil && err != io.EOF {
 			er := fmt.Errorf("error: failed to read data from tcp listener: %v", err)
-			sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
+			s.processes.errorKernel.errSend(s.processInitial, Message{}, er)
 			return
 		}
 
@@ -159,7 +159,7 @@ func (s *server) readHTTPlistenerHandler(w http.ResponseWriter, r *http.Request)
 	sam, err := s.convertBytesToSAMs(readBytes)
 	if err != nil {
 		er := fmt.Errorf("error: malformed json received on HTTPListener: %v", err)
-		sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
+		s.processes.errorKernel.errSend(s.processInitial, Message{}, er)
 		return
 	}
 
@@ -226,7 +226,7 @@ func (s *server) convertBytesToSAMs(b []byte) ([]subjectAndMessage, error) {
 	for _, m := range MsgSlice {
 		sm, err := newSubjectAndMessage(m)
 		if err != nil {
-			sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), err)
+			s.processes.errorKernel.errSend(s.processInitial, m, err)
 			log.Printf("error: jsonFromFileData: %v\n", err)
 			continue
 		}
@@ -270,7 +270,7 @@ func (s *server) checkMessageToNodes(MsgSlice []Message) []Message {
 		// the slice since it is not valid.
 		default:
 			er := fmt.Errorf("error: no toNode or toNodes where specified in the message, dropping message: %v", v)
-			sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
+			s.processes.errorKernel.errSend(s.processInitial, v, er)
 			continue
 		}
 	}

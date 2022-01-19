@@ -62,6 +62,8 @@ type server struct {
 	version string
 	// tui client
 	tui *tui
+	// processInitial is the initial process that all other processes are tied to.
+	processInitial process
 }
 
 // newServer will prepare and return a server type
@@ -249,9 +251,9 @@ func (s *server) Start() {
 	//
 	// NB: The context of the initial process are set in processes.Start.
 	sub := newSubject(REQInitial, s.nodeName)
-	p := newProcess(context.TODO(), s.metrics, s.natsConn, s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, "", nil)
+	s.processInitial = newProcess(context.TODO(), s.metrics, s.natsConn, s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, "", nil)
 	// Start all wanted subscriber processes.
-	s.processes.Start(p)
+	s.processes.Start(s.processInitial)
 
 	time.Sleep(time.Second * 1)
 	s.processes.printProcessesMap()
@@ -308,14 +310,16 @@ func (s *server) Stop() {
 
 // sendErrorMessage will put the error message directly on the channel that is
 // read by the nats publishing functions.
-func sendErrorLogMessage(conf *Configuration, metrics *metrics, newMessagesCh chan<- []subjectAndMessage, FromNode Node, theError error) {
-	// NB: Adding log statement here for more visuality during development.
-	log.Printf("%v\n", theError)
-	sam := createErrorMsgContent(conf, FromNode, theError)
-	newMessagesCh <- []subjectAndMessage{sam}
-
-	metrics.promErrorMessagesSentTotal.Inc()
-}
+//
+// Deprecated.
+// func sendErrorLogMessage(conf *Configuration, metrics *metrics, newMessagesCh chan<- []subjectAndMessage, FromNode Node, theError error) {
+// 	// NB: Adding log statement here for more visuality during development.
+// 	log.Printf("%v\n", theError)
+// 	sam := createErrorMsgContent(conf, FromNode, theError)
+// 	newMessagesCh <- []subjectAndMessage{sam}
+//
+// 	metrics.promErrorMessagesSentTotal.Inc()
+// }
 
 // sendInfoMessage will put the error message directly on the channel that is
 // read by the nats publishing functions.
@@ -374,7 +378,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 	const samValueBucket string = "samValueBucket"
 	const indexValueBucket string = "indexValueBucket"
 
-	s.ringBuffer = newringBuffer(s.ctx, s.metrics, s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.newMessagesCh, samValueBucket, indexValueBucket)
+	s.ringBuffer = newringBuffer(s.ctx, s.metrics, s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.newMessagesCh, samValueBucket, indexValueBucket, s.errorKernel, s.processInitial)
 
 	ringBufferInCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValueAndDelivered)
@@ -411,12 +415,12 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 			// Check if the format of the message is correct.
 			if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
 				er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
-				sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
+				s.errorKernel.errSend(s.processInitial, sam.Message, er)
 				continue
 			}
 			if !coeAvailable.CheckIfExists(sam.Subject.CommandOrEvent, sam.Subject) {
 				er := fmt.Errorf("error: routeMessagesToProcess: the command or event do not exist, message dropped: %v", sam.Message.Method)
-				sendErrorLogMessage(s.configuration, s.metrics, s.newMessagesCh, Node(s.nodeName), er)
+				s.errorKernel.errSend(s.processInitial, sam.Message, er)
 
 				continue
 			}
