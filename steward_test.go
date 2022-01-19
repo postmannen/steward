@@ -54,6 +54,7 @@ func TestStewardServer(t *testing.T) {
 		CentralNodeName:       "central",
 		DefaultMessageRetries: 1,
 		DefaultMessageTimeout: 3,
+		EnableSocket:          true,
 
 		StartSubREQCliCommand:     true,
 		StartSubREQCliCommandCont: true,
