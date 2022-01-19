@@ -76,7 +76,7 @@ func (e *errorKernel) start(newMessagesCh chan<- []subjectAndMessage) error {
 		// the operator....or other ?
 		switch errEvent.errorType {
 
-		case sendError:
+		case errSend:
 			// Just log the error, and don't use the errorAction channel
 			// so the process who sent the error don't have to wait for
 			// the error message to be sent before it can continue.
@@ -89,7 +89,7 @@ func (e *errorKernel) start(newMessagesCh chan<- []subjectAndMessage) error {
 					Message: Message{
 						Directory:  "errorLog",
 						ToNode:     "errorCentral",
-						FromNode:   "apekatt",
+						FromNode:   errEvent.process.node,
 						FileName:   "error.log",
 						Data:       []string{er},
 						Method:     REQErrorLog,
@@ -128,6 +128,40 @@ func (e *errorKernel) stop() {
 	e.cancel()
 }
 
+// sendError will just send an error to the errorCentral.
+func (e *errorKernel) errSend(proc process, msg Message, err error) {
+	ev := errorEvent{
+		//errorType:     logOnly,
+		process: proc,
+		message: msg,
+		// We don't want to create any actions when just
+		// sending errors.
+		// errorActionCh: make(chan errorAction),
+	}
+
+	e.errorCh <- ev
+}
+
+// sendError will just send an error to the errorCentral.
+//
+// NB: This func is for now only an idea for how to implement
+// the usage of actions and might not make any sense at all later....
+func (e *errorKernel) errWithAction(proc process, msg Message, err error) chan errorAction {
+	// Create the channel where to receive what action to do.
+	errAction := make(chan errorAction)
+
+	ev := errorEvent{
+		//errorType:     logOnly,
+		process:       proc,
+		message:       msg,
+		errorActionCh: errAction,
+	}
+
+	e.errorCh <- ev
+
+	return errAction
+}
+
 // errorAction is used to tell the process who sent the error
 // what it shall do. The process who sends the error will
 // have to block and wait for the response on the errorActionCh.
@@ -151,7 +185,9 @@ const (
 type errorType int
 
 const (
-	sendError errorType = iota
+	// errSend will just send the content of the error to the
+	// central error logger.
+	errSend errorType = iota
 )
 
 type errorEvent struct {
