@@ -78,7 +78,8 @@ func (e *errorKernel) start(newMessagesCh chan<- []subjectAndMessage) error {
 		// the operator....or other ?
 		switch errEvent.errorType {
 
-		case errSend:
+		case errTypeSendToCentralErrorLogger:
+			fmt.Printf(" * case errTypeSend\n")
 			// Just log the error, and don't use the errorAction channel
 			// so the process who sent the error don't have to wait for
 			// the error message to be sent before it can continue.
@@ -105,7 +106,10 @@ func (e *errorKernel) start(newMessagesCh chan<- []subjectAndMessage) error {
 				e.metrics.promErrorMessagesSentTotal.Inc()
 			}()
 
-		default:
+		case errTypeWithAction:
+			// TODO: Look into how to implement error actions.
+
+			fmt.Printf(" * case errTypeWithAction\n")
 			// Just print the error, and tell the process to continue. The
 			// process who sent the error should block andwait for receiving
 			// an errActionContinue message.
@@ -122,6 +126,9 @@ func (e *errorKernel) start(newMessagesCh chan<- []subjectAndMessage) error {
 					return
 				}
 			}()
+
+		default:
+			fmt.Printf(" * case default\n")
 		}
 	}
 }
@@ -133,9 +140,10 @@ func (e *errorKernel) stop() {
 // sendError will just send an error to the errorCentral.
 func (e *errorKernel) errSend(proc process, msg Message, err error) {
 	ev := errorEvent{
-		//errorType:     logOnly,
-		process: proc,
-		message: msg,
+		err:       err,
+		errorType: errTypeSendToCentralErrorLogger,
+		process:   proc,
+		message:   msg,
 		// We don't want to create any actions when just
 		// sending errors.
 		// errorActionCh: make(chan errorAction),
@@ -144,10 +152,9 @@ func (e *errorKernel) errSend(proc process, msg Message, err error) {
 	e.errorCh <- ev
 }
 
-// sendError will just send an error to the errorCentral.
+// errWithAction
 //
-// NB: This func is for now only an idea for how to implement
-// the usage of actions and might not make any sense at all later....
+// TODO: Look into how to implement error actions.
 func (e *errorKernel) errWithAction(proc process, msg Message, err error) chan errorAction {
 	// Create the channel where to receive what action to do.
 	errAction := make(chan errorAction)
@@ -189,7 +196,8 @@ type errorType int
 const (
 	// errSend will just send the content of the error to the
 	// central error logger.
-	errSend errorType = iota
+	errTypeSendToCentralErrorLogger errorType = iota
+	errTypeWithAction               errorType = iota
 )
 
 type errorEvent struct {
