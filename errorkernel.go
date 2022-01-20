@@ -76,12 +76,18 @@ func (e *errorKernel) start(newMessagesCh chan<- []subjectAndMessage) error {
 		switch errEvent.errorType {
 
 		case errTypeSendToCentralErrorLogger:
-			fmt.Printf(" * case errTypeSend\n")
 			// Just log the error by creating a message and send it
 			// to the errorCentral log server.
+
 			go func() {
-				// Add time stamp
-				er := fmt.Sprintf("%v, node: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), errEvent.process.node, errEvent.err)
+				var er string
+				// Decide what extra information to add to the error message.
+				switch {
+				case errEvent.message.RelayFromNode != "":
+					er = fmt.Sprintf("%v, node: %v, relayFromNode: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), errEvent.process.node, errEvent.message.RelayFromNode, errEvent.err)
+				default:
+					er = fmt.Sprintf("%v, node: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), errEvent.process.node, errEvent.err)
+				}
 
 				sam := subjectAndMessage{
 					Subject: newSubject(REQErrorLog, "errorCentral"),
@@ -107,8 +113,6 @@ func (e *errorKernel) start(newMessagesCh chan<- []subjectAndMessage) error {
 			// Just print the error, and tell the process to continue. The
 			// process who sent the error should block and wait for receiving
 			// an errActionContinue message.
-
-			fmt.Printf(" * case errTypeWithAction\n")
 
 			go func() {
 				log.Printf("TESTING, we received and error from the process, but we're telling the process back to continue\n")
