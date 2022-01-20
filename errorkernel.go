@@ -67,22 +67,18 @@ func (e *errorKernel) start(newMessagesCh chan<- []subjectAndMessage) error {
 		// Check the type of the error to decide what to do.
 		//
 		// We should be able to handle each error individually and
-		// also concurrently, so the handler is started in it's
+		// also concurrently, so each handler is started in it's
 		// own go routine
 		//
 		// Here we should check the severity of the error,
 		// and also possibly the the error-state of the process
-		// that fails, so we can decide if we should stop and
-		// start a new process to replace to old one, or if we
-		// should just kill the process and send message back to
-		// the operator....or other ?
+		// that fails.
 		switch errEvent.errorType {
 
 		case errTypeSendToCentralErrorLogger:
 			fmt.Printf(" * case errTypeSend\n")
-			// Just log the error, and don't use the errorAction channel
-			// so the process who sent the error don't have to wait for
-			// the error message to be sent before it can continue.
+			// Just log the error by creating a message and send it
+			// to the errorCentral log server.
 			go func() {
 				// Add time stamp
 				er := fmt.Sprintf("%v, node: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), errEvent.process.node, errEvent.err)
@@ -101,30 +97,34 @@ func (e *errorKernel) start(newMessagesCh chan<- []subjectAndMessage) error {
 					},
 				}
 
+				// Put the message on the channel to the ringbuffer.
 				newMessagesCh <- []subjectAndMessage{sam}
 
 				e.metrics.promErrorMessagesSentTotal.Inc()
 			}()
 
 		case errTypeWithAction:
-			// TODO: Look into how to implement error actions.
-
-			fmt.Printf(" * case errTypeWithAction\n")
 			// Just print the error, and tell the process to continue. The
-			// process who sent the error should block andwait for receiving
+			// process who sent the error should block and wait for receiving
 			// an errActionContinue message.
 
-			go func() {
+			fmt.Printf(" * case errTypeWithAction\n")
 
-				// log.Printf("*** error_kernel: %#v, type=%T\n", er, er)
+			go func() {
 				log.Printf("TESTING, we received and error from the process, but we're telling the process back to continue\n")
 
+				// Send a message back to where the errWithAction function
+				// was called on the errorActionCh so the caller can decide
+				// what to do based on the response.
 				select {
 				case errEvent.errorActionCh <- errActionContinue:
 				case <-e.ctx.Done():
 					log.Printf("info: errorKernel: got ctx.Done, will stop waiting for errAction\n")
 					return
 				}
+
+				// We also want to log the error.
+				e.errSend(errEvent.process, errEvent.message, errEvent.err)
 			}()
 
 		default:
@@ -154,21 +154,31 @@ func (e *errorKernel) errSend(proc process, msg Message, err error) {
 
 // errWithAction
 //
-// TODO: Look into how to implement error actions.
+// TODO: Needs more work.
+//
+// Will prepare an errorEvent to send to the errorKernel that
+// contains a channel of type errorAction.
+// The errorActionCh are returned from the function and are used
+// to create a channel between where this function is called and
+// the go routine started in the errorKernel. From where the
+// function was called we can read the channel for a response
+// given from the errorKernel, and then decide what to do based
+// on the errorAction value.
 func (e *errorKernel) errWithAction(proc process, msg Message, err error) chan errorAction {
 	// Create the channel where to receive what action to do.
-	errAction := make(chan errorAction)
+	errActionCh := make(chan errorAction)
 
 	ev := errorEvent{
-		//errorType:     logOnly,
+		err:           err,
+		errorType:     errTypeWithAction,
 		process:       proc,
 		message:       msg,
-		errorActionCh: errAction,
+		errorActionCh: errActionCh,
 	}
 
 	e.errorCh <- ev
 
-	return errAction
+	return errActionCh
 }
 
 // errorAction is used to tell the process who sent the error
@@ -177,17 +187,12 @@ func (e *errorKernel) errWithAction(proc process, msg Message, err error) chan e
 type errorAction int
 
 const (
-	// errActionJustPrint should just print the error,
-	// and the worker process should continue.
+	// errActionContinue is ment to be used when the a process
+	// can just continue without takig any special care.
 	errActionContinue errorAction = iota
-	// errActionKillAndSpawnNew should log the error,
+	// errActionKill should log the error,
 	// stop the current worker process, and spawn a new.
 	errActionKill errorAction = iota
-	// errActionKillAndDie should log the error, stop the
-	// current worker process, and send a message back to
-	// the master supervisor that it was unable to complete
-	// the action of the current message. The error message
-	// should contain a copy of the original message.
 )
 
 // errorType
