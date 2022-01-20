@@ -40,17 +40,12 @@ type server struct {
 	processes *processes
 	// The name of the node
 	nodeName string
-	// newMessagesCh are the channel where new messages to be handled
-	// by the system are put. So if any process want's to send a message
-	// like an error message you just put the message on the newMessagesCh.
+	// ringBufferBulkInCh are the channel where new messages in a bulk
+	// format (slice) are put into the system.
 	//
 	// In general the ringbuffer will read this
-	// channel for messages to put on the buffer.
-	//
-	// Example:
-	// A message is read from the socket, then put on the newMessagesCh
-	// and then put on the ringbuffer.
-	newMessagesCh chan []subjectAndMessage
+	// channel, unfold each slice, and put single messages on the buffer.
+	ringBufferBulkInCh chan []subjectAndMessage
 	// errorKernel is doing all the error handling like what to do if
 	// an error occurs.
 	errorKernel *errorKernel
@@ -142,18 +137,18 @@ func NewServer(c *Configuration, version string) (*server, error) {
 	}
 
 	s := &server{
-		ctx:           ctx,
-		cancel:        cancel,
-		configuration: c,
-		nodeName:      c.NodeName,
-		natsConn:      conn,
-		StewardSocket: stewardSocket,
-		processes:     newProcesses(ctx, metrics, tuiClient, errorKernel),
-		newMessagesCh: make(chan []subjectAndMessage),
-		metrics:       metrics,
-		version:       version,
-		tui:           tuiClient,
-		errorKernel:   errorKernel,
+		ctx:                ctx,
+		cancel:             cancel,
+		configuration:      c,
+		nodeName:           c.NodeName,
+		natsConn:           conn,
+		StewardSocket:      stewardSocket,
+		processes:          newProcesses(ctx, metrics, tuiClient, errorKernel),
+		ringBufferBulkInCh: make(chan []subjectAndMessage),
+		metrics:            metrics,
+		version:            version,
+		tui:                tuiClient,
+		errorKernel:        errorKernel,
 	}
 
 	// Create the default data folder for where subscribers should
@@ -214,7 +209,7 @@ func (s *server) Start() {
 	s.metrics.promVersion.With(prometheus.Labels{"version": string(s.version)})
 
 	go func() {
-		err := s.errorKernel.start(s.newMessagesCh)
+		err := s.errorKernel.start(s.ringBufferBulkInCh)
 		if err != nil {
 			log.Printf("%v\n", err)
 		}
@@ -251,7 +246,7 @@ func (s *server) Start() {
 	//
 	// NB: The context of the initial process are set in processes.Start.
 	sub := newSubject(REQInitial, s.nodeName)
-	s.processInitial = newProcess(context.TODO(), s.metrics, s.natsConn, s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, "", nil)
+	s.processInitial = newProcess(context.TODO(), s.metrics, s.natsConn, s.processes, s.ringBufferBulkInCh, s.configuration, sub, s.errorKernel.errorCh, "", nil)
 	// Start all wanted subscriber processes.
 	s.processes.Start(s.processInitial)
 
@@ -266,7 +261,7 @@ func (s *server) Start() {
 
 	if s.configuration.EnableTUI {
 		go func() {
-			err := s.tui.Start(s.ctx, s.newMessagesCh)
+			err := s.tui.Start(s.ctx, s.ringBufferBulkInCh)
 			if err != nil {
 				log.Printf("%v\n", err)
 				os.Exit(1)
@@ -308,26 +303,13 @@ func (s *server) Stop() {
 
 }
 
-// sendErrorMessage will put the error message directly on the channel that is
-// read by the nats publishing functions.
-//
-// Deprecated.
-// func sendErrorLogMessage(conf *Configuration, metrics *metrics, newMessagesCh chan<- []subjectAndMessage, FromNode Node, theError error) {
-// 	// NB: Adding log statement here for more visuality during development.
-// 	log.Printf("%v\n", theError)
-// 	sam := createErrorMsgContent(conf, FromNode, theError)
-// 	newMessagesCh <- []subjectAndMessage{sam}
-//
-// 	metrics.promErrorMessagesSentTotal.Inc()
-// }
-
 // sendInfoMessage will put the error message directly on the channel that is
 // read by the nats publishing functions.
-func sendInfoLogMessage(conf *Configuration, metrics *metrics, newMessagesCh chan<- []subjectAndMessage, FromNode Node, theError error) {
+func sendInfoLogMessage(conf *Configuration, metrics *metrics, ringBufferBulkInCh chan<- []subjectAndMessage, FromNode Node, theError error) {
 	// NB: Adding log statement here for more visuality during development.
 	log.Printf("%v\n", theError)
 	sam := createErrorMsgContent(conf, FromNode, theError)
-	newMessagesCh <- []subjectAndMessage{sam}
+	ringBufferBulkInCh <- []subjectAndMessage{sam}
 
 	metrics.promInfoMessagesSentTotal.Inc()
 }
@@ -366,7 +348,7 @@ type samDBValueAndDelivered struct {
 // routeMessagesToProcess takes a database name it's input argument.
 // The database will be used as the persistent k/v store for the work
 // queue which is implemented as a ring buffer.
-// The newMessagesCh are where we get new messages to publish.
+// The ringBufferInCh are where we get new messages to publish.
 // Incomming messages will be routed to the correct subject process, where
 // the handling of each nats subject is handled within it's own separate
 // worker process.
@@ -378,7 +360,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 	const samValueBucket string = "samValueBucket"
 	const indexValueBucket string = "indexValueBucket"
 
-	s.ringBuffer = newringBuffer(s.ctx, s.metrics, s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.newMessagesCh, samValueBucket, indexValueBucket, s.errorKernel, s.processInitial)
+	s.ringBuffer = newringBuffer(s.ctx, s.metrics, s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.ringBufferBulkInCh, samValueBucket, indexValueBucket, s.errorKernel, s.processInitial)
 
 	ringBufferInCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValueAndDelivered)
@@ -391,7 +373,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 	// we loop here, unfold the slice, and put single subjectAndMessages's on
 	// the channel to the ringbuffer.
 	go func() {
-		for sams := range s.newMessagesCh {
+		for sams := range s.ringBufferBulkInCh {
 			for _, sam := range sams {
 				ringBufferInCh <- sam
 			}
@@ -483,7 +465,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 					// log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 					sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
-					proc := newProcess(s.ctx, s.metrics, s.natsConn, s.processes, s.newMessagesCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil)
+					proc := newProcess(s.ctx, s.metrics, s.natsConn, s.processes, s.ringBufferBulkInCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil)
 
 					proc.spawnWorker(s.processes, s.natsConn)
 					// log.Printf("info: processNewMessages: new process started, subject: %v, processID: %v\n", subjName, proc.processID)

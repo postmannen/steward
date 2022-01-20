@@ -47,18 +47,18 @@ type ringBuffer struct {
 	permStore chan string
 	// Name of node.
 	nodeName Node
-	// newMessagesCh from *server are also implemented here,
+	// ringBufferBulkInCh from *server are also implemented here,
 	// so the ringbuffer can send it's error messages the same
 	// way as all messages are handled.
-	newMessagesCh  chan []subjectAndMessage
-	metrics        *metrics
-	configuration  *Configuration
-	errorKernel    *errorKernel
-	processInitial process
+	ringBufferBulkInCh chan []subjectAndMessage
+	metrics            *metrics
+	configuration      *Configuration
+	errorKernel        *errorKernel
+	processInitial     process
 }
 
 // newringBuffer returns a push/pop storage for values.
-func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configuration, size int, dbFileName string, nodeName Node, newMessagesCh chan []subjectAndMessage, samValueBucket string, indexValueBucket string, errorKernel *errorKernel, processInitial process) *ringBuffer {
+func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configuration, size int, dbFileName string, nodeName Node, ringBufferBulkInCh chan []subjectAndMessage, samValueBucket string, indexValueBucket string, errorKernel *errorKernel, processInitial process) *ringBuffer {
 
 	// Check if socket folder exists, if not create it
 	if _, err := os.Stat(configuration.DatabaseFolder); os.IsNotExist(err) {
@@ -80,16 +80,16 @@ func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configu
 	}
 
 	return &ringBuffer{
-		bufData:          make(chan samDBValue, size),
-		db:               db,
-		samValueBucket:   samValueBucket,
-		indexValueBucket: indexValueBucket,
-		permStore:        make(chan string),
-		nodeName:         nodeName,
-		newMessagesCh:    newMessagesCh,
-		metrics:          metrics,
-		configuration:    configuration,
-		processInitial:   processInitial,
+		bufData:            make(chan samDBValue, size),
+		db:                 db,
+		samValueBucket:     samValueBucket,
+		indexValueBucket:   indexValueBucket,
+		permStore:          make(chan string),
+		nodeName:           nodeName,
+		ringBufferBulkInCh: ringBufferBulkInCh,
+		metrics:            metrics,
+		configuration:      configuration,
+		processInitial:     processInitial,
 	}
 }
 
@@ -141,7 +141,6 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 			er := fmt.Errorf("info: fillBuffer: retreival of values from k/v store failed, probaly empty database, and no previous entries in db to process: %v", err)
 			log.Printf("%v\n", er)
 			return
-			//sendErrorLogMessage(r.newMessagesCh, node(r.nodeName), er)
 		}
 
 		for _, v := range s {

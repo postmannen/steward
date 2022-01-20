@@ -52,7 +52,7 @@ func newErrorKernel(ctx context.Context, m *metrics) *errorKernel {
 // process if it should continue or not based not based on how severe
 // the error where. This should be right after sending the error
 // sending in the process.
-func (e *errorKernel) start(newMessagesCh chan<- []subjectAndMessage) error {
+func (e *errorKernel) start(ringBufferBulkInCh chan<- []subjectAndMessage) error {
 	// NOTE: For now it will just print the error messages to the
 	// console.
 
@@ -104,7 +104,7 @@ func (e *errorKernel) start(newMessagesCh chan<- []subjectAndMessage) error {
 				}
 
 				// Put the message on the channel to the ringbuffer.
-				newMessagesCh <- []subjectAndMessage{sam}
+				ringBufferBulkInCh <- []subjectAndMessage{sam}
 
 				e.metrics.promErrorMessagesSentTotal.Inc()
 			}()
