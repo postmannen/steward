@@ -387,6 +387,9 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 
 	// Start reading new fresh messages received on the incomming message
 	// pipe/file requested, and fill them into the buffer.
+	// Since the new messages comming into the system is a []subjectAndMessage
+	// we loop here, unfold the slice, and put single subjectAndMessages's on
+	// the channel to the ringbuffer.
 	go func() {
 		for sams := range s.newMessagesCh {
 			for _, sam := range sams {
