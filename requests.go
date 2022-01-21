@@ -460,7 +460,6 @@ func (m methodREQOpProcessStart) handler(proc process, message Message, node str
 		er := fmt.Errorf(txt)
 		proc.processes.errorKernel.errSend(proc, message, er)
 
-		// TODO: What should this look like ?
 		out = []byte(txt + "\n")
 		newReplyMessage(proc, message, out)
 	}()
@@ -767,9 +766,6 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 			}
 
 			proc.toRingbufferCh <- []subjectAndMessage{sam}
-
-			// TODO: Should we also send a reply message with the result back
-			// to where the message originated ?
 
 			replyData := fmt.Sprintf("info: succesfully read the file %v, and sent the content to %v\n", SrcFilePath, DstNode)
 
@@ -1659,7 +1655,7 @@ func (m methodREQToSocket) handler(proc process, message Message, node string) (
 
 	for _, d := range message.Data {
 		// TODO: Write the data to the socket here.
-		fmt.Printf("Info: Data to write to socket: %v\n", d)
+		fmt.Printf("Info: REQToSocket is not yet implemented. Data to write to socket: %v\n", d)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))

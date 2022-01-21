@@ -97,7 +97,6 @@ func messageSlide(app *tview.Application) tview.Primitive {
 			// Get nodes from file.
 			values, err = getNodeNames("nodeslist.cfg")
 			if err != nil {
-				// TODO: Handle error here, exit ?
 				return nil
 			}
 
