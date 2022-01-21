@@ -502,7 +502,7 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 		// they are running on.
 
 		if v := len(message.MethodArgs); v != 3 {
-			er := fmt.Errorf("error: methodREQCliCommand: got <4 number methodArgs, want: method,node,kind")
+			er := fmt.Errorf("error: methodREQOpProcessStop: got <4 number methodArgs, want: method,node,kind")
 			proc.processes.errorKernel.errSend(proc, message, er)
 			log.Printf("%v\n", er)
 		}
@@ -706,7 +706,7 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 
 		switch {
 		case len(message.MethodArgs) < 3:
-			er := fmt.Errorf("error: methodREQCliCommand: got <3 number methodArgs: want srcfilePath,dstNode,dstFilePath")
+			er := fmt.Errorf("error: methodREQCopyFileFrom: got <3 number methodArgs: want srcfilePath,dstNode,dstFilePath")
 			proc.processes.errorKernel.errSend(proc, message, er)
 			log.Printf("%v\n", er)
 			return
@@ -857,7 +857,7 @@ func (m methodREQCopyFileTo) handler(proc process, message Message, node string)
 			// ---
 			switch {
 			case len(message.MethodArgs) < 3:
-				er := fmt.Errorf("error: methodREQCliCommand: got <3 number methodArgs: want srcfilePath,dstNode,dstFilePath")
+				er := fmt.Errorf("error: methodREQCopyFileTo: got <3 number methodArgs: want srcfilePath,dstNode,dstFilePath")
 				proc.processes.errorKernel.errSend(proc, message, er)
 				log.Printf("%v\n", er)
 				return
@@ -1694,7 +1694,7 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 		case message.RelayOriginalMethod == REQCopyFileFrom:
 			switch {
 			case len(message.MethodArgs) < 3:
-				er := fmt.Errorf("error: methodREQCliCommand: got <3 number methodArgs: want srcfilePath,dstNode,dstFilePath")
+				er := fmt.Errorf("error: methodREQRelayInitial: got <3 number methodArgs: want srcfilePath,dstNode,dstFilePath")
 				proc.processes.errorKernel.errSend(proc, message, er)
 				log.Printf("%v\n", er)
 				return
