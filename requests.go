@@ -1503,7 +1503,7 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 				// go routine.
 				// close(t.Lines)
 				er := fmt.Errorf("info: method timeout reached REQTailFile, canceling: %v", message.MethodArgs)
-				sendInfoLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+				proc.processes.errorKernel.infoSend(proc, message, er)
 
 				return
 			case out := <-outCh:
@@ -1629,7 +1629,7 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 			case <-ctx.Done():
 				cancel()
 				er := fmt.Errorf("info: methodREQCliCommandCont: method timeout reached, canceling: methodArgs: %v", message.MethodArgs)
-				sendInfoLogMessage(proc.configuration, proc.processes.metrics, proc.toRingbufferCh, proc.node, er)
+				proc.processes.errorKernel.infoSend(proc, message, er)
 				return
 			case out := <-outCh:
 				newReplyMessage(proc, message, out)

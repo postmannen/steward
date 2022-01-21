@@ -305,14 +305,16 @@ func (s *server) Stop() {
 
 // sendInfoMessage will put the error message directly on the channel that is
 // read by the nats publishing functions.
-func sendInfoLogMessage(conf *Configuration, metrics *metrics, ringBufferBulkInCh chan<- []subjectAndMessage, FromNode Node, theError error) {
-	// NB: Adding log statement here for more visuality during development.
-	log.Printf("%v\n", theError)
-	sam := createErrorMsgContent(conf, FromNode, theError)
-	ringBufferBulkInCh <- []subjectAndMessage{sam}
-
-	metrics.promInfoMessagesSentTotal.Inc()
-}
+//
+// DEPRECATED:
+// func sendInfoLogMessage(conf *Configuration, metrics *metrics, ringBufferBulkInCh chan<- []subjectAndMessage, FromNode Node, theError error) {
+// 	// NB: Adding log statement here for more visuality during development.
+// 	log.Printf("%v\n", theError)
+// 	sam := createErrorMsgContent(conf, FromNode, theError)
+// 	ringBufferBulkInCh <- []subjectAndMessage{sam}
+//
+// 	metrics.promInfoMessagesSentTotal.Inc()
+// }
 
 // createErrorMsgContent will prepare a subject and message with the content
 // of the error

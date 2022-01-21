@@ -64,6 +64,34 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- []subjectAndMessage) error
 			return fmt.Errorf("info: stopping errorKernel")
 		}
 
+		sendErrorOrInfo := func(errEvent errorEvent) {
+			var er string
+			// Decide what extra information to add to the error message.
+			switch {
+			case errEvent.message.RelayFromNode != "":
+				er = fmt.Sprintf("%v, node: %v, relayFromNode: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), errEvent.process.node, errEvent.message.RelayFromNode, errEvent.err)
+			default:
+				er = fmt.Sprintf("%v, node: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), errEvent.process.node, errEvent.err)
+			}
+
+			sam := subjectAndMessage{
+				Subject: newSubject(REQErrorLog, "errorCentral"),
+				Message: Message{
+					Directory:  "errorLog",
+					ToNode:     "errorCentral",
+					FromNode:   errEvent.process.node,
+					FileName:   "error.log",
+					Data:       []string{er},
+					Method:     REQErrorLog,
+					ACKTimeout: errEvent.process.configuration.ErrorMessageTimeout,
+					Retries:    errEvent.process.configuration.ErrorMessageRetries,
+				},
+			}
+
+			// Put the message on the channel to the ringbuffer.
+			ringBufferBulkInCh <- []subjectAndMessage{sam}
+		}
+
 		// Check the type of the error to decide what to do.
 		//
 		// We should be able to handle each error individually and
@@ -75,38 +103,22 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- []subjectAndMessage) error
 		// that fails.
 		switch errEvent.errorType {
 
-		case errTypeSendToCentralErrorLogger:
+		case errTypeSendError:
 			// Just log the error by creating a message and send it
 			// to the errorCentral log server.
 
 			go func() {
-				var er string
-				// Decide what extra information to add to the error message.
-				switch {
-				case errEvent.message.RelayFromNode != "":
-					er = fmt.Sprintf("%v, node: %v, relayFromNode: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), errEvent.process.node, errEvent.message.RelayFromNode, errEvent.err)
-				default:
-					er = fmt.Sprintf("%v, node: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), errEvent.process.node, errEvent.err)
-				}
-
-				sam := subjectAndMessage{
-					Subject: newSubject(REQErrorLog, "errorCentral"),
-					Message: Message{
-						Directory:  "errorLog",
-						ToNode:     "errorCentral",
-						FromNode:   errEvent.process.node,
-						FileName:   "error.log",
-						Data:       []string{er},
-						Method:     REQErrorLog,
-						ACKTimeout: errEvent.process.configuration.ErrorMessageTimeout,
-						Retries:    errEvent.process.configuration.ErrorMessageRetries,
-					},
-				}
-
-				// Put the message on the channel to the ringbuffer.
-				ringBufferBulkInCh <- []subjectAndMessage{sam}
-
+				sendErrorOrInfo(errEvent)
 				e.metrics.promErrorMessagesSentTotal.Inc()
+			}()
+
+		case errTypeSendInfo:
+			// Just log the error by creating a message and send it
+			// to the errorCentral log server.
+
+			go func() {
+				sendErrorOrInfo(errEvent)
+				e.metrics.promInfoMessagesSentTotal.Inc()
 			}()
 
 		case errTypeWithAction:
@@ -141,11 +153,26 @@ func (e *errorKernel) stop() {
 	e.cancel()
 }
 
-// sendError will just send an error to the errorCentral.
+// errSend will just send an error message to the errorCentral.
 func (e *errorKernel) errSend(proc process, msg Message, err error) {
 	ev := errorEvent{
 		err:       err,
-		errorType: errTypeSendToCentralErrorLogger,
+		errorType: errTypeSendError,
+		process:   proc,
+		message:   msg,
+		// We don't want to create any actions when just
+		// sending errors.
+		// errorActionCh: make(chan errorAction),
+	}
+
+	e.errorCh <- ev
+}
+
+// infoSend will just send an info message to the errorCentral.
+func (e *errorKernel) infoSend(proc process, msg Message, err error) {
+	ev := errorEvent{
+		err:       err,
+		errorType: errTypeSendInfo,
 		process:   proc,
 		message:   msg,
 		// We don't want to create any actions when just
@@ -205,8 +232,9 @@ type errorType int
 const (
 	// errSend will just send the content of the error to the
 	// central error logger.
-	errTypeSendToCentralErrorLogger errorType = iota
-	errTypeWithAction               errorType = iota
+	errTypeSendError  errorType = iota
+	errTypeSendInfo   errorType = iota
+	errTypeWithAction errorType = iota
 )
 
 type errorEvent struct {
