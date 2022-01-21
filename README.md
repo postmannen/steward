@@ -879,7 +879,7 @@ env CONFIG_FOLDER=./etc/ ./steward \
  -brokerAddress="127.0.0.1:4222"
 ```
 
-**NB**: By default Steward creates it's folders like `./etc`, `./var`, and `./data` in the folder you're in when you start it. If you want to run multiple instances on the same machine you should create separate folders for each instance, and start Steward when you're in that folder. The location of the folders can also be specified within the config file. 
+**NB**: By default Steward creates it's folders like `./etc`, `./var`, and `./data` in the folder you're in when you start it. If you want to run multiple instances on the same machine you should create separate folders for each instance, and start Steward when you're in that folder. The location of the folders can also be specified within the config file.
 
 #### Nkey Authentication
 
