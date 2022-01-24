@@ -496,6 +496,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 	messageDropdown.SetLabel("message").SetOptions(msgsValues, msgDropdownFunc)
 	// Clear the form.
 	p.inputForm.Clear(false)
+	drawMessageInputFields(p, m)
 	p.selectMessage.AddFormItem(messageDropdown)
 
 	p.inputForm.AddButton("update message dropdown menu", func() {
@@ -665,7 +666,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 			// update the select message dropdown
 			messageMessageValues := getMessageNames(p.logForm)
 			messageDropdown.SetLabel("message").SetOptions(messageMessageValues, msgDropdownFunc)
-			p.inputForm.Clear(false)
+			// p.inputForm.Clear(false)
 
 		})
 
