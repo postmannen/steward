@@ -2,9 +2,9 @@
 
 Steward is a Command & Control backend system for Servers, IOT and Edge platforms where the network link for reaching them can be reliable like local networks, or totally unreliable like satellite links. An end node can even be offline when you give it a command, and Steward will make sure that the command is delivered when the node comes online.
 
-Example use cases can be:
+Example use cases:
 
-- Start shell sessions on end nodes run scripts or a series of commands to change config, restart services and control those systems.
+- Send a specific message to one or many end nodes that will instruct to run scripts or a series of shell commands to change config, restart services and control those systems.
 - Gather IOT/OT data from both secure and not secure devices and systems, and transfer them encrypted in a secure way over the internet to your central system for handling those data.
 - Collect metrics or monitor end nodes and store the result on a central Steward instance, or pass those data on to another central system for handling metrics or monitoring data.
 - Distribute certificates.
