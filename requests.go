@@ -1640,7 +1640,8 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 			cancel()
 
 			if err := cmd.Wait(); err != nil {
-				log.Printf(" --------------- * error: REQCliCommandCont: cmd.Wait: %v\n", err)
+				er := fmt.Errorf("info: methodREQCliCommandCont: method timeout reached, canceled: methodArgs: %v, %v", message.MethodArgs, err)
+				proc.processes.errorKernel.errSend(proc, message, er)
 			}
 
 		}()
