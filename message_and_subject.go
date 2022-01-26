@@ -44,7 +44,7 @@ type Message struct {
 	// fields.
 	IsReply bool `json:"isReply" yaml:"isReply"`
 	// From what node the message originated
-	FromNode Node
+	FromNode Node `json:"fromNode" yaml:"fromNode"`
 	// ACKTimeout for waiting for an ack message
 	ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
 	// Resend retries

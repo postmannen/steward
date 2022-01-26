@@ -274,6 +274,9 @@ func (s *server) Start() {
 	// so we can cancel this context last, and not use the server.
 	s.routeMessagesToProcess("./incomingBuffer.db")
 
+	// Check and enable read the messages specified in the startup folder.
+	s.readStartupFolder()
+
 }
 
 // Will stop all processes started during startup.

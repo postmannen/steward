@@ -456,7 +456,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 
 	// Add a dropdown menu to select message files to use.
 
-	msgsValues := getMessageNames(p.logForm)
+	msgsValues := t.getMessageNames(p.logForm)
 
 	msgDropdownFunc := func(msgFileName string, index int) {
 		filePath := filepath.Join("messages", msgFileName)
@@ -500,7 +500,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 	p.selectMessage.AddFormItem(messageDropdown)
 
 	p.inputForm.AddButton("update message dropdown menu", func() {
-		messageMessageValues := getMessageNames(p.logForm)
+		messageMessageValues := t.getMessageNames(p.logForm)
 		messageDropdown.SetLabel("message").SetOptions(messageMessageValues, msgDropdownFunc)
 	})
 
@@ -664,7 +664,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 			fmt.Fprintf(p.logForm, "info: succesfully wrote message to file: %v\n", file)
 
 			// update the select message dropdown
-			messageMessageValues := getMessageNames(p.logForm)
+			messageMessageValues := t.getMessageNames(p.logForm)
 			messageDropdown.SetLabel("message").SetOptions(messageMessageValues, msgDropdownFunc)
 			// p.inputForm.Clear(false)
 
@@ -726,7 +726,7 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 	nodesDropdown.SetLabel("nodes").SetOptions(nodesList, nil)
 	p.selectForm.AddFormItem(nodesDropdown)
 
-	msgsValues := getMessageNames(p.outputForm)
+	msgsValues := t.getMessageNames(p.outputForm)
 
 	messageDropdown := tview.NewDropDown()
 	messageDropdown.SetLabelColor(tcell.ColorIndianRed)
@@ -741,7 +741,7 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 		}
 		nodesDropdown.SetLabel("nodes").SetOptions(nodesList, nil)
 
-		msgsValues := getMessageNames(p.outputForm)
+		msgsValues := t.getMessageNames(p.outputForm)
 		messageDropdown.SetLabel("message").SetOptions(msgsValues, nil)
 	})
 
@@ -758,7 +758,7 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 		}
 		nodesDropdown.SetLabel("nodes").SetOptions(nodesList, nil)
 
-		messageValues := getMessageNames(p.outputForm)
+		messageValues := t.getMessageNames(p.outputForm)
 		messageDropdown.SetLabel("message").SetOptions(messageValues, nil)
 	})
 
@@ -839,7 +839,7 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 
 // getMessageNames will get the names of all the messages in
 // the messages folder.
-func getMessageNames(outputForm *tview.TextView) []string {
+func (t *tui) getMessageNames(outputForm *tview.TextView) []string {
 	// Create messages dropdown field.
 	fInfo, err := ioutil.ReadDir("messages")
 	if err != nil {
