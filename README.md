@@ -36,6 +36,11 @@ As long as you can do something as an operator on in a shell on a system you can
     - [Schema for the messages to send into Steward via the API's](#schema-for-the-messages-to-send-into-steward-via-the-apis)
     - [Nats messaging timeouts](#nats-messaging-timeouts)
     - [Compression of the Nats message payload](#compression-of-the-nats-message-payload)
+    - [startup folder](#startup-folder)
+      - [General functionality](#general-functionality)
+      - [How to send the reply to another node](#how-to-send-the-reply-to-another-node)
+      - [method timeout](#method-timeout)
+        - [Example](#example)
     - [Request Methods](#request-methods)
       - [REQOpProcessList](#reqopprocesslist)
       - [REQOpProcessStart](#reqopprocessstart)
@@ -380,6 +385,50 @@ When starting a Steward instance with compression enabled it is the publishing o
 The subscribing instance of Steward will automatically detect if the message is compressed or not, and decompress it if needed.
 
 With other words, Steward will by default receive and handle both compressed and uncompressed messages, and you decide on the publishing side if you want to enable compression or not.
+
+### startup folder
+
+#### General functionality
+
+Messages can be automatically scheduled to be read and executed at startup of Steward.
+
+A folder named **startup** will be present in the working directory of Steward, and you put the messages to be executed at startup here.
+
+#### How to send the reply to another node
+
+Normally the **fromNode** field is automatically filled in with the node name of the node where a message originated.
+
+Since messages within the startup folder is not received from another node via the normal message path we need to specify the **fromNode** field within the message for where we want the reply delivered.
+
+#### method timeout
+
+We can also make the request method run for as long as the Steward instance itself is running. We can do that by setting the **methodTimeout** field to a value of `-1`.
+
+This can make sense if you for example wan't to continously ping a host, or continously run a script on a node.
+
+##### Example
+
+```json
+[
+    {
+        "toNode": "ship1",
+        "fromNode": "central",
+        "method": "REQCliCommandCont",
+        "methodArgs": [
+            "bash",
+            "-c",
+            "nc -lk localhost 8888"
+        ],
+        "replyMethod": "REQToConsole",
+        "methodTimeout": 10,
+    }
+]
+```
+
+This message is put in the `./startup` folder on **node1**.</br>
+We send the message to ourself, hence specifying ourself in the `toNode` field.</br>
+We specify the reply messages with the result to be sent to the console on **central** in the `fromNode` field.</br>
+In the example we start a TCP listener on port 8888, and we want the method to run for as long as Steward is running. So we set the **methodTimeout** to `-1`.</br>
 
 ### Request Methods
 
