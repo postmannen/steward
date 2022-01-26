@@ -180,7 +180,7 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 			if v.Message.Retries < 1 {
 				v.Message.Retries = r.configuration.DefaultMessageRetries
 			}
-			if v.Message.MethodTimeout < 1 {
+			if v.Message.MethodTimeout < 1 && v.Message.MethodTimeout != -1 {
 				v.Message.MethodTimeout = r.configuration.DefaultMethodTimeout
 			}
 
