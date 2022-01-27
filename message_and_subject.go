@@ -103,7 +103,7 @@ type Node string
 type Subject struct {
 	// node, the name of the node to receive the message.
 	ToNode string `json:"node" yaml:"toNode"`
-	// messageType, command/event
+	// Event, event type like EventACK or EventNACK.
 	Event Event `json:"event" yaml:"event"`
 	// method, what is this message doing, etc. CLICommand, Syslog, etc.
 	Method Method `json:"method" yaml:"method"`

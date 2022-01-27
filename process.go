@@ -536,7 +536,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		}
 
 	default:
-		er := fmt.Errorf("info: did not find that specific type of command or event: %#v", p.subject.Event)
+		er := fmt.Errorf("info: did not find that specific type of event: %#v", p.subject.Event)
 		p.processes.errorKernel.infoSend(p, message, er)
 
 	}

@@ -7,14 +7,12 @@
 package steward
 
 // Event describes on the message level if this is
-// an event or command kind of message in the Subject name.
+// an ACK or NACK kind of message in the Subject name.
 // This field is mainly used to be able to spawn up different
-// worker processes based on the Subject name so we can have
-// one process for handling event kind, and another for
-// handling command kind of messages.
+// worker processes based on the Subject name.
 // This type is used in both building the subject name, and
-// also inside the Message type to describe if it is a Command
-// or Event.
+// also inside the Message type to describe what kind like
+// ACK or NACK it is.
 type Event string
 
 func (c Event) CheckEventAvailable() EventAvailable {
@@ -46,14 +44,14 @@ type EventAvailable struct {
 	topics map[Event]struct{}
 }
 
-// Check if a command or even exists.
+// Check if an event exists.
 func (e EventAvailable) CheckIfExists(event Event, subject Subject) bool {
 	_, ok := e.topics[event]
 	if ok {
-		// log.Printf("info: EventAvailable.CheckIfExists: command or event found: %v, for %v\n", c, subject.name())
+		// log.Printf("info: EventAvailable.CheckIfExists: event found: %v, for %v\n", c, subject.name())
 		return true
 	} else {
-		// log.Printf("error: EventAvailable.CheckIfExists: command or event not found: %v, for %v\n", c, subject.name())
+		// log.Printf("error: EventAvailable.CheckIfExists: event not found: %v, for %v\n", c, subject.name())
 		return false
 	}
 }

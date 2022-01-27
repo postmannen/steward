@@ -133,15 +133,11 @@ const (
 // The mapping of all the method constants specified, what type
 // it references, and the kind if it is an Event or Command, and
 // if it is ACK or NACK.
-//  Allowed values for the commandOrEvent field are:
-//   - CommandACK
-//   - CommandNACK
+//  Allowed values for the Event field are:
 //   - EventACK
 //   - EventNack
 func (m Method) GetMethodsAvailable() MethodsAvailable {
 
-	// Command, Used to make a request to perform an action
-	// Event, Used to communicate that something have happened.
 	ma := MethodsAvailable{
 		Methodhandlers: map[Method]methodHandler{
 			REQInitial: methodREQInitial{

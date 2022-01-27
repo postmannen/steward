@@ -409,7 +409,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 				continue
 			}
 			if !eventAvailable.CheckIfExists(sam.Subject.Event, sam.Subject) {
-				er := fmt.Errorf("error: routeMessagesToProcess: the command or event do not exist, message dropped: %v", sam.Message.Method)
+				er := fmt.Errorf("error: routeMessagesToProcess: the event type do not exist, message dropped: %v", sam.Message.Method)
 				s.errorKernel.errSend(s.processInitial, sam.Message, er)
 
 				continue
