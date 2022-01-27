@@ -104,7 +104,7 @@ type Subject struct {
 	// node, the name of the node to receive the message.
 	ToNode string `json:"node" yaml:"toNode"`
 	// messageType, command/event
-	CommandOrEvent Event `json:"commandOrEvent" yaml:"commandOrEvent"`
+	Event Event `json:"event" yaml:"event"`
 	// method, what is this message doing, etc. CLICommand, Syslog, etc.
 	Method Method `json:"method" yaml:"method"`
 	// messageCh is used by publisher kind processes to read new messages
@@ -118,19 +118,19 @@ type Subject struct {
 // all the values given as arguments. It will also create the channel
 // to receive new messages on the specific subject.
 func newSubject(method Method, node string) Subject {
-	// Get the CommandOrEvent type for the Method.
+	// Get the Event type for the Method.
 	ma := method.GetMethodsAvailable()
 	mh, ok := ma.Methodhandlers[method]
 	if !ok {
-		log.Printf("error: no CommandOrEvent type specified for the method: %v\n", method)
+		log.Printf("error: no Event type specified for the method: %v\n", method)
 		os.Exit(1)
 	}
 
 	return Subject{
-		ToNode:         node,
-		CommandOrEvent: mh.getKind(),
-		Method:         method,
-		messageCh:      make(chan Message),
+		ToNode:    node,
+		Event:     mh.getKind(),
+		Method:    method,
+		messageCh: make(chan Message),
 	}
 }
 
@@ -139,5 +139,5 @@ type subjectName string
 
 // Return a value of the subjectName for the subject as used with nats subject.
 func (s Subject) name() subjectName {
-	return subjectName(fmt.Sprintf("%s.%s.%s", s.ToNode, s.Method, s.CommandOrEvent))
+	return subjectName(fmt.Sprintf("%s.%s.%s", s.ToNode, s.Method, s.Event))
 }

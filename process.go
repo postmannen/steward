@@ -246,7 +246,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 
 		// If it is a NACK message we just deliver the message and return
 		// here so we don't create a ACK message and then stop waiting for it.
-		if p.subject.CommandOrEvent == EventNACK {
+		if p.subject.Event == EventNACK {
 			err := natsConn.PublishMsg(msg)
 			if err != nil {
 				er := fmt.Errorf("error: nats publish of hello failed: %v", err)
@@ -283,7 +283,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 
 		// If the message is an ACK type of message we must check that a
 		// reply, and if it is not we don't wait here at all.
-		if p.subject.CommandOrEvent == EventACK {
+		if p.subject.Event == EventACK {
 			// Wait up until ACKTimeout specified for a reply,
 			// continue and resend if no reply received,
 			// or exit if max retries for the message reached.
@@ -497,12 +497,12 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 	// sent from the publisher once, and if it is not delivered it will not be retried.
 	switch {
 
-	// Check for ACK type Commands or Event.
-	case p.subject.CommandOrEvent == EventACK:
+	// Check for ACK type Event.
+	case p.subject.Event == EventACK:
 		// Look up the method handler for the specified method.
 		mh, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
-			er := fmt.Errorf("error: subscriberHandler: no such method type: %v", p.subject.CommandOrEvent)
+			er := fmt.Errorf("error: subscriberHandler: no such method type: %v", p.subject.Event)
 			p.processes.errorKernel.errSend(p, message, er)
 		}
 
@@ -520,11 +520,11 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		// Send a confirmation message back to the publisher
 		natsConn.Publish(msg.Reply, out)
 
-	// Check for NACK type Commands or Event.
-	case p.subject.CommandOrEvent == EventNACK:
+	// Check for NACK type Event.
+	case p.subject.Event == EventNACK:
 		mf, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
-			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.CommandOrEvent)
+			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.Event)
 			p.processes.errorKernel.errSend(p, message, er)
 		}
 
@@ -536,7 +536,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		}
 
 	default:
-		er := fmt.Errorf("info: did not find that specific type of command or event: %#v", p.subject.CommandOrEvent)
+		er := fmt.Errorf("info: did not find that specific type of command or event: %#v", p.subject.Event)
 		p.processes.errorKernel.infoSend(p, message, er)
 
 	}

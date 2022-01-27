@@ -145,67 +145,67 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 	ma := MethodsAvailable{
 		Methodhandlers: map[Method]methodHandler{
 			REQInitial: methodREQInitial{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQOpProcessList: methodREQOpProcessList{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQOpProcessStart: methodREQOpProcessStart{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQOpProcessStop: methodREQOpProcessStop{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQCliCommand: methodREQCliCommand{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQCliCommandCont: methodREQCliCommandCont{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQToConsole: methodREQToConsole{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQTuiToConsole: methodREQTuiToConsole{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQToFileAppend: methodREQToFileAppend{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQToFile: methodREQToFile{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQCopyFileFrom: methodREQCopyFileFrom{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQCopyFileTo: methodREQCopyFileTo{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQHello: methodREQHello{
-				commandOrEvent: EventNACK,
+				event: EventNACK,
 			},
 			REQErrorLog: methodREQErrorLog{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQPing: methodREQPing{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQPong: methodREQPong{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQHttpGet: methodREQHttpGet{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQTailFile: methodREQTailFile{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQToSocket: methodREQToSocket{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQRelay: methodREQRelay{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 			REQRelayInitial: methodREQRelayInitial{
-				commandOrEvent: EventACK,
+				event: EventACK,
 			},
 		},
 	}
@@ -249,11 +249,11 @@ func getContextForMethodTimeout(ctx context.Context, message Message) (context.C
 
 // Initial parent method used to start other processes.
 type methodREQInitial struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQInitial) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 func (m methodREQInitial) handler(proc process, message Message, node string) ([]byte, error) {
@@ -388,11 +388,11 @@ type methodHandler interface {
 
 // --- OpProcessList
 type methodREQOpProcessList struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQOpProcessList) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // Handle Op Process List
@@ -426,11 +426,11 @@ func (m methodREQOpProcessList) handler(proc process, message Message, node stri
 // --- OpProcessStart
 
 type methodREQOpProcessStart struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQOpProcessStart) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // Handle Op Process Start
@@ -482,11 +482,11 @@ func (m methodREQOpProcessStart) handler(proc process, message Message, node str
 // --- OpProcessStop
 
 type methodREQOpProcessStop struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQOpProcessStop) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // RecevingNode Node        `json:"receivingNode"`
@@ -588,11 +588,11 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 // ----
 
 type methodREQToFileAppend struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQToFileAppend) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // Handle appending data to file.
@@ -642,11 +642,11 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 // -----
 
 type methodREQToFile struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQToFile) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // Handle writing to a file. Will truncate any existing data if the file did already
@@ -699,11 +699,11 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 // ----
 
 type methodREQCopyFileFrom struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQCopyFileFrom) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // Handle writing to a file. Will truncate any existing data if the file did already
@@ -832,11 +832,11 @@ func copyFileFrom(ctx context.Context, wg *sync.WaitGroup, SrcFilePath string, e
 // ----
 
 type methodREQCopyFileTo struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQCopyFileTo) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // Handle writing to a file. Will truncate any existing data if the file did already
@@ -947,11 +947,11 @@ func (m methodREQCopyFileTo) handler(proc process, message Message, node string)
 
 // ----
 type methodREQHello struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQHello) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // Handler for receiving hello messages.
@@ -1001,11 +1001,11 @@ func (m methodREQHello) handler(proc process, message Message, node string) ([]b
 // ---
 
 type methodREQErrorLog struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQErrorLog) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // Handle the writing of error logs.
@@ -1050,11 +1050,11 @@ func (m methodREQErrorLog) handler(proc process, message Message, node string) (
 // ---
 
 type methodREQPing struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQPing) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // Handle receving a ping.
@@ -1114,11 +1114,11 @@ func (m methodREQPing) handler(proc process, message Message, node string) ([]by
 // ---
 
 type methodREQPong struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQPong) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // Handle receiving a pong.
@@ -1171,11 +1171,11 @@ func (m methodREQPong) handler(proc process, message Message, node string) ([]by
 // ---
 
 type methodREQCliCommand struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQCliCommand) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // handler to run a CLI command with timeout context. The handler will
@@ -1288,11 +1288,11 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 // ---
 
 type methodREQToConsole struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQToConsole) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // Handler to write directly to console.
@@ -1321,11 +1321,11 @@ func (m methodREQToConsole) handler(proc process, message Message, node string) 
 // ---
 
 type methodREQTuiToConsole struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQTuiToConsole) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // Handler to write directly to console.
@@ -1345,11 +1345,11 @@ func (m methodREQTuiToConsole) handler(proc process, message Message, node strin
 // ---
 
 type methodREQHttpGet struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQHttpGet) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // handler to do a Http Get.
@@ -1444,11 +1444,11 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 // --- methodREQTailFile
 
 type methodREQTailFile struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQTailFile) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // handler to run a tailing of files with timeout context. The handler will
@@ -1537,11 +1537,11 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 
 // ---
 type methodREQCliCommandCont struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQCliCommandCont) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // Handler to run REQCliCommandCont, which is the same as normal
@@ -1670,11 +1670,11 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 // ---
 
 type methodREQToSocket struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQToSocket) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // TODO: Not implemented.
@@ -1693,11 +1693,11 @@ func (m methodREQToSocket) handler(proc process, message Message, node string) (
 // ----
 
 type methodREQRelayInitial struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQRelayInitial) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // Handler to relay messages via a host.
@@ -1797,11 +1797,11 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 // ----
 
 type methodREQRelay struct {
-	commandOrEvent Event
+	event Event
 }
 
 func (m methodREQRelay) getKind() Event {
-	return m.commandOrEvent
+	return m.event
 }
 
 // Handler to relay messages via a host.

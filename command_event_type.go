@@ -1,7 +1,7 @@
 // NB:
-// When adding new constants for the Method or CommandOrEvent
+// When adding new constants for the Method or event
 // types, make sure to also add them to the map
-// <Method/CommandOrEvent>Available since the this will be used
+// <Method/Event>Available since the this will be used
 // to check if the message values are valid later on.
 
 package steward
@@ -40,8 +40,8 @@ const (
 	EventNACK Event = "EventNACK"
 )
 
-// CommandOrEventAvailable are used for checking if the
-// commands or events are defined.
+// EventAvailable are used for checking if the
+// events are defined.
 type EventAvailable struct {
 	topics map[Event]struct{}
 }
@@ -50,10 +50,10 @@ type EventAvailable struct {
 func (e EventAvailable) CheckIfExists(event Event, subject Subject) bool {
 	_, ok := e.topics[event]
 	if ok {
-		// log.Printf("info: CommandOrEventAvailable.CheckIfExists: command or event found: %v, for %v\n", c, subject.name())
+		// log.Printf("info: EventAvailable.CheckIfExists: command or event found: %v, for %v\n", c, subject.name())
 		return true
 	} else {
-		// log.Printf("error: CommandOrEventAvailable.CheckIfExists: command or event not found: %v, for %v\n", c, subject.name())
+		// log.Printf("error: EventAvailable.CheckIfExists: command or event not found: %v, for %v\n", c, subject.name())
 		return false
 	}
 }

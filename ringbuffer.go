@@ -162,9 +162,9 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 	for {
 		select {
 		case v := <-inCh:
-			// Check if the command or event exists in commandOrEvent.go
-			if !eventAvailable.CheckIfExists(v.CommandOrEvent, v.Subject) {
-				er := fmt.Errorf("error: fillBuffer: the event or command type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v, where given: event=%v, with subject=%v", eventAvailableValues, v.CommandOrEvent, v.Subject)
+			// Check if the event exists.
+			if !eventAvailable.CheckIfExists(v.Event, v.Subject) {
+				er := fmt.Errorf("error: fillBuffer: the event type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v, where given: event=%v, with subject=%v", eventAvailableValues, v.Event, v.Subject)
 				r.errorKernel.errSend(r.processInitial, Message{}, er)
 
 				// if it was not a valid value, we jump back up, and
