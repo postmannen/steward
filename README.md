@@ -1241,3 +1241,5 @@ If messages have been sent, and not picked up by a node it might make sense to h
 All code in this repository are to be concidered not-production-ready, and the use is at your own responsibility. The code are the attempt to concretize the idea of a purely async management system where the controlling unit is decoupled from the receiving unit, and that that we know the state of all the receiving units at all times.
 
 Also read the license file for further details.
+
+Expect the main branch to have breaking changes. If stability is needed, use the released packages, and read the release notes.
