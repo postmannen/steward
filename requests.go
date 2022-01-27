@@ -145,22 +145,22 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 	ma := MethodsAvailable{
 		Methodhandlers: map[Method]methodHandler{
 			REQInitial: methodREQInitial{
-				commandOrEvent: CommandACK,
+				commandOrEvent: EventACK,
 			},
 			REQOpProcessList: methodREQOpProcessList{
-				commandOrEvent: CommandACK,
+				commandOrEvent: EventACK,
 			},
 			REQOpProcessStart: methodREQOpProcessStart{
-				commandOrEvent: CommandACK,
+				commandOrEvent: EventACK,
 			},
 			REQOpProcessStop: methodREQOpProcessStop{
-				commandOrEvent: CommandACK,
+				commandOrEvent: EventACK,
 			},
 			REQCliCommand: methodREQCliCommand{
-				commandOrEvent: CommandACK,
+				commandOrEvent: EventACK,
 			},
 			REQCliCommandCont: methodREQCliCommandCont{
-				commandOrEvent: CommandACK,
+				commandOrEvent: EventACK,
 			},
 			REQToConsole: methodREQToConsole{
 				commandOrEvent: EventACK,
@@ -249,10 +249,10 @@ func getContextForMethodTimeout(ctx context.Context, message Message) (context.C
 
 // Initial parent method used to start other processes.
 type methodREQInitial struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQInitial) getKind() CommandOrEvent {
+func (m methodREQInitial) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -381,17 +381,17 @@ func selectFileNaming(message Message, proc process) (string, string) {
 // The methodHandler interface.
 type methodHandler interface {
 	handler(proc process, message Message, node string) ([]byte, error)
-	getKind() CommandOrEvent
+	getKind() Event
 }
 
 // -----
 
 // --- OpProcessList
 type methodREQOpProcessList struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQOpProcessList) getKind() CommandOrEvent {
+func (m methodREQOpProcessList) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -426,10 +426,10 @@ func (m methodREQOpProcessList) handler(proc process, message Message, node stri
 // --- OpProcessStart
 
 type methodREQOpProcessStart struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQOpProcessStart) getKind() CommandOrEvent {
+func (m methodREQOpProcessStart) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -482,10 +482,10 @@ func (m methodREQOpProcessStart) handler(proc process, message Message, node str
 // --- OpProcessStop
 
 type methodREQOpProcessStop struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQOpProcessStop) getKind() CommandOrEvent {
+func (m methodREQOpProcessStop) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -588,10 +588,10 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 // ----
 
 type methodREQToFileAppend struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQToFileAppend) getKind() CommandOrEvent {
+func (m methodREQToFileAppend) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -642,10 +642,10 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 // -----
 
 type methodREQToFile struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQToFile) getKind() CommandOrEvent {
+func (m methodREQToFile) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -699,10 +699,10 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 // ----
 
 type methodREQCopyFileFrom struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQCopyFileFrom) getKind() CommandOrEvent {
+func (m methodREQCopyFileFrom) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -832,10 +832,10 @@ func copyFileFrom(ctx context.Context, wg *sync.WaitGroup, SrcFilePath string, e
 // ----
 
 type methodREQCopyFileTo struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQCopyFileTo) getKind() CommandOrEvent {
+func (m methodREQCopyFileTo) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -947,10 +947,10 @@ func (m methodREQCopyFileTo) handler(proc process, message Message, node string)
 
 // ----
 type methodREQHello struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQHello) getKind() CommandOrEvent {
+func (m methodREQHello) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -1001,10 +1001,10 @@ func (m methodREQHello) handler(proc process, message Message, node string) ([]b
 // ---
 
 type methodREQErrorLog struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQErrorLog) getKind() CommandOrEvent {
+func (m methodREQErrorLog) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -1050,10 +1050,10 @@ func (m methodREQErrorLog) handler(proc process, message Message, node string) (
 // ---
 
 type methodREQPing struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQPing) getKind() CommandOrEvent {
+func (m methodREQPing) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -1114,10 +1114,10 @@ func (m methodREQPing) handler(proc process, message Message, node string) ([]by
 // ---
 
 type methodREQPong struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQPong) getKind() CommandOrEvent {
+func (m methodREQPong) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -1171,10 +1171,10 @@ func (m methodREQPong) handler(proc process, message Message, node string) ([]by
 // ---
 
 type methodREQCliCommand struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQCliCommand) getKind() CommandOrEvent {
+func (m methodREQCliCommand) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -1288,10 +1288,10 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 // ---
 
 type methodREQToConsole struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQToConsole) getKind() CommandOrEvent {
+func (m methodREQToConsole) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -1321,10 +1321,10 @@ func (m methodREQToConsole) handler(proc process, message Message, node string) 
 // ---
 
 type methodREQTuiToConsole struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQTuiToConsole) getKind() CommandOrEvent {
+func (m methodREQTuiToConsole) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -1345,10 +1345,10 @@ func (m methodREQTuiToConsole) handler(proc process, message Message, node strin
 // ---
 
 type methodREQHttpGet struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQHttpGet) getKind() CommandOrEvent {
+func (m methodREQHttpGet) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -1444,10 +1444,10 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 // --- methodREQTailFile
 
 type methodREQTailFile struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQTailFile) getKind() CommandOrEvent {
+func (m methodREQTailFile) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -1537,10 +1537,10 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 
 // ---
 type methodREQCliCommandCont struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQCliCommandCont) getKind() CommandOrEvent {
+func (m methodREQCliCommandCont) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -1670,10 +1670,10 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 // ---
 
 type methodREQToSocket struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQToSocket) getKind() CommandOrEvent {
+func (m methodREQToSocket) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -1693,10 +1693,10 @@ func (m methodREQToSocket) handler(proc process, message Message, node string) (
 // ----
 
 type methodREQRelayInitial struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQRelayInitial) getKind() CommandOrEvent {
+func (m methodREQRelayInitial) getKind() Event {
 	return m.commandOrEvent
 }
 
@@ -1797,10 +1797,10 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 // ----
 
 type methodREQRelay struct {
-	commandOrEvent CommandOrEvent
+	commandOrEvent Event
 }
 
-func (m methodREQRelay) getKind() CommandOrEvent {
+func (m methodREQRelay) getKind() Event {
 	return m.commandOrEvent
 }
 

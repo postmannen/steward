@@ -149,12 +149,12 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 	}()
 
 	// Prepare the map structure to know what values are allowed
-	// for the commands or events
-	var coe CommandOrEvent
-	coeAvailable := coe.GetCommandOrEventAvailable()
-	coeAvailableValues := []CommandOrEvent{}
-	for v := range coeAvailable.topics {
-		coeAvailableValues = append(coeAvailableValues, v)
+	// for the events
+	var event Event
+	eventAvailable := event.CheckEventAvailable()
+	eventAvailableValues := []Event{}
+	for v := range eventAvailable.topics {
+		eventAvailableValues = append(eventAvailableValues, v)
 	}
 
 	// Check for incomming messages. These are typically comming from
@@ -163,8 +163,8 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 		select {
 		case v := <-inCh:
 			// Check if the command or event exists in commandOrEvent.go
-			if !coeAvailable.CheckIfExists(v.CommandOrEvent, v.Subject) {
-				er := fmt.Errorf("error: fillBuffer: the event or command type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v, where given: coe=%v, with subject=%v", coeAvailableValues, v.CommandOrEvent, v.Subject)
+			if !eventAvailable.CheckIfExists(v.CommandOrEvent, v.Subject) {
+				er := fmt.Errorf("error: fillBuffer: the event or command type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v, where given: event=%v, with subject=%v", eventAvailableValues, v.CommandOrEvent, v.Subject)
 				r.errorKernel.errSend(r.processInitial, Message{}, er)
 
 				// if it was not a valid value, we jump back up, and

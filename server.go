@@ -390,8 +390,8 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 	// send if there are a specific subject for it, and if no subject
 	// exist throw an error.
 
-	var coe CommandOrEvent
-	coeAvailable := coe.GetCommandOrEventAvailable()
+	var event Event
+	eventAvailable := event.CheckEventAvailable()
 
 	var method Method
 	methodsAvailable := method.GetMethodsAvailable()
@@ -408,7 +408,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 				s.errorKernel.errSend(s.processInitial, sam.Message, er)
 				continue
 			}
-			if !coeAvailable.CheckIfExists(sam.Subject.CommandOrEvent, sam.Subject) {
+			if !eventAvailable.CheckIfExists(sam.Subject.CommandOrEvent, sam.Subject) {
 				er := fmt.Errorf("error: routeMessagesToProcess: the command or event do not exist, message dropped: %v", sam.Message.Method)
 				s.errorKernel.errSend(s.processInitial, sam.Message, er)
 

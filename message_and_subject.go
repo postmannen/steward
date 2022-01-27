@@ -104,7 +104,7 @@ type Subject struct {
 	// node, the name of the node to receive the message.
 	ToNode string `json:"node" yaml:"toNode"`
 	// messageType, command/event
-	CommandOrEvent CommandOrEvent `json:"commandOrEvent" yaml:"commandOrEvent"`
+	CommandOrEvent Event `json:"commandOrEvent" yaml:"commandOrEvent"`
 	// method, what is this message doing, etc. CLICommand, Syslog, etc.
 	Method Method `json:"method" yaml:"method"`
 	// messageCh is used by publisher kind processes to read new messages
@@ -120,7 +120,7 @@ type Subject struct {
 func newSubject(method Method, node string) Subject {
 	// Get the CommandOrEvent type for the Method.
 	ma := method.GetMethodsAvailable()
-	coe, ok := ma.Methodhandlers[method]
+	mh, ok := ma.Methodhandlers[method]
 	if !ok {
 		log.Printf("error: no CommandOrEvent type specified for the method: %v\n", method)
 		os.Exit(1)
@@ -128,7 +128,7 @@ func newSubject(method Method, node string) Subject {
 
 	return Subject{
 		ToNode:         node,
-		CommandOrEvent: coe.getKind(),
+		CommandOrEvent: mh.getKind(),
 		Method:         method,
 		messageCh:      make(chan Message),
 	}

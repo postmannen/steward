@@ -244,9 +244,9 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 			Header: natsMsgHeader,
 		}
 
-		//
-
-		if p.subject.CommandOrEvent == CommandNACK || p.subject.CommandOrEvent == EventNACK {
+		// If it is a NACK message we just deliver the message and return
+		// here so we don't create a ACK message and then stop waiting for it.
+		if p.subject.CommandOrEvent == EventNACK {
 			err := natsConn.PublishMsg(msg)
 			if err != nil {
 				er := fmt.Errorf("error: nats publish of hello failed: %v", err)
@@ -260,7 +260,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 		// The SubscribeSync used in the subscriber, will get messages that
 		// are sent after it started subscribing.
 		//
-		// Create a subscriber for the reply message.
+		// Create a subscriber for the ACK reply message.
 		subReply, err := natsConn.SubscribeSync(msg.Reply)
 		if err != nil {
 			er := fmt.Errorf("error: nats SubscribeSync failed: failed to create reply message for subject: %v, error: %v", msg.Reply, err)
@@ -283,7 +283,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 
 		// If the message is an ACK type of message we must check that a
 		// reply, and if it is not we don't wait here at all.
-		if p.subject.CommandOrEvent == CommandACK || p.subject.CommandOrEvent == EventACK {
+		if p.subject.CommandOrEvent == EventACK {
 			// Wait up until ACKTimeout specified for a reply,
 			// continue and resend if no reply received,
 			// or exit if max retries for the message reached.
@@ -498,7 +498,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 	switch {
 
 	// Check for ACK type Commands or Event.
-	case p.subject.CommandOrEvent == CommandACK || p.subject.CommandOrEvent == EventACK:
+	case p.subject.CommandOrEvent == EventACK:
 		// Look up the method handler for the specified method.
 		mh, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
@@ -521,7 +521,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		natsConn.Publish(msg.Reply, out)
 
 	// Check for NACK type Commands or Event.
-	case p.subject.CommandOrEvent == CommandNACK || p.subject.CommandOrEvent == EventNACK:
+	case p.subject.CommandOrEvent == EventNACK:
 		mf, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.CommandOrEvent)

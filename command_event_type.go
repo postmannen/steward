@@ -6,7 +6,7 @@
 
 package steward
 
-// CommandOrEvent describes on the message level if this is
+// Event describes on the message level if this is
 // an event or command kind of message in the Subject name.
 // This field is mainly used to be able to spawn up different
 // worker processes based on the Subject name so we can have
@@ -15,15 +15,13 @@ package steward
 // This type is used in both building the subject name, and
 // also inside the Message type to describe if it is a Command
 // or Event.
-type CommandOrEvent string
+type Event string
 
-func (c CommandOrEvent) GetCommandOrEventAvailable() CommandOrEventAvailable {
-	ma := CommandOrEventAvailable{
-		topics: map[CommandOrEvent]struct{}{
-			CommandACK:  {},
-			CommandNACK: {},
-			EventACK:    {},
-			EventNACK:   {},
+func (c Event) CheckEventAvailable() EventAvailable {
+	ma := EventAvailable{
+		topics: map[Event]struct{}{
+			EventACK:  {},
+			EventNACK: {},
 		},
 	}
 
@@ -31,36 +29,26 @@ func (c CommandOrEvent) GetCommandOrEventAvailable() CommandOrEventAvailable {
 }
 
 const (
-	// Command, command that will just wait for an
-	// ack, and nothing of the output of the command are
-	// delivered back in the reply ack message.
-	// The message should contain the unique ID of the
-	// command.
-	CommandACK CommandOrEvent = "CommandACK"
+	// EventACK, wait for the return of an ACK message.
+	// The sender will wait for an ACK reply message
+	// to decide if it was succesfully delivered or not.
+	// If no ACK was received within the timeout, the
+	// message will be resent the nr. of times specified
+	// in retries field of the message.
+	EventACK Event = "EventACK"
 	// Same as above, but No ACK.
-	CommandNACK CommandOrEvent = "CommandNACK"
-	// Same as above, but No ACK
-	// Event, wait for and return the ACK message. This means
-	// that the command should be executed immediately
-	// and that we should get the confirmation if it
-	// was successful or not.
-	EventACK CommandOrEvent = "EventACK"
-	// Same as above, but No ACK.
-	EventNACK CommandOrEvent = "EventNACK"
-	// eventCommand, just wait for the ACK that the
-	// message is received. What action happens is up to the
-	// received to decide.
+	EventNACK Event = "EventNACK"
 )
 
 // CommandOrEventAvailable are used for checking if the
 // commands or events are defined.
-type CommandOrEventAvailable struct {
-	topics map[CommandOrEvent]struct{}
+type EventAvailable struct {
+	topics map[Event]struct{}
 }
 
 // Check if a command or even exists.
-func (co CommandOrEventAvailable) CheckIfExists(c CommandOrEvent, subject Subject) bool {
-	_, ok := co.topics[c]
+func (e EventAvailable) CheckIfExists(event Event, subject Subject) bool {
+	_, ok := e.topics[event]
 	if ok {
 		// log.Printf("info: CommandOrEventAvailable.CheckIfExists: command or event found: %v, for %v\n", c, subject.name())
 		return true
