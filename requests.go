@@ -1367,7 +1367,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 		url := message.MethodArgs[0]
 
 		client := http.Client{
-			Timeout: time.Duration(message.MethodTimeout),
+			Timeout: time.Second * time.Duration(message.MethodTimeout),
 		}
 
 		// Get a context with the timeout specified in message.MethodTimeout.
