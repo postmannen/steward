@@ -11,6 +11,8 @@ Example use cases:
 
 As long as you can do something as an operator on in a shell on a system you can do the same with Steward in a secure way to one or all end nodes (servers) in one go with one single message/command.
 
+**NB** Expect the main branch to have breaking changes. If stability is needed, use the released packages, and read the release notes where changes will be explained.
+
 - [steward](#steward)
   - [What is it ?](#what-is-it-)
   - [Overview](#overview)
@@ -85,7 +87,6 @@ As long as you can do something as an operator on in a shell on a system you can
       - [Subject](#subject)
         - [Complete subject example](#complete-subject-example)
   - [TODO](#todo)
-    - [Services at startup of Steward. Could be implemented by having a local folder of messages to go through at startup. What is needed](#services-at-startup-of-steward-could-be-implemented-by-having-a-local-folder-of-messages-to-go-through-at-startup-what-is-needed)
     - [Add Op option the remove messages from the queue on nodes](#add-op-option-the-remove-messages-from-the-queue-on-nodes)
   - [Disclaimer](#disclaimer)
 
@@ -175,9 +176,7 @@ TODO: Make a diagram here...
 
 - **Node**: Something with an operating system that have network available. This can be a server, a cloud instance, a container, or other.
 - **Process**: A message handler that knows how to handle messages of a given subject concurrently.
-- **Message**:
-  - **Command**: Something to be executed on the message received. An example can be a shell command.
-  - **Event**: Something that have happened. An example can be transfer of syslog data from a host.
+- **Message**: A message sent from one Steward node to another.
 
 ## Features
 
@@ -224,7 +223,7 @@ Example of a message with timeouts set:
         "toNode": "ship2",
         "methodArgs": ["bash","-c","tail -f /var/log/syslog"],
         "replyMethod":"REQToFileAppend",
-        "method":"REQnCliCommandCont",
+        "method":"REQCliCommandCont",
         "ACKTimeout":3,
         "retries":3,
         "methodTimeout": 60
@@ -514,7 +513,7 @@ Will run the command given, and return the stdout output of the command continou
         "directory":"some/cli/command",
         "fileName":"cli.result",
         "toNode": "ship2",
-        "method":"REQnCliCommandCont",
+        "method":"REQCliCommandCont",
         "methodArgs": ["bash","-c","docker ps -a"],
         "replyMethod":"REQToFileAppend",
         "methodTimeout":10,
@@ -1188,29 +1187,25 @@ You can save the content to myfile.JSON and append it to the `socket` file:
 
 #### Subject
 
-`<nodename>.<method>.<command/event>`
+`<nodename>.<method>.<event>`
 
 Example:
 
-`ship3.REQCliCommand.CommandACK`
+`ship3.REQCliCommand.EventACK`
 
 For ACK messages (using the reply functionality in NATS) we append the `.reply` to the subject.
 
-`ship3.REQCliCommand.CommandACK.reply`
+`ship3.REQCliCommand.EventACK.reply`
 
 **Nodename**: Are the hostname of the device. This do not have to be resolvable via DNS, it is just a unique name for the host to receive the message.
 
-**Command/Event**: Is the type of message sent. Descriptions of these commands/events are provided in this document:
+**Event**: Desribes if we want and Acknowledge or No Acknowledge when the message was delivered :
 
-- `CommandACK`
 - `EventACK`
-- `CommandNACK`
 - `EventNACK`
 
-Description of the differences are mentioned earlier.
-
-Info: The command/event called **MessageType** are present in both the **Subject** structure and the **Message** structure.
-This is due to MessageType being used in both the naming of a subject, and for specifying message type to allow for specific processing of a message.
+Info: The field **Event** are present in both the **Subject** structure and the **Message** structure.
+This is due to **Event** being used in both the naming of a subject, and for specifying message type to allow for specific processing of a message.
 
 **Method**: Are the functionality the message provide. Example could be for example `REQCliCommand` or `REQHttpGet`
 
@@ -1220,17 +1215,11 @@ For Hello Message to a node named "central" of type Event and there is No Ack.
 
 `central.REQHello.EventNACK`
 
-For CliCommand message to a node named "ship1" of type Command and it wants an Ack.
+For CliCommand message to a node named "ship1" of type Event and it wants an Ack.
 
-`ship1.REQCliCommand.CommandACK`
+`ship1.REQCliCommand.EventACK`
 
 ## TODO
-
-### Services at startup of Steward. Could be implemented by having a local folder of messages to go through at startup. What is needed
-
-- A Handler that writes to this folder.
-- A Handler that can check what is in this folder.
-- A Handler to remove messages from this folder.
 
 ### Add Op option the remove messages from the queue on nodes
 
