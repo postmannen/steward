@@ -28,6 +28,8 @@ type Message struct {
 	// method. Can be f.ex. an ip address if it is a tcp sender, or the
 	// shell command to execute in a cli session.
 	MethodArgs []string `json:"methodArgs" yaml:"methodArgs"`
+	// ArgSignature is the ed25519 signature of the methodArgs.
+	ArgSignature []byte `json:"argSignature" yaml:"argSignature"`
 	// ReplyMethod, is the method to use for the reply message.
 	// By default the reply method will be set to log to file, but
 	// you can override it setting your own here.
