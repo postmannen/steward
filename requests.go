@@ -319,7 +319,7 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 	newMsg := Message{
 		ToNode:        message.FromNode,
 		FromNode:      message.ToNode,
-		Data:          []string{string(outData)},
+		Data:          outData,
 		Method:        message.ReplyMethod,
 		MethodArgs:    message.ReplyMethodArgs,
 		MethodTimeout: message.ReplyMethodTimeout,
@@ -621,14 +621,12 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 	}
 	defer f.Close()
 
-	for _, d := range message.Data {
-		_, err := f.Write([]byte(d))
-		f.Sync()
-		if err != nil {
-			er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file : %v, %v", file, err)
-			proc.processes.errorKernel.errSend(proc, message, er)
-			log.Printf("%v\n", er)
-		}
+	_, err = f.Write(message.Data)
+	f.Sync()
+	if err != nil {
+		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file : %v, %v", file, err)
+		proc.processes.errorKernel.errSend(proc, message, er)
+		log.Printf("%v\n", er)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -678,14 +676,12 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 	}
 	defer f.Close()
 
-	for _, d := range message.Data {
-		_, err := f.Write([]byte(d))
-		f.Sync()
-		if err != nil {
-			er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file: file: %v, %v", file, err)
-			proc.processes.errorKernel.errSend(proc, message, er)
-			log.Printf("%v\n", er)
-		}
+	_, err = f.Write(message.Data)
+	f.Sync()
+	if err != nil {
+		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file: file: %v, %v", file, err)
+		proc.processes.errorKernel.errSend(proc, message, er)
+		log.Printf("%v\n", er)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -759,7 +755,7 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 			msg.ToNode = Node(DstNode)
 			//msg.Method = REQToFile
 			msg.Method = REQCopyFileTo
-			msg.Data = []string{string(out)}
+			msg.Data = out
 			msg.Directory = dstDir
 			msg.FileName = dstFile
 
@@ -901,13 +897,11 @@ func (m methodREQCopyFileTo) handler(proc process, message Message, node string)
 			}
 			defer f.Close()
 
-			for _, d := range message.Data {
-				_, err := f.Write([]byte(d))
-				f.Sync()
-				if err != nil {
-					er := fmt.Errorf("failed to write to file: file: %v, error: %v", file, err)
-					errCh <- er
-				}
+			_, err = f.Write(message.Data)
+			f.Sync()
+			if err != nil {
+				er := fmt.Errorf("failed to write to file: file: %v, error: %v", file, err)
+				errCh <- er
 			}
 
 			// All went ok, send a signal to the outer select statement.
@@ -1031,12 +1025,10 @@ func (m methodREQErrorLog) handler(proc process, message Message, node string) (
 	}
 	defer f.Close()
 
-	for _, d := range message.Data {
-		_, err := f.Write([]byte(d))
-		f.Sync()
-		if err != nil {
-			log.Printf("error: methodEventTextLogging.handler: failed to write to file: %v\n", err)
-		}
+	_, err = f.Write(message.Data)
+	f.Sync()
+	if err != nil {
+		log.Printf("error: methodEventTextLogging.handler: failed to write to file: %v\n", err)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -1223,7 +1215,7 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 
 					// Put all the data which is a slice of string into a single
 					// string so we can put it in a single env variable.
-					envData = strings.Join(message.Data, "")
+					envData = string(message.Data)
 				}
 			}
 
@@ -1303,10 +1295,7 @@ func (m methodREQToConsole) handler(proc process, message Message, node string) 
 			log.Printf("error: no tui client started\n")
 		}
 	default:
-		for _, v := range message.Data {
-			fmt.Fprintf(os.Stdout, "%v", v)
-		}
-
+		fmt.Fprintf(os.Stdout, "%v", string(message.Data))
 		fmt.Println()
 	}
 
@@ -1773,7 +1762,7 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 		message.ToNode = Node(relayTo)
 		message.FromNode = Node(node)
 		message.Method = REQRelay
-		message.Data = []string{string(out)}
+		message.Data = out
 
 		sam, err := newSubjectAndMessage(message)
 		if err != nil {

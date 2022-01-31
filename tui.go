@@ -27,7 +27,7 @@ import (
 
 // tui holds general types used within the tui.
 type tui struct {
-	toConsoleCh    chan []string
+	toConsoleCh    chan []byte
 	toRingbufferCh chan []subjectAndMessage
 	ctx            context.Context
 	nodeName       Node
@@ -35,7 +35,7 @@ type tui struct {
 
 // newTui returns a new tui.
 func newTui(nodeName Node) (*tui, error) {
-	ch := make(chan []string)
+	ch := make(chan []byte)
 	s := tui{
 		toConsoleCh: ch,
 		nodeName:    nodeName,

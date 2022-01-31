@@ -332,7 +332,7 @@ func createErrorMsgContent(conf *Configuration, FromNode Node, theError error) s
 			ToNode:     "errorCentral",
 			FromNode:   FromNode,
 			FileName:   "error.log",
-			Data:       []string{er},
+			Data:       []byte(er),
 			Method:     REQErrorLog,
 			ACKTimeout: conf.ErrorMessageTimeout,
 			Retries:    conf.ErrorMessageRetries,

@@ -235,7 +235,7 @@ func (s startup) pubREQHello(p process) {
 					Directory:  "hello-messages",
 					ToNode:     Node(p.configuration.CentralNodeName),
 					FromNode:   Node(p.node),
-					Data:       []string{d},
+					Data:       []byte(d),
 					Method:     REQHello,
 					ACKTimeout: 10,
 					Retries:    1,

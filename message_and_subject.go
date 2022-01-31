@@ -21,7 +21,7 @@ type Message struct {
 	// specify the cli commands to execute on a node, and this is
 	// also the field where we put the returned data in a reply
 	// message.
-	Data []string `json:"data" yaml:"data"`
+	Data []byte `json:"data" yaml:"data"`
 	// Method, what request type to use, like REQCliCommand, REQHttpGet..
 	Method Method `json:"method" yaml:"method"`
 	// Additional arguments that might be needed when executing the

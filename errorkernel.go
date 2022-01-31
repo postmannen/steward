@@ -81,7 +81,7 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- []subjectAndMessage) error
 					ToNode:     "errorCentral",
 					FromNode:   errEvent.process.node,
 					FileName:   "error.log",
-					Data:       []string{er},
+					Data:       []byte(er),
 					Method:     REQErrorLog,
 					ACKTimeout: errEvent.process.configuration.ErrorMessageTimeout,
 					Retries:    errEvent.process.configuration.ErrorMessageRetries,
