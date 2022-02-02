@@ -2,8 +2,12 @@ package steward
 
 import (
 	"context"
+	"crypto/ed25519"
+	"encoding/base64"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -24,21 +28,36 @@ type processes struct {
 	lastProcessID int
 	// The instance global prometheus registry.
 	metrics *metrics
-	// Waitgroup to keep track of all the processes started
+	// Waitgroup to keep track of all the processes started.
 	wg sync.WaitGroup
 	// tui
 	tui *tui
 	// errorKernel
 	errorKernel *errorKernel
+	// configuration
+	configuration *Configuration
+
+	// Full path to the signing keys folder
+	SignKeyFolder string
+	// Full path to private signing key.
+	SignKeyPrivateKeyPath string
+	// Full path to public signing key.
+	SignKeyPublicKeyPath string
+
+	// private key for ed25519 signing.
+	SignPrivateKey []byte
+	// public key for ed25519 signing.
+	SignPublicKey []byte
 }
 
 // newProcesses will prepare and return a *processes which
 // is map containing all the currently running processes.
-func newProcesses(ctx context.Context, metrics *metrics, tui *tui, errorKernel *errorKernel) *processes {
+func newProcesses(ctx context.Context, metrics *metrics, tui *tui, errorKernel *errorKernel, configuration *Configuration) *processes {
 	p := processes{
-		active:      *newProcsMap(),
-		tui:         tui,
-		errorKernel: errorKernel,
+		active:        *newProcsMap(),
+		tui:           tui,
+		errorKernel:   errorKernel,
+		configuration: configuration,
 	}
 
 	// Prepare the parent context for the subscribers.
@@ -54,7 +73,92 @@ func newProcesses(ctx context.Context, metrics *metrics, tui *tui, errorKernel *
 
 	p.metrics = metrics
 
+	// Set the signing key paths.
+	p.SignKeyFolder = filepath.Join(p.configuration.ConfigFolder, "signing")
+	p.SignKeyPrivateKeyPath = filepath.Join(p.SignKeyFolder, "private.key")
+	p.SignKeyPublicKeyPath = filepath.Join(p.SignKeyFolder, "public.key")
+
 	return &p
+}
+
+// ----------------------
+
+// loadSigningKeys will try to load the ed25519 signing keys. If the
+// files are not found new keys will be generated and written to disk.
+func (p *processes) loadSigningKeys(initProc process) error {
+	// Check if folder structure exist, if not create it.
+	if _, err := os.Stat(p.SignKeyFolder); os.IsNotExist(err) {
+		err := os.MkdirAll(p.SignKeyFolder, 0700)
+		if err != nil {
+			er := fmt.Errorf("error: failed to create directory for signing keys : %v", err)
+			return er
+		}
+
+	}
+
+	// Check if there already are any keys in the etc folder.
+	foundKey := false
+
+	if _, err := os.Stat(p.SignKeyPublicKeyPath); !os.IsNotExist(err) {
+		foundKey = true
+	}
+	if _, err := os.Stat(p.SignKeyPrivateKeyPath); !os.IsNotExist(err) {
+		foundKey = true
+	}
+
+	// If no keys where found generete a new pair and write them to disk.
+	if !foundKey {
+		pub, priv, err := ed25519.GenerateKey(nil)
+		if err != nil {
+			er := fmt.Errorf("error: failed to generate ed25519 keys for signing: %v", err)
+			return er
+		}
+		pubB64string := base64.RawStdEncoding.EncodeToString(pub)
+		privB64string := base64.RawStdEncoding.EncodeToString(priv)
+
+		// Write public key to file.
+		err = p.writeSigningKey(p.SignKeyPublicKeyPath, pubB64string)
+		if err != nil {
+			return err
+		}
+
+		// Write private key to file.
+		err = p.writeSigningKey(p.SignKeyPrivateKeyPath, privB64string)
+		if err != nil {
+			return err
+		}
+
+		// Also store the keys in the processes structure so we can
+		// reference them from there when we need them.
+		p.SignPublicKey = pub
+		p.SignPrivateKey = priv
+
+		er := fmt.Errorf("info: no signing keys found, generating new keys")
+		p.errorKernel.errSend(initProc, Message{}, er)
+
+		// We got the new generated keys now, so we can return.
+		return nil
+	}
+
+	return nil
+}
+
+// writeSigningKey will write the base64 encoded signing key to file.
+func (p *processes) writeSigningKey(realPath string, keyB64 string) error {
+	fh, err := os.OpenFile(realPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		er := fmt.Errorf("error: failed to open key file for writing: %v", err)
+		return er
+	}
+	defer fh.Close()
+
+	_, err = fh.Write([]byte(keyB64))
+	if err != nil {
+		er := fmt.Errorf("error: failed to write key to file: %v", err)
+		return er
+	}
+
+	return nil
 }
 
 // ----------------------

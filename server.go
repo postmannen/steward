@@ -143,7 +143,7 @@ func NewServer(c *Configuration, version string) (*server, error) {
 		nodeName:           c.NodeName,
 		natsConn:           conn,
 		StewardSocket:      stewardSocket,
-		processes:          newProcesses(ctx, metrics, tuiClient, errorKernel),
+		processes:          newProcesses(ctx, metrics, tuiClient, errorKernel, c),
 		ringBufferBulkInCh: make(chan []subjectAndMessage),
 		metrics:            metrics,
 		version:            version,
@@ -249,6 +249,14 @@ func (s *server) Start() {
 	s.processInitial = newProcess(context.TODO(), s.metrics, s.natsConn, s.processes, s.ringBufferBulkInCh, s.configuration, sub, s.errorKernel.errorCh, "", nil)
 	// Start all wanted subscriber processes.
 	s.processes.Start(s.processInitial)
+
+	// We need the initial process to be able to send error messages so
+	// we have to load the signing keys here.
+	err := s.processes.loadSigningKeys(s.processInitial)
+	if err != nil {
+		log.Printf("%v\n", err)
+		os.Exit(1)
+	}
 
 	time.Sleep(time.Second * 1)
 	s.processes.printProcessesMap()
