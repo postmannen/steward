@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -106,7 +107,8 @@ func (p *processes) loadSigningKeys(initProc process) error {
 		foundKey = true
 	}
 
-	// If no keys where found generete a new pair and write them to disk.
+	// If no keys where found generete a new pair, load them into the
+	// processes struct fields, and write them to disk.
 	if !foundKey {
 		pub, priv, err := ed25519.GenerateKey(nil)
 		if err != nil {
@@ -140,7 +142,47 @@ func (p *processes) loadSigningKeys(initProc process) error {
 		return nil
 	}
 
+	// Key files found, load them into the processes struct fields.
+	pubKey, _, err := p.readKeyFile(p.SignKeyPublicKeyPath)
+	if err != nil {
+		return err
+	}
+	p.SignPublicKey = pubKey
+
+	privKey, _, err := p.readKeyFile(p.SignKeyPrivateKeyPath)
+	if err != nil {
+		return err
+	}
+	p.SignPublicKey = pubKey
+	p.SignPrivateKey = privKey
+
 	return nil
+}
+
+// readKeyFile will take the path of a key file as input, read the base64
+// encoded data, decode the data. It will return the raw data as []byte,
+// the base64 encoded data, and any eventual error.
+func (p *processes) readKeyFile(keyFile string) (ed2519key []byte, b64Key []byte, err error) {
+	fh, err := os.Open(keyFile)
+	if err != nil {
+		er := fmt.Errorf("error: failed to open key file: %v", err)
+		return nil, nil, er
+	}
+	defer fh.Close()
+
+	b, err := ioutil.ReadAll(fh)
+	if err != nil {
+		er := fmt.Errorf("error: failed to read key file: %v", err)
+		return nil, nil, er
+	}
+
+	key, err := base64.RawStdEncoding.DecodeString(string(b))
+	if err != nil {
+		er := fmt.Errorf("error: failed to base64 decode key data: %v", err)
+		return nil, nil, er
+	}
+
+	return key, b, nil
 }
 
 // writeSigningKey will write the base64 encoded signing key to file.
