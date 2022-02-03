@@ -75,6 +75,10 @@ type Configuration struct {
 	EnableSocket bool
 	// EnableTUI will enable the Terminal User Interface
 	EnableTUI bool
+	// AllowEmptySignature will allow subscribers to handle messages
+	// with empty signatures. The only reason for using this flag
+	// should be to upgrade from version 0.1.15 and earlier.
+	AllowEmptySignature bool
 
 	// NOTE:
 	// Op commands will not be specified as a flag since they can't be turned off.
@@ -146,6 +150,7 @@ type ConfigurationFromFile struct {
 	SetBlockProfileRate      *int
 	EnableSocket             *bool
 	EnableTUI                *bool
+	AllowEmptySignature      *bool
 
 	StartPubREQHello          *int
 	StartSubREQErrorLog       *bool
@@ -202,6 +207,7 @@ func newConfigurationDefaults() Configuration {
 		SetBlockProfileRate:      0,
 		EnableSocket:             true,
 		EnableTUI:                false,
+		AllowEmptySignature:      true,
 
 		StartSubREQErrorLog:       true,
 		StartSubREQHello:          true,
@@ -372,6 +378,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.EnableTUI = *cf.EnableTUI
 	}
+	if cf.AllowEmptySignature == nil {
+		conf.AllowEmptySignature = cd.AllowEmptySignature
+	} else {
+		conf.AllowEmptySignature = *cf.AllowEmptySignature
+	}
 
 	// --- Start pub/sub
 
@@ -511,6 +522,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.IntVar(&c.SetBlockProfileRate, "setBlockProfileRate", fc.SetBlockProfileRate, "Enable block profiling by setting the value to f.ex. 1. 0 = disabled")
 	flag.BoolVar(&c.EnableSocket, "enableSocket", fc.EnableSocket, "true/false for enabling the creation of a steward.sock file")
 	flag.BoolVar(&c.EnableTUI, "enableTUI", fc.EnableTUI, "true/false for enabling the Terminal User Interface")
+	flag.BoolVar(&c.AllowEmptySignature, "allowEmptySignature", fc.AllowEmptySignature, "true/false AllowEmptySignature will allow subscribers to handle messages with empty signatures. The only reason for using this flag should be to upgrade from version 0.1.15 and earlier")
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 
