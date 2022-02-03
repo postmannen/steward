@@ -508,15 +508,17 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			p.processes.errorKernel.errSend(p, message, er)
 		}
 
-		var out []byte
+		out := []byte{}
 		var err error
 
-		// Call the method handler for the specified method.
-		out, err = mh.handler(p, message, thisNode)
+		if p.verifySignature(message) {
+			// Call the method handler for the specified method.
+			out, err = mh.handler(p, message, thisNode)
 
-		if err != nil {
-			er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-			p.processes.errorKernel.errSend(p, message, er)
+			if err != nil {
+				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
+				p.processes.errorKernel.errSend(p, message, er)
+			}
 		}
 
 		// Send a confirmation message back to the publisher
@@ -530,11 +532,14 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			p.processes.errorKernel.errSend(p, message, er)
 		}
 
-		_, err := mf.handler(p, message, thisNode)
+		if p.verifySignature(message) {
 
-		if err != nil {
-			er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-			p.processes.errorKernel.errSend(p, message, er)
+			_, err := mf.handler(p, message, thisNode)
+
+			if err != nil {
+				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
+				p.processes.errorKernel.errSend(p, message, er)
+			}
 		}
 
 	default:
@@ -542,6 +547,13 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		p.processes.errorKernel.infoSend(p, message, er)
 
 	}
+}
+
+// verifySignature
+func (p process) verifySignature(m Message) bool {
+	fmt.Printf(" * verifySignature, fromNode: %v, method: %v, signature: %v\n", m.FromNode, m.Method, m.ArgSignature)
+
+	return true
 }
 
 // SubscribeMessage will register the Nats callback function for the specified
