@@ -551,6 +551,11 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 
 // verifySignature
 func (p process) verifySignature(m Message) bool {
+	if p.configuration.AllowEmptySignature {
+		fmt.Printf(" * verifySignature: AllowEmptySignature set to TRUE\n")
+		return true
+	}
+
 	fmt.Printf(" * verifySignature, fromNode: %v, method: %v, signature: %v\n", m.FromNode, m.Method, m.ArgSignature)
 
 	return true
