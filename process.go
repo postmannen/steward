@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/ed25519"
 	"encoding/gob"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -594,6 +596,11 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		// exit this function if Cancel are received via ctx.
 		select {
 		case m := <-p.subject.messageCh:
+			// Sign the methodArgs, and add the signature to the message.
+			m.ArgSignature = p.addMethodArgSignature(m)
+			fmt.Printf(" * added signature: %v\n", m.ArgSignature)
+			fmt.Printf(" * length of sig : %v\n", len(m.ArgSignature))
+
 			p.publishAMessage(m, zEnc, once, natsConn)
 		case <-p.ctx.Done():
 			er := fmt.Errorf("info: canceling publisher: %v", p.subject.name())
@@ -602,6 +609,13 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 			return
 		}
 	}
+}
+
+func (p process) addMethodArgSignature(m Message) []byte {
+	argsString := strings.Join(m.MethodArgs, " ")
+	sign := ed25519.Sign(p.processes.SignPrivateKey, []byte(argsString))
+
+	return sign
 }
 
 func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, natsConn *nats.Conn) {
