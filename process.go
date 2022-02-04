@@ -84,11 +84,14 @@ type process struct {
 	// startup holds the startup functions for starting up publisher
 	// or subscriber processes
 	startup *startup
+
+	// Signatures
+	signatures *signatures
 }
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func newProcess(ctx context.Context, metrics *metrics, natsConn *nats.Conn, processes *processes, toRingbufferCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, errCh chan errorEvent, processKind processKind, procFunc func() error) process {
+func newProcess(ctx context.Context, metrics *metrics, natsConn *nats.Conn, processes *processes, toRingbufferCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, errCh chan errorEvent, processKind processKind, procFunc func() error, signatures *signatures) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
 	processes.lastProcessID++
 
@@ -110,7 +113,7 @@ func newProcess(ctx context.Context, metrics *metrics, natsConn *nats.Conn, proc
 		natsConn:         natsConn,
 		ctx:              ctx,
 		ctxCancel:        cancel,
-		startup:          newStartup(metrics),
+		startup:          newStartup(metrics, signatures),
 	}
 
 	return proc

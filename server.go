@@ -59,6 +59,10 @@ type server struct {
 	tui *tui
 	// processInitial is the initial process that all other processes are tied to.
 	processInitial process
+
+	// Signatures  holds all the signatures,
+	// and the public keys
+	Signatures *signatures
 }
 
 // newServer will prepare and return a server type
@@ -136,6 +140,8 @@ func NewServer(c *Configuration, version string) (*server, error) {
 
 	}
 
+	signatures := newSignatures()
+
 	s := &server{
 		ctx:                ctx,
 		cancel:             cancel,
@@ -143,12 +149,13 @@ func NewServer(c *Configuration, version string) (*server, error) {
 		nodeName:           c.NodeName,
 		natsConn:           conn,
 		StewardSocket:      stewardSocket,
-		processes:          newProcesses(ctx, metrics, tuiClient, errorKernel, c),
+		processes:          newProcesses(ctx, metrics, tuiClient, errorKernel, c, signatures),
 		ringBufferBulkInCh: make(chan []subjectAndMessage),
 		metrics:            metrics,
 		version:            version,
 		tui:                tuiClient,
 		errorKernel:        errorKernel,
+		Signatures:         signatures,
 	}
 
 	// Create the default data folder for where subscribers should
@@ -246,7 +253,7 @@ func (s *server) Start() {
 	//
 	// NB: The context of the initial process are set in processes.Start.
 	sub := newSubject(REQInitial, s.nodeName)
-	s.processInitial = newProcess(context.TODO(), s.metrics, s.natsConn, s.processes, s.ringBufferBulkInCh, s.configuration, sub, s.errorKernel.errorCh, "", nil)
+	s.processInitial = newProcess(context.TODO(), s.metrics, s.natsConn, s.processes, s.ringBufferBulkInCh, s.configuration, sub, s.errorKernel.errorCh, "", nil, s.Signatures)
 	// Start all wanted subscriber processes.
 	s.processes.Start(s.processInitial)
 
@@ -479,7 +486,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 					// log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 					sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
-					proc := newProcess(s.ctx, s.metrics, s.natsConn, s.processes, s.ringBufferBulkInCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil)
+					proc := newProcess(s.ctx, s.metrics, s.natsConn, s.processes, s.ringBufferBulkInCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil, s.Signatures)
 
 					proc.spawnWorker(s.processes, s.natsConn)
 					// log.Printf("info: processNewMessages: new process started, subject: %v, processID: %v\n", subjName, proc.processID)
