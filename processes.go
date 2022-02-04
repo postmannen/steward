@@ -45,6 +45,10 @@ type processes struct {
 	// Full path to public signing key.
 	SignKeyPublicKeyPath string
 
+	// allowedSignatures  holds all the signatures,
+	// and the public keys
+	allowedSignatures allowedSignatures
+
 	// private key for ed25519 signing.
 	SignPrivateKey []byte
 	// public key for ed25519 signing.
@@ -59,6 +63,9 @@ func newProcesses(ctx context.Context, metrics *metrics, tui *tui, errorKernel *
 		tui:           tui,
 		errorKernel:   errorKernel,
 		configuration: configuration,
+		allowedSignatures: allowedSignatures{
+			signatures: make(map[string]struct{}),
+		},
 	}
 
 	// Prepare the parent context for the subscribers.
@@ -83,6 +90,15 @@ func newProcesses(ctx context.Context, metrics *metrics, tui *tui, errorKernel *
 }
 
 // ----------------------
+
+// allowedSignatures is the structure for reading and writing from
+// the signatures map. It holds a mutex to use when interacting with
+// the map.
+type allowedSignatures struct {
+	// signatures is a map for holding all the allowed signatures.
+	signatures map[string]struct{}
+	mu         sync.Mutex
+}
 
 // loadSigningKeys will try to load the ed25519 signing keys. If the
 // files are not found new keys will be generated and written to disk.

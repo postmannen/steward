@@ -327,28 +327,29 @@ func (s *server) Stop() {
 // 	metrics.promInfoMessagesSentTotal.Inc()
 // }
 
-// createErrorMsgContent will prepare a subject and message with the content
-// of the error
-func createErrorMsgContent(conf *Configuration, FromNode Node, theError error) subjectAndMessage {
-	// Add time stamp
-	er := fmt.Sprintf("%v, node: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), FromNode, theError.Error())
-
-	sam := subjectAndMessage{
-		Subject: newSubject(REQErrorLog, "errorCentral"),
-		Message: Message{
-			Directory:  "errorLog",
-			ToNode:     "errorCentral",
-			FromNode:   FromNode,
-			FileName:   "error.log",
-			Data:       []byte(er),
-			Method:     REQErrorLog,
-			ACKTimeout: conf.ErrorMessageTimeout,
-			Retries:    conf.ErrorMessageRetries,
-		},
-	}
-
-	return sam
-}
+// DEPRECATED
+// // createErrorMsgContent will prepare a subject and message with the content
+// // of the error
+// func createErrorMsgContent(conf *Configuration, FromNode Node, theError error) subjectAndMessage {
+// 	// Add time stamp
+// 	er := fmt.Sprintf("%v, node: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), FromNode, theError.Error())
+//
+// 	sam := subjectAndMessage{
+// 		Subject: newSubject(REQErrorLog, "errorCentral"),
+// 		Message: Message{
+// 			Directory:  "errorLog",
+// 			ToNode:     "errorCentral",
+// 			FromNode:   FromNode,
+// 			FileName:   "error.log",
+// 			Data:       []byte(er),
+// 			Method:     REQErrorLog,
+// 			ACKTimeout: conf.ErrorMessageTimeout,
+// 			Retries:    conf.ErrorMessageRetries,
+// 		},
+// 	}
+//
+// 	return sam
+// }
 
 // Contains the sam value as it is used in the state DB, and also a
 // delivered function to be called when this message is picked up, so

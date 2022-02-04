@@ -556,9 +556,18 @@ func (p process) verifySignature(m Message) bool {
 		return true
 	}
 
-	fmt.Printf(" * verifySignature, fromNode: %v, method: %v, signature: %v\n", m.FromNode, m.Method, m.ArgSignature)
+	// Verify if the signature matches.
+	argsStringified := argsToString(m.MethodArgs)
+	ok := ed25519.Verify(p.processes.SignPublicKey, []byte(argsStringified), m.ArgSignature)
 
-	return true
+	fmt.Printf(" * verifySignature, result: %v, fromNode: %v, method: %v, signature: %s\n", ok, m.FromNode, m.Method, m.ArgSignature)
+
+	return ok
+}
+
+// argsToString takes args in the format of []string and returns a string.
+func argsToString(args []string) string {
+	return strings.Join(args, " ")
 }
 
 // SubscribeMessage will register the Nats callback function for the specified
@@ -615,8 +624,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		case m := <-p.subject.messageCh:
 			// Sign the methodArgs, and add the signature to the message.
 			m.ArgSignature = p.addMethodArgSignature(m)
-			fmt.Printf(" * added signature: %v\n", m.ArgSignature)
-			fmt.Printf(" * length of sig : %v\n", len(m.ArgSignature))
+			fmt.Printf(" * DEBUG: add signature, fromNode: %v, method: %v, signature: %s\n", m.FromNode, m.Method, m.ArgSignature)
 
 			p.publishAMessage(m, zEnc, once, natsConn)
 		case <-p.ctx.Done():
@@ -629,7 +637,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 }
 
 func (p process) addMethodArgSignature(m Message) []byte {
-	argsString := strings.Join(m.MethodArgs, " ")
+	argsString := argsToString(m.MethodArgs)
 	sign := ed25519.Sign(p.processes.SignPrivateKey, []byte(argsString))
 
 	return sign
