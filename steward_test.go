@@ -230,19 +230,15 @@ func checkREQHelloTest(stewardServer *server, conf *Configuration, t *testing.T)
 
 // Check the error logger type.
 func checkREQErrorLogTest(stewardServer *server, conf *Configuration, t *testing.T) error {
-	m := `[
-		{
-			"directory": "errorLog",
-			"fileName":"fileName.result",
-			"toNode": "errorCentral",
-			"data": ["some error"],
-			"method": "REQErrorLog"
-		}
-	]`
+	m := Message{
+		ToNode: "somenode",
+	}
 
-	writeToSocketTest(conf, m, t)
+	p := newProcess(stewardServer.ctx, stewardServer.metrics, stewardServer.natsConn, stewardServer.processes, stewardServer.processInitial.toRingbufferCh, stewardServer.configuration, Subject{}, stewardServer.errorKernel.errorCh, processKindSubscriber, nil, stewardServer.signatures)
 
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "errorCentral", "fileName.result")
+	stewardServer.errorKernel.errSend(p, m, fmt.Errorf("some error"))
+
+	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "errorCentral", "error.log")
 	_, err := findStringInFileTest("some error", resultFile, conf, t)
 	if err != nil {
 		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQErrorLogTest: %v", err)
