@@ -605,7 +605,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		case m := <-p.subject.messageCh:
 			// Sign the methodArgs, and add the signature to the message.
 			m.ArgSignature = p.addMethodArgSignature(m)
-			fmt.Printf(" * DEBUG: add signature, fromNode: %v, method: %v, signature: %s\n", m.FromNode, m.Method, m.ArgSignature)
+			fmt.Printf(" * DEBUG: add signature, fromNode: %v, method: %v,  len of signature: %v\n", m.FromNode, m.Method, len(m.ArgSignature))
 
 			p.publishAMessage(m, zEnc, once, natsConn)
 		case <-p.ctx.Done():

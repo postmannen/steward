@@ -180,7 +180,7 @@ func (s *signatures) readKeyFile(keyFile string) (ed2519key []byte, b64Key []byt
 
 // verifySignature
 func (s *signatures) verifySignature(m Message) bool {
-	fmt.Printf(" * DEBUG: verifySignature, method: %v ,s contains: %v\n", m.Method, s)
+	fmt.Printf(" * DEBUG: verifySignature, method: %v\n", m.Method)
 	if s.configuration.AllowEmptySignature {
 		fmt.Printf(" * DEBUG: verifySignature: AllowEmptySignature set to TRUE\n")
 		return true
@@ -190,7 +190,7 @@ func (s *signatures) verifySignature(m Message) bool {
 	argsStringified := argsToString(m.MethodArgs)
 	ok := ed25519.Verify(s.SignPublicKey, []byte(argsStringified), m.ArgSignature)
 
-	fmt.Printf(" * DEBUG: verifySignature, result: %v, fromNode: %v, method: %v, signature: %s\n", ok, m.FromNode, m.Method, m.ArgSignature)
+	fmt.Printf(" * DEBUG: verifySignature, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
 
 	return ok
 }
