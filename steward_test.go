@@ -48,6 +48,7 @@ func TestStewardServer(t *testing.T) {
 		DatabaseFolder: filepath.Join(tempdir, "var/lib"),
 		//SubscribersDataFolder: filepath.Join(tempdir, "data"),
 		SubscribersDataFolder: "./tmp/",
+		ConfigFolder:          "./tmp/etc",
 		BrokerAddress:         "127.0.0.1:40222",
 		PromHostAndPort:       ":2112",
 		NodeName:              "central",
