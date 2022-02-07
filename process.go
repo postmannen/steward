@@ -114,6 +114,7 @@ func newProcess(ctx context.Context, metrics *metrics, natsConn *nats.Conn, proc
 		ctx:              ctx,
 		ctxCancel:        cancel,
 		startup:          newStartup(metrics, signatures),
+		signatures:       signatures,
 	}
 
 	return proc
@@ -514,7 +515,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		out := []byte{}
 		var err error
 
-		if p.verifySignature(message) {
+		if p.signatures.verifySignature(message) {
 			// Call the method handler for the specified method.
 			out, err = mh.handler(p, message, thisNode)
 
@@ -535,7 +536,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			p.processes.errorKernel.errSend(p, message, er)
 		}
 
-		if p.verifySignature(message) {
+		if p.signatures.verifySignature(message) {
 
 			_, err := mf.handler(p, message, thisNode)
 
@@ -550,22 +551,6 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		p.processes.errorKernel.infoSend(p, message, er)
 
 	}
-}
-
-// verifySignature
-func (p process) verifySignature(m Message) bool {
-	if p.configuration.AllowEmptySignature {
-		fmt.Printf(" * verifySignature: AllowEmptySignature set to TRUE\n")
-		return true
-	}
-
-	// Verify if the signature matches.
-	argsStringified := argsToString(m.MethodArgs)
-	ok := ed25519.Verify(p.processes.SignPublicKey, []byte(argsStringified), m.ArgSignature)
-
-	fmt.Printf(" * verifySignature, result: %v, fromNode: %v, method: %v, signature: %s\n", ok, m.FromNode, m.Method, m.ArgSignature)
-
-	return ok
 }
 
 // argsToString takes args in the format of []string and returns a string.
@@ -641,7 +626,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 
 func (p process) addMethodArgSignature(m Message) []byte {
 	argsString := argsToString(m.MethodArgs)
-	sign := ed25519.Sign(p.processes.SignPrivateKey, []byte(argsString))
+	sign := ed25519.Sign(p.signatures.SignPrivateKey, []byte(argsString))
 
 	return sign
 }

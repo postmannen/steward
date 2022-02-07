@@ -55,6 +55,7 @@ func TestStewardServer(t *testing.T) {
 		DefaultMessageRetries: 1,
 		DefaultMessageTimeout: 3,
 		EnableSocket:          true,
+		// AllowEmptySignature:   true,
 
 		StartSubREQCliCommand:     true,
 		StartSubREQCliCommandCont: true,

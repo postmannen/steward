@@ -60,17 +60,17 @@ type server struct {
 	// processInitial is the initial process that all other processes are tied to.
 	processInitial process
 
-	// Signatures  holds all the signatures,
+	// signatures  holds all the signatures,
 	// and the public keys
-	Signatures *signatures
+	signatures *signatures
 }
 
 // newServer will prepare and return a server type
-func NewServer(c *Configuration, version string) (*server, error) {
+func NewServer(configuration *Configuration, version string) (*server, error) {
 	// Set up the main background context.
 	ctx, cancel := context.WithCancel(context.Background())
 
-	metrics := newMetrics(c.PromHostAndPort)
+	metrics := newMetrics(configuration.PromHostAndPort)
 
 	// Start the error kernel that will do all the error handling
 	// that is not done within a process.
@@ -78,14 +78,14 @@ func NewServer(c *Configuration, version string) (*server, error) {
 
 	var opt nats.Option
 
-	if c.RootCAPath != "" {
-		opt = nats.RootCAs(c.RootCAPath)
+	if configuration.RootCAPath != "" {
+		opt = nats.RootCAs(configuration.RootCAPath)
 	}
 
-	if c.NkeySeedFile != "" {
+	if configuration.NkeySeedFile != "" {
 		var err error
 
-		opt, err = nats.NkeyOptionFromSeed(c.NkeySeedFile)
+		opt, err = nats.NkeyOptionFromSeed(configuration.NkeySeedFile)
 		if err != nil {
 			cancel()
 			return nil, fmt.Errorf("error: failed to read nkey seed file: %v", err)
@@ -98,16 +98,16 @@ func NewServer(c *Configuration, version string) (*server, error) {
 	for {
 		var err error
 		// Setting MaxReconnects to -1 which equals unlimited.
-		conn, err = nats.Connect(c.BrokerAddress,
+		conn, err = nats.Connect(configuration.BrokerAddress,
 			opt,
 			nats.MaxReconnects(-1),
-			nats.ReconnectJitter(time.Duration(c.NatsReconnectJitter)*time.Millisecond, time.Duration(c.NatsReconnectJitterTLS)*time.Second),
-			nats.Timeout(time.Second*time.Duration(c.NatsConnOptTimeout)),
+			nats.ReconnectJitter(time.Duration(configuration.NatsReconnectJitter)*time.Millisecond, time.Duration(configuration.NatsReconnectJitterTLS)*time.Second),
+			nats.Timeout(time.Second*time.Duration(configuration.NatsConnOptTimeout)),
 		)
 		// If no servers where available, we loop and retry until succesful.
 		if err != nil {
-			log.Printf("error: could not connect, waiting %v seconds, and retrying: %v\n", c.NatsConnectRetryInterval, err)
-			time.Sleep(time.Duration(time.Second * time.Duration(c.NatsConnectRetryInterval)))
+			log.Printf("error: could not connect, waiting %v seconds, and retrying: %v\n", configuration.NatsConnectRetryInterval, err)
+			time.Sleep(time.Duration(time.Second * time.Duration(configuration.NatsConnectRetryInterval)))
 			continue
 		}
 
@@ -121,8 +121,8 @@ func NewServer(c *Configuration, version string) (*server, error) {
 	var err error
 
 	// Open the steward socket file, and start the listener if enabled.
-	if c.EnableSocket {
-		stewardSocket, err = createSocket(c.SocketFolder, "steward.sock")
+	if configuration.EnableSocket {
+		stewardSocket, err = createSocket(configuration.SocketFolder, "steward.sock")
 		if err != nil {
 			cancel()
 			return nil, err
@@ -131,8 +131,8 @@ func NewServer(c *Configuration, version string) (*server, error) {
 
 	// Create the tui client structure if enabled.
 	var tuiClient *tui
-	if c.EnableTUI {
-		tuiClient, err = newTui(Node(c.NodeName))
+	if configuration.EnableTUI {
+		tuiClient, err = newTui(Node(configuration.NodeName))
 		if err != nil {
 			cancel()
 			return nil, err
@@ -140,36 +140,37 @@ func NewServer(c *Configuration, version string) (*server, error) {
 
 	}
 
-	signatures := newSignatures()
+	signatures := newSignatures(configuration, errorKernel)
+	fmt.Printf(" * DEBUG: newServer: signatures contains: %+v\n", signatures)
 
 	s := &server{
 		ctx:                ctx,
 		cancel:             cancel,
-		configuration:      c,
-		nodeName:           c.NodeName,
+		configuration:      configuration,
+		nodeName:           configuration.NodeName,
 		natsConn:           conn,
 		StewardSocket:      stewardSocket,
-		processes:          newProcesses(ctx, metrics, tuiClient, errorKernel, c, signatures),
+		processes:          newProcesses(ctx, metrics, tuiClient, errorKernel, configuration, signatures),
 		ringBufferBulkInCh: make(chan []subjectAndMessage),
 		metrics:            metrics,
 		version:            version,
 		tui:                tuiClient,
 		errorKernel:        errorKernel,
-		Signatures:         signatures,
+		signatures:         signatures,
 	}
 
 	// Create the default data folder for where subscribers should
 	// write it's data, check if data folder exist, and create it if needed.
-	if _, err := os.Stat(c.SubscribersDataFolder); os.IsNotExist(err) {
-		if c.SubscribersDataFolder == "" {
-			return nil, fmt.Errorf("error: subscribersDataFolder value is empty, you need to provide the config or the flag value at startup %v: %v", c.SubscribersDataFolder, err)
+	if _, err := os.Stat(configuration.SubscribersDataFolder); os.IsNotExist(err) {
+		if configuration.SubscribersDataFolder == "" {
+			return nil, fmt.Errorf("error: subscribersDataFolder value is empty, you need to provide the config or the flag value at startup %v: %v", configuration.SubscribersDataFolder, err)
 		}
-		err := os.Mkdir(c.SubscribersDataFolder, 0700)
+		err := os.Mkdir(configuration.SubscribersDataFolder, 0700)
 		if err != nil {
-			return nil, fmt.Errorf("error: failed to create data folder directory %v: %v", c.SubscribersDataFolder, err)
+			return nil, fmt.Errorf("error: failed to create data folder directory %v: %v", configuration.SubscribersDataFolder, err)
 		}
 
-		log.Printf("info: Creating subscribers data folder at %v\n", c.SubscribersDataFolder)
+		log.Printf("info: Creating subscribers data folder at %v\n", configuration.SubscribersDataFolder)
 	}
 
 	return s, nil
@@ -253,17 +254,9 @@ func (s *server) Start() {
 	//
 	// NB: The context of the initial process are set in processes.Start.
 	sub := newSubject(REQInitial, s.nodeName)
-	s.processInitial = newProcess(context.TODO(), s.metrics, s.natsConn, s.processes, s.ringBufferBulkInCh, s.configuration, sub, s.errorKernel.errorCh, "", nil, s.Signatures)
+	s.processInitial = newProcess(context.TODO(), s.metrics, s.natsConn, s.processes, s.ringBufferBulkInCh, s.configuration, sub, s.errorKernel.errorCh, "", nil, s.signatures)
 	// Start all wanted subscriber processes.
 	s.processes.Start(s.processInitial)
-
-	// We need the initial process to be able to send error messages so
-	// we have to load the signing keys here.
-	err := s.processes.loadSigningKeys(s.processInitial)
-	if err != nil {
-		log.Printf("%v\n", err)
-		os.Exit(1)
-	}
 
 	time.Sleep(time.Second * 1)
 	s.processes.printProcessesMap()
@@ -486,7 +479,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 					// log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 					sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
-					proc := newProcess(s.ctx, s.metrics, s.natsConn, s.processes, s.ringBufferBulkInCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil, s.Signatures)
+					proc := newProcess(s.ctx, s.metrics, s.natsConn, s.processes, s.ringBufferBulkInCh, s.configuration, sub, s.errorKernel.errorCh, processKindPublisher, nil, s.signatures)
 
 					proc.spawnWorker(s.processes, s.natsConn)
 					// log.Printf("info: processNewMessages: new process started, subject: %v, processID: %v\n", subjName, proc.processID)
