@@ -42,13 +42,7 @@ type process struct {
 	// NB: Might not be needed later on.
 	node Node
 	// The processID for the current process
-	processID int
-	// errorCh is the same channel the errorKernel uses to
-	// read incomming errors. By having this channel available
-	// within a process we can send errors to the error kernel,
-	// the EK desided what to do, and sends the action about
-	// what to do back to the process where the error came from.
-	errorCh     chan errorEvent
+	processID   int
 	processKind processKind
 	// Who are we allowed to receive from ?
 	// allowedReceivers map[Node]struct{}
@@ -91,7 +85,7 @@ type process struct {
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func newProcess(ctx context.Context, metrics *metrics, natsConn *nats.Conn, processes *processes, toRingbufferCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, errCh chan errorEvent, processKind processKind, procFunc func() error, signatures *signatures) process {
+func newProcess(ctx context.Context, metrics *metrics, natsConn *nats.Conn, processes *processes, toRingbufferCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, processKind processKind, procFunc func() error, signatures *signatures) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
 	processes.lastProcessID++
 
@@ -104,7 +98,6 @@ func newProcess(ctx context.Context, metrics *metrics, natsConn *nats.Conn, proc
 		subject:          subject,
 		node:             Node(configuration.NodeName),
 		processID:        processes.lastProcessID,
-		errorCh:          errCh,
 		processKind:      processKind,
 		methodsAvailable: method.GetMethodsAvailable(),
 		toRingbufferCh:   toRingbufferCh,
