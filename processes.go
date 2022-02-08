@@ -191,6 +191,8 @@ func (p *processes) Start(proc process) {
 	proc.startup.subREQRelayInitial(proc)
 
 	proc.startup.subREQToSocket(proc)
+
+	proc.startup.subREQPublicKey(proc)
 }
 
 // Stop all subscriber processes.
@@ -426,6 +428,14 @@ func (s startup) subREQRelayInitial(p process) {
 func (s startup) subREQToSocket(p process) {
 	log.Printf("Starting write to socket subscriber: %#v\n", p.node)
 	sub := newSubject(REQToSocket, string(p.node))
+	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, processKindSubscriber, nil, p.signatures)
+
+	go proc.spawnWorker(p.processes, p.natsConn)
+}
+
+func (s startup) subREQPublicKey(p process) {
+	log.Printf("Starting get Public Key subscriber: %#v\n", p.node)
+	sub := newSubject(REQPublicKey, string(p.node))
 	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, processKindSubscriber, nil, p.signatures)
 
 	go proc.spawnWorker(p.processes, p.natsConn)

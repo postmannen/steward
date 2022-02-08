@@ -129,7 +129,7 @@ const (
 	// REQNone is used when there should be no reply.
 	REQNone Method = "REQNone"
 	// REQPublicKey will get the public ed25519 certificate from a node.
-	REQPublicKey
+	REQPublicKey Method = "REQPublicKey"
 )
 
 // The mapping of all the method constants specified, what type
@@ -1837,6 +1837,31 @@ func (m methodREQPublicKey) getKind() Event {
 
 // Handler to get the public ed25519 key from a node.
 func (m methodREQPublicKey) handler(proc process, message Message, node string) ([]byte, error) {
+	// Get a context with the timeout specified in message.MethodTimeout.
+	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
+
+	proc.processes.wg.Add(1)
+	go func() {
+		defer proc.processes.wg.Done()
+		outCh := make(chan []byte)
+
+		go func() {
+			select {
+			case <-ctx.Done():
+			case outCh <- proc.signatures.SignPublicKey:
+			}
+		}()
+
+		select {
+		// case proc.toRingbufferCh <- []subjectAndMessage{sam}:
+		case <-ctx.Done():
+		case out := <-outCh:
+
+			// Prepare and queue for sending a new message with the output
+			// of the action executed.
+			newReplyMessage(proc, message, out)
+		}
+	}()
 
 	// Send back an ACK message.
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
