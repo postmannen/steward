@@ -1798,7 +1798,10 @@ func (m methodREQRelay) getKind() Event {
 func (m methodREQRelay) handler(proc process, message Message, node string) ([]byte, error) {
 	// relay the message here to the actual host here.
 
+	proc.processes.wg.Add(1)
 	go func() {
+		defer proc.processes.wg.Done()
+
 		message.ToNode = message.RelayToNode
 		message.FromNode = Node(node)
 		message.Method = message.RelayOriginalMethod
@@ -1811,7 +1814,10 @@ func (m methodREQRelay) handler(proc process, message Message, node string) ([]b
 			return
 		}
 
-		proc.toRingbufferCh <- []subjectAndMessage{sam}
+		select {
+		case proc.toRingbufferCh <- []subjectAndMessage{sam}:
+		case <-proc.ctx.Done():
+		}
 	}()
 
 	// Send back an ACK message.
