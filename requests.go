@@ -128,6 +128,8 @@ const (
 	REQRelayInitial Method = "REQRelayInitial"
 	// REQNone is used when there should be no reply.
 	REQNone Method = "REQNone"
+	// REQPublicKey will get the public ed25519 certificate from a node.
+	REQPublicKey
 )
 
 // The mapping of all the method constants specified, what type
@@ -201,6 +203,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				event: EventACK,
 			},
 			REQRelayInitial: methodREQRelayInitial{
+				event: EventACK,
+			},
+			REQPublicKey: methodREQPublicKey{
 				event: EventACK,
 			},
 		},
@@ -1793,18 +1798,39 @@ func (m methodREQRelay) getKind() Event {
 func (m methodREQRelay) handler(proc process, message Message, node string) ([]byte, error) {
 	// relay the message here to the actual host here.
 
-	message.ToNode = message.RelayToNode
-	message.FromNode = Node(node)
-	message.Method = message.RelayOriginalMethod
+	go func() {
+		message.ToNode = message.RelayToNode
+		message.FromNode = Node(node)
+		message.Method = message.RelayOriginalMethod
 
-	sam, err := newSubjectAndMessage(message)
-	if err != nil {
-		er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
-		proc.processes.errorKernel.errSend(proc, message, er)
-		log.Printf("%v\n", er)
-	}
+		sam, err := newSubjectAndMessage(message)
+		if err != nil {
+			er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
+			proc.processes.errorKernel.errSend(proc, message, er)
+			log.Printf("%v\n", er)
+			return
+		}
 
-	proc.toRingbufferCh <- []subjectAndMessage{sam}
+		proc.toRingbufferCh <- []subjectAndMessage{sam}
+	}()
+
+	// Send back an ACK message.
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+// ----
+
+type methodREQPublicKey struct {
+	event Event
+}
+
+func (m methodREQPublicKey) getKind() Event {
+	return m.event
+}
+
+// Handler to get the public ed25519 key from a node.
+func (m methodREQPublicKey) handler(proc process, message Message, node string) ([]byte, error) {
 
 	// Send back an ACK message.
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
