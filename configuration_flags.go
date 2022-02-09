@@ -79,9 +79,8 @@ type Configuration struct {
 	// with empty signatures. The only reason for using this flag
 	// should be to upgrade from version 0.1.15 and earlier.
 	AllowEmptySignature bool
-
-	// NOTE:
-	// Op commands will not be specified as a flag since they can't be turned off.
+	// IsCentralAuth
+	IsCentralAuth bool
 
 	// Make the current node send hello messages to central at given interval in seconds
 	StartPubREQHello int
@@ -151,6 +150,7 @@ type ConfigurationFromFile struct {
 	EnableSocket             *bool
 	EnableTUI                *bool
 	AllowEmptySignature      *bool
+	IsCentralAuth            *bool
 
 	StartPubREQHello          *int
 	StartSubREQErrorLog       *bool
@@ -208,6 +208,7 @@ func newConfigurationDefaults() Configuration {
 		EnableSocket:             true,
 		EnableTUI:                false,
 		AllowEmptySignature:      true,
+		IsCentralAuth:            false,
 
 		StartSubREQErrorLog:       true,
 		StartSubREQHello:          true,
@@ -383,6 +384,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.AllowEmptySignature = *cf.AllowEmptySignature
 	}
+	if cf.IsCentralAuth == nil {
+		conf.IsCentralAuth = cd.IsCentralAuth
+	} else {
+		conf.IsCentralAuth = *cf.IsCentralAuth
+	}
 
 	// --- Start pub/sub
 
@@ -523,6 +529,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.EnableSocket, "enableSocket", fc.EnableSocket, "true/false for enabling the creation of a steward.sock file")
 	flag.BoolVar(&c.EnableTUI, "enableTUI", fc.EnableTUI, "true/false for enabling the Terminal User Interface")
 	flag.BoolVar(&c.AllowEmptySignature, "allowEmptySignature", fc.AllowEmptySignature, "true/false AllowEmptySignature will allow subscribers to handle messages with empty signatures. The only reason for using this flag should be to upgrade from version 0.1.15 and earlier")
+	flag.BoolVar(&c.IsCentralAuth, "isCentralAuth", fc.IsCentralAuth, "true/false, is this the central auth server")
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 
