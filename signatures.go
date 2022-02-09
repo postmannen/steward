@@ -17,9 +17,11 @@ type signature string
 // the signatures map. It holds a mutex to use when interacting with
 // the map.
 type signatures struct {
-	// allowed is a map for holding all the allowed signatures.
-	allowed map[signature]struct{}
-	mu      sync.Mutex
+	// All the allowed signatures a node is allowed to recive from.
+	allowedSignatures *allowedSignatures
+
+	// All the public keys for nodes a node is allowed to receive from.
+	publicKeys *publicKeys
 
 	// Full path to the signing keys folder
 	SignKeyFolder string
@@ -40,9 +42,10 @@ type signatures struct {
 
 func newSignatures(configuration *Configuration, errorKernel *errorKernel) *signatures {
 	s := signatures{
-		allowed:       make(map[signature]struct{}),
-		configuration: configuration,
-		errorKernel:   errorKernel,
+		allowedSignatures: newAllowedSignatures(),
+		publicKeys:        newPublicKeys(),
+		configuration:     configuration,
+		errorKernel:       errorKernel,
 	}
 
 	// Set the signing key paths.
@@ -57,6 +60,34 @@ func newSignatures(configuration *Configuration, errorKernel *errorKernel) *sign
 	}
 
 	return &s
+}
+
+type allowedSignatures struct {
+	// allowed is a map for holding all the allowed signatures.
+	allowed map[signature]Node
+	mu      sync.Mutex
+}
+
+func newAllowedSignatures() *allowedSignatures {
+	a := allowedSignatures{
+		allowed: make(map[signature]Node),
+	}
+
+	return &a
+}
+
+type publicKeys struct {
+	// nodesKey is a map who holds all the public keys for nodes.
+	nodeKeys map[Node][]byte
+	mu       sync.Mutex
+}
+
+func newPublicKeys() *publicKeys {
+	p := publicKeys{
+		nodeKeys: make(map[Node][]byte),
+	}
+
+	return &p
 }
 
 // loadSigningKeys will try to load the ed25519 signing keys. If the
