@@ -75,10 +75,8 @@ type Configuration struct {
 	EnableSocket bool
 	// EnableTUI will enable the Terminal User Interface
 	EnableTUI bool
-	// AllowEmptySignature will allow subscribers to handle messages
-	// with empty signatures. The only reason for using this flag
-	// should be to upgrade from version 0.1.15 and earlier.
-	AllowEmptySignature bool
+	// EnableSignatureCheck
+	EnableSignatureCheck bool
 	// IsCentralAuth
 	IsCentralAuth bool
 
@@ -149,7 +147,7 @@ type ConfigurationFromFile struct {
 	SetBlockProfileRate      *int
 	EnableSocket             *bool
 	EnableTUI                *bool
-	AllowEmptySignature      *bool
+	EnableSignatureCheck     *bool
 	IsCentralAuth            *bool
 
 	StartPubREQHello          *int
@@ -207,7 +205,7 @@ func newConfigurationDefaults() Configuration {
 		SetBlockProfileRate:      0,
 		EnableSocket:             true,
 		EnableTUI:                false,
-		AllowEmptySignature:      true,
+		EnableSignatureCheck:     false,
 		IsCentralAuth:            false,
 
 		StartSubREQErrorLog:       true,
@@ -379,10 +377,10 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.EnableTUI = *cf.EnableTUI
 	}
-	if cf.AllowEmptySignature == nil {
-		conf.AllowEmptySignature = cd.AllowEmptySignature
+	if cf.EnableSignatureCheck == nil {
+		conf.EnableSignatureCheck = cd.EnableSignatureCheck
 	} else {
-		conf.AllowEmptySignature = *cf.AllowEmptySignature
+		conf.EnableSignatureCheck = *cf.EnableSignatureCheck
 	}
 	if cf.IsCentralAuth == nil {
 		conf.IsCentralAuth = cd.IsCentralAuth
@@ -526,10 +524,10 @@ func (c *Configuration) CheckFlags() error {
 	flag.StringVar(&c.Compression, "compression", fc.Compression, "compression method to use. defaults to no compression, z = zstd, g = gzip. Undefined value will default to no compression")
 	flag.StringVar(&c.Serialization, "serialization", fc.Serialization, "Serialization method to use. defaults to gob, other values are = cbor. Undefined value will default to gob")
 	flag.IntVar(&c.SetBlockProfileRate, "setBlockProfileRate", fc.SetBlockProfileRate, "Enable block profiling by setting the value to f.ex. 1. 0 = disabled")
-	flag.BoolVar(&c.EnableSocket, "enableSocket", fc.EnableSocket, "true/false for enabling the creation of a steward.sock file")
+	flag.BoolVar(&c.EnableSocket, "enableSocket", fc.EnableSocket, "true/false, for enabling the creation of a steward.sock file")
 	flag.BoolVar(&c.EnableTUI, "enableTUI", fc.EnableTUI, "true/false for enabling the Terminal User Interface")
-	flag.BoolVar(&c.AllowEmptySignature, "allowEmptySignature", fc.AllowEmptySignature, "true/false AllowEmptySignature will allow subscribers to handle messages with empty signatures. The only reason for using this flag should be to upgrade from version 0.1.15 and earlier")
-	flag.BoolVar(&c.IsCentralAuth, "isCentralAuth", fc.IsCentralAuth, "true/false, is this the central auth server")
+	flag.BoolVar(&c.EnableSignatureCheck, "enableSignatureCheck", fc.EnableSignatureCheck, "true/false *TESTING* enable signature checking.")
+	flag.BoolVar(&c.IsCentralAuth, "isCentralAuth", fc.IsCentralAuth, "true/false, *TESTING* is this the central auth server")
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 

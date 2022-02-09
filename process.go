@@ -10,7 +10,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -542,11 +541,6 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		p.processes.errorKernel.infoSend(p, message, er)
 
 	}
-}
-
-// argsToString takes args in the format of []string and returns a string.
-func argsToString(args []string) string {
-	return strings.Join(args, " ")
 }
 
 // SubscribeMessage will register the Nats callback function for the specified
