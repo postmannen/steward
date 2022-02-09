@@ -44,8 +44,6 @@ type process struct {
 	// The processID for the current process
 	processID   int
 	processKind processKind
-	// Who are we allowed to receive from ?
-	// allowedReceivers map[Node]struct{}
 	// methodsAvailable
 	methodsAvailable MethodsAvailable
 	// Helper or service function that can do some kind of work
