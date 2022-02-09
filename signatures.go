@@ -217,6 +217,11 @@ func (s *signatures) verifySignature(m Message) bool {
 		return true
 	}
 
+	if m.Method != REQCliCommand {
+		fmt.Printf(" * DEBUG: verifySignature: WAS OTHER THAN CLI COMMAND\n")
+		return true
+	}
+
 	// Verify if the signature matches.
 	argsStringified := argsToString(m.MethodArgs)
 	ok := ed25519.Verify(s.SignPublicKey, []byte(argsStringified), m.ArgSignature)
