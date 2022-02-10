@@ -546,6 +546,8 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.StartSubREQCliCommandCont, "startSubREQCliCommandCont", fc.StartSubREQCliCommandCont, "true/false")
 	flag.BoolVar(&c.StartSubREQRelay, "startSubREQRelay", fc.StartSubREQRelay, "true/false")
 
+	purgeBufferDB := flag.Bool("purgeBufferDB", false, "true/false, purge the incoming buffer db and all it's state")
+
 	flag.Parse()
 
 	// Check that mandatory flag values have been set.
@@ -559,6 +561,15 @@ func (c *Configuration) CheckFlags() error {
 	if err := c.WriteConfigFile(); err != nil {
 		log.Printf("error: checkFlags: failed writing config file: %v\n", err)
 		os.Exit(1)
+	}
+
+	if *purgeBufferDB {
+		fp := filepath.Join(c.DatabaseFolder, "incomingBuffer.db")
+		err := os.Remove(fp)
+		if err != nil {
+			log.Printf("error: failed to purge buffer state database: %v\n", err)
+		}
+
 	}
 
 	return nil
