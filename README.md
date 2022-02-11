@@ -51,6 +51,7 @@ As long as you can do something as an operator on in a shell on a system you can
       - [REQCliCommandCont](#reqclicommandcont)
       - [REQTailFile](#reqtailfile)
       - [REQHttpGet](#reqhttpget)
+      - [REQHttpGetScheduled](#reqhttpgetscheduled)
       - [REQHello](#reqhello)
       - [REQCopyFileFrom](#reqcopyfilefrom)
       - [REQErrorLog](#reqerrorlog)
@@ -557,6 +558,34 @@ Scrape web url, and get the html sent back in a reply message. Uses the methodTi
         "toNode": "ship2",
         "method":"REQHttpGet",
         "methodArgs": ["https://web.ics.purdue.edu/~gchopra/class/public/pages/webdesign/05_simple.html"],
+        "replyMethod":"REQToFile",
+        "ACKTimeout":10,
+        "retries": 3,
+        "methodTimeout": 3
+    }
+]
+```
+
+#### REQHttpGetScheduled
+
+Schedule scraping of a web web url, and get the html sent back in a reply message. Uses the methodTimeout for how long it will wait for the http get method to return result.
+
+The **methodArgs** also takes 3 arguments:
+
+  1. The URL to scrape.
+  2. The schedule interval given in **seconds**.
+  3. How long the scheduler should run in minutes.
+
+The example below will scrape the URL specified every 30 seconds for 10 minutes.
+
+```json
+[
+    {
+        "directory": "web",
+        "fileName": "web.html",
+        "toNode": "ship2",
+        "method":"REQHttpGet",
+        "methodArgs": ["https://web.ics.purdue.edu/~gchopra/class/public/pages/webdesign/05_simple.html","30","10"],
         "replyMethod":"REQToFile",
         "ACKTimeout":10,
         "retries": 3,
