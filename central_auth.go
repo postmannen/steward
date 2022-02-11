@@ -5,6 +5,8 @@ type argsString string
 
 type centralAuth struct {
 	schema map[Node]map[argsString]signatureBase32
+
+	configuration *Configuration
 }
 
 func newCentralAuth() *centralAuth {

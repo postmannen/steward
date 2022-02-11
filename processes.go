@@ -176,6 +176,10 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQHttpGet(proc)
 	}
 
+	if proc.configuration.StartSubREQHttpGetScheduled {
+		proc.startup.subREQHttpGetScheduled(proc)
+	}
+
 	if proc.configuration.StartSubREQTailFile {
 		proc.startup.subREQTailFile(proc)
 	}
@@ -222,6 +226,16 @@ func (s startup) subREQHttpGet(p process) {
 
 	log.Printf("Starting Http Get subscriber: %#v\n", p.node)
 	sub := newSubject(REQHttpGet, string(p.node))
+	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, processKindSubscriber, nil, s.Signatures)
+
+	go proc.spawnWorker(p.processes, p.natsConn)
+
+}
+
+func (s startup) subREQHttpGetScheduled(p process) {
+
+	log.Printf("Starting Http Get Scheduled subscriber: %#v\n", p.node)
+	sub := newSubject(REQHttpGetScheduled, string(p.node))
 	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, processKindSubscriber, nil, s.Signatures)
 
 	go proc.spawnWorker(p.processes, p.natsConn)

@@ -105,6 +105,8 @@ type Configuration struct {
 	StartSubREQToConsole bool
 	// Subscriber for REQHttpGet
 	StartSubREQHttpGet bool
+	// Subscriber for REQHttpGetScheduled
+	StartSubREQHttpGetScheduled bool
 	// Subscriber for tailing log files
 	StartSubREQTailFile bool
 	// Subscriber for continously delivery of output from cli commands.
@@ -150,21 +152,22 @@ type ConfigurationFromFile struct {
 	EnableSignatureCheck     *bool
 	IsCentralAuth            *bool
 
-	StartPubREQHello          *int
-	StartSubREQErrorLog       *bool
-	StartSubREQHello          *bool
-	StartSubREQToFileAppend   *bool
-	StartSubREQToFile         *bool
-	StartSubREQCopyFileFrom   *bool
-	StartSubREQCopyFileTo     *bool
-	StartSubREQPing           *bool
-	StartSubREQPong           *bool
-	StartSubREQCliCommand     *bool
-	StartSubREQToConsole      *bool
-	StartSubREQHttpGet        *bool
-	StartSubREQTailFile       *bool
-	StartSubREQCliCommandCont *bool
-	StartSubREQRelay          *bool
+	StartPubREQHello            *int
+	StartSubREQErrorLog         *bool
+	StartSubREQHello            *bool
+	StartSubREQToFileAppend     *bool
+	StartSubREQToFile           *bool
+	StartSubREQCopyFileFrom     *bool
+	StartSubREQCopyFileTo       *bool
+	StartSubREQPing             *bool
+	StartSubREQPong             *bool
+	StartSubREQCliCommand       *bool
+	StartSubREQToConsole        *bool
+	StartSubREQHttpGet          *bool
+	StartSubREQHttpGetScheduled *bool
+	StartSubREQTailFile         *bool
+	StartSubREQCliCommandCont   *bool
+	StartSubREQRelay            *bool
 }
 
 // NewConfiguration will return a *Configuration.
@@ -208,20 +211,21 @@ func newConfigurationDefaults() Configuration {
 		EnableSignatureCheck:     false,
 		IsCentralAuth:            false,
 
-		StartSubREQErrorLog:       true,
-		StartSubREQHello:          true,
-		StartSubREQToFileAppend:   true,
-		StartSubREQToFile:         true,
-		StartSubREQCopyFileFrom:   true,
-		StartSubREQCopyFileTo:     true,
-		StartSubREQPing:           true,
-		StartSubREQPong:           true,
-		StartSubREQCliCommand:     true,
-		StartSubREQToConsole:      true,
-		StartSubREQHttpGet:        true,
-		StartSubREQTailFile:       true,
-		StartSubREQCliCommandCont: true,
-		StartSubREQRelay:          false,
+		StartSubREQErrorLog:         true,
+		StartSubREQHello:            true,
+		StartSubREQToFileAppend:     true,
+		StartSubREQToFile:           true,
+		StartSubREQCopyFileFrom:     true,
+		StartSubREQCopyFileTo:       true,
+		StartSubREQPing:             true,
+		StartSubREQPong:             true,
+		StartSubREQCliCommand:       true,
+		StartSubREQToConsole:        true,
+		StartSubREQHttpGet:          true,
+		StartSubREQHttpGetScheduled: true,
+		StartSubREQTailFile:         true,
+		StartSubREQCliCommandCont:   true,
+		StartSubREQRelay:            false,
 	}
 	return c
 }
@@ -450,6 +454,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.StartSubREQHttpGet = *cf.StartSubREQHttpGet
 	}
+	if cf.StartSubREQHttpGetScheduled == nil {
+		conf.StartSubREQHttpGetScheduled = cd.StartSubREQHttpGetScheduled
+	} else {
+		conf.StartSubREQHttpGetScheduled = *cf.StartSubREQHttpGetScheduled
+	}
 	if cf.StartSubREQTailFile == nil {
 		conf.StartSubREQTailFile = cd.StartSubREQTailFile
 	} else {
@@ -542,6 +551,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.StartSubREQCliCommand, "startSubREQCliCommand", fc.StartSubREQCliCommand, "true/false")
 	flag.BoolVar(&c.StartSubREQToConsole, "startSubREQToConsole", fc.StartSubREQToConsole, "true/false")
 	flag.BoolVar(&c.StartSubREQHttpGet, "startSubREQHttpGet", fc.StartSubREQHttpGet, "true/false")
+	flag.BoolVar(&c.StartSubREQHttpGetScheduled, "startSubREQHttpGetScheduled", fc.StartSubREQHttpGetScheduled, "true/false")
 	flag.BoolVar(&c.StartSubREQTailFile, "startSubREQTailFile", fc.StartSubREQTailFile, "true/false")
 	flag.BoolVar(&c.StartSubREQCliCommandCont, "startSubREQCliCommandCont", fc.StartSubREQCliCommandCont, "true/false")
 	flag.BoolVar(&c.StartSubREQRelay, "startSubREQRelay", fc.StartSubREQRelay, "true/false")
