@@ -144,7 +144,7 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- []subjectAndMessage) error
 			}()
 
 		default:
-			fmt.Printf(" * case default\n")
+			// fmt.Printf(" * case default\n")
 		}
 	}
 }

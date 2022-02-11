@@ -1570,7 +1570,7 @@ func (m methodREQHttpGetScheduled) handler(proc process, message Message, node s
 		for {
 			select {
 			case <-ctxScheduler.Done():
-				fmt.Printf(" * DEBUG: <-ctxScheduler.Done()\n")
+				// fmt.Printf(" * DEBUG: <-ctxScheduler.Done()\n")
 				cancel()
 				er := fmt.Errorf("error: methodREQHttpGet: schedule context timed out: %v", message.MethodArgs)
 				proc.processes.errorKernel.errSend(proc, message, er)
@@ -1707,7 +1707,7 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 		defer proc.processes.wg.Done()
 
 		defer func() {
-			fmt.Printf(" * DONE *\n")
+			// fmt.Printf(" * DONE *\n")
 		}()
 
 		var a []string
@@ -1802,7 +1802,7 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 				proc.processes.errorKernel.infoSend(proc, message, er)
 				return
 			case out := <-outCh:
-				fmt.Printf(" * out: %v\n", string(out))
+				// fmt.Printf(" * out: %v\n", string(out))
 				newReplyMessage(proc, message, out)
 			case out := <-errCh:
 				newReplyMessage(proc, message, []byte(out))
@@ -1828,10 +1828,10 @@ func (m methodREQToSocket) getKind() Event {
 // Handler to write to unix socket file.
 func (m methodREQToSocket) handler(proc process, message Message, node string) ([]byte, error) {
 
-	for _, d := range message.Data {
-		// TODO: Write the data to the socket here.
-		fmt.Printf("Info: REQToSocket is not yet implemented. Data to write to socket: %v\n", d)
-	}
+	// for _, d := range message.Data {
+	// 	// TODO: Write the data to the socket here.
+	// 	// fmt.Printf("Info: REQToSocket is not yet implemented. Data to write to socket: %v\n", d)
+	// }
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil

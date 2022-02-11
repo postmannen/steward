@@ -141,7 +141,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 	}
 
 	signatures := newSignatures(configuration, errorKernel)
-	fmt.Printf(" * DEBUG: newServer: signatures contains: %+v\n", signatures)
+	// fmt.Printf(" * DEBUG: newServer: signatures contains: %+v\n", signatures)
 
 	s := &server{
 		ctx:                ctx,

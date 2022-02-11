@@ -212,15 +212,15 @@ func (s *signatures) readKeyFile(keyFile string) (ed2519key []byte, b64Key []byt
 
 // verifySignature
 func (s *signatures) verifySignature(m Message) bool {
-	fmt.Printf(" * DEBUG: verifySignature, method: %v\n", m.Method)
+	// fmt.Printf(" * DEBUG: verifySignature, method: %v\n", m.Method)
 	if !s.configuration.EnableSignatureCheck {
-		fmt.Printf(" * DEBUG: verifySignature: AllowEmptySignature set to TRUE\n")
+		// fmt.Printf(" * DEBUG: verifySignature: AllowEmptySignature set to TRUE\n")
 		return true
 	}
 
 	// TODO: Only enable signature checking for REQCliCommand for now.
 	if m.Method != REQCliCommand {
-		fmt.Printf(" * DEBUG: verifySignature: WAS OTHER THAN CLI COMMAND\n")
+		// fmt.Printf(" * DEBUG: verifySignature: WAS OTHER THAN CLI COMMAND\n")
 		return true
 	}
 
@@ -228,7 +228,7 @@ func (s *signatures) verifySignature(m Message) bool {
 	argsStringified := argsToString(m.MethodArgs)
 	ok := ed25519.Verify(s.SignPublicKey, []byte(argsStringified), m.ArgSignature)
 
-	fmt.Printf(" * DEBUG: verifySignature, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
+	// fmt.Printf(" * DEBUG: verifySignature, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
 
 	return ok
 }
