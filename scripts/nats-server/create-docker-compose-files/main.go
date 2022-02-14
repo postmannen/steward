@@ -55,6 +55,7 @@ func generateDockerCompose(templateFile string, cData composeData) error {
 }
 
 type composeData struct {
+	ContainerName   string
 	ImageAndVersion string
 	NatsConfPath    string
 	LeCertPath      string
@@ -68,6 +69,7 @@ type envData struct {
 }
 
 func main() {
+	containerName := flag.String("containerName", "", "Name of the docker container")
 	imageAndVersion := flag.String("imageAndVersion", "", "The name:version of the docker image to use")
 	natsConfPath := flag.String("natsConfPath", "./nats.conf", "the full path of the nats.conf file")
 	leCertPath := flag.String("leCertPath", "", "the full path to the LetsEncrypt crt file")
@@ -81,6 +83,7 @@ func main() {
 	flag.Parse()
 
 	cData := composeData{
+		ContainerName:   *containerName,
 		ImageAndVersion: *imageAndVersion,
 		NatsConfPath:    *natsConfPath,
 		LeCertPath:      *leCertPath,
@@ -92,6 +95,10 @@ func main() {
 		Flags: *flags,
 	}
 
+	if cData.ContainerName == "" {
+		log.Printf("error: -containerName flag can not be empty\n")
+		return
+	}
 	if cData.ImageAndVersion == "" {
 		log.Printf("error: -imageAndVersion flag can not be empty\n")
 		return

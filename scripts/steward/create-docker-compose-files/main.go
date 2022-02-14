@@ -95,13 +95,14 @@ func generateEnv(fileDir string, templateDir string, brokerAddress string) error
 }
 
 // generateDockerCompose will generate the docker-compose.yml file.
-func generateDockerCompose(fileDir string, templateFile string, imageAndVersion string, exposedProfilingPort string, exposedPrometheusPort string, exposedDataFolderPort string, exposedTcpListenerPort string, exposedHttpListenerPort string, nkeySeedFile string, socketFolder string) error {
+func generateDockerCompose(containerName, fileDir string, templateFile string, imageAndVersion string, exposedProfilingPort string, exposedPrometheusPort string, exposedDataFolderPort string, exposedTcpListenerPort string, exposedHttpListenerPort string, nkeySeedFile string, socketFolder string) error {
 	tpl, err := template.ParseFiles(templateFile)
 	if err != nil {
 		return fmt.Errorf("error: parsing template file, you might need to set the -templateDir flag : %v, err: %v", templateFile, err)
 	}
 
 	data := struct {
+		ContainerName           string
 		ImageAndVersion         string
 		ExposedProfilingPort    string
 		ExposedPrometheusPort   string
@@ -111,6 +112,7 @@ func generateDockerCompose(fileDir string, templateFile string, imageAndVersion 
 		NkeySeedFile            string
 		SocketFolder            string
 	}{
+		ContainerName:           containerName,
 		ImageAndVersion:         imageAndVersion,
 		ExposedProfilingPort:    exposedProfilingPort,
 		ExposedPrometheusPort:   exposedPrometheusPort,
@@ -137,6 +139,7 @@ func generateDockerCompose(fileDir string, templateFile string, imageAndVersion 
 }
 
 func main() {
+	containerName := flag.String("containerName", "", "name of the container")
 	fileDir := flag.String("fileDir", "./", "the directory path for where to store the files")
 
 	brokerAddress := flag.String("brokerAddress", "", "the address:port of the broker to connect to")
@@ -152,6 +155,11 @@ func main() {
 	templateDir := flag.String("templateDir", "./steward/scripts/steward/create-docker-compose-files/", "the directory path to where the template files are located")
 
 	flag.Parse()
+
+	if *containerName == "" {
+		log.Printf("error: -containerName flag can not be empty\n")
+		return
+	}
 
 	if *brokerAddress == "" {
 		log.Printf("error: -brokerAddress flag can not be empty\n")
@@ -176,7 +184,7 @@ func main() {
 
 	{
 		template := path.Join(*templateDir, "docker-compose.yml.tpl")
-		err := generateDockerCompose(*fileDir, template, *imageAndVersion, *exposedProfilingPort, *exposedPrometheusPort, *exposedDataFolderPort, *exposedTcpListenerPort, *exposedHttpListenerPort, *nkeySeedFile, *socketFolder)
+		err := generateDockerCompose(*containerName, *fileDir, template, *imageAndVersion, *exposedProfilingPort, *exposedPrometheusPort, *exposedDataFolderPort, *exposedTcpListenerPort, *exposedHttpListenerPort, *nkeySeedFile, *socketFolder)
 		if err != nil {
 			log.Printf("%v\n", err)
 			return

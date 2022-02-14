@@ -120,8 +120,8 @@ type Configuration struct {
 // configuration values from file, so we are able to detect
 // if a value were given or not when parsing.
 type ConfigurationFromFile struct {
-	RingBufferSize           *int
 	ConfigFolder             *string
+	RingBufferSize           *int
 	SocketFolder             *string
 	TCPListener              *string
 	HTTPListener             *string
@@ -179,12 +179,13 @@ func NewConfiguration() *Configuration {
 // Get a Configuration struct with the default values set.
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
-		RingBufferSize:           1000,
 		ConfigFolder:             "./etc/",
+		RingBufferSize:           1000,
 		SocketFolder:             "./tmp",
 		TCPListener:              "",
 		HTTPListener:             "",
 		DatabaseFolder:           "./var/lib",
+		NodeName:                 "",
 		BrokerAddress:            "127.0.0.1:4222",
 		NatsConnOptTimeout:       20,
 		NatsConnectRetryInterval: 10,
@@ -195,7 +196,6 @@ func newConfigurationDefaults() Configuration {
 		DefaultMessageTimeout:    10,
 		DefaultMessageRetries:    1,
 		DefaultMethodTimeout:     10,
-		StartPubREQHello:         30,
 		SubscribersDataFolder:    "./data",
 		CentralNodeName:          "",
 		RootCAPath:               "",
@@ -211,6 +211,7 @@ func newConfigurationDefaults() Configuration {
 		EnableSignatureCheck:     false,
 		IsCentralAuth:            false,
 
+		StartPubREQHello:            30,
 		StartSubREQErrorLog:         true,
 		StartSubREQHello:            true,
 		StartSubREQToFileAppend:     true,

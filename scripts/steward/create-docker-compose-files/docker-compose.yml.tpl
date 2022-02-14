@@ -4,6 +4,7 @@ version: "3.1"
 
 services:
   steward:
+    container_name: {{.ContainerName}}
     build: .
     env_file:
       - env.env
@@ -30,6 +31,11 @@ services:
     volumes:
       # - {{.NkeySeedFile}}:/app/seed.txt
       - {{.SocketFolder}}:/app/tmp/:rw
+    logging:
+        driver: "json-file"
+        options:
+            max-size: "10m"
+            max-file: "10"
 
 secrets:
   seed:
