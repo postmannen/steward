@@ -417,6 +417,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			if err != nil {
 				er := fmt.Errorf("error: gob decoding failed: %v", err)
 				log.Printf("%v\n", er)
+				fmt.Printf(" * DEBUG1: message: %#v\n", message)
 				p.processes.errorKernel.errSend(p, message, er)
 				return
 			}
@@ -431,6 +432,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		if err != nil {
 			er := fmt.Errorf("error: gob decoding failed: %v", err)
 			log.Printf("%v\n", er)
+			fmt.Printf(" * DEBUG2: message: %#v\n", message)
 			p.processes.errorKernel.errSend(p, message, er)
 			return
 		}
