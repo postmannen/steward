@@ -83,6 +83,7 @@ As long as you can do something as an operator on in a shell on a system you can
         - [Specify more messages at once do](#specify-more-messages-at-once-do)
         - [Send the same message to several hosts by using the toHosts field](#send-the-same-message-to-several-hosts-by-using-the-tohosts-field)
         - [Tail a log file on a node, and save the result of the tail centrally at the directory specified](#tail-a-log-file-on-a-node-and-save-the-result-of-the-tail-centrally-at-the-directory-specified)
+        - [Example for deleting the ringbuffer database and restarting steward](#example-for-deleting-the-ringbuffer-database-and-restarting-steward)
   - [Concepts/Ideas](#conceptsideas)
     - [Naming](#naming)
       - [Subject](#subject)
@@ -1202,6 +1203,24 @@ The API for sending a message from one node to another node is by sending a stru
         "ACKTimeout":5,
         "retries":3,
         "methodTimeout": 200
+    }
+]
+```
+
+##### Example for deleting the ringbuffer database and restarting steward
+
+```json
+[
+    {
+        "directory":"system",
+        "fileName":"system.log",
+        "toNodes": ["ship2"],
+        "method":"REQCliCommand",
+        "methodArgs": ["bash","-c","rm -rf /usr/local/steward/lib/incomingBuffer.db & systemctl restart steward"],
+        "replyMethod":"REQToFileAppend",
+        "ACKTimeout":30,
+        "retries":1,
+        "methodTimeout": 30
     }
 ]
 ```
