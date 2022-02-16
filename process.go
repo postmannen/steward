@@ -415,7 +415,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 
 			err := gobDec.Decode(&message)
 			if err != nil {
-				er := fmt.Errorf("error: gob decoding failed: subject=%v,lenght nats msgData=%v, error=%v", subject, len(msgData), err)
+				er := fmt.Errorf("error: gob decoding failed serial header: subject=%v,header=%v, error=%v", subject, msg.Header, err)
 				p.processes.errorKernel.errSend(p, message, er)
 				return
 			}
@@ -428,7 +428,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 
 		err := gobDec.Decode(&message)
 		if err != nil {
-			er := fmt.Errorf("error: gob decoding failed: subject=%v,lenght nats msgData=%v, error=%v", subject, len(msgData), err)
+			er := fmt.Errorf("error: gob decoding failed no-serial header: subject=%v,header=%v, error=%v", subject, msg.Header, err)
 			log.Printf("%v\n", er)
 			p.processes.errorKernel.errSend(p, message, er)
 			return
