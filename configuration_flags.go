@@ -212,7 +212,7 @@ func newConfigurationDefaults() Configuration {
 		IsCentralAuth:            false,
 
 		StartPubREQHello:            30,
-		StartSubREQErrorLog:         true,
+		StartSubREQErrorLog:         false,
 		StartSubREQHello:            true,
 		StartSubREQToFileAppend:     true,
 		StartSubREQToFile:           true,
