@@ -342,7 +342,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 // the state of the message being processed, and then reply back to the
 // correct sending process's reply, meaning so we ACK back to the correct
 // publisher.
-func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, msg *nats.Msg) {
+func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, msg *nats.Msg, subject string) {
 
 	// Variable to hold a copy of the message data, so we don't mess with
 	// the original data since the original is a pointer value.
@@ -415,9 +415,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 
 			err := gobDec.Decode(&message)
 			if err != nil {
-				er := fmt.Errorf("error: gob decoding failed: %v", err)
-				log.Printf("%v\n", er)
-				fmt.Printf(" * DEBUG1: message: %#v\n", message)
+				er := fmt.Errorf("error: gob decoding failed: subject=%v,lenght nats msgData=%v, error=%v", subject, len(msgData), err)
 				p.processes.errorKernel.errSend(p, message, er)
 				return
 			}
@@ -430,9 +428,8 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 
 		err := gobDec.Decode(&message)
 		if err != nil {
-			er := fmt.Errorf("error: gob decoding failed: %v", err)
+			er := fmt.Errorf("error: gob decoding failed: subject=%v,lenght nats msgData=%v, error=%v", subject, len(msgData), err)
 			log.Printf("%v\n", er)
-			fmt.Printf(" * DEBUG2: message: %#v\n", message)
 			p.processes.errorKernel.errSend(p, message, er)
 			return
 		}
@@ -554,7 +551,7 @@ func (p process) subscribeMessages() *nats.Subscription {
 		//_, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
 
 		// Start up the subscriber handler.
-		go p.messageSubscriberHandler(p.natsConn, p.configuration.NodeName, msg)
+		go p.messageSubscriberHandler(p.natsConn, p.configuration.NodeName, msg, subject)
 	})
 	if err != nil {
 		log.Printf("error: Subscribe failed: %v\n", err)
