@@ -48,6 +48,7 @@ ENV ENABLE_SOCKET "1"
 ENV ENABLE_TUI "0"
 ENV ENABLE_SIGNATURE_CHECK "0"
 ENV IS_CENTRAL_AUTH "0"
+ENV ENABLE_DEBUG "0"
 
 ENV START_PUB_REQ_HELLO 60
 
@@ -98,6 +99,7 @@ CMD ["ash","-c","env CONFIGFOLDER=./etc/ /app/steward\
     -enableTUI=$ENABLE_TUI\
     -enableSignatureCheck=$ENABLE_SIGNATURE_CHECK\
     -isCentralAuth=$IS_CENTRAL_AUTH\
+    -enableDebug=$ENABLE_DEBUG\
     -startPubREQHello=$START_PUB_REQ_HELLO\
     -startSubREQErrorLog=$START_SUB_REQ_ERROR_LOG\
     -startSubREQHello=$START_SUB_REQ_HELLO\
