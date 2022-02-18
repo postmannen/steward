@@ -79,6 +79,9 @@ type Configuration struct {
 	EnableSignatureCheck bool
 	// IsCentralAuth
 	IsCentralAuth bool
+	// EnableDebug will also enable printing all the messages received in the errorKernel
+	// to STDERR.
+	EnableDebug bool
 
 	// Make the current node send hello messages to central at given interval in seconds
 	StartPubREQHello int
@@ -151,6 +154,7 @@ type ConfigurationFromFile struct {
 	EnableTUI                *bool
 	EnableSignatureCheck     *bool
 	IsCentralAuth            *bool
+	EnableDebug              *bool
 
 	StartPubREQHello            *int
 	StartSubREQErrorLog         *bool
@@ -210,6 +214,7 @@ func newConfigurationDefaults() Configuration {
 		EnableTUI:                false,
 		EnableSignatureCheck:     false,
 		IsCentralAuth:            false,
+		EnableDebug:              false,
 
 		StartPubREQHello:            30,
 		StartSubREQErrorLog:         false,
@@ -392,6 +397,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.IsCentralAuth = *cf.IsCentralAuth
 	}
+	if cf.EnableDebug == nil {
+		conf.EnableDebug = cd.EnableDebug
+	} else {
+		conf.EnableDebug = *cf.EnableDebug
+	}
 
 	// --- Start pub/sub
 
@@ -538,6 +548,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.EnableTUI, "enableTUI", fc.EnableTUI, "true/false for enabling the Terminal User Interface")
 	flag.BoolVar(&c.EnableSignatureCheck, "enableSignatureCheck", fc.EnableSignatureCheck, "true/false *TESTING* enable signature checking.")
 	flag.BoolVar(&c.IsCentralAuth, "isCentralAuth", fc.IsCentralAuth, "true/false, *TESTING* is this the central auth server")
+	flag.BoolVar(&c.EnableDebug, "enableDebug", fc.EnableDebug, "true/false, will enable debug logging so all messages sent to the errorKernel will also be printed to STDERR")
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 
