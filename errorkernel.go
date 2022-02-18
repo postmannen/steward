@@ -90,6 +90,10 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- []subjectAndMessage) error
 
 			// Put the message on the channel to the ringbuffer.
 			ringBufferBulkInCh <- []subjectAndMessage{sam}
+
+			if errEvent.process.configuration.EnableDebug {
+				log.Printf("%v\n", er)
+			}
 		}
 
 		// Check the type of the error to decide what to do.
