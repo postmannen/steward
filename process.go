@@ -510,17 +510,9 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		out := []byte{}
 		var err error
 
-		// TODO: This is not correct. As it is now we only want signature checking
-		// for REQCliCommand, but this will only call the handler if that is true,
-		// or that the EnableSignatureCheck flag is set. This will lead to all other
-		// REQ types being discarded since we don't call the mh.Handler method for
-		// those REQ.
-		// NB: Add the logic for also calling mh.handler for those other methods
-		// that don't need a valid signature.
 		if p.signatures.verifySignature(message) {
 			// Call the method handler for the specified method.
 			out, err = mh.handler(p, message, thisNode)
-
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
 				p.processes.errorKernel.errSend(p, message, er)
