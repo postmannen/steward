@@ -618,6 +618,7 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 	// Create the initial header, and set values below depending on the
 	// various configuration options chosen.
 	natsMsgHeader := make(nats.Header)
+	natsMsgHeader["fromNode"] = []string{string(p.node)}
 
 	// The serialized value of the nats message payload
 	var natsMsgPayloadSerialized []byte
