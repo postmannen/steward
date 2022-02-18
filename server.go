@@ -170,7 +170,8 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 			return nil, fmt.Errorf("error: failed to create data folder directory %v: %v", configuration.SubscribersDataFolder, err)
 		}
 
-		log.Printf("info: Creating subscribers data folder at %v\n", configuration.SubscribersDataFolder)
+		er := fmt.Errorf("info: creating subscribers data folder at %v", configuration.SubscribersDataFolder)
+		s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
 	}
 
 	return s, nil

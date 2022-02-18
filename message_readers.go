@@ -72,7 +72,8 @@ func (s *server) readStartupFolder() {
 		for i := range sams {
 			if sams[i].Message.FromNode == "" {
 				sams = append(sams[:i], sams[i+1:]...)
-				log.Printf(" error: missing from field in startup message\n")
+				er := fmt.Errorf(" error: missing from field in startup message")
+				s.errorKernel.errSend(s.processInitial, Message{}, er)
 			}
 
 			// Bounds check.
@@ -337,8 +338,9 @@ func (s *server) convertBytesToSAMs(b []byte) ([]subjectAndMessage, error) {
 	for _, m := range MsgSlice {
 		sm, err := newSubjectAndMessage(m)
 		if err != nil {
-			s.processes.errorKernel.errSend(s.processInitial, m, err)
-			log.Printf("error: jsonFromFileData: %v\n", err)
+			er := fmt.Errorf("error: newSubjectAndMessage: %v", err)
+			s.processes.errorKernel.errSend(s.processInitial, m, er)
+
 			continue
 		}
 		sam = append(sam, sm)

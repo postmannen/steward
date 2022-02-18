@@ -287,11 +287,12 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 			if err != nil {
 				er := fmt.Errorf("error: ack receive failed: subject=%v: %v", p.subject.name(), err)
 				// sendErrorLogMessage(p.toRingbufferCh, p.node, er)
-				log.Printf(" ** %v\n", er)
+				p.processes.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 				// did not receive a reply, decide what to do..
 				retryAttempts++
-				log.Printf("Retry attempt:%v, retries: %v, ACKTimeout: %v, message.ID: %v\n", retryAttempts, message.Retries, message.ACKTimeout, message.ID)
+				er = fmt.Errorf("retry attempt:%v, retries: %v, ack timeout: %v, message.ID: %v", retryAttempts, message.Retries, message.ACKTimeout, message.ID)
+				p.processes.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 				switch {
 				//case message.Retries == 0:
@@ -307,8 +308,6 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 						p.processes.errorKernel.infoSend(p, message, er)
 					}
 
-					log.Printf("%v\n", er)
-
 					subReply.Unsubscribe()
 
 					p.processes.metrics.promNatsMessagesFailedACKsTotal.Inc()
@@ -316,7 +315,9 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 
 				default:
 					// none of the above matched, so we've not reached max retries yet
-					log.Printf("max retries for message not reached, retrying sending of message with ID %v\n", message.ID)
+					er := fmt.Errorf("max retries for message not reached, retrying sending of message with ID %v", message.ID)
+					p.processes.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+
 					p.processes.metrics.promNatsMessagesMissedACKsTotal.Inc()
 					continue
 				}
@@ -470,7 +471,6 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		if err != nil {
 			er := fmt.Errorf("error: subscriberHandler: newSubjectAndMessage : %v, message copy: %v", err, msgCopy)
 			p.processes.errorKernel.errSend(p, message, er)
-			log.Printf("%v\n", er)
 		}
 
 		p.toRingbufferCh <- []subjectAndMessage{sam}
@@ -504,6 +504,13 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		out := []byte{}
 		var err error
 
+		// TODO: This is not correct. As it is now we only want signature checking
+		// for REQCliCommand, but this will only call the handler if that is true,
+		// or that the EnableSignatureCheck flag is set. This will lead to all other
+		// REQ types being discarded since we don't call the mh.Handler method for
+		// those REQ.
+		// NB: Add the logic for also calling mh.handler for those other methods
+		// that don't need a valid signature.
 		if p.signatures.verifySignature(message) {
 			// Call the method handler for the specified method.
 			out, err = mh.handler(p, message, thisNode)
@@ -694,7 +701,7 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 
 	default: // no compression
 		// Allways log the error to console.
-		er := fmt.Errorf("error: PUBLISHING: compression type not defined, setting default to no compression")
+		er := fmt.Errorf("error: publishing: compression type not defined, setting default to no compression")
 		log.Printf("%v\n", er)
 
 		// We only wan't to send the error message to errorCentral once.
