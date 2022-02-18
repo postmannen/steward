@@ -352,6 +352,12 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 
 	// fmt.Printf(" * DEBUG: header value on subscriberHandler: %v\n", msg.Header)
 
+	// If debugging is enabled, print the source node name of the nats messages received.
+	if val, ok := msg.Header["fromNode"]; ok {
+		er := fmt.Errorf("info: nats message received from %v, with subject %v ", val, subject)
+		p.processes.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	}
+
 	// If compression is used, decompress it to get the gob data. If
 	// compression is not used it is the gob encoded data we already
 	// got in msgData so we do nothing with it.
