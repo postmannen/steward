@@ -187,6 +187,12 @@ func (e *errorKernel) infoSend(proc process, msg Message, err error) {
 	e.errorCh <- ev
 }
 
+func (e *errorKernel) logConsoleOnlyIfDebug(err error, c *Configuration) {
+	if c.EnableDebug {
+		log.Printf("%v\n", err)
+	}
+}
+
 // // TODO: Needs more work.
 // //
 // // errWithAction
