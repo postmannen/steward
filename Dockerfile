@@ -1,9 +1,9 @@
 # build stage
-FROM golang:1.17.0-alpine AS build-env
+FROM golang:1.17.7-alpine AS build-env
 RUN apk --no-cache add build-base git gcc
 
 RUN mkdir -p /build
-COPY ./steward /build/
+COPY ./ /build/
 
 WORKDIR /build/cmd/steward/
 RUN go version
