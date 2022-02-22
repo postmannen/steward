@@ -91,7 +91,9 @@ func (s *server) readStartupFolder() {
 // getFilePaths will get the names of all the messages in
 // the folder specified from current working directory.
 func (s *server) getFilePaths(dirName string) ([]string, error) {
-	dirPath, err := os.Getwd()
+	dirPath, err := os.Executable()
+	dirPath = filepath.Dir(dirPath)
+	fmt.Printf(" * DEBUG: %v\n", dirPath)
 	if err != nil {
 		return nil, fmt.Errorf("error: startup folder: unable to get the working directory %v: %v", dirPath, err)
 	}
