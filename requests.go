@@ -1474,7 +1474,7 @@ func (m methodREQHttpGetScheduled) handler(proc process, message Message, node s
 			return
 		}
 
-		// schedulerTotalTime, err := strconv.Atoi(message.MethodArgs[2])
+		schedulerTotalTime, err := strconv.Atoi(message.MethodArgs[2])
 		if err != nil {
 			er := fmt.Errorf("error: methodREQHttpGetScheduled: scheduler total time value is not a valid int number defined as a string value minutes: %v, bailing out: %v", err, message.MethodArgs)
 			proc.processes.errorKernel.errSend(proc, message, er)
@@ -1490,7 +1490,7 @@ func (m methodREQHttpGetScheduled) handler(proc process, message Message, node s
 		// Prepare a context that will be for the schedule as a whole.
 		// NB: Individual http get's will create their own context's
 		// derived from this one.
-		ctxScheduler, cancel := context.WithTimeout(proc.ctx, time.Second*60)
+		ctxScheduler, cancel := context.WithTimeout(proc.ctx, time.Minute*time.Duration(schedulerTotalTime))
 
 		go func() {
 			// Prepare the http request.
