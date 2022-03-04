@@ -2,7 +2,6 @@ package steward
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,6 +10,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 )
 
 // readStartupFolder will check the <workdir>/startup folder when Steward
@@ -324,7 +325,7 @@ type subjectAndMessage struct {
 func (s *server) convertBytesToSAMs(b []byte) ([]subjectAndMessage, error) {
 	MsgSlice := []Message{}
 
-	err := json.Unmarshal(b, &MsgSlice)
+	err := yaml.Unmarshal(b, &MsgSlice)
 	if err != nil {
 		return nil, fmt.Errorf("error: unmarshal of file failed: %#v", err)
 	}
