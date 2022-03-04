@@ -94,6 +94,8 @@ type Configuration struct {
 	StartSubREQToFileAppend bool
 	// Subscriber for writing to file
 	StartSubREQToFile bool
+	// Subscriber for writing to file without ACK
+	StartSubREQToFileNACK bool
 	// Subscriber for reading files to copy
 	StartSubREQCopyFileFrom bool
 	// Subscriber for writing copied files to disk
@@ -161,6 +163,7 @@ type ConfigurationFromFile struct {
 	StartSubREQHello            *bool
 	StartSubREQToFileAppend     *bool
 	StartSubREQToFile           *bool
+	StartSubREQToFileNACK       *bool
 	StartSubREQCopyFileFrom     *bool
 	StartSubREQCopyFileTo       *bool
 	StartSubREQPing             *bool
@@ -221,6 +224,7 @@ func newConfigurationDefaults() Configuration {
 		StartSubREQHello:            true,
 		StartSubREQToFileAppend:     true,
 		StartSubREQToFile:           true,
+		StartSubREQToFileNACK:       true,
 		StartSubREQCopyFileFrom:     true,
 		StartSubREQCopyFileTo:       true,
 		StartSubREQPing:             true,
@@ -430,6 +434,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.StartSubREQToFile = *cf.StartSubREQToFile
 	}
+	if cf.StartSubREQToFileNACK == nil {
+		conf.StartSubREQToFileNACK = cd.StartSubREQToFileNACK
+	} else {
+		conf.StartSubREQToFileNACK = *cf.StartSubREQToFileNACK
+	}
 	if cf.StartSubREQCopyFileFrom == nil {
 		conf.StartSubREQCopyFileFrom = cd.StartSubREQCopyFileFrom
 	} else {
@@ -556,6 +565,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.StartSubREQHello, "startSubREQHello", fc.StartSubREQHello, "true/false")
 	flag.BoolVar(&c.StartSubREQToFileAppend, "startSubREQToFileAppend", fc.StartSubREQToFileAppend, "true/false")
 	flag.BoolVar(&c.StartSubREQToFile, "startSubREQToFile", fc.StartSubREQToFile, "true/false")
+	flag.BoolVar(&c.StartSubREQToFileNACK, "startSubREQToFileNACK", fc.StartSubREQToFileNACK, "true/false")
 	flag.BoolVar(&c.StartSubREQCopyFileFrom, "startSubREQCopyFileFrom", fc.StartSubREQCopyFileFrom, "true/false")
 	flag.BoolVar(&c.StartSubREQCopyFileTo, "startSubREQCopyFileTo", fc.StartSubREQCopyFileTo, "true/false")
 	flag.BoolVar(&c.StartSubREQPing, "startSubREQPing", fc.StartSubREQPing, "true/false")

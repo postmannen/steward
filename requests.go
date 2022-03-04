@@ -102,6 +102,8 @@ const (
 	// The data field is a slice of strings where the values of the
 	// slice will be written to the file.
 	REQToFile Method = "REQToFile"
+	// REQToFileNACK same as REQToFile but NACK.
+	REQToFileNACK Method = "REQToFileNACK"
 	// Read the source file to be copied to some node.
 	REQCopyFileFrom Method = "REQCopyFileFrom"
 	// Write the destination copied to some node.
@@ -174,6 +176,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			},
 			REQToFile: methodREQToFile{
 				event: EventACK,
+			},
+			REQToFileNACK: methodREQToFile{
+				event: EventNACK,
 			},
 			REQCopyFileFrom: methodREQCopyFileFrom{
 				event: EventACK,

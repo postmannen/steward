@@ -122,6 +122,11 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQToFile(proc)
 	}
 
+	// Start a subscriber for text to file messages
+	if proc.configuration.StartSubREQToFileNACK {
+		proc.startup.subREQToFileNACK(proc)
+	}
+
 	// Start a subscriber for reading file to copy
 	if proc.configuration.StartSubREQCopyFileFrom {
 		proc.startup.subREQCopyFileFrom(proc)
@@ -377,6 +382,14 @@ func (s startup) subREQHello(p process) {
 func (s startup) subREQToFile(p process) {
 	log.Printf("Starting text to file subscriber: %#v\n", p.node)
 	sub := newSubject(REQToFile, string(p.node))
+	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, processKindSubscriber, nil, p.signatures)
+
+	go proc.spawnWorker(p.processes, p.natsConn)
+}
+
+func (s startup) subREQToFileNACK(p process) {
+	log.Printf("Starting text to file subscriber: %#v\n", p.node)
+	sub := newSubject(REQToFileNACK, string(p.node))
 	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, processKindSubscriber, nil, p.signatures)
 
 	go proc.spawnWorker(p.processes, p.natsConn)
