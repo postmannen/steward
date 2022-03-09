@@ -588,7 +588,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 	switch p.configuration.Compression {
 	case "z": // zstd
 		// enc, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
-		enc, err := zstd.NewWriter(nil)
+		enc, err := zstd.NewWriter(nil, zstd.WithEncoderConcurrency(1))
 		if err != nil {
 			log.Printf("error: zstd new encoder failed: %v\n", err)
 			os.Exit(1)
@@ -686,7 +686,9 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 		natsMsgPayloadCompressed = zEnc.EncodeAll(natsMsgPayloadSerialized, nil)
 		natsMsgHeader["cmp"] = []string{p.configuration.Compression}
 
-		zEnc.Reset(nil)
+		// p.zEncMutex.Lock()
+		// zEnc.Reset(nil)
+		// p.zEncMutex.Unlock()
 
 	case "g": // gzip
 		var buf bytes.Buffer
@@ -726,9 +728,13 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 	// sending of the message.
 	p.messageDeliverNats(natsMsgPayloadCompressed, natsMsgHeader, natsConn, m)
 
-	// Signaling back to the ringbuffer that we are done with the
-	// current message, and it can remove it from the ringbuffer.
-	m.done <- struct{}{}
+	select {
+	case m.done <- struct{}{}:
+		// Signaling back to the ringbuffer that we are done with the
+		// current message, and it can remove it from the ringbuffer.
+	case <-p.ctx.Done():
+		return
+	}
 
 	// Increment the counter for the next message to be sent.
 	p.messageID++
