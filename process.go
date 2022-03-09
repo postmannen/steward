@@ -274,6 +274,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 			// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
 			log.Printf("%v, waiting %ds before retrying\n", er, publishTimer)
 			time.Sleep(time.Second * publishTimer)
+			subReply.Unsubscribe()
 			continue
 		}
 
@@ -288,6 +289,11 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				er := fmt.Errorf("error: ack receive failed: subject=%v: %v", p.subject.name(), err)
 				// sendErrorLogMessage(p.toRingbufferCh, p.node, er)
 				p.processes.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+
+				if err == nats.ErrNoResponders {
+					fmt.Printf(" * DEBUG: Waiting, ACKTimeout: %v\n", message.ACKTimeout)
+					time.Sleep(time.Second * time.Duration(message.ACKTimeout))
+				}
 
 				// did not receive a reply, decide what to do..
 				retryAttempts++
@@ -319,6 +325,9 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 					p.processes.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 					p.processes.metrics.promNatsMessagesMissedACKsTotal.Inc()
+
+					subReply.Unsubscribe()
+
 					continue
 				}
 			}

@@ -328,7 +328,7 @@ func (r *ringBuffer) dumpBucket(bucket string) ([]samDBValue, error) {
 		})
 
 		for _, v := range samDBValues {
-			log.Printf("info: k/v store: %#v\n", v)
+			log.Printf("info: k/v store, kvID: %v, message.ID: %v, subject: %v, len(data): %v\n", v.ID, v.Data.ID, v.Data.Subject, len(v.Data.Data))
 		}
 
 		return nil
