@@ -612,7 +612,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 			m.ArgSignature = p.addMethodArgSignature(m)
 			// fmt.Printf(" * DEBUG: add signature, fromNode: %v, method: %v,  len of signature: %v\n", m.FromNode, m.Method, len(m.ArgSignature))
 
-			p.publishAMessage(m, zEnc, once, natsConn)
+			go p.publishAMessage(m, zEnc, once, natsConn)
 		case <-p.ctx.Done():
 			er := fmt.Errorf("info: canceling publisher: %v", p.subject.name())
 			//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
