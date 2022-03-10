@@ -38,6 +38,7 @@ As long as you can do something as an operator on in a shell on a system you can
     - [Schema for the messages to send into Steward via the API's](#schema-for-the-messages-to-send-into-steward-via-the-apis)
     - [Nats messaging timeouts](#nats-messaging-timeouts)
     - [Compression of the Nats message payload](#compression-of-the-nats-message-payload)
+    - [Serialization of messages sent between nodes](#serialization-of-messages-sent-between-nodes)
     - [startup folder](#startup-folder)
       - [General functionality](#general-functionality)
       - [How to send the reply to another node](#how-to-send-the-reply-to-another-node)
@@ -387,6 +388,24 @@ When starting a Steward instance with compression enabled it is the publishing o
 The subscribing instance of Steward will automatically detect if the message is compressed or not, and decompress it if needed.
 
 With other words, Steward will by default receive and handle both compressed and uncompressed messages, and you decide on the publishing side if you want to enable compression or not.
+
+### Serialization of messages sent between nodes
+
+Steward support two serialization formats when sending messages. By default it uses the Go spesific **GOB** format, but serialization with **CBOR** are also supported.
+
+A benefit of using **CBOR** is the size of the messages when transferred.
+
+To enable **CBOR** serialization either start **steward** by setting the serialization flag:
+
+```bash
+./steward -serialization="cbor" <other flags here...>
+```
+
+Or edit the config file `<steward directory>/etc/config.toml` and set:
+
+```toml
+Serialization = "cbor"
+```
 
 ### startup folder
 
