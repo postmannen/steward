@@ -60,6 +60,7 @@ As long as you can do something as an operator on in a shell on a system you can
       - [REQToConsole](#reqtoconsole)
       - [REQToFileAppend](#reqtofileappend)
       - [REQToFile](#reqtofile)
+      - [REQToFileNACK](#reqtofilenack)
       - [ReqCliCommand](#reqclicommand-1)
     - [Errors reporting](#errors-reporting)
     - [Prometheus metrics](#prometheus-metrics)
@@ -701,6 +702,10 @@ Write the output of the reply message to a file specified with the `directory` a
 ]
 ```
 
+#### REQToFileNACK
+
+Same as REQToFile, but will not send an ACK when a message is delivered.
+
 #### ReqCliCommand
 
 **ReqCliCommand** is a bit special in that it can be used as both **method** and **replyMethod**
@@ -1116,7 +1121,7 @@ RelayReplyMethod Method `json:"relayReplyMethod" yaml:"relayReplyMethod"`
 
 ### How to send a Message
 
-The API for sending a message from one node to another node is by sending a structured JSON object into a listener port in of of the following ways.
+The API for sending a message from one node to another node is by sending a structured JSON or YAML object into a listener port in of of the following ways.
 
 - unix socket called `steward.sock`. By default lives in the `./tmp` directory
 - tcpListener, specify host:port with startup flag, or config file.
@@ -1129,6 +1134,8 @@ The API for sending a message from one node to another node is by sending a stru
 #### Sending a command from one Node to Another Node
 
 ##### Example JSON for appending a message of type command into the `socket` file
+
+In JSON:
 
 ```json
 [
@@ -1143,6 +1150,39 @@ The API for sending a message from one node to another node is by sending a stru
         "methodTimeout": 4
     }
 ]
+```
+
+Or in YAML:
+
+```yaml
+---
+- toNodes:
+  - ship1
+  method: REQCliCommand
+  methodArgs:
+  - bash
+  - "-c"
+  - "
+    cat <<< $'[{
+    \"directory\": \"metrics\",
+    \"fileName\": \"edgeAgent.prom\",
+    \"fromNode\":\"metrics\",
+    \"toNode\": \"ship1\",
+    \"method\":\"REQHttpGetScheduled\",
+    \"methodArgs\": [\"http://127.0.0.1:8080/metrics\",
+    \"60\",\"5000000\"],\"replyMethod\":\"REQToFile\",
+    \"ACKTimeout\":10,
+    \"retries\": 3,\"methodTimeout\": 3
+    }]'>scrape-metrics.msg
+    "
+  replyMethod: REQToFile
+  ACKTimeout: 5
+  retries: 3
+  replyACKTimeout: 5
+  replyRetries: 3
+  methodTimeout: 5
+  directory: system
+  fileName: system.log
 ```
 
 ##### Specify more messages at once do
