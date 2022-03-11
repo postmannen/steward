@@ -1,0 +1,11 @@
+[
+    {
+        "directory": "stop",
+        "fileName": "stopHttp.log",
+        "toNode": "ship1",
+	    "toNodes": ["central"],
+        "method":"REQOpProcessStop",
+        "methodArgs": ["REQHttpGet","central","subscriber"],
+        "replyMethod":"REQToFile"
+    }
+]

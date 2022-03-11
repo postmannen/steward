@@ -1,0 +1,11 @@
+[
+    {
+        "directory": "stop",
+        "fileName": "startHttp.log",
+        "toNode": "",
+	    "toNodes": ["central"],
+        "method":"REQOpProcessStart",
+        "methodArgs": ["REQHttpGet"],
+        "replyMethod":"REQToFile"
+    }
+]
