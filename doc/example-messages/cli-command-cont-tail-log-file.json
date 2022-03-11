@@ -1,0 +1,17 @@
+[
+    {
+        "directory":"system",
+        "fileName": "test",
+        "toNodes": ["ship1"],
+	    "relayViaNode": "central",
+	    "relayReplyMethod": "REQToConsole",
+        "methodArgs": ["bash","-c","cat /etc/hostname && journalctl -u steward -n 5 --follow"],
+        "method":"REQCliCommandCont",
+        "replyMethod":"REQToFileAppend",
+        "ACKTimeout":5,
+        "retries":3,
+        "replyACKTimeout":5,
+        "replyRetries":3,
+        "methodTimeout": 5
+    }
+]

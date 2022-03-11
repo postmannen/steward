@@ -1,0 +1,34 @@
+---
+- toNodes:
+    - ship1
+    - ship2
+  method: REQCliCommand
+  methodArgs:
+    - "bash"
+    - "-c"
+    - |
+      cat <<-"EOF" >test.sh
+      #!/bin/bash
+
+      if [ -z "$1" ]; then
+          echo "error: No argument supplied, give the hostname as the only argument"
+          exit 1
+      fi
+
+      touch $1
+      echo "sorry..." > $1
+
+      EOF
+
+      chmod +x test.sh
+
+      ./test.sh WHOOPS.txt
+
+  replyMethod: REQToFile
+  ACKTimeout: 5
+  retries: 120
+  replyACKTimeout: 5
+  replyRetries: 3
+  methodTimeout: 5
+  directory: system
+  fileName: system.log

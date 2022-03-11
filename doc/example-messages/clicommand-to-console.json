@@ -1,0 +1,20 @@
+[
+    {
+        "toNodes": ["ship1"],
+        "method": "REQCliCommand",
+        "methodArgs": [
+            "bash",
+            "-c",
+            "hostname && curl -v http://debian.org"
+        ],
+        "replyMethod": "REQToConsole",
+        "ACKTimeout": 5,
+        "retries": 3,
+        "replyACKTimeout": 5,
+        "replyRetries": 5,
+        "methodTimeout": 5,
+        "replyMethodTimeout": 120,
+        "directory": "debug",
+        "fileName": "test.txt"
+    }
+]

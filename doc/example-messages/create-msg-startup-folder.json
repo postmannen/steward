@@ -1,0 +1,19 @@
+[
+    {
+        "relayViaNode": "central",
+        "relayReplyMethod": "REQToConsole",
+        "toNodes": ["ship1","ship2"],
+        "method": "REQCliCommand",
+        "methodArgs": [
+            "bash","-c","cat <<< $'[{\"directory\": \"metrics\",\"fileName\": \"edgeAgent.prom\",\"fromNode\":\"metrics\",\"toNode\": \"ship1\",\"method\":\"REQHttpGetScheduled\",\"methodArgs\": [\"http://127.0.0.1:9601/metrics\",\"60\",\"5000000\"],\"replyMethod\":\"REQToFile\",\"ACKTimeout\":10,\"retries\": 3,\"methodTimeout\": 3}]'>/usr/local/steward/startup/scrape-edge-agent.msg && cat <<< $'[{\"directory\": \"metrics\",\"fileName\": \"edgeHub.prom\",\"fromNode\":\"metrics\",\"toNode\": \"ship2\",\"method\":\"REQHttpGetScheduled\",\"methodArgs\": [\"http://127.0.0.1:9602/metrics\",\"60\",\"5000000\"],\"replyMethod\":\"REQToFile\",\"ACKTimeout\":10,\"retries\": 3,\"methodTimeout\": 3}]'>/usr/local/steward/startup/scrape-edge-hub.msg  && systemctl restart steward"
+        ],
+        "replyMethod": "REQToFile",
+        "ACKTimeout": 20,
+        "retries": 3,
+        "replyACKTimeout": 20,
+        "replyRetries": 3,
+        "methodTimeout": 5,
+        "directory": "system",
+        "fileName": "system.log"
+    }
+]

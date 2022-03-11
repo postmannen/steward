@@ -1,0 +1,22 @@
+[
+    {
+        "toNodes": ["ship1","ship2"],
+        "method": "REQCliCommand",
+        "methodArgs": [
+            "bash",
+            "-c",
+            "cat /etc/hostname && systemd-resolve --flush-caches &&wg-quick down wg0 && sleep 2 && wg-quick up wg0"
+        ],
+        "replyMethod": "REQToFile",
+        "ACKTimeout": 20,
+        "retries": 3,
+        "replyACKTimeout": 20,
+        "replyRetries": 3,
+        "methodTimeout": 20,
+        "replyMethodTimeout": 120,
+        "directory": "system/wireguard",
+        "fileName": "wireguard-down-up.log",
+        "relayViaNode": "central",
+        "relayReplyMethod": "REQToConsole"
+    }
+]

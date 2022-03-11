@@ -1,0 +1,10 @@
+[
+    {
+        "directory": "copy",
+        "fileName": "copy.log",
+        "toNodes": ["ship1"],
+        "method":"REQCopyFileFrom",
+        "methodArgs": ["./tmp2.txt","ship2","/tmp/tmp2.txt"],
+        "replyMethod":"REQToFileAppend"
+    }
+]

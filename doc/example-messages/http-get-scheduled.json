@@ -1,0 +1,18 @@
+[
+    {
+        "toNodes": ["ship1"],
+        "method": "REQHttpGetScheduled",
+        "methodArgs": [
+            "https://vg.no","10","1"
+        ],
+        "replyMethod": "REQToConsole",
+        "ACKTimeout": 5,
+        "retries": 3,
+        "replyACKTimeout": 5,
+        "replyRetries": 3,
+        "methodTimeout": 5,
+        "replyMethodTimeout": 120,
+        "directory": "test",
+        "fileName": "test.txt"
+    }
+]

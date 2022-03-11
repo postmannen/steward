@@ -1,0 +1,15 @@
+[
+    {
+        "directory":"system",
+        "fileName": "test.txt",
+        "toNodes": ["ship1","ship2"],
+        "methodArgs": ["bash","-c","sed -i 's/StartSubREQErrorLog =.*/StartSubREQErrorLog = false/g' /usr/local/steward/etc/config.toml && systemctl restart steward"],
+        "method":"REQCliCommand",
+        "replyMethod":"REQToFile",
+        "ACKTimeout":10,
+        "retries":1,
+        "replyACKTimeout":10,
+        "replyRetries":3,
+        "methodTimeout": 60
+    }
+]

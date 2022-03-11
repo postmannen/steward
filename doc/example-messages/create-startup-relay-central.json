@@ -1,0 +1,19 @@
+[
+    {
+        "relayViaNode": "central",
+        "relayReplyMethod": "REQToConsole",
+        "toNodes": ["ship1"],
+        "method": "REQCliCommand",
+        "methodArgs": [
+            "bash","-c","cat <<< $'[{\"directory\": \"metrics\",\"fileName\": \"edgeHub.prom\",\"fromNode\":\"metrics\",\"toNode\": \"ship1\",\"method\":\"REQHttpGetScheduled\",\"methodArgs\": [\"http://127.0.0.1:9602/metrics\",\"60\",\"5000000\"],\"replyMethod\":\"REQToFile\",\"ACKTimeout\":10,\"retries\": 3,\"methodTimeout\": 3}]'>/usr/local/steward/startup/scrape-edge-hub.msg && systemctl restart steward"
+        ],
+        "replyMethod": "REQToFile",
+        "ACKTimeout": 5,
+        "retries": 3,
+        "replyACKTimeout": 5,
+        "replyRetries": 3,
+        "methodTimeout": 5,
+        "directory": "system",
+        "fileName": "system.log"
+    }
+]
