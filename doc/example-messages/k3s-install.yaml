@@ -1,0 +1,18 @@
+---
+- toNodes:
+    - vbox1
+  method: REQCliCommandCont
+  methodArgs:
+    - "bash"
+    - "-c"
+    - |
+      curl -sfL https://get.k3s.io | sh -
+
+  replyMethod: REQToConsole
+  ACKTimeout: 5
+  retries: 3
+  replyACKTimeout: 5
+  replyRetries: 3
+  methodTimeout: 120
+  directory: system
+  fileName: system.log

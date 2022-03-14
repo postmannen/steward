@@ -1,0 +1,18 @@
+---
+- toNodes:
+    - vbox1
+  method: REQCliCommand
+  methodArgs:
+    - "bash"
+    - "-c"
+    - |
+      kubectl delete -f test.yaml
+
+  replyMethod: REQToConsole
+  ACKTimeout: 5
+  retries: 120
+  replyACKTimeout: 5
+  replyRetries: 3
+  methodTimeout: 100
+  directory: system
+  fileName: system.log
