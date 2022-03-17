@@ -415,6 +415,8 @@ Messages can be automatically scheduled to be read and executed at startup of St
 
 A folder named **startup** will be present in the working directory of Steward, and you put the messages to be executed at startup here.
 
+Messages put in the startup folder will not be sent to the broker but handled locally, and only (eventually) the reply message from the Request Method called will be sent to the broker.
+
 #### How to send the reply to another node
 
 Normally the **fromNode** field is automatically filled in with the node name of the node where a message originated.

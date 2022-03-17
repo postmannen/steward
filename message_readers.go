@@ -104,13 +104,14 @@ func (s *server) readStartupFolder() {
 			if !ok {
 				er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.Event)
 				p.processes.errorKernel.errSend(p, sams[i].Message, er)
+				continue
 			}
 
 			_, err = mh.handler(p, sams[i].Message, s.nodeName)
-
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
 				p.processes.errorKernel.errSend(p, sams[i].Message, er)
+				continue
 			}
 		}
 
