@@ -203,6 +203,11 @@ func (s *server) readSocket() {
 				// Fill in the value for the FromNode field, so the receiver
 				// can check this field to know where it came from.
 				sams[i].Message.FromNode = Node(s.nodeName)
+
+				// Send an info message to the central about the message picked
+				// for auditing.
+				er := fmt.Errorf("info: message read from socket on %v: %v", s.nodeName, sams[i].Message)
+				s.processes.errorKernel.errSend(s.processInitial, Message{}, er)
 			}
 
 			// Send the SAM struct to be picked up by the ring buffer.
