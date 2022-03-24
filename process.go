@@ -291,7 +291,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				p.processes.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 				if err == nats.ErrNoResponders {
-					fmt.Printf(" * DEBUG: Waiting, ACKTimeout: %v\n", message.ACKTimeout)
+					// fmt.Printf(" * DEBUG: Waiting, ACKTimeout: %v\n", message.ACKTimeout)
 					time.Sleep(time.Second * time.Duration(message.ACKTimeout))
 				}
 
@@ -327,7 +327,6 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 					p.processes.metrics.promNatsMessagesMissedACKsTotal.Inc()
 
 					subReply.Unsubscribe()
-
 					continue
 				}
 			}
