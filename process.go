@@ -45,12 +45,33 @@ type process struct {
 	processKind processKind
 	// methodsAvailable
 	methodsAvailable MethodsAvailable
-	// Helper or service function that can do some kind of work
-	// for the process.
-	// The idea is that this can hold for example the map of the
-	// the hello nodes to limit shared resources in the system as
-	// a whole for sharing a map from the *server level.
-	procFunc procFunc
+	// procFunc is a function that will be started when a worker process
+	// is started. If a procFunc is registered when creating a new process
+	// the procFunc will be started as a go routine when the process is started,
+	// and stopped when the process is stopped.
+	//
+	// A procFunc can be started both for publishing and subscriber processes.
+	//
+	// When used with a subscriber process the usecase is most likely to handle
+	// some kind of state needed for a request type. The handlers themselves
+	// can not hold state since they are only called once per message received,
+	// and exits when the message is handled leaving no state behind. With a procfunc
+	// we can have a process function running at all times tied to the process, and
+	// this function can be able to hold the state needed in a certain scenario.
+	//
+	// With a subscriber handler you generally take the message in the handler and
+	// pass it on to the procFunc by putting it on the procFuncCh<-, and the
+	// message can then be read from the procFuncCh inside the procFunc, and we
+	// can do some further work on it, for example update registry for metrics that
+	// is needed for that specific request type.
+	//
+	// With a publisher process you can attach a static function that will do some
+	// work to a request type, and publish the result.
+	//
+	// procFunc's can also be used to wrap in other types which we want to
+	// work with. An example can be handling of metrics which the message
+	// have no notion of, but a procFunc can have that wrapped in from when it was constructed.
+	procFunc func(ctx context.Context, procFuncCh chan Message) error
 	// The channel to send a messages to the procFunc go routine.
 	// This is typically used within the methodHandler for so we
 	// can pass messages between the procFunc and the handler.
@@ -109,34 +130,6 @@ func newProcess(ctx context.Context, metrics *metrics, natsConn *nats.Conn, proc
 
 	return proc
 }
-
-// procFunc is a function that will be started when a worker process
-// is started. If a procFunc is registered when creating a new process
-// the procFunc will be started as a go routine when the process is started,
-// and stopped when the process is stopped.
-//
-// A procFunc can be started both for publishing and subscriber processes.
-//
-// When used with a subscriber process the usecase is most likely to handle
-// some kind of state needed for a request type. The handlers themselves
-// can not hold state since they are only called once per message received,
-// and exits when the message is handled leaving no state behind. With a procfunc
-// we can have a process function running at all times tied to the process, and
-// this function can be able to hold the state needed in a certain scenario.
-//
-// With a subscriber handler you generally take the message in the handler and
-// pass it on to the procFunc by putting it on the procFuncCh<-, and the
-// message can then be read from the procFuncCh inside the procFunc, and we
-// can do some further work on it, for example update registry for metrics that
-// is needed for that specific request type.
-//
-// With a publisher process you can attach a static function that will do some
-// work to a request type, and publish the result.
-//
-// procFunc's can also be used to wrap in other types which we want to
-// work with. An example can be handling of metrics which the message
-// have no notion of, but a procFunc can have that wrapped in from when it was constructed.
-type procFunc func(ctx context.Context, procFuncCh chan Message) error
 
 // The purpose of this function is to check if we should start a
 // publisher or subscriber process, where a process is a go routine

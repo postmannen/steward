@@ -254,42 +254,41 @@ func (s startup) pubREQHello(p process) {
 	proc := newProcess(p.ctx, s.metrics, p.natsConn, p.processes, p.toRingbufferCh, p.configuration, sub, processKindPublisher, nil, s.Signatures)
 
 	// Define the procFunc to be used for the process.
-	proc.procFunc = procFunc(
-		func(ctx context.Context, procFuncCh chan Message) error {
-			ticker := time.NewTicker(time.Second * time.Duration(p.configuration.StartPubREQHello))
-			for {
+	proc.procFunc = func(ctx context.Context, procFuncCh chan Message) error {
+		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.StartPubREQHello))
+		for {
 
-				d := fmt.Sprintf("Hello from %v\n", p.node)
+			d := fmt.Sprintf("Hello from %v\n", p.node)
 
-				m := Message{
-					FileName:   "hello.log",
-					Directory:  "hello-messages",
-					ToNode:     Node(p.configuration.CentralNodeName),
-					FromNode:   Node(p.node),
-					Data:       []byte(d),
-					Method:     REQHello,
-					ACKTimeout: 10,
-					Retries:    1,
-				}
-
-				sam, err := newSubjectAndMessage(m)
-				if err != nil {
-					// In theory the system should drop the message before it reaches here.
-					p.processes.errorKernel.errSend(p, m, err)
-					log.Printf("error: ProcessesStart: %v\n", err)
-				}
-				proc.toRingbufferCh <- []subjectAndMessage{sam}
-
-				select {
-				case <-ticker.C:
-				case <-ctx.Done():
-					er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
-					// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-					log.Printf("%v\n", er)
-					return nil
-				}
+			m := Message{
+				FileName:   "hello.log",
+				Directory:  "hello-messages",
+				ToNode:     Node(p.configuration.CentralNodeName),
+				FromNode:   Node(p.node),
+				Data:       []byte(d),
+				Method:     REQHello,
+				ACKTimeout: 10,
+				Retries:    1,
 			}
-		})
+
+			sam, err := newSubjectAndMessage(m)
+			if err != nil {
+				// In theory the system should drop the message before it reaches here.
+				p.processes.errorKernel.errSend(p, m, err)
+				log.Printf("error: ProcessesStart: %v\n", err)
+			}
+			proc.toRingbufferCh <- []subjectAndMessage{sam}
+
+			select {
+			case <-ticker.C:
+			case <-ctx.Done():
+				er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
+				// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
+				return nil
+			}
+		}
+	}
 	go proc.spawnWorker(p.processes, p.natsConn)
 }
 
@@ -351,32 +350,31 @@ func (s startup) subREQHello(p process) {
 	// a handler are not able to hold state, and we need to hold the state
 	// of the nodes we've received hello's from in the sayHelloNodes map,
 	// which is the information we pass along to generate metrics.
-	proc.procFunc = procFunc(
-		func(ctx context.Context, procFuncCh chan Message) error {
-			sayHelloNodes := make(map[Node]struct{})
+	proc.procFunc = func(ctx context.Context, procFuncCh chan Message) error {
+		sayHelloNodes := make(map[Node]struct{})
 
-			for {
-				// Receive a copy of the message sent from the method handler.
-				var m Message
+		for {
+			// Receive a copy of the message sent from the method handler.
+			var m Message
 
-				select {
-				case m = <-procFuncCh:
-				case <-ctx.Done():
-					er := fmt.Errorf("info: stopped handleFunc for: subscriber %v", proc.subject.name())
-					// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-					log.Printf("%v\n", er)
-					return nil
-				}
-
-				// Add an entry for the node in the map
-				sayHelloNodes[m.FromNode] = struct{}{}
-
-				// update the prometheus metrics
-				s.metrics.promHelloNodesTotal.Set(float64(len(sayHelloNodes)))
-				s.metrics.promHelloNodesContactLast.With(prometheus.Labels{"nodeName": string(m.FromNode)}).SetToCurrentTime()
-
+			select {
+			case m = <-procFuncCh:
+			case <-ctx.Done():
+				er := fmt.Errorf("info: stopped handleFunc for: subscriber %v", proc.subject.name())
+				// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
+				return nil
 			}
-		})
+
+			// Add an entry for the node in the map
+			sayHelloNodes[m.FromNode] = struct{}{}
+
+			// update the prometheus metrics
+			s.metrics.promHelloNodesTotal.Set(float64(len(sayHelloNodes)))
+			s.metrics.promHelloNodesContactLast.With(prometheus.Labels{"nodeName": string(m.FromNode)}).SetToCurrentTime()
+
+		}
+	}
 	go proc.spawnWorker(p.processes, p.natsConn)
 }
 
