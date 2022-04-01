@@ -473,8 +473,8 @@ func (m methodREQOpProcessStart) handler(proc process, message Message, node str
 
 		// Create the process and start it.
 		sub := newSubject(method, proc.configuration.NodeName)
-		procNew := newProcess(proc.ctx, proc.processes.metrics, proc.natsConn, proc.processes, proc.toRingbufferCh, proc.configuration, sub, processKindSubscriber, nil, proc.signatures)
-		go procNew.spawnWorker(proc.processes, proc.natsConn)
+		procNew := newProcess(proc.ctx, proc.server, sub, processKindSubscriber, nil)
+		go procNew.spawnWorker()
 
 		txt := fmt.Sprintf("info: OpProcessStart: started id: %v, subject: %v: node: %v", procNew.processID, sub, message.ToNode)
 		er := fmt.Errorf(txt)
@@ -564,7 +564,7 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 			}
 
 			// Remove the prometheus label
-			proc.processes.metrics.promProcessesAllRunning.Delete(prometheus.Labels{"processName": string(processName)})
+			proc.server.metrics.promProcessesAllRunning.Delete(prometheus.Labels{"processName": string(processName)})
 
 			txt := fmt.Sprintf("info: OpProcessStop: process stopped id: %v, method: %v on: %v", toStopProc.processID, sub, message.ToNode)
 			er := fmt.Errorf(txt)
@@ -1011,7 +1011,7 @@ func (m methodREQErrorLog) getKind() Event {
 
 // Handle the writing of error logs.
 func (m methodREQErrorLog) handler(proc process, message Message, node string) ([]byte, error) {
-	proc.processes.metrics.promErrorMessagesReceivedTotal.Inc()
+	proc.server.metrics.promErrorMessagesReceivedTotal.Inc()
 
 	// If it was a request type message we want to check what the initial messages
 	// method, so we can use that in creating the file name to store the data.

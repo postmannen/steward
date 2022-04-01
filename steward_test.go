@@ -235,7 +235,7 @@ func checkREQErrorLogTest(stewardServer *server, conf *Configuration, t *testing
 		ToNode: "somenode",
 	}
 
-	p := newProcess(stewardServer.ctx, stewardServer.metrics, stewardServer.natsConn, stewardServer.processes, stewardServer.processInitial.toRingbufferCh, stewardServer.configuration, Subject{}, processKindSubscriber, nil, stewardServer.signatures)
+	p := newProcess(stewardServer.ctx, stewardServer, Subject{}, processKindSubscriber, nil)
 
 	stewardServer.errorKernel.errSend(p, m, fmt.Errorf("some error"))
 

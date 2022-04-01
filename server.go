@@ -40,12 +40,12 @@ type server struct {
 	processes *processes
 	// The name of the node
 	nodeName string
-	// ringBufferBulkInCh are the channel where new messages in a bulk
+	// toRingBufferCh are the channel where new messages in a bulk
 	// format (slice) are put into the system.
 	//
 	// In general the ringbuffer will read this
 	// channel, unfold each slice, and put single messages on the buffer.
-	ringBufferBulkInCh chan []subjectAndMessage
+	toRingBufferCh chan []subjectAndMessage
 	// errorKernel is doing all the error handling like what to do if
 	// an error occurs.
 	errorKernel *errorKernel
@@ -148,23 +148,24 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 	signatures := newSignatures(configuration, errorKernel)
 	// fmt.Printf(" * DEBUG: newServer: signatures contains: %+v\n", signatures)
 
-	s := &server{
-		ctx:                ctx,
-		cancel:             cancel,
-		configuration:      configuration,
-		nodeName:           configuration.NodeName,
-		natsConn:           conn,
-		StewardSocket:      stewardSocket,
-		processes:          newProcesses(ctx, metrics, tuiClient, errorKernel, configuration, signatures),
-		ringBufferBulkInCh: make(chan []subjectAndMessage),
-		metrics:            metrics,
-		version:            version,
-		tui:                tuiClient,
-		errorKernel:        errorKernel,
-		signatures:         signatures,
-		helloRegister:      newHelloRegister(),
-		centralAuth:        newCentralAuth(),
+	s := server{
+		ctx:            ctx,
+		cancel:         cancel,
+		configuration:  configuration,
+		nodeName:       configuration.NodeName,
+		natsConn:       conn,
+		StewardSocket:  stewardSocket,
+		toRingBufferCh: make(chan []subjectAndMessage),
+		metrics:        metrics,
+		version:        version,
+		tui:            tuiClient,
+		errorKernel:    errorKernel,
+		signatures:     signatures,
+		helloRegister:  newHelloRegister(),
+		centralAuth:    newCentralAuth(),
 	}
+
+	s.processes = newProcesses(ctx, &s)
 
 	// Create the default data folder for where subscribers should
 	// write it's data, check if data folder exist, and create it if needed.
@@ -181,7 +182,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
 	}
 
-	return s, nil
+	return &s, nil
 
 }
 
@@ -235,7 +236,7 @@ func (s *server) Start() {
 	s.metrics.promVersion.With(prometheus.Labels{"version": string(s.version)})
 
 	go func() {
-		err := s.errorKernel.start(s.ringBufferBulkInCh)
+		err := s.errorKernel.start(s.toRingBufferCh)
 		if err != nil {
 			log.Printf("%v\n", err)
 		}
@@ -272,7 +273,7 @@ func (s *server) Start() {
 	//
 	// NB: The context of the initial process are set in processes.Start.
 	sub := newSubject(REQInitial, s.nodeName)
-	s.processInitial = newProcess(context.TODO(), s.metrics, s.natsConn, s.processes, s.ringBufferBulkInCh, s.configuration, sub, "", nil, s.signatures)
+	s.processInitial = newProcess(context.TODO(), s, sub, "", nil)
 	// Start all wanted subscriber processes.
 	s.processes.Start(s.processInitial)
 
@@ -287,7 +288,7 @@ func (s *server) Start() {
 
 	if s.configuration.EnableTUI {
 		go func() {
-			err := s.tui.Start(s.ctx, s.ringBufferBulkInCh)
+			err := s.tui.Start(s.ctx, s.toRingBufferCh)
 			if err != nil {
 				log.Printf("%v\n", err)
 				os.Exit(1)
@@ -392,7 +393,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 	const samValueBucket string = "samValueBucket"
 	const indexValueBucket string = "indexValueBucket"
 
-	s.ringBuffer = newringBuffer(s.ctx, s.metrics, s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.ringBufferBulkInCh, samValueBucket, indexValueBucket, s.errorKernel, s.processInitial)
+	s.ringBuffer = newringBuffer(s.ctx, s.metrics, s.configuration, bufferSize, dbFileName, Node(s.nodeName), s.toRingBufferCh, samValueBucket, indexValueBucket, s.errorKernel, s.processInitial)
 
 	ringBufferInCh := make(chan subjectAndMessage)
 	ringBufferOutCh := make(chan samDBValueAndDelivered)
@@ -405,7 +406,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 	// we loop here, unfold the slice, and put single subjectAndMessages's on
 	// the channel to the ringbuffer.
 	go func() {
-		for sams := range s.ringBufferBulkInCh {
+		for sams := range s.toRingBufferCh {
 			for _, sam := range sams {
 				ringBufferInCh <- sam
 			}
@@ -497,9 +498,9 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 					// log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 					sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
-					proc := newProcess(s.ctx, s.metrics, s.natsConn, s.processes, s.ringBufferBulkInCh, s.configuration, sub, processKindPublisher, nil, s.signatures)
+					proc := newProcess(s.ctx, s, sub, processKindPublisher, nil)
 
-					proc.spawnWorker(s.processes, s.natsConn)
+					proc.spawnWorker()
 					// log.Printf("info: processNewMessages: new process started, subject: %v, processID: %v\n", subjName, proc.processID)
 
 					// Now when the process is spawned we continue,

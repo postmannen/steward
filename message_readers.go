@@ -211,7 +211,7 @@ func (s *server) readSocket() {
 			}
 
 			// Send the SAM struct to be picked up by the ring buffer.
-			s.ringBufferBulkInCh <- sams
+			s.toRingBufferCh <- sams
 
 		}(conn)
 	}
@@ -276,7 +276,7 @@ func (s *server) readTCPListener() {
 			}
 
 			// Send the SAM struct to be picked up by the ring buffer.
-			s.ringBufferBulkInCh <- sam
+			s.toRingBufferCh <- sam
 
 		}(conn)
 	}
@@ -320,7 +320,7 @@ func (s *server) readHTTPlistenerHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Send the SAM struct to be picked up by the ring buffer.
-	s.ringBufferBulkInCh <- sam
+	s.toRingBufferCh <- sam
 
 }
 

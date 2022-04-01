@@ -40,6 +40,8 @@ NB: Nodes that don't have hello messages enabled and are not present in the hell
 
 If a node is registered in the auth db but not present in the network we should throw a log message to the errorKernel so operators would be aware of such nodes.
 
+DECIDE: Hello messages should contain the public key ?
+
 ### Public Keys
 
 #### Central Store

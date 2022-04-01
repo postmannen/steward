@@ -32,6 +32,9 @@ const (
 // process holds all the logic to handle a message type and it's
 // method, subscription/publishin messages for a subject, and more.
 type process struct {
+	// server
+	server *server
+	// messageID
 	messageID int
 	// the subject used for the specific process. One process
 	// can contain only one sender on a message bus, hence
@@ -103,29 +106,30 @@ type process struct {
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func newProcess(ctx context.Context, metrics *metrics, natsConn *nats.Conn, processes *processes, toRingbufferCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, processKind processKind, procFunc func() error, signatures *signatures) process {
+func newProcess(ctx context.Context, server *server, subject Subject, processKind processKind, procFunc func() error) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
-	processes.lastProcessID++
+	server.processes.lastProcessID++
 
 	ctx, cancel := context.WithCancel(ctx)
 
 	var method Method
 
 	proc := process{
+		server:           server,
 		messageID:        0,
 		subject:          subject,
-		node:             Node(configuration.NodeName),
-		processID:        processes.lastProcessID,
+		node:             Node(server.configuration.NodeName),
+		processID:        server.processes.lastProcessID,
 		processKind:      processKind,
 		methodsAvailable: method.GetMethodsAvailable(),
-		toRingbufferCh:   toRingbufferCh,
-		configuration:    configuration,
-		processes:        processes,
-		natsConn:         natsConn,
+		toRingbufferCh:   server.toRingBufferCh,
+		configuration:    server.configuration,
+		processes:        server.processes,
+		natsConn:         server.natsConn,
 		ctx:              ctx,
 		ctxCancel:        cancel,
-		startup:          newStartup(metrics, signatures),
-		signatures:       signatures,
+		startup:          newStartup(server),
+		signatures:       server.signatures,
 	}
 
 	return proc
@@ -138,7 +142,7 @@ func newProcess(ctx context.Context, metrics *metrics, natsConn *nats.Conn, proc
 //
 // It will give the process the next available ID, and also add the
 // process to the processes map in the server structure.
-func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
+func (p process) spawnWorker() {
 	// We use the full name of the subject to identify a unique
 	// process. We can do that since a process can only handle
 	// one message queue.
@@ -153,7 +157,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 	processName := processNameGet(p.subject.name(), p.processKind)
 
 	// Add prometheus metrics for the process.
-	p.processes.metrics.promProcessesAllRunning.With(prometheus.Labels{"processName": string(processName)})
+	p.server.metrics.promProcessesAllRunning.With(prometheus.Labels{"processName": string(processName)})
 
 	// Start a publisher worker, which will start a go routine (process)
 	// That will take care of all the messages for the subject it owns.
@@ -176,7 +180,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 			}()
 		}
 
-		go p.publishMessages(natsConn)
+		go p.publishMessages(p.natsConn)
 	}
 
 	// Start a subscriber worker, which will start a go routine (process)
@@ -205,9 +209,9 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 	p.processName = pn
 
 	// Add information about the new process to the started processes map.
-	procs.active.mu.Lock()
-	procs.active.procNames[pn] = p
-	procs.active.mu.Unlock()
+	p.server.processes.active.mu.Lock()
+	p.server.processes.active.procNames[pn] = p
+	p.server.processes.active.mu.Unlock()
 }
 
 // messageDeliverNats will create the Nats message with headers and payload.
@@ -242,7 +246,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				log.Printf("%v\n", er)
 				return
 			}
-			p.processes.metrics.promNatsDeliveredTotal.Inc()
+			p.server.metrics.promNatsDeliveredTotal.Inc()
 			return
 		}
 
@@ -309,7 +313,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 
 					subReply.Unsubscribe()
 
-					p.processes.metrics.promNatsMessagesFailedACKsTotal.Inc()
+					p.server.metrics.promNatsMessagesFailedACKsTotal.Inc()
 					return
 
 				default:
@@ -317,7 +321,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 					er := fmt.Errorf("max retries for message not reached, retrying sending of message with ID %v", message.ID)
 					p.processes.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
-					p.processes.metrics.promNatsMessagesMissedACKsTotal.Inc()
+					p.server.metrics.promNatsMessagesMissedACKsTotal.Inc()
 
 					subReply.Unsubscribe()
 					continue
@@ -328,7 +332,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 
 		subReply.Unsubscribe()
 
-		p.processes.metrics.promNatsDeliveredTotal.Inc()
+		p.server.metrics.promNatsDeliveredTotal.Inc()
 
 		return
 	}
