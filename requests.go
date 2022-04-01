@@ -354,7 +354,7 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 	if err != nil {
 		// In theory the system should drop the message before it reaches here.
 		er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
-		proc.processes.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er)
 	}
 
 	proc.toRingbufferCh <- []subjectAndMessage{sam}
@@ -458,7 +458,7 @@ func (m methodREQOpProcessStart) handler(proc process, message Message, node str
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodREQOpProcessStart: got <1 number methodArgs")
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 			return
 		}
 
@@ -467,7 +467,7 @@ func (m methodREQOpProcessStart) handler(proc process, message Message, node str
 		tmpH := mt.getHandler(Method(method))
 		if tmpH == nil {
 			er := fmt.Errorf("error: OpProcessStart: no such request type defined: %v" + m)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 			return
 		}
 
@@ -478,7 +478,7 @@ func (m methodREQOpProcessStart) handler(proc process, message Message, node str
 
 		txt := fmt.Sprintf("info: OpProcessStart: started id: %v, subject: %v: node: %v", procNew.processID, sub, message.ToNode)
 		er := fmt.Errorf(txt)
-		proc.processes.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er)
 
 		out = []byte(txt + "\n")
 		newReplyMessage(proc, message, out)
@@ -523,7 +523,7 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 
 		if v := len(message.MethodArgs); v != 3 {
 			er := fmt.Errorf("error: methodREQOpProcessStop: got <4 number methodArgs, want: method,node,kind")
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 		}
 
 		methodString := message.MethodArgs[0]
@@ -534,7 +534,7 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 		tmpH := mt.getHandler(Method(method))
 		if tmpH == nil {
 			er := fmt.Errorf("error: OpProcessStop: no such request type defined: %v, check that the methodArgs are correct: " + methodString)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 			return
 		}
 
@@ -560,7 +560,7 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 			err := toStopProc.natsSubscription.Unsubscribe()
 			if err != nil {
 				er := fmt.Errorf("error: methodREQOpStopProcess failed to stop nats.Subscription: %v, methodArgs: %v", err, message.MethodArgs)
-				proc.processes.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er)
 			}
 
 			// Remove the prometheus label
@@ -568,7 +568,7 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 
 			txt := fmt.Sprintf("info: OpProcessStop: process stopped id: %v, method: %v on: %v", toStopProc.processID, sub, message.ToNode)
 			er := fmt.Errorf(txt)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 
 			out = []byte(txt + "\n")
 			newReplyMessage(proc, message, out)
@@ -576,7 +576,7 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 		} else {
 			txt := fmt.Sprintf("error: OpProcessStop: did not find process to stop: %v on %v", sub, message.ToNode)
 			er := fmt.Errorf(txt)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 
 			out = []byte(txt + "\n")
 			newReplyMessage(proc, message, out)
@@ -613,11 +613,11 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 		err := os.MkdirAll(folderTree, 0700)
 		if err != nil {
 			er := fmt.Errorf("error: methodREQToFileAppend: failed to create toFileAppend directory tree:%v, subject: %v, %v", folderTree, proc.subject, err)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 		}
 
 		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.processes.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 	}
 
 	// Open file and write data.
@@ -625,7 +625,7 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
 	if err != nil {
 		er := fmt.Errorf("error: methodREQToFileAppend.handler: failed to open file: %v, %v", file, err)
-		proc.processes.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er)
 		return nil, err
 	}
 	defer f.Close()
@@ -634,7 +634,7 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 	f.Sync()
 	if err != nil {
 		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file : %v, %v", file, err)
-		proc.processes.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -664,13 +664,13 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 		err := os.MkdirAll(folderTree, 0700)
 		if err != nil {
 			er := fmt.Errorf("error: methodREQToFile failed to create toFile directory tree: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 
 			return nil, er
 		}
 
 		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.processes.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 	}
 
 	// Open file and write data.
@@ -678,7 +678,7 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
 	if err != nil {
 		er := fmt.Errorf("error: methodREQToFile.handler: failed to open file, check that you've specified a value for fileName in the message: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
-		proc.processes.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er)
 
 		return nil, err
 	}
@@ -688,7 +688,7 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 	f.Sync()
 	if err != nil {
 		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file: file: %v, %v", file, err)
-		proc.processes.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -716,7 +716,7 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 		switch {
 		case len(message.MethodArgs) < 3:
 			er := fmt.Errorf("error: methodREQCopyFileFrom: got <3 number methodArgs: want srcfilePath,dstNode,dstFilePath")
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 
 			return
 		}
@@ -743,11 +743,11 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 		select {
 		case <-ctx.Done():
 			er := fmt.Errorf("error: methodREQCopyFile: got <-ctx.Done(): %v", message.MethodArgs)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 
 			return
 		case er := <-errCh:
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 
 			return
 		case out := <-outCh:
@@ -771,7 +771,7 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 			sam, err := newSubjectAndMessage(msg)
 			if err != nil {
 				er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
-				proc.processes.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er)
 			}
 
 			proc.toRingbufferCh <- []subjectAndMessage{sam}
@@ -868,7 +868,7 @@ func (m methodREQCopyFileTo) handler(proc process, message Message, node string)
 			switch {
 			case len(message.MethodArgs) < 3:
 				er := fmt.Errorf("error: methodREQCopyFileTo: got <3 number methodArgs: want srcfilePath,dstNode,dstFilePath")
-				proc.processes.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er)
 
 				return
 			}
@@ -892,7 +892,7 @@ func (m methodREQCopyFileTo) handler(proc process, message Message, node string)
 
 				{
 					er := fmt.Errorf("info: MethodREQCopyFileTo: Creating folders %v", dstDir)
-					proc.processes.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+					proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 				}
 			}
 
@@ -924,12 +924,12 @@ func (m methodREQCopyFileTo) handler(proc process, message Message, node string)
 		select {
 		case <-ctx.Done():
 			er := fmt.Errorf("error: methodREQCopyFileTo: got <-ctx.Done(): %v", message.MethodArgs)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 			return
 
 		case err := <-errCh:
 			er := fmt.Errorf("error: methodREQCopyFileTo: %v", err)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 			return
 
 		case out := <-outCh:
@@ -968,7 +968,7 @@ func (m methodREQHello) handler(proc process, message Message, node string) ([]b
 		}
 
 		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.processes.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 	}
 
 	// Open file and write data.
@@ -986,7 +986,7 @@ func (m methodREQHello) handler(proc process, message Message, node string) ([]b
 	f.Sync()
 	if err != nil {
 		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file: %v", err)
-		proc.processes.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er)
 	}
 
 	// --------------------------
@@ -1025,7 +1025,7 @@ func (m methodREQErrorLog) handler(proc process, message Message, node string) (
 		}
 
 		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.processes.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 	}
 
 	// Open file and write data.
@@ -1041,7 +1041,7 @@ func (m methodREQErrorLog) handler(proc process, message Message, node string) (
 	f.Sync()
 	if err != nil {
 		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file: %v", err)
-		proc.processes.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -1071,13 +1071,13 @@ func (m methodREQPing) handler(proc process, message Message, node string) ([]by
 		err := os.MkdirAll(folderTree, 0700)
 		if err != nil {
 			er := fmt.Errorf("error: methodREQPing.handler: failed to create toFile directory tree: %v, %v", folderTree, err)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 
 			return nil, er
 		}
 
 		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.processes.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 	}
 
 	// Open file.
@@ -1085,7 +1085,7 @@ func (m methodREQPing) handler(proc process, message Message, node string) ([]by
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
 	if err != nil {
 		er := fmt.Errorf("error: methodREQPing.handler: failed to open file, check that you've specified a value for fileName in the message: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
-		proc.processes.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er)
 
 		return nil, err
 	}
@@ -1097,7 +1097,7 @@ func (m methodREQPing) handler(proc process, message Message, node string) ([]by
 	f.Sync()
 	if err != nil {
 		er := fmt.Errorf("error: methodREQPing.handler: failed to write to file: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
-		proc.processes.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er)
 	}
 
 	proc.processes.wg.Add(1)
@@ -1134,13 +1134,13 @@ func (m methodREQPong) handler(proc process, message Message, node string) ([]by
 		err := os.MkdirAll(folderTree, 0700)
 		if err != nil {
 			er := fmt.Errorf("error: methodREQPong.handler: failed to create toFile directory tree %v: %v", folderTree, err)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 
 			return nil, er
 		}
 
 		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.processes.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 	}
 
 	// Open file.
@@ -1148,7 +1148,7 @@ func (m methodREQPong) handler(proc process, message Message, node string) ([]by
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
 	if err != nil {
 		er := fmt.Errorf("error: methodREQPong.handler: failed to open file, check that you've specified a value for fileName in the message: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
-		proc.processes.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er)
 
 		return nil, err
 	}
@@ -1160,7 +1160,7 @@ func (m methodREQPong) handler(proc process, message Message, node string) ([]by
 	f.Sync()
 	if err != nil {
 		er := fmt.Errorf("error: methodREQPong.handler: failed to write to file: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
-		proc.processes.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -1182,7 +1182,7 @@ func (m methodREQCliCommand) getKind() Event {
 // as a new message.
 func (m methodREQCliCommand) handler(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- CLICommandREQUEST received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.processes.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
 
 	// Execute the CLI command in it's own go routine, so we are able
 	// to return immediately with an ack reply that the messag was
@@ -1197,7 +1197,7 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodREQCliCommand: got <1 number methodArgs")
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 
 			return
 		case len(message.MethodArgs) >= 0:
@@ -1247,7 +1247,7 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 			err := cmd.Run()
 			if err != nil {
 				er := fmt.Errorf("error: methodREQCliCommand: cmd.Run failed : %v, methodArgs: %v, error_output: %v", err, message.MethodArgs, stderr.String())
-				proc.processes.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er)
 			}
 
 			select {
@@ -1261,7 +1261,7 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQCliCommand: method timed out: %v", message.MethodArgs)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 		case out := <-outCh:
 			cancel()
 
@@ -1305,7 +1305,7 @@ func (m methodREQToConsole) handler(proc process, message Message, node string) 
 			proc.processes.tui.toConsoleCh <- message.Data
 		} else {
 			er := fmt.Errorf("error: no tui client started")
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 		}
 	default:
 		fmt.Fprintf(os.Stdout, "%v", string(message.Data))
@@ -1334,7 +1334,7 @@ func (m methodREQTuiToConsole) handler(proc process, message Message, node strin
 		proc.processes.tui.toConsoleCh <- message.Data
 	} else {
 		er := fmt.Errorf("error: no tui client started")
-		proc.processes.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -1354,7 +1354,7 @@ func (m methodREQHttpGet) getKind() Event {
 // handler to do a Http Get.
 func (m methodREQHttpGet) handler(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- REQHttpGet received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.processes.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -1363,7 +1363,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodREQHttpGet: got <1 number methodArgs")
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 
 			return
 		}
@@ -1380,7 +1380,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
 			er := fmt.Errorf("error: methodREQHttpGet: NewRequest failed: %v, bailing out: %v", err, message.MethodArgs)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 			cancel()
 			return
 		}
@@ -1394,7 +1394,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 			resp, err := client.Do(req)
 			if err != nil {
 				er := fmt.Errorf("error: methodREQHttpGet: client.Do failed: %v, bailing out: %v", err, message.MethodArgs)
-				proc.processes.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er)
 				return
 			}
 			defer resp.Body.Close()
@@ -1402,14 +1402,14 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 			if resp.StatusCode != 200 {
 				cancel()
 				er := fmt.Errorf("error: methodREQHttpGet: not 200, were %#v, bailing out: %v", resp.StatusCode, message)
-				proc.processes.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er)
 				return
 			}
 
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				er := fmt.Errorf("error: methodREQHttpGet: io.ReadAll failed : %v, methodArgs: %v", err, message.MethodArgs)
-				proc.processes.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er)
 			}
 
 			out := body
@@ -1425,7 +1425,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQHttpGet: method timed out: %v", message.MethodArgs)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 		case out := <-outCh:
 			cancel()
 
@@ -1454,7 +1454,7 @@ func (m methodREQHttpGetScheduled) getKind() Event {
 // The second element of the MethodArgs slice holds the timer defined in seconds.
 func (m methodREQHttpGetScheduled) handler(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- REQHttpGetScheduled received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.processes.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -1465,7 +1465,7 @@ func (m methodREQHttpGetScheduled) handler(proc process, message Message, node s
 		switch {
 		case len(message.MethodArgs) < 3:
 			er := fmt.Errorf("error: methodREQHttpGet: got <3 number methodArgs. Want URL, Schedule Interval in seconds, and the total time in minutes the scheduler should run for")
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 
 			return
 		}
@@ -1475,14 +1475,14 @@ func (m methodREQHttpGetScheduled) handler(proc process, message Message, node s
 		scheduleInterval, err := strconv.Atoi(message.MethodArgs[1])
 		if err != nil {
 			er := fmt.Errorf("error: methodREQHttpGetScheduled: schedule interval value is not a valid int number defined as a string value seconds: %v, bailing out: %v", err, message.MethodArgs)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 			return
 		}
 
 		schedulerTotalTime, err := strconv.Atoi(message.MethodArgs[2])
 		if err != nil {
 			er := fmt.Errorf("error: methodREQHttpGetScheduled: scheduler total time value is not a valid int number defined as a string value minutes: %v, bailing out: %v", err, message.MethodArgs)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 			return
 		}
 
@@ -1516,7 +1516,7 @@ func (m methodREQHttpGetScheduled) handler(proc process, message Message, node s
 					req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 					if err != nil {
 						er := fmt.Errorf("error: methodREQHttpGet: NewRequest failed: %v, error: %v", err, message.MethodArgs)
-						proc.processes.errorKernel.errSend(proc, message, er)
+						proc.errorKernel.errSend(proc, message, er)
 						cancel()
 						return
 					}
@@ -1529,7 +1529,7 @@ func (m methodREQHttpGetScheduled) handler(proc process, message Message, node s
 						resp, err := client.Do(req)
 						if err != nil {
 							er := fmt.Errorf("error: methodREQHttpGet: client.Do failed: %v, error: %v", err, message.MethodArgs)
-							proc.processes.errorKernel.errSend(proc, message, er)
+							proc.errorKernel.errSend(proc, message, er)
 							return
 						}
 						defer resp.Body.Close()
@@ -1537,14 +1537,14 @@ func (m methodREQHttpGetScheduled) handler(proc process, message Message, node s
 						if resp.StatusCode != 200 {
 							cancel()
 							er := fmt.Errorf("error: methodREQHttpGet: not 200, were %#v, error: %v", resp.StatusCode, message)
-							proc.processes.errorKernel.errSend(proc, message, er)
+							proc.errorKernel.errSend(proc, message, er)
 							return
 						}
 
 						body, err := io.ReadAll(resp.Body)
 						if err != nil {
 							er := fmt.Errorf("error: methodREQHttpGet: io.ReadAll failed : %v, methodArgs: %v", err, message.MethodArgs)
-							proc.processes.errorKernel.errSend(proc, message, er)
+							proc.errorKernel.errSend(proc, message, er)
 						}
 
 						out := body
@@ -1575,7 +1575,7 @@ func (m methodREQHttpGetScheduled) handler(proc process, message Message, node s
 				// fmt.Printf(" * DEBUG: <-ctxScheduler.Done()\n")
 				cancel()
 				er := fmt.Errorf("error: methodREQHttpGet: schedule context timed out: %v", message.MethodArgs)
-				proc.processes.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er)
 				return
 			case out := <-outCh:
 				// Prepare and queue for sending a new message with the output
@@ -1605,7 +1605,7 @@ func (m methodREQTailFile) getKind() Event {
 // as a new message.
 func (m methodREQTailFile) handler(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- TailFile REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.processes.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
 
 	proc.processes.wg.Add(1)
 	go func() {
@@ -1614,7 +1614,7 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodREQTailFile: got <1 number methodArgs")
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 
 			return
 		}
@@ -1641,7 +1641,7 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 		}})
 		if err != nil {
 			er := fmt.Errorf("error: methodREQToTailFile: tailFile: %v", err)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 		}
 
 		proc.processes.wg.Add(1)
@@ -1667,7 +1667,7 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 				// go routine.
 				// close(t.Lines)
 				er := fmt.Errorf("info: method timeout reached REQTailFile, canceling: %v", message.MethodArgs)
-				proc.processes.errorKernel.infoSend(proc, message, er)
+				proc.errorKernel.infoSend(proc, message, er)
 
 				return
 			case out := <-outCh:
@@ -1699,7 +1699,7 @@ func (m methodREQCliCommandCont) getKind() Event {
 // back as it is generated, and not just when the command is finished.
 func (m methodREQCliCommandCont) handler(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- CLInCommandCont REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.processes.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
 
 	// Execute the CLI command in it's own go routine, so we are able
 	// to return immediately with an ack reply that the message was
@@ -1718,7 +1718,7 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodREQCliCommand: got <1 number methodArgs")
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 
 			return
 		case len(message.MethodArgs) >= 0:
@@ -1746,18 +1746,18 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 			outReader, err := cmd.StdoutPipe()
 			if err != nil {
 				er := fmt.Errorf("error: methodREQCliCommandCont: cmd.StdoutPipe failed : %v, methodArgs: %v", err, message.MethodArgs)
-				proc.processes.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er)
 			}
 
 			ErrorReader, err := cmd.StderrPipe()
 			if err != nil {
 				er := fmt.Errorf("error: methodREQCliCommandCont: cmd.StderrPipe failed : %v, methodArgs: %v", err, message.MethodArgs)
-				proc.processes.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er)
 			}
 
 			if err := cmd.Start(); err != nil {
 				er := fmt.Errorf("error: methodREQCliCommandCont: cmd.Start failed : %v, methodArgs: %v", err, message.MethodArgs)
-				proc.processes.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er)
 			}
 
 			go func() {
@@ -1787,7 +1787,7 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 
 			if err := cmd.Wait(); err != nil {
 				er := fmt.Errorf("info: methodREQCliCommandCont: method timeout reached, canceled: methodArgs: %v, %v", message.MethodArgs, err)
-				proc.processes.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er)
 			}
 
 		}()
@@ -1798,7 +1798,7 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 			case <-ctx.Done():
 				cancel()
 				er := fmt.Errorf("info: methodREQCliCommandCont: method timeout reached, canceling: methodArgs: %v", message.MethodArgs)
-				proc.processes.errorKernel.infoSend(proc, message, er)
+				proc.errorKernel.infoSend(proc, message, er)
 				return
 			case out := <-outCh:
 				// fmt.Printf(" * out: %v\n", string(out))
@@ -1870,7 +1870,7 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 			switch {
 			case len(message.MethodArgs) < 3:
 				er := fmt.Errorf("error: methodREQRelayInitial: got <3 number methodArgs: want srcfilePath,dstNode,dstFilePath")
-				proc.processes.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er)
 
 				return
 			}
@@ -1903,11 +1903,11 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 		select {
 		case <-ctx.Done():
 			er := fmt.Errorf("error: methodREQRelayInitial: CopyFromFile: got <-ctx.Done(): %v", message.MethodArgs)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 
 			return
 		case er := <-errCh:
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 
 			return
 		case <-nothingCh:
@@ -1928,7 +1928,7 @@ func (m methodREQRelayInitial) handler(proc process, message Message, node strin
 		sam, err := newSubjectAndMessage(message)
 		if err != nil {
 			er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 		}
 
 		proc.toRingbufferCh <- []subjectAndMessage{sam}
@@ -1964,7 +1964,7 @@ func (m methodREQRelay) handler(proc process, message Message, node string) ([]b
 		sam, err := newSubjectAndMessage(message)
 		if err != nil {
 			er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
-			proc.processes.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er)
 
 			return
 		}

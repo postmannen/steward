@@ -99,9 +99,10 @@ type process struct {
 	// startup holds the startup functions for starting up publisher
 	// or subscriber processes
 	startup *startup
-
 	// Signatures
 	signatures *signatures
+	// errorKernel
+	errorKernel *errorKernel
 }
 
 // prepareNewProcess will set the the provided values and the default
@@ -130,6 +131,7 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 		ctxCancel:        cancel,
 		startup:          newStartup(server),
 		signatures:       server.signatures,
+		errorKernel:      server.errorKernel,
 	}
 
 	return proc
@@ -175,7 +177,7 @@ func (p process) spawnWorker() {
 				err := p.procFunc(p.ctx, p.procFuncCh)
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
-					p.processes.errorKernel.errSend(p, Message{}, er)
+					p.errorKernel.errSend(p, Message{}, er)
 				}
 			}()
 		}
@@ -198,7 +200,7 @@ func (p process) spawnWorker() {
 				err := p.procFunc(p.ctx, p.procFuncCh)
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
-					p.processes.errorKernel.errSend(p, Message{}, er)
+					p.errorKernel.errSend(p, Message{}, er)
 				}
 			}()
 		}
@@ -285,7 +287,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 			if err != nil {
 				er := fmt.Errorf("error: ack receive failed: subject=%v: %v", p.subject.name(), err)
 				// sendErrorLogMessage(p.toRingbufferCh, p.node, er)
-				p.processes.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 				if err == nats.ErrNoResponders {
 					// fmt.Printf(" * DEBUG: Waiting, ACKTimeout: %v\n", message.ACKTimeout)
@@ -295,7 +297,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				// did not receive a reply, decide what to do..
 				retryAttempts++
 				er = fmt.Errorf("retry attempt:%v, retries: %v, ack timeout: %v, message.ID: %v", retryAttempts, message.Retries, message.ACKTimeout, message.ID)
-				p.processes.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 				switch {
 				//case message.Retries == 0:
@@ -308,7 +310,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 					// We do not want to send errorLogs for REQErrorLog type since
 					// it will just cause an endless loop.
 					if message.Method != REQErrorLog {
-						p.processes.errorKernel.infoSend(p, message, er)
+						p.errorKernel.infoSend(p, message, er)
 					}
 
 					subReply.Unsubscribe()
@@ -319,7 +321,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				default:
 					// none of the above matched, so we've not reached max retries yet
 					er := fmt.Errorf("max retries for message not reached, retrying sending of message with ID %v", message.ID)
-					p.processes.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+					p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 					p.server.metrics.promNatsMessagesMissedACKsTotal.Inc()
 
@@ -360,7 +362,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 	// If debugging is enabled, print the source node name of the nats messages received.
 	if val, ok := msg.Header["fromNode"]; ok {
 		er := fmt.Errorf("info: nats message received from %v, with subject %v ", val, subject)
-		p.processes.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 	}
 
 	// If compression is used, decompress it to get the gob data. If
@@ -372,13 +374,13 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			zr, err := zstd.NewReader(nil)
 			if err != nil {
 				er := fmt.Errorf("error: zstd NewReader failed: %v", err)
-				p.processes.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er)
 				return
 			}
 			msgData, err = zr.DecodeAll(msg.Data, nil)
 			if err != nil {
 				er := fmt.Errorf("error: zstd decoding failed: %v", err)
-				p.processes.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er)
 				zr.Close()
 				return
 			}
@@ -390,14 +392,14 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			gr, err := gzip.NewReader(r)
 			if err != nil {
 				er := fmt.Errorf("error: gzip NewReader failed: %v", err)
-				p.processes.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er)
 				return
 			}
 
 			b, err := io.ReadAll(gr)
 			if err != nil {
 				er := fmt.Errorf("error: gzip ReadAll failed: %v", err)
-				p.processes.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er)
 				return
 			}
 
@@ -418,7 +420,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			err := cbor.Unmarshal(msgData, &message)
 			if err != nil {
 				er := fmt.Errorf("error: cbor decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-				p.processes.errorKernel.errSend(p, message, er)
+				p.errorKernel.errSend(p, message, er)
 				return
 			}
 		default: // Deaults to gob if no match was found.
@@ -428,7 +430,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			err := gobDec.Decode(&message)
 			if err != nil {
 				er := fmt.Errorf("error: gob decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-				p.processes.errorKernel.errSend(p, message, er)
+				p.errorKernel.errSend(p, message, er)
 				return
 			}
 		}
@@ -441,7 +443,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		err := gobDec.Decode(&message)
 		if err != nil {
 			er := fmt.Errorf("error: gob decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-			p.processes.errorKernel.errSend(p, message, er)
+			p.errorKernel.errSend(p, message, er)
 			return
 		}
 	}
@@ -464,7 +466,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		switch {
 		case msgCopy.PreviousMessage.RelayReplyMethod == "":
 			er := fmt.Errorf("error: subscriberHandler: no PreviousMessage.RelayReplyMethod found, defaulting to the reply method of previous message: %v ", msgCopy)
-			p.processes.errorKernel.errSend(p, message, er)
+			p.errorKernel.errSend(p, message, er)
 
 			msgCopy.Method = msgCopy.PreviousMessage.ReplyMethod
 
@@ -481,7 +483,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		sam, err := newSubjectAndMessage(msgCopy)
 		if err != nil {
 			er := fmt.Errorf("error: subscriberHandler: newSubjectAndMessage : %v, message copy: %v", err, msgCopy)
-			p.processes.errorKernel.errSend(p, message, er)
+			p.errorKernel.errSend(p, message, er)
 		}
 
 		p.toRingbufferCh <- []subjectAndMessage{sam}
@@ -509,7 +511,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		mh, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: no such method type: %v", p.subject.Event)
-			p.processes.errorKernel.errSend(p, message, er)
+			p.errorKernel.errSend(p, message, er)
 		}
 
 		out := []byte{}
@@ -520,7 +522,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			out, err = mh.handler(p, message, thisNode)
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-				p.processes.errorKernel.errSend(p, message, er)
+				p.errorKernel.errSend(p, message, er)
 			}
 		}
 
@@ -532,7 +534,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		mf, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.Event)
-			p.processes.errorKernel.errSend(p, message, er)
+			p.errorKernel.errSend(p, message, er)
 		}
 
 		if p.signatures.verifySignature(message) {
@@ -541,13 +543,13 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-				p.processes.errorKernel.errSend(p, message, er)
+				p.errorKernel.errSend(p, message, er)
 			}
 		}
 
 	default:
 		er := fmt.Errorf("info: did not find that specific type of event: %#v", p.subject.Event)
-		p.processes.errorKernel.infoSend(p, message, er)
+		p.errorKernel.infoSend(p, message, er)
 
 	}
 }
@@ -642,7 +644,7 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 		b, err := cbor.Marshal(m)
 		if err != nil {
 			er := fmt.Errorf("error: messageDeliverNats: cbor encode message failed: %v", err)
-			p.processes.errorKernel.errSend(p, m, er)
+			p.errorKernel.errSend(p, m, er)
 			return
 		}
 
@@ -655,7 +657,7 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 		err := gobEnc.Encode(m)
 		if err != nil {
 			er := fmt.Errorf("error: messageDeliverNats: gob encode message failed: %v", err)
-			p.processes.errorKernel.errSend(p, m, er)
+			p.errorKernel.errSend(p, m, er)
 			return
 		}
 
@@ -711,7 +713,7 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 
 		// We only wan't to send the error message to errorCentral once.
 		once.Do(func() {
-			p.processes.errorKernel.errSend(p, m, er)
+			p.errorKernel.errSend(p, m, er)
 		})
 
 		// No compression, so we just assign the value of the serialized
