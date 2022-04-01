@@ -63,6 +63,11 @@ type server struct {
 	// signatures  holds all the signatures,
 	// and the public keys
 	signatures *signatures
+	// helloRegister is a register of all the nodes that have sent hello messages
+	// to the central server
+	helloRegister *helloRegister
+	// holds the logic for the central auth services
+	centralAuth *centralAuth
 }
 
 // newServer will prepare and return a server type
@@ -157,6 +162,8 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		tui:                tuiClient,
 		errorKernel:        errorKernel,
 		signatures:         signatures,
+		helloRegister:      newHelloRegister(),
+		centralAuth:        newCentralAuth(),
 	}
 
 	// Create the default data folder for where subscribers should
@@ -176,6 +183,16 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 
 	return s, nil
 
+}
+
+// helloRegister is a register of all the nodes that have sent hello messages.
+type helloRegister struct {
+}
+
+func newHelloRegister() *helloRegister {
+	h := helloRegister{}
+
+	return &h
 }
 
 // create socket will create a socket file, and return the net.Listener to
