@@ -564,7 +564,7 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 			}
 
 			// Remove the prometheus label
-			proc.server.metrics.promProcessesAllRunning.Delete(prometheus.Labels{"processName": string(processName)})
+			proc.metrics.promProcessesAllRunning.Delete(prometheus.Labels{"processName": string(processName)})
 
 			txt := fmt.Sprintf("info: OpProcessStop: process stopped id: %v, method: %v on: %v", toStopProc.processID, sub, message.ToNode)
 			er := fmt.Errorf(txt)
@@ -1011,7 +1011,7 @@ func (m methodREQErrorLog) getKind() Event {
 
 // Handle the writing of error logs.
 func (m methodREQErrorLog) handler(proc process, message Message, node string) ([]byte, error) {
-	proc.server.metrics.promErrorMessagesReceivedTotal.Inc()
+	proc.metrics.promErrorMessagesReceivedTotal.Inc()
 
 	// If it was a request type message we want to check what the initial messages
 	// method, so we can use that in creating the file name to store the data.

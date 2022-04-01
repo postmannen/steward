@@ -49,6 +49,7 @@ func newProcesses(ctx context.Context, server *server) *processes {
 		errorKernel:   server.errorKernel,
 		configuration: server.configuration,
 		Signatures:    server.signatures,
+		metrics:       server.metrics,
 	}
 
 	// Prepare the parent context for the subscribers.

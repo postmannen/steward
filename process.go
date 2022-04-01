@@ -103,6 +103,8 @@ type process struct {
 	signatures *signatures
 	// errorKernel
 	errorKernel *errorKernel
+	// metrics
+	metrics *metrics
 }
 
 // prepareNewProcess will set the the provided values and the default
@@ -132,6 +134,7 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 		startup:          newStartup(server),
 		signatures:       server.signatures,
 		errorKernel:      server.errorKernel,
+		metrics:          server.metrics,
 	}
 
 	return proc
