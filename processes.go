@@ -219,11 +219,15 @@ func (p *processes) Stop() {
 
 // Startup holds all the startup methods for subscribers.
 type startup struct {
-	server *server
+	server  *server
+	metrics *metrics
 }
 
 func newStartup(server *server) *startup {
-	s := startup{server}
+	s := startup{
+		server:  server,
+		metrics: server.metrics,
+	}
 
 	return &s
 }
@@ -371,8 +375,8 @@ func (s startup) subREQHello(p process) {
 			sayHelloNodes[m.FromNode] = struct{}{}
 
 			// update the prometheus metrics
-			s.server.metrics.promHelloNodesTotal.Set(float64(len(sayHelloNodes)))
-			s.server.metrics.promHelloNodesContactLast.With(prometheus.Labels{"nodeName": string(m.FromNode)}).SetToCurrentTime()
+			s.metrics.promHelloNodesTotal.Set(float64(len(sayHelloNodes)))
+			s.metrics.promHelloNodesContactLast.With(prometheus.Labels{"nodeName": string(m.FromNode)}).SetToCurrentTime()
 
 		}
 	}
@@ -481,7 +485,7 @@ func (p *processes) printProcessesMap() {
 			log.Printf("* proc - pub/sub: %v, procName in map: %v , id: %v, subject: %v\n", proc.processKind, pName, proc.processID, proc.subject.name())
 		}
 
-		p.server.metrics.promProcessesTotal.Set(float64(len(p.active.procNames)))
+		p.metrics.promProcessesTotal.Set(float64(len(p.active.procNames)))
 
 		p.active.mu.Unlock()
 	}
