@@ -193,7 +193,7 @@ func (s *server) readSocket() {
 			// unmarshal the JSON into a struct
 			sams, err := s.convertBytesToSAMs(readBytes)
 			if err != nil {
-				er := fmt.Errorf("error: malformed json received on socket: %v", err)
+				er := fmt.Errorf("error: malformed json received on socket: %s\n %v", readBytes, err)
 				s.errorKernel.errSend(s.processInitial, Message{}, er)
 				return
 			}

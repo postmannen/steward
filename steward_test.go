@@ -57,6 +57,7 @@ func TestStewardServer(t *testing.T) {
 		DefaultMessageTimeout: 3,
 		EnableSocket:          true,
 		// AllowEmptySignature:   true,
+		EnableDebug: true,
 
 		StartSubREQCliCommand:     true,
 		StartSubREQCliCommandCont: true,
@@ -328,8 +329,7 @@ func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing
 
 	file := filepath.Join(wd, "test.file")
 
-	s := `
-	[
+	s := `[
 		{
 			"directory": "tail-files",
 			"fileName": "fileName.result",
@@ -340,8 +340,8 @@ func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing
 			"retries":3,
 			"methodTimeout": 10
 		}
-	]
-	`
+	]`
+
 	writeToSocketTest(conf, s, t)
 
 	// time.Sleep(time.Second * 5)
