@@ -3,6 +3,7 @@ package steward
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -59,6 +60,8 @@ type Configuration struct {
 	RootCAPath string
 	// Full path to the NKEY's seed file
 	NkeySeedFile string
+	// NkeyPublicKey
+	NkeyPublicKey string
 	// The host and port to expose the data folder
 	ExposeDataFolder string
 	// Timeout for error messages
@@ -602,6 +605,26 @@ func (c *Configuration) CheckFlags() error {
 			log.Printf("error: failed to purge buffer state database: %v\n", err)
 		}
 
+	}
+
+	// Get the nkey user file content.
+	if c.NkeySeedFile != "" {
+		userFileDir := filepath.Dir(c.NkeySeedFile)
+		userFile := filepath.Join(userFileDir, "user.txt")
+
+		uFh, err := os.Open(userFile)
+		if err != nil {
+			log.Printf("error: unable to open %v file: %v\n", userFile, err)
+			os.Exit(1)
+		}
+
+		userFileContent, err := io.ReadAll(uFh)
+		if err != nil {
+			log.Printf("error: unable to read %v file: %v\n", userFile, err)
+			os.Exit(1)
+		}
+
+		c.NkeyPublicKey = string(userFileContent)
 	}
 
 	return nil
