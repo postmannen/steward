@@ -263,7 +263,8 @@ func (s startup) pubREQHello(p process) {
 		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.StartPubREQHello))
 		for {
 
-			d := fmt.Sprintf("Hello from %v\n", p.node)
+			// d := fmt.Sprintf("Hello from %v\n", p.node)
+			d := proc.configuration.NkeyPublicKey
 
 			m := Message{
 				FileName:   "hello.log",
@@ -356,7 +357,7 @@ func (s startup) subREQHello(p process) {
 	// of the nodes we've received hello's from in the sayHelloNodes map,
 	// which is the information we pass along to generate metrics.
 	proc.procFunc = func(ctx context.Context, procFuncCh chan Message) error {
-		sayHelloNodes := make(map[Node]struct{})
+		// sayHelloNodes := make(map[Node]struct{})
 
 		for {
 			// Receive a copy of the message sent from the method handler.
@@ -372,10 +373,13 @@ func (s startup) subREQHello(p process) {
 			}
 
 			// Add an entry for the node in the map
-			sayHelloNodes[m.FromNode] = struct{}{}
+			s.server.centralAuth.nodePublicKeys.mu.Lock()
+			s.server.centralAuth.nodePublicKeys.keyMap[m.FromNode] = string(m.Data)
+			fmt.Printf(" * MAP CONTENT:\n %v\n", s.server.centralAuth.nodePublicKeys.keyMap)
+			s.server.centralAuth.nodePublicKeys.mu.Unlock()
 
 			// update the prometheus metrics
-			s.metrics.promHelloNodesTotal.Set(float64(len(sayHelloNodes)))
+			s.metrics.promHelloNodesTotal.Set(float64(len(s.server.centralAuth.nodePublicKeys.keyMap)))
 			s.metrics.promHelloNodesContactLast.With(prometheus.Labels{"nodeName": string(m.FromNode)}).SetToCurrentTime()
 
 		}

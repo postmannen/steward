@@ -32,6 +32,10 @@ This can be done at the subject level on the broker since we are using NKEY's to
   * Only CentralAuth can send REQAuthUpdate, REQCertUpdate to nodes.
   * Only CentralAuth can receive REQAddAuth or REQDelAuth.
 
+#### Signing authorization updates to nodes
+
+Authorization updates to nodes should be signed with the private key of the central auth server, so the receving node can verify the signature and then update the node's authorization.
+
 ### Hello register
 
 Create a database of all the nodes from where we have received hello messages which is stored persistently to disk. We can then use this register as the source for what nodes are in the network, whom to ask for public keys.

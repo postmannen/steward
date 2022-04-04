@@ -162,7 +162,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		errorKernel:    errorKernel,
 		signatures:     signatures,
 		helloRegister:  newHelloRegister(),
-		centralAuth:    newCentralAuth(),
+		centralAuth:    newCentralAuth(configuration),
 	}
 
 	s.processes = newProcesses(ctx, &s)

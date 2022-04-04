@@ -61,7 +61,7 @@ type Configuration struct {
 	// Full path to the NKEY's seed file
 	NkeySeedFile string
 	// NkeyPublicKey
-	NkeyPublicKey string
+	NkeyPublicKey string `toml:"-"`
 	// The host and port to expose the data folder
 	ExposeDataFolder string
 	// Timeout for error messages
