@@ -36,9 +36,11 @@ This can be done at the subject level on the broker since we are using NKEY's to
 
 Authorization updates to nodes should be signed with the private key of the central auth server, so the receving node can verify the signature and then update the node's authorization.
 
-### Hello register
+### Public Keys
 
-Create a database of all the nodes from where we have received hello messages which is stored persistently to disk. We can then use this register as the source for what nodes are in the network, whom to ask for public keys.
+#### Hello register
+
+Create a database of all the nodes from where we have received hello messages which is stored persistently to disk. We can then use this register as the source for what nodes are in the network.
 
 NB: Nodes that don't have hello messages enabled and are not present in the hello register will not be allowed to use auth.
 
@@ -46,19 +48,15 @@ If a node is registered in the auth db but not present in the network we should 
 
 DECIDE: Hello messages should contain the public key ?
 
-### Public Keys
-
 #### Central Store
 
 Store all the public keys in a k/v `node -> {publicKey, valid}` on CentralAuth.
 
 The `valid` field tells if the public key are valid, or have been revoked.
 
-#### Request to get public keys from nodes
-
-We could get all the nodes from the hello message register on central server.
-
 #### Request for nodes to report their public keys on startup
+
+Nodes should report in their public in the data field of the hello message.
 
 If the key is the same as the one stored on the auth server we should do nothing. If it is different we should report that a new key for a node is registered and needs action to be either stored or discarded.
 On the CentralAuth we need a service to verify that updating the currently stored value for a nodes public key is ok.
