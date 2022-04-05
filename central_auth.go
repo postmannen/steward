@@ -33,7 +33,6 @@ func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *cen
 	databaseFilepath := filepath.Join(configuration.DatabaseFolder, "auth.db")
 
 	// Open the database file for persistent storage of public keys.
-
 	db, err := bolt.Open(databaseFilepath, 0600, nil)
 	if err != nil {
 		log.Printf("error: failed to open db: %v\n", err)
@@ -42,13 +41,19 @@ func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *cen
 
 	c.db = db
 
+	// Get public keys from db storage.
 	keys, err := c.dbDumpPublicKey()
 	if err != nil {
-		fmt.Printf(" * DEBUG: dbPublicKeyDump failed: %v\n", err)
+		log.Printf("debug: dbPublicKeyDump failed, probably empty db: %v\n", err)
 	}
 
-	c.nodePublicKeys.keyMap = keys
-	fmt.Printf(" * keyDump: %v\n ", keys)
+	// Only assign from storage to in memory map if the storage contained any values.
+	if keys != nil {
+		c.nodePublicKeys.keyMap = keys
+		for k, v := range keys {
+			log.Printf("info: public keys db contains: %v, %v\n", k, []byte(v))
+		}
+	}
 
 	return &c
 }
@@ -75,12 +80,12 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	c.dbUpdatePublicKey(string(msg.FromNode), msg.Data)
 
 	if ok {
-		er := fmt.Errorf("updated public key for node: %v", msg.FromNode)
+		er := fmt.Errorf("info: updated public key for node: %v", msg.FromNode)
 		fmt.Printf(" * %v\n", er)
 		c.errorKernel.infoSend(proc, msg, er)
 	}
 	if !ok {
-		er := fmt.Errorf("added new node with public key: %v", msg.FromNode)
+		er := fmt.Errorf("info: added new node with public key: %v", msg.FromNode)
 		fmt.Printf(" * %v\n", er)
 		c.errorKernel.infoSend(proc, msg, er)
 	}

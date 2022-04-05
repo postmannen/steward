@@ -266,7 +266,7 @@ func (s startup) pubREQHello(p process) {
 		for {
 
 			// d := fmt.Sprintf("Hello from %v\n", p.node)
-			d := proc.configuration.NkeyPublicKey
+			d := s.server.signatures.SignPublicKey
 
 			m := Message{
 				FileName:   "hello.log",
