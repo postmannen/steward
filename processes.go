@@ -219,14 +219,16 @@ func (p *processes) Stop() {
 
 // Startup holds all the startup methods for subscribers.
 type startup struct {
-	server  *server
-	metrics *metrics
+	server      *server
+	centralAuth *centralAuth
+	metrics     *metrics
 }
 
 func newStartup(server *server) *startup {
 	s := startup{
-		server:  server,
-		metrics: server.metrics,
+		server:      server,
+		centralAuth: server.centralAuth,
+		metrics:     server.metrics,
 	}
 
 	return &s
@@ -372,11 +374,7 @@ func (s startup) subREQHello(p process) {
 				return nil
 			}
 
-			// Add an entry for the node in the map
-			s.server.centralAuth.nodePublicKeys.mu.Lock()
-			s.server.centralAuth.nodePublicKeys.keyMap[m.FromNode] = string(m.Data)
-			fmt.Printf(" * MAP CONTENT:\n %v\n", s.server.centralAuth.nodePublicKeys.keyMap)
-			s.server.centralAuth.nodePublicKeys.mu.Unlock()
+			s.centralAuth.addPublicKey(proc, m)
 
 			// update the prometheus metrics
 			s.metrics.promHelloNodesTotal.Set(float64(len(s.server.centralAuth.nodePublicKeys.keyMap)))
