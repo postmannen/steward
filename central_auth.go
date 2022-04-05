@@ -80,12 +80,12 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	c.dbUpdatePublicKey(string(msg.FromNode), msg.Data)
 
 	if ok {
-		er := fmt.Errorf("info: updated public key for node: %v", msg.FromNode)
+		er := fmt.Errorf("info: updated with new public key for node: %v", msg.FromNode)
 		fmt.Printf(" * %v\n", er)
 		c.errorKernel.infoSend(proc, msg, er)
 	}
 	if !ok {
-		er := fmt.Errorf("info: added new node with public key: %v", msg.FromNode)
+		er := fmt.Errorf("info: added public key for new node: %v", msg.FromNode)
 		fmt.Printf(" * %v\n", er)
 		c.errorKernel.infoSend(proc, msg, er)
 	}
