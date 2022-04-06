@@ -81,7 +81,7 @@ TODO
 
 #### Store that is used as the Auth DB for knowing what is needed to be distributed where
 
-`ToNode -> Command -> []FromNode`
+`ToNode -> Command -> []{FromNode, signature-of-X-from-central}`
 
 * When the store is updated a new push message should be sent to all the destination nodes to update their local ACL store.
 
