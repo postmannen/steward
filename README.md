@@ -21,6 +21,7 @@ As long as you can do something as an operator on in a shell on a system you can
   - [Publishing and Subscribing processes](#publishing-and-subscribing-processes)
     - [Publisher](#publisher)
     - [Subscriber](#subscriber)
+    - [Load balancing](#load-balancing)
     - [Logical structure](#logical-structure)
   - [Terminology](#terminology)
   - [Features](#features)
@@ -171,6 +172,10 @@ If one process hangs on a long running message method it will not affect the res
 1. The receiving end will need to have a subscriber process started on a specific subject and be allowed handle messages from the sending nodes to execute the method defined in the message.
 2. When a message have been received, a handler for the method type specified in the message will be executed.
 3. If the output of the method called is supposed to be returned to the publiser it will do so by using the replyMethod specified.
+
+### Load balancing
+
+Steward instances with the same **Nodename** will automatically load balance the handling of messages on a given subject, and any given message will only be handled once by one instance.
 
 ### Logical structure
 

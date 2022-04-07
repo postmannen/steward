@@ -565,7 +565,8 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 // on a node.
 func (p process) subscribeMessages() *nats.Subscription {
 	subject := string(p.subject.name())
-	natsSubscription, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
+	// natsSubscription, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
+	natsSubscription, err := p.natsConn.QueueSubscribe(subject, subject, func(msg *nats.Msg) {
 		//_, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
 
 		// Start up the subscriber handler.

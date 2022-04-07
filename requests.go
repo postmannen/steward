@@ -2133,6 +2133,13 @@ func (m methodREQPublicKeysPut) handler(proc process, message Message, node stri
 
 			fmt.Printf(" *** RECEIVED KEYS: %v\n", keys)
 
+			// TODO:
+			// - We need to store the public keys in a map in signatures.go
+			// - We should also persist that public keys map to file, so we can read
+			//   that file on startup to get all the previosly received keys.
+			// - The store to map and also that map to file should happen with a method
+			//   on signatures.publicKeys, so we do both in one go.
+
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
 			// newReplyMessage(proc, message, out)
