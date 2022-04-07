@@ -91,8 +91,6 @@ type Configuration struct {
 	StartPubREQHello int
 	// Publisher for asking central for public keys
 	StartPubREQPublicKeysGet bool
-	// Subscriber for receiving reqests to get public keys registered on central
-	StartSubREQPublicKeysGet bool
 	// Subscriber for receiving updates of public keys from central
 	StartSubREQPublicKeysPut bool
 	// Start the central error logger.
@@ -170,7 +168,6 @@ type ConfigurationFromFile struct {
 
 	StartPubREQHello            *int
 	StartPubREQPublicKeysGet    *bool
-	StartSubREQPublicKeysGet    *bool
 	StartSubREQPublicKeysPut    *bool
 	StartSubREQErrorLog         *bool
 	StartSubREQHello            *bool
@@ -235,7 +232,6 @@ func newConfigurationDefaults() Configuration {
 
 		StartPubREQHello:            30,
 		StartPubREQPublicKeysGet:    true,
-		StartSubREQPublicKeysGet:    false,
 		StartSubREQPublicKeysPut:    true,
 		StartSubREQErrorLog:         false,
 		StartSubREQHello:            true,
@@ -441,11 +437,6 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.StartPubREQPublicKeysGet = *cf.StartPubREQPublicKeysGet
 	}
-	if cf.StartSubREQPublicKeysGet == nil {
-		conf.StartSubREQPublicKeysGet = cd.StartSubREQPublicKeysGet
-	} else {
-		conf.StartSubREQPublicKeysGet = *cf.StartSubREQPublicKeysGet
-	}
 	if cf.StartSubREQPublicKeysPut == nil {
 		conf.StartSubREQPublicKeysPut = cd.StartSubREQPublicKeysPut
 	} else {
@@ -600,7 +591,6 @@ func (c *Configuration) CheckFlags() error {
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 
 	flag.BoolVar(&c.StartPubREQPublicKeysGet, "startPubREQPublicKeysGet", fc.StartPubREQPublicKeysGet, "true/false")
-	flag.BoolVar(&c.StartSubREQPublicKeysGet, "startSubREQPublicKeysGet", fc.StartSubREQPublicKeysGet, "true/false")
 	flag.BoolVar(&c.StartSubREQPublicKeysPut, "startSubREQPublicKeysPut", fc.StartSubREQPublicKeysPut, "true/false")
 	flag.BoolVar(&c.StartSubREQErrorLog, "startSubREQErrorLog", fc.StartSubREQErrorLog, "true/false")
 	flag.BoolVar(&c.StartSubREQHello, "startSubREQHello", fc.StartSubREQHello, "true/false")

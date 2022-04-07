@@ -170,7 +170,7 @@ func (p *processes) Start(proc process) {
 		proc.startup.pubREQPublicKeysGet(proc)
 	}
 
-	if proc.configuration.StartSubREQPublicKeysGet {
+	if proc.configuration.IsCentralAuth {
 		proc.startup.subREQPublicKeysGet(proc)
 	}
 

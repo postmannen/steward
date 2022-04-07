@@ -1,6 +1,7 @@
 package steward
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -13,21 +14,21 @@ import (
 type signatureBase32 string
 type argsString string
 type centralAuth struct {
-	schema           map[Node]map[argsString]signatureBase32
-	nodePublicKeys   *nodePublicKeys
-	configuration    *Configuration
-	db               *bolt.DB
-	bucketPublicKeys string
-	errorKernel      *errorKernel
+	// schema           map[Node]map[argsString]signatureBase32
+	nodePublicKeys       *nodePublicKeys
+	configuration        *Configuration
+	db                   *bolt.DB
+	bucketNamePublicKeys string
+	errorKernel          *errorKernel
 }
 
 func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *centralAuth {
 	c := centralAuth{
-		schema:           make(map[Node]map[argsString]signatureBase32),
-		nodePublicKeys:   newNodePublicKeys(configuration),
-		configuration:    configuration,
-		bucketPublicKeys: "publicKeys",
-		errorKernel:      errorKernel,
+		// schema:           make(map[Node]map[argsString]signatureBase32),
+		nodePublicKeys:       newNodePublicKeys(configuration),
+		configuration:        configuration,
+		bucketNamePublicKeys: "publicKeys",
+		errorKernel:          errorKernel,
 	}
 
 	databaseFilepath := filepath.Join(configuration.DatabaseFolder, "auth.db")
@@ -66,14 +67,14 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	// Check if a key for the current node already exists in the map.
 	existingKey, ok := c.nodePublicKeys.KeyMap[msg.FromNode]
 
-	if ok && existingKey == string(msg.Data) {
+	if ok && bytes.Equal(existingKey, msg.Data) {
 		fmt.Printf(" * key value for node %v is the same, doing nothing\n", msg.FromNode)
 		c.nodePublicKeys.mu.Unlock()
 		return
 	}
 
 	// New key
-	c.nodePublicKeys.KeyMap[msg.FromNode] = string(msg.Data)
+	c.nodePublicKeys.KeyMap[msg.FromNode] = msg.Data
 	c.nodePublicKeys.mu.Unlock()
 
 	// Add key to persistent storage.
@@ -99,9 +100,9 @@ func (c *centralAuth) dbGetPublicKey(node string) ([]byte, error) {
 	// View is a help function to get values out of the database.
 	err := c.db.View(func(tx *bolt.Tx) error {
 		//Open a bucket to get key's and values from.
-		bu := tx.Bucket([]byte(c.bucketPublicKeys))
+		bu := tx.Bucket([]byte(c.bucketNamePublicKeys))
 		if bu == nil {
-			log.Printf("info: no db bucket exist: %v\n", c.bucketPublicKeys)
+			log.Printf("info: no db bucket exist: %v\n", c.bucketNamePublicKeys)
 			return nil
 		}
 
@@ -123,7 +124,7 @@ func (c *centralAuth) dbGetPublicKey(node string) ([]byte, error) {
 func (c *centralAuth) dbUpdatePublicKey(node string, value []byte) error {
 	err := c.db.Update(func(tx *bolt.Tx) error {
 		//Create a bucket
-		bu, err := tx.CreateBucketIfNotExists([]byte(c.bucketPublicKeys))
+		bu, err := tx.CreateBucketIfNotExists([]byte(c.bucketNamePublicKeys))
 		if err != nil {
 			return fmt.Errorf("error: CreateBuckerIfNotExists failed: %v", err)
 		}
@@ -144,11 +145,11 @@ func (c *centralAuth) dbUpdatePublicKey(node string, value []byte) error {
 // bucket if it exists.
 func (c *centralAuth) dbDeletePublicKey(key string) error {
 	err := c.db.Update(func(tx *bolt.Tx) error {
-		bu := tx.Bucket([]byte(c.bucketPublicKeys))
+		bu := tx.Bucket([]byte(c.bucketNamePublicKeys))
 
 		err := bu.Delete([]byte(key))
 		if err != nil {
-			log.Printf("error: delete key in bucket %v failed: %v\n", c.bucketPublicKeys, err)
+			log.Printf("error: delete key in bucket %v failed: %v\n", c.bucketNamePublicKeys, err)
 		}
 
 		return nil
@@ -159,18 +160,18 @@ func (c *centralAuth) dbDeletePublicKey(key string) error {
 
 // dumpBucket will dump out all they keys and values in the
 // specified bucket, and return a sorted []samDBValue
-func (c *centralAuth) dbDumpPublicKey() (map[Node]string, error) {
-	m := make(map[Node]string)
+func (c *centralAuth) dbDumpPublicKey() (map[Node][]byte, error) {
+	m := make(map[Node][]byte)
 
 	err := c.db.View(func(tx *bolt.Tx) error {
-		bu := tx.Bucket([]byte(c.bucketPublicKeys))
+		bu := tx.Bucket([]byte(c.bucketNamePublicKeys))
 		if bu == nil {
 			return fmt.Errorf("error: dumpBucket: tx.bucket returned nil")
 		}
 
 		// For each element found in the DB, print it.
 		bu.ForEach(func(k, v []byte) error {
-			m[Node(k)] = string(v)
+			m[Node(k)] = v
 			return nil
 		})
 
@@ -188,13 +189,13 @@ func (c *centralAuth) dbDumpPublicKey() (map[Node]string, error) {
 // The keys will be written to a k/v store for persistence.
 type nodePublicKeys struct {
 	mu     sync.Mutex
-	KeyMap map[Node]string
+	KeyMap map[Node][]byte
 }
 
 // newNodePublicKeys will return a prepared type of nodePublicKeys.
 func newNodePublicKeys(configuration *Configuration) *nodePublicKeys {
 	n := nodePublicKeys{
-		KeyMap: make(map[Node]string),
+		KeyMap: make(map[Node][]byte),
 	}
 
 	return &n
