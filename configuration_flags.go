@@ -41,6 +41,8 @@ type Configuration struct {
 	NatsReconnectJitter int
 	// NatsReconnectJitterTLS in seconds
 	NatsReconnectJitterTLS int
+	// PublicKeysGetInterval in seconds
+	PublicKeysGetInterval int
 	// The number of the profiling port
 	ProfilingPort string
 	// host and port for prometheus listener, e.g. localhost:2112
@@ -87,8 +89,13 @@ type Configuration struct {
 
 	// Make the current node send hello messages to central at given interval in seconds
 	StartPubREQHello int
+	// Publisher for asking central for public keys
+	StartPubREQPublicKeysGet bool
+	// Subscriber for receiving reqests to get public keys registered on central
+	StartSubREQPublicKeysGet bool
+	// Subscriber for receiving updates of public keys from central
+	StartSubREQPublicKeysPut bool
 	// Start the central error logger.
-	// Takes a comma separated string of nodes to receive from or "*" for all nodes.
 	StartSubREQErrorLog bool
 	// Subscriber for hello messages
 	StartSubREQHello bool
@@ -139,6 +146,7 @@ type ConfigurationFromFile struct {
 	NatsConnectRetryInterval *int
 	NatsReconnectJitter      *int
 	NatsReconnectJitterTLS   *int
+	PublicKeysGetInterval    *int
 	ProfilingPort            *string
 	PromHostAndPort          *string
 	DefaultMessageTimeout    *int
@@ -161,6 +169,9 @@ type ConfigurationFromFile struct {
 	EnableDebug              *bool
 
 	StartPubREQHello            *int
+	StartPubREQPublicKeysGet    *bool
+	StartSubREQPublicKeysGet    *bool
+	StartSubREQPublicKeysPut    *bool
 	StartSubREQErrorLog         *bool
 	StartSubREQHello            *bool
 	StartSubREQToFileAppend     *bool
@@ -200,6 +211,7 @@ func newConfigurationDefaults() Configuration {
 		NatsConnectRetryInterval: 10,
 		NatsReconnectJitter:      100,
 		NatsReconnectJitterTLS:   1,
+		PublicKeysGetInterval:    60,
 		ProfilingPort:            "",
 		PromHostAndPort:          "",
 		DefaultMessageTimeout:    10,
@@ -222,6 +234,9 @@ func newConfigurationDefaults() Configuration {
 		EnableDebug:              false,
 
 		StartPubREQHello:            30,
+		StartPubREQPublicKeysGet:    true,
+		StartSubREQPublicKeysGet:    false,
+		StartSubREQPublicKeysPut:    true,
 		StartSubREQErrorLog:         false,
 		StartSubREQHello:            true,
 		StartSubREQToFileAppend:     true,
@@ -307,6 +322,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 		conf.NatsReconnectJitterTLS = cd.NatsReconnectJitterTLS
 	} else {
 		conf.NatsReconnectJitterTLS = *cf.NatsReconnectJitterTLS
+	}
+	if cf.PublicKeysGetInterval == nil {
+		conf.PublicKeysGetInterval = cd.PublicKeysGetInterval
+	} else {
+		conf.PublicKeysGetInterval = *cf.PublicKeysGetInterval
 	}
 	if cf.ProfilingPort == nil {
 		conf.ProfilingPort = cd.ProfilingPort
@@ -415,6 +435,21 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 		conf.StartPubREQHello = cd.StartPubREQHello
 	} else {
 		conf.StartPubREQHello = *cf.StartPubREQHello
+	}
+	if cf.StartPubREQPublicKeysGet == nil {
+		conf.StartPubREQPublicKeysGet = cd.StartPubREQPublicKeysGet
+	} else {
+		conf.StartPubREQPublicKeysGet = *cf.StartPubREQPublicKeysGet
+	}
+	if cf.StartSubREQPublicKeysGet == nil {
+		conf.StartSubREQPublicKeysGet = cd.StartSubREQPublicKeysGet
+	} else {
+		conf.StartSubREQPublicKeysGet = *cf.StartSubREQPublicKeysGet
+	}
+	if cf.StartSubREQPublicKeysPut == nil {
+		conf.StartSubREQPublicKeysPut = cd.StartSubREQPublicKeysPut
+	} else {
+		conf.StartSubREQPublicKeysPut = *cf.StartSubREQPublicKeysPut
 	}
 	if cf.StartSubREQErrorLog == nil {
 		conf.StartSubREQErrorLog = cd.StartSubREQErrorLog
@@ -540,6 +575,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.IntVar(&c.NatsConnectRetryInterval, "natsConnectRetryInterval", fc.NatsConnectRetryInterval, "default nats retry connect interval in seconds.")
 	flag.IntVar(&c.NatsReconnectJitter, "natsReconnectJitter", fc.NatsReconnectJitter, "default nats ReconnectJitter interval in milliseconds.")
 	flag.IntVar(&c.NatsReconnectJitterTLS, "natsReconnectJitterTLS", fc.NatsReconnectJitterTLS, "default nats ReconnectJitterTLS interval in seconds.")
+	flag.IntVar(&c.PublicKeysGetInterval, "publicKeysGetInterval", fc.PublicKeysGetInterval, "default interval in seconds for asking the central for public keys")
 	flag.StringVar(&c.ProfilingPort, "profilingPort", fc.ProfilingPort, "The number of the profiling port")
 	flag.StringVar(&c.PromHostAndPort, "promHostAndPort", fc.PromHostAndPort, "host and port for prometheus listener, e.g. localhost:2112")
 	flag.IntVar(&c.DefaultMessageTimeout, "defaultMessageTimeout", fc.DefaultMessageTimeout, "default message timeout in seconds. This can be overridden on the message level")
@@ -563,6 +599,9 @@ func (c *Configuration) CheckFlags() error {
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 
+	flag.BoolVar(&c.StartPubREQPublicKeysGet, "startPubREQPublicKeysGet", fc.StartPubREQPublicKeysGet, "true/false")
+	flag.BoolVar(&c.StartSubREQPublicKeysGet, "startSubREQPublicKeysGet", fc.StartSubREQPublicKeysGet, "true/false")
+	flag.BoolVar(&c.StartSubREQPublicKeysPut, "startSubREQPublicKeysPut", fc.StartSubREQPublicKeysPut, "true/false")
 	flag.BoolVar(&c.StartSubREQErrorLog, "startSubREQErrorLog", fc.StartSubREQErrorLog, "true/false")
 	flag.BoolVar(&c.StartSubREQHello, "startSubREQHello", fc.StartSubREQHello, "true/false")
 	flag.BoolVar(&c.StartSubREQToFileAppend, "startSubREQToFileAppend", fc.StartSubREQToFileAppend, "true/false")

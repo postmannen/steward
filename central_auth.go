@@ -49,7 +49,7 @@ func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *cen
 
 	// Only assign from storage to in memory map if the storage contained any values.
 	if keys != nil {
-		c.nodePublicKeys.keyMap = keys
+		c.nodePublicKeys.KeyMap = keys
 		for k, v := range keys {
 			log.Printf("info: public keys db contains: %v, %v\n", k, []byte(v))
 		}
@@ -64,7 +64,7 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	c.nodePublicKeys.mu.Lock()
 
 	// Check if a key for the current node already exists in the map.
-	existingKey, ok := c.nodePublicKeys.keyMap[msg.FromNode]
+	existingKey, ok := c.nodePublicKeys.KeyMap[msg.FromNode]
 
 	if ok && existingKey == string(msg.Data) {
 		fmt.Printf(" * key value for node %v is the same, doing nothing\n", msg.FromNode)
@@ -73,7 +73,7 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	}
 
 	// New key
-	c.nodePublicKeys.keyMap[msg.FromNode] = string(msg.Data)
+	c.nodePublicKeys.KeyMap[msg.FromNode] = string(msg.Data)
 	c.nodePublicKeys.mu.Unlock()
 
 	// Add key to persistent storage.
@@ -188,13 +188,13 @@ func (c *centralAuth) dbDumpPublicKey() (map[Node]string, error) {
 // The keys will be written to a k/v store for persistence.
 type nodePublicKeys struct {
 	mu     sync.Mutex
-	keyMap map[Node]string
+	KeyMap map[Node]string
 }
 
 // newNodePublicKeys will return a prepared type of nodePublicKeys.
 func newNodePublicKeys(configuration *Configuration) *nodePublicKeys {
 	n := nodePublicKeys{
-		keyMap: make(map[Node]string),
+		KeyMap: make(map[Node]string),
 	}
 
 	return &n

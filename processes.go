@@ -114,62 +114,50 @@ func (p *processes) Start(proc process) {
 		go proc.spawnWorker()
 	}
 
-	// Start a subscriber for textLogging messages
 	if proc.configuration.StartSubREQToFileAppend {
 		proc.startup.subREQToFileAppend(proc)
 	}
 
-	// Start a subscriber for text to file messages
 	if proc.configuration.StartSubREQToFile {
 		proc.startup.subREQToFile(proc)
 	}
 
-	// Start a subscriber for text to file messages
 	if proc.configuration.StartSubREQToFileNACK {
 		proc.startup.subREQToFileNACK(proc)
 	}
 
-	// Start a subscriber for reading file to copy
 	if proc.configuration.StartSubREQCopyFileFrom {
 		proc.startup.subREQCopyFileFrom(proc)
 	}
 
-	// Start a subscriber for writing copied file to disk
 	if proc.configuration.StartSubREQCopyFileTo {
 		proc.startup.subREQCopyFileTo(proc)
 	}
 
-	// Start a subscriber for Hello messages
 	if proc.configuration.StartSubREQHello {
 		proc.startup.subREQHello(proc)
 	}
 
 	if proc.configuration.StartSubREQErrorLog {
-		// Start a subscriber for REQErrorLog messages
 		proc.startup.subREQErrorLog(proc)
 	}
 
-	// Start a subscriber for Ping Request messages
 	if proc.configuration.StartSubREQPing {
 		proc.startup.subREQPing(proc)
 	}
 
-	// Start a subscriber for REQPong messages
 	if proc.configuration.StartSubREQPong {
 		proc.startup.subREQPong(proc)
 	}
 
-	// Start a subscriber for REQCliCommand messages
 	if proc.configuration.StartSubREQCliCommand {
 		proc.startup.subREQCliCommand(proc)
 	}
 
-	// Start a subscriber for CLICommandReply messages
 	if proc.configuration.StartSubREQToConsole {
 		proc.startup.subREQToConsole(proc)
 	}
 
-	// Start a subscriber for CLICommandReply messages
 	if proc.configuration.EnableTUI {
 		proc.startup.subREQTuiToConsole(proc)
 	}
@@ -178,7 +166,18 @@ func (p *processes) Start(proc process) {
 		proc.startup.pubREQHello(proc)
 	}
 
-	// Start a subscriber for Http Get Requests
+	if proc.configuration.StartPubREQPublicKeysGet {
+		proc.startup.pubREQPublicKeysGet(proc)
+	}
+
+	if proc.configuration.StartSubREQPublicKeysGet {
+		proc.startup.subREQPublicKeysGet(proc)
+	}
+
+	if proc.configuration.StartSubREQPublicKeysPut {
+		proc.startup.subREQPublicKeysPut(proc)
+	}
+
 	if proc.configuration.StartSubREQHttpGet {
 		proc.startup.subREQHttpGet(proc)
 	}
@@ -300,6 +299,68 @@ func (s startup) pubREQHello(p process) {
 	go proc.spawnWorker()
 }
 
+// pubREQPublicKeysGet defines the startup of a publisher that will send REQPublicKeysGet
+// to central server and ask for publics keys, and to get them deliver back with a request
+// of type pubREQPublicKeysPut.
+func (s startup) pubREQPublicKeysGet(p process) {
+	log.Printf("Starting PublicKeysGet Publisher: %#v\n", p.node)
+
+	sub := newSubject(REQPublicKeysGet, p.configuration.CentralNodeName)
+	proc := newProcess(p.ctx, s.server, sub, processKindPublisher, nil)
+
+	// Define the procFunc to be used for the process.
+	proc.procFunc = func(ctx context.Context, procFuncCh chan Message) error {
+		// TODO: replace this with a separate timer for the request type.
+		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.PublicKeysGetInterval))
+		for {
+
+			m := Message{
+				FileName:  "publickeysget.log",
+				Directory: "publickeysget",
+				ToNode:    Node(p.configuration.CentralNodeName),
+				FromNode:  Node(p.node),
+				// Data:       []byte(d),
+				Method:      REQPublicKeysGet,
+				ReplyMethod: REQPublicKeysPut,
+				ACKTimeout:  proc.configuration.DefaultMessageTimeout,
+				Retries:     1,
+			}
+
+			sam, err := newSubjectAndMessage(m)
+			if err != nil {
+				// In theory the system should drop the message before it reaches here.
+				p.errorKernel.errSend(p, m, err)
+				log.Printf("error: ProcessesStart: %v\n", err)
+			}
+			proc.toRingbufferCh <- []subjectAndMessage{sam}
+
+			select {
+			case <-ticker.C:
+			case <-ctx.Done():
+				er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
+				// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
+				return nil
+			}
+		}
+	}
+	go proc.spawnWorker()
+}
+
+func (s startup) subREQPublicKeysGet(p process) {
+	log.Printf("Starting Public keys get subscriber: %#v\n", p.node)
+	sub := newSubject(REQPublicKeysGet, string(p.node))
+	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
+	go proc.spawnWorker()
+}
+
+func (s startup) subREQPublicKeysPut(p process) {
+	log.Printf("Starting Public keys put subscriber: %#v\n", p.node)
+	sub := newSubject(REQPublicKeysPut, string(p.node))
+	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
+	go proc.spawnWorker()
+}
+
 func (s startup) subREQToConsole(p process) {
 	log.Printf("Starting Text To Console subscriber: %#v\n", p.node)
 	sub := newSubject(REQToConsole, string(p.node))
@@ -377,7 +438,7 @@ func (s startup) subREQHello(p process) {
 			s.centralAuth.addPublicKey(proc, m)
 
 			// update the prometheus metrics
-			s.metrics.promHelloNodesTotal.Set(float64(len(s.server.centralAuth.nodePublicKeys.keyMap)))
+			s.metrics.promHelloNodesTotal.Set(float64(len(s.server.centralAuth.nodePublicKeys.KeyMap)))
 			s.metrics.promHelloNodesContactLast.With(prometheus.Labels{"nodeName": string(m.FromNode)}).SetToCurrentTime()
 
 		}

@@ -36,6 +36,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -133,8 +134,12 @@ const (
 	REQRelayInitial Method = "REQRelayInitial"
 	// REQNone is used when there should be no reply.
 	REQNone Method = "REQNone"
-	// REQPublicKey will get the public ed25519 certificate from a node.
+	// REQPublicKey will get the public ed25519 key from a node.
 	REQPublicKey Method = "REQPublicKey"
+	// REQPublicKeysGet will get all the public keys from central.
+	REQPublicKeysGet Method = "REQPublicKeysGet"
+	// REQPublicKeysPut will put all the public received from central.
+	REQPublicKeysPut Method = "REQPublicKeysPut"
 )
 
 // The mapping of all the method constants specified, what type
@@ -218,6 +223,12 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			},
 			REQPublicKey: methodREQPublicKey{
 				event: EventACK,
+			},
+			REQPublicKeysGet: methodREQPublicKeysGet{
+				event: EventNACK,
+			},
+			REQPublicKeysPut: methodREQPublicKeysPut{
+				event: EventNACK,
 			},
 		},
 	}
@@ -332,6 +343,7 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 
 	// Create a new message for the reply, and put it on the
 	// ringbuffer to be published.
+	// TODO: Check that we still got all the fields present that are needed here.
 	newMsg := Message{
 		ToNode:        message.FromNode,
 		FromNode:      message.ToNode,
@@ -2021,6 +2033,115 @@ func (m methodREQPublicKey) handler(proc process, message Message, node string) 
 	// Send back an ACK message.
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
+}
+
+// ----
+
+type methodREQPublicKeysGet struct {
+	event Event
+}
+
+func (m methodREQPublicKeysGet) getKind() Event {
+	return m.event
+}
+
+// Handler to get all the public ed25519 keys from a central server.
+func (m methodREQPublicKeysGet) handler(proc process, message Message, node string) ([]byte, error) {
+	// Get a context with the timeout specified in message.MethodTimeout.
+
+	// TODO:
+	// - Since this is implemented as a NACK message we could implement a
+	//   metric thats shows the last time a node did a key request.
+	// - We could also implement a metrics on the receiver showing the last
+	//   time a node had done an update.
+
+	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
+
+	proc.processes.wg.Add(1)
+	go func() {
+		defer proc.processes.wg.Done()
+		outCh := make(chan []byte)
+
+		go func() {
+			select {
+			case <-ctx.Done():
+			// TODO: Should we receive a hash of he current keys from the node here
+			// to verify if we need to update or not ?
+			case outCh <- []byte{}:
+			}
+		}()
+
+		select {
+		case <-ctx.Done():
+		// case out := <-outCh:
+		case <-outCh:
+			b, err := json.Marshal(proc.centralAuth.nodePublicKeys.KeyMap)
+			if err != nil {
+				er := fmt.Errorf("error: REQPublicKeysGet, failed to marshal keys map: %v", err)
+				proc.errorKernel.errSend(proc, message, er)
+			}
+
+			newReplyMessage(proc, message, b)
+		}
+	}()
+
+	// NB: We're not sending an ACK message for this request type.
+	return nil, nil
+}
+
+// ----
+
+type methodREQPublicKeysPut struct {
+	event Event
+}
+
+func (m methodREQPublicKeysPut) getKind() Event {
+	return m.event
+}
+
+// Handler to put the public key replies received from a central server.
+func (m methodREQPublicKeysPut) handler(proc process, message Message, node string) ([]byte, error) {
+	// Get a context with the timeout specified in message.MethodTimeout.
+
+	// TODO:
+	// - Since this is implemented as a NACK message we could implement a
+	//   metric thats shows the last time keys were updated.
+
+	// TODO: Define a subscriber for this Request type in startups.
+
+	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
+
+	proc.processes.wg.Add(1)
+	go func() {
+		defer proc.processes.wg.Done()
+		outCh := make(chan []byte)
+
+		go func() {
+			select {
+			case <-ctx.Done():
+			// TODO: Should we receive a hash of he current keys from the node her ?
+			case outCh <- []byte{}:
+			}
+		}()
+
+		select {
+		// case proc.toRingbufferCh <- []subjectAndMessage{sam}:
+		case <-ctx.Done():
+		case <-outCh:
+			keys := make(map[Node]string)
+			json.Unmarshal(message.Data, &keys)
+
+			fmt.Printf(" *** RECEIVED KEYS: %v\n", keys)
+
+			// Prepare and queue for sending a new message with the output
+			// of the action executed.
+			// newReplyMessage(proc, message, out)
+		}
+	}()
+
+	// Send back an ACK message.
+	// ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return nil, nil
 }
 
 // ----

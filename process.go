@@ -101,6 +101,8 @@ type process struct {
 	startup *startup
 	// Signatures
 	signatures *signatures
+	// centralAuth
+	centralAuth *centralAuth
 	// errorKernel
 	errorKernel *errorKernel
 	// metrics
@@ -133,6 +135,7 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 		ctxCancel:        cancel,
 		startup:          newStartup(server),
 		signatures:       server.signatures,
+		centralAuth:      server.centralAuth,
 		errorKernel:      server.errorKernel,
 		metrics:          server.metrics,
 	}
