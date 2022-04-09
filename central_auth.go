@@ -188,7 +188,7 @@ func (c *centralAuth) dbDumpPublicKey() (map[Node][]byte, error) {
 // nodePublicKeys holds all the gathered public keys of nodes in the system.
 // The keys will be written to a k/v store for persistence.
 type nodePublicKeys struct {
-	mu     sync.Mutex
+	mu     sync.RWMutex
 	KeyMap map[Node][]byte
 }
 
