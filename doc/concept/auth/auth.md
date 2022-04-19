@@ -6,7 +6,7 @@ This documents is the planning and concept for how we might be able to also auth
 
 We also want to add the feature of signature checking for all messages that it comes from a trusted node.
 
-## Signing
+## Signing MethodArgs field
 
 The Request types we want to protect is the REQCliCommand and REQCliCommandCont. We want to have an ACL list of all the message signatures that are allowed to be executed. Signatures not in the ACL list will be discarded.
 
@@ -15,6 +15,10 @@ By signining the  **methodArgs** field of a message with an ed25519 private key,
 Have a flag to turn off signing on nodes. Should same flag turn off both signing and check of signatures, or should we have one for each ?
 
 Add a flag to do signature checking on all messages for all request types to verify the sender as a double verification on top of the NATS authorization. This is not intended to be used with the ACL list, but only verifying the signature, and that the sender is are who they claim to be.
+
+## Signing Data field
+
+We should also add signatures based on the **data** field of the message on the publishers, and also add verification of the these messages when they are received on the subscriber.
 
 ## CentralAuth
 
