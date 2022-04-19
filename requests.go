@@ -2099,6 +2099,8 @@ func (m methodREQPublicKeysPut) getKind() Event {
 	return m.event
 }
 
+// TODO: Rename to :REQPublicKeysToNode
+//
 // Handler to put the public key replies received from a central server.
 func (m methodREQPublicKeysPut) handler(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.

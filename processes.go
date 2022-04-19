@@ -265,6 +265,7 @@ func (s startup) pubREQHello(p process) {
 		for {
 
 			// d := fmt.Sprintf("Hello from %v\n", p.node)
+			// Send the ed25519 public key used for signing as the payload of the message.
 			d := s.server.signatures.SignPublicKey
 
 			m := Message{
