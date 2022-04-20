@@ -174,8 +174,8 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQPublicKeysGet(proc)
 	}
 
-	if proc.configuration.StartSubREQPublicKeysPut {
-		proc.startup.subREQPublicKeysPut(proc)
+	if proc.configuration.StartSubREQPublicKeysToNode {
+		proc.startup.subREQPublicKeysToNode(proc)
 	}
 
 	if proc.configuration.StartSubREQHttpGet {
@@ -302,7 +302,7 @@ func (s startup) pubREQHello(p process) {
 
 // pubREQPublicKeysGet defines the startup of a publisher that will send REQPublicKeysGet
 // to central server and ask for publics keys, and to get them deliver back with a request
-// of type pubREQPublicKeysPut.
+// of type pubREQPublicKeysToNode.
 func (s startup) pubREQPublicKeysGet(p process) {
 	log.Printf("Starting PublicKeysGet Publisher: %#v\n", p.node)
 
@@ -322,7 +322,7 @@ func (s startup) pubREQPublicKeysGet(p process) {
 				FromNode:  Node(p.node),
 				// Data:       []byte(d),
 				Method:      REQPublicKeysGet,
-				ReplyMethod: REQPublicKeysPut,
+				ReplyMethod: REQPublicKeysToNode,
 				ACKTimeout:  proc.configuration.DefaultMessageTimeout,
 				Retries:     1,
 			}
@@ -355,9 +355,9 @@ func (s startup) subREQPublicKeysGet(p process) {
 	go proc.spawnWorker()
 }
 
-func (s startup) subREQPublicKeysPut(p process) {
-	log.Printf("Starting Public keys put subscriber: %#v\n", p.node)
-	sub := newSubject(REQPublicKeysPut, string(p.node))
+func (s startup) subREQPublicKeysToNode(p process) {
+	log.Printf("Starting Public keys to Node subscriber: %#v\n", p.node)
+	sub := newSubject(REQPublicKeysToNode, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
 }

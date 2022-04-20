@@ -138,8 +138,8 @@ const (
 	REQPublicKey Method = "REQPublicKey"
 	// REQPublicKeysGet will get all the public keys from central.
 	REQPublicKeysGet Method = "REQPublicKeysGet"
-	// REQPublicKeysPut will put all the public received from central.
-	REQPublicKeysPut Method = "REQPublicKeysPut"
+	// REQPublicKeysToNode will put all the public received from central.
+	REQPublicKeysToNode Method = "REQPublicKeysToNode"
 )
 
 // The mapping of all the method constants specified, what type
@@ -227,7 +227,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQPublicKeysGet: methodREQPublicKeysGet{
 				event: EventNACK,
 			},
-			REQPublicKeysPut: methodREQPublicKeysPut{
+			REQPublicKeysToNode: methodREQPublicKeysToNode{
 				event: EventNACK,
 			},
 		},
@@ -2091,18 +2091,18 @@ func (m methodREQPublicKeysGet) handler(proc process, message Message, node stri
 
 // ----
 
-type methodREQPublicKeysPut struct {
+type methodREQPublicKeysToNode struct {
 	event Event
 }
 
-func (m methodREQPublicKeysPut) getKind() Event {
+func (m methodREQPublicKeysToNode) getKind() Event {
 	return m.event
 }
 
 // TODO: Rename to :REQPublicKeysToNode
 //
 // Handler to put the public key replies received from a central server.
-func (m methodREQPublicKeysPut) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodREQPublicKeysToNode) handler(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 
 	// TODO:

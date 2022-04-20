@@ -92,7 +92,7 @@ type Configuration struct {
 	// Publisher for asking central for public keys
 	StartPubREQPublicKeysGet bool
 	// Subscriber for receiving updates of public keys from central
-	StartSubREQPublicKeysPut bool
+	StartSubREQPublicKeysToNode bool
 	// Start the central error logger.
 	StartSubREQErrorLog bool
 	// Subscriber for hello messages
@@ -168,7 +168,7 @@ type ConfigurationFromFile struct {
 
 	StartPubREQHello            *int
 	StartPubREQPublicKeysGet    *bool
-	StartSubREQPublicKeysPut    *bool
+	StartSubREQPublicKeysToNode *bool
 	StartSubREQErrorLog         *bool
 	StartSubREQHello            *bool
 	StartSubREQToFileAppend     *bool
@@ -232,7 +232,7 @@ func newConfigurationDefaults() Configuration {
 
 		StartPubREQHello:            30,
 		StartPubREQPublicKeysGet:    true,
-		StartSubREQPublicKeysPut:    true,
+		StartSubREQPublicKeysToNode: true,
 		StartSubREQErrorLog:         false,
 		StartSubREQHello:            true,
 		StartSubREQToFileAppend:     true,
@@ -437,10 +437,10 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.StartPubREQPublicKeysGet = *cf.StartPubREQPublicKeysGet
 	}
-	if cf.StartSubREQPublicKeysPut == nil {
-		conf.StartSubREQPublicKeysPut = cd.StartSubREQPublicKeysPut
+	if cf.StartSubREQPublicKeysToNode == nil {
+		conf.StartSubREQPublicKeysToNode = cd.StartSubREQPublicKeysToNode
 	} else {
-		conf.StartSubREQPublicKeysPut = *cf.StartSubREQPublicKeysPut
+		conf.StartSubREQPublicKeysToNode = *cf.StartSubREQPublicKeysToNode
 	}
 	if cf.StartSubREQErrorLog == nil {
 		conf.StartSubREQErrorLog = cd.StartSubREQErrorLog
@@ -591,7 +591,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 
 	flag.BoolVar(&c.StartPubREQPublicKeysGet, "startPubREQPublicKeysGet", fc.StartPubREQPublicKeysGet, "true/false")
-	flag.BoolVar(&c.StartSubREQPublicKeysPut, "startSubREQPublicKeysPut", fc.StartSubREQPublicKeysPut, "true/false")
+	flag.BoolVar(&c.StartSubREQPublicKeysToNode, "startSubREQPublicKeysToNode", fc.StartSubREQPublicKeysToNode, "true/false")
 	flag.BoolVar(&c.StartSubREQErrorLog, "startSubREQErrorLog", fc.StartSubREQErrorLog, "true/false")
 	flag.BoolVar(&c.StartSubREQHello, "startSubREQHello", fc.StartSubREQHello, "true/false")
 	flag.BoolVar(&c.StartSubREQToFileAppend, "startSubREQToFileAppend", fc.StartSubREQToFileAppend, "true/false")

@@ -13,6 +13,8 @@ import (
 
 type signatureBase32 string
 type argsString string
+
+// centralAuth holds the logic related to handling public keys and auth maps.
 type centralAuth struct {
 	// schema           map[Node]map[argsString]signatureBase32
 	nodePublicKeys       *nodePublicKeys
@@ -22,6 +24,7 @@ type centralAuth struct {
 	errorKernel          *errorKernel
 }
 
+// newCentralAuth will return a prepared *centralAuth with input values set.
 func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *centralAuth {
 	c := centralAuth{
 		// schema:           make(map[Node]map[argsString]signatureBase32),
@@ -60,7 +63,6 @@ func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *cen
 }
 
 // addPublicKey to the db if the node do not exist, or if it is a new value.
-// We should return an error if the key have changed.
 func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	c.nodePublicKeys.mu.Lock()
 
@@ -94,7 +96,7 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	//c.dbDump(c.bucketPublicKeys)
 }
 
-// dbView will look up and return a specific value if it exists for a key in a bucket in a DB.
+// dbGetPublicKey will look up and return a specific value if it exists for a key in a bucket in a DB.
 func (c *centralAuth) dbGetPublicKey(node string) ([]byte, error) {
 	var value []byte
 	// View is a help function to get values out of the database.
