@@ -101,7 +101,7 @@ func TestStewardServer(t *testing.T) {
 		checkErrorKernelMalformedJSONtest,
 		checkMetricValuesTest,
 
-		// TODO: checkREQRelay
+		// checkREQRelay
 	}
 
 	for _, f := range funcs {

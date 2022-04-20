@@ -2071,8 +2071,6 @@ func (m methodREQPublicKeysToNode) getKind() Event {
 	return m.event
 }
 
-// TODO: Rename to :REQPublicKeysToNode
-//
 // Handler to put the public key replies received from a central server.
 func (m methodREQPublicKeysToNode) handler(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
@@ -2080,8 +2078,6 @@ func (m methodREQPublicKeysToNode) handler(proc process, message Message, node s
 	// TODO:
 	// - Since this is implemented as a NACK message we could implement a
 	//   metric thats shows the last time keys were updated.
-
-	// TODO: Define a subscriber for this Request type in startups.
 
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
 
@@ -2093,7 +2089,7 @@ func (m methodREQPublicKeysToNode) handler(proc process, message Message, node s
 		go func() {
 			select {
 			case <-ctx.Done():
-			// TODO: Should we receive a hash of he current keys from the node her ?
+			// TODO: Should we receive a hash of he current keys from the node here ?
 			case outCh <- []byte{}:
 			}
 		}()
