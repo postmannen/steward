@@ -127,8 +127,6 @@ const (
 	// Tail file
 	REQTailFile Method = "REQTailFile"
 	// Write to steward socket
-	REQToSocket Method = "REQToSocket"
-	// Send a message via a node
 	REQRelay Method = "REQRelay"
 	// The method handler for the first step in a relay chain.
 	REQRelayInitial Method = "REQRelayInitial"
@@ -212,9 +210,6 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQTailFile: methodREQTailFile{
 				event: EventACK,
 			},
-			REQToSocket: methodREQToSocket{
-				event: EventACK,
-			},
 			REQRelay: methodREQRelay{
 				event: EventACK,
 			},
@@ -240,7 +235,7 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 // the Stew client for knowing what of the req types are generally
 // used as reply methods.
 func (m Method) GetReplyMethods() []Method {
-	rm := []Method{REQToConsole, REQTuiToConsole, REQCliCommand, REQCliCommandCont, REQToFile, REQToFileAppend, REQToSocket, REQNone}
+	rm := []Method{REQToConsole, REQTuiToConsole, REQCliCommand, REQCliCommandCont, REQToFile, REQToFileAppend, REQNone}
 	return rm
 }
 
@@ -1826,29 +1821,6 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 }
 
 // ---
-
-type methodREQToSocket struct {
-	event Event
-}
-
-func (m methodREQToSocket) getKind() Event {
-	return m.event
-}
-
-// TODO: Not implemented.
-// Handler to write to unix socket file.
-func (m methodREQToSocket) handler(proc process, message Message, node string) ([]byte, error) {
-
-	// for _, d := range message.Data {
-	// 	// TODO: Write the data to the socket here.
-	// 	// fmt.Printf("Info: REQToSocket is not yet implemented. Data to write to socket: %v\n", d)
-	// }
-
-	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
-	return ackMsg, nil
-}
-
-// ----
 
 type methodREQRelayInitial struct {
 	event Event

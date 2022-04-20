@@ -200,8 +200,6 @@ func (p *processes) Start(proc process) {
 
 	proc.startup.subREQRelayInitial(proc)
 
-	proc.startup.subREQToSocket(proc)
-
 	proc.startup.subREQPublicKey(proc)
 }
 
@@ -311,7 +309,6 @@ func (s startup) pubREQPublicKeysGet(p process) {
 
 	// Define the procFunc to be used for the process.
 	proc.procFunc = func(ctx context.Context, procFuncCh chan Message) error {
-		// TODO: replace this with a separate timer for the request type.
 		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.PublicKeysGetInterval))
 		for {
 
@@ -515,14 +512,6 @@ func (s startup) subREQRelay(p process) {
 func (s startup) subREQRelayInitial(p process) {
 	log.Printf("Starting Relay Initial: %#v\n", p.node)
 	sub := newSubject(REQRelayInitial, string(p.node))
-	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
-
-	go proc.spawnWorker()
-}
-
-func (s startup) subREQToSocket(p process) {
-	log.Printf("Starting write to socket subscriber: %#v\n", p.node)
-	sub := newSubject(REQToSocket, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 
 	go proc.spawnWorker()
