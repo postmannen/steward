@@ -138,6 +138,8 @@ const (
 	REQPublicKeysGet Method = "REQPublicKeysGet"
 	// REQPublicKeysToNode will put all the public received from central.
 	REQPublicKeysToNode Method = "REQPublicKeysToNode"
+	// REQAuthPublicKeysAllow
+	REQPublicKeysAllow Method = "REQPublicKeysAllow"
 )
 
 // The mapping of all the method constants specified, what type
@@ -224,6 +226,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			},
 			REQPublicKeysToNode: methodREQPublicKeysToNode{
 				event: EventNACK,
+			},
+			REQPublicKeysAllow: methodREQPublicKeysAllow{
+				event: EventACK,
 			},
 		},
 	}
@@ -2035,6 +2040,9 @@ func (m methodREQPublicKeysGet) handler(proc process, message Message, node stri
 		outCh := make(chan []byte)
 
 		go func() {
+			// Normally we would do some logic here, where the result is passed to outCh when done.
+			// In this case this go func and the below select is not needed, but keeping it so the
+			// structure is the same as the other handlers.
 			select {
 			case <-ctx.Done():
 			// TODO: Should we receive a hash of he current keys from the node here
@@ -2047,7 +2055,9 @@ func (m methodREQPublicKeysGet) handler(proc process, message Message, node stri
 		case <-ctx.Done():
 		// case out := <-outCh:
 		case <-outCh:
+			proc.centralAuth.nodePublicKeys.mu.Lock()
 			b, err := json.Marshal(proc.centralAuth.nodePublicKeys.KeyMap)
+			proc.centralAuth.nodePublicKeys.mu.Unlock()
 			if err != nil {
 				er := fmt.Errorf("error: REQPublicKeysGet, failed to marshal keys map: %v", err)
 				proc.errorKernel.errSend(proc, message, er)
@@ -2087,6 +2097,9 @@ func (m methodREQPublicKeysToNode) handler(proc process, message Message, node s
 		outCh := make(chan []byte)
 
 		go func() {
+			// Normally we would do some logic here, where the result is passed to outCh when done.
+			// In this case this go func and the below select is not needed, but keeping it so the
+			// structure is the same as the other handlers.
 			select {
 			case <-ctx.Done():
 			// TODO: Should we receive a hash of he current keys from the node here ?
@@ -2099,7 +2112,11 @@ func (m methodREQPublicKeysToNode) handler(proc process, message Message, node s
 		case <-ctx.Done():
 		case <-outCh:
 			keys := make(map[Node]string)
-			json.Unmarshal(message.Data, &keys)
+			err := json.Unmarshal(message.Data, &keys)
+			if err != nil {
+				er := fmt.Errorf("error: REQPublicKeysToNode : json unmarshal failed: %v, message: %v", err, message)
+				proc.errorKernel.errSend(proc, message, er)
+			}
 
 			fmt.Printf(" *** RECEIVED KEYS: %v\n", keys)
 
@@ -2119,6 +2136,68 @@ func (m methodREQPublicKeysToNode) handler(proc process, message Message, node s
 	// Send back an ACK message.
 	// ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return nil, nil
+}
+
+// ----
+
+type methodREQPublicKeysAllow struct {
+	event Event
+}
+
+func (m methodREQPublicKeysAllow) getKind() Event {
+	return m.event
+}
+
+// Handler to get all the public ed25519 keys from a central server.
+func (m methodREQPublicKeysAllow) handler(proc process, message Message, node string) ([]byte, error) {
+	// Get a context with the timeout specified in message.MethodTimeout.
+	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
+
+	proc.processes.wg.Add(1)
+	go func() {
+		defer proc.processes.wg.Done()
+		outCh := make(chan []byte)
+
+		go func() {
+			// Normally we would do some logic here, where the result is passed to outCh when done.
+			// In this case this go func and the below select is not needed, but keeping it so the
+			// structure is the same as the other handlers.
+			select {
+			case <-ctx.Done():
+			case outCh <- []byte{}:
+			}
+		}()
+
+		select {
+		case <-ctx.Done():
+		case <-outCh:
+			proc.centralAuth.nodeNotAckedPublicKeys.mu.Lock()
+			defer proc.centralAuth.nodeNotAckedPublicKeys.mu.Unlock()
+
+			for _, n := range message.MethodArgs {
+				key, ok := proc.centralAuth.nodeNotAckedPublicKeys.KeyMap[Node(n)]
+				if ok {
+					// Store/update the node and public key on the allowed pubKey map.
+					proc.centralAuth.nodePublicKeys.mu.Lock()
+					proc.centralAuth.nodePublicKeys.KeyMap[Node(n)] = key
+					proc.centralAuth.nodePublicKeys.mu.Unlock()
+
+					// Add key to persistent storage.
+					proc.centralAuth.dbUpdatePublicKey(string(n), key)
+
+					// Delete the key from the NotAcked map
+					delete(proc.centralAuth.nodeNotAckedPublicKeys.KeyMap, Node(n))
+
+					er := fmt.Errorf("info: REQPublicKeysAllow : allowed new/updated public key for %v to allowed public key map", n)
+					proc.errorKernel.infoSend(proc, message, er)
+				}
+			}
+
+		}
+	}()
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
 }
 
 // ----

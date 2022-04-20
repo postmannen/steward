@@ -172,6 +172,7 @@ func (p *processes) Start(proc process) {
 
 	if proc.configuration.IsCentralAuth {
 		proc.startup.subREQPublicKeysGet(proc)
+		proc.startup.subREQPublicKeysAllow(proc)
 	}
 
 	if proc.configuration.StartSubREQPublicKeysToNode {
@@ -352,6 +353,13 @@ func (s startup) subREQPublicKeysGet(p process) {
 	go proc.spawnWorker()
 }
 
+func (s startup) subREQPublicKeysAllow(p process) {
+	log.Printf("Starting Public keys allow subscriber: %#v\n", p.node)
+	sub := newSubject(REQPublicKeysAllow, string(p.node))
+	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
+	go proc.spawnWorker()
+}
+
 func (s startup) subREQPublicKeysToNode(p process) {
 	log.Printf("Starting Public keys to Node subscriber: %#v\n", p.node)
 	sub := newSubject(REQPublicKeysToNode, string(p.node))
@@ -436,7 +444,11 @@ func (s startup) subREQHello(p process) {
 			s.centralAuth.addPublicKey(proc, m)
 
 			// update the prometheus metrics
-			s.metrics.promHelloNodesTotal.Set(float64(len(s.server.centralAuth.nodePublicKeys.KeyMap)))
+
+			s.server.centralAuth.nodePublicKeys.mu.Lock()
+			mapLen := len(s.server.centralAuth.nodePublicKeys.KeyMap)
+			s.server.centralAuth.nodePublicKeys.mu.Unlock()
+			s.metrics.promHelloNodesTotal.Set(float64(mapLen))
 			s.metrics.promHelloNodesContactLast.With(prometheus.Labels{"nodeName": string(m.FromNode)}).SetToCurrentTime()
 
 		}
