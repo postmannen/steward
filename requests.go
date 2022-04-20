@@ -1990,6 +1990,10 @@ func (m methodREQPublicKey) handler(proc process, message Message, node string) 
 		outCh := make(chan []byte)
 
 		go func() {
+			// Normally we would do some logic here, where the result is passed to outCh when done,
+			// so we can split up the working logic, and f.ex. sending a reply logic.
+			// In this case this go func and the below select is not needed, but keeping it so the
+			// structure is the same as the other handlers.
 			select {
 			case <-ctx.Done():
 			case outCh <- proc.signatures.SignPublicKey:
@@ -2040,7 +2044,8 @@ func (m methodREQPublicKeysGet) handler(proc process, message Message, node stri
 		outCh := make(chan []byte)
 
 		go func() {
-			// Normally we would do some logic here, where the result is passed to outCh when done.
+			// Normally we would do some logic here, where the result is passed to outCh when done,
+			// so we can split up the working logic, and f.ex. sending a reply logic.
 			// In this case this go func and the below select is not needed, but keeping it so the
 			// structure is the same as the other handlers.
 			select {
@@ -2097,7 +2102,8 @@ func (m methodREQPublicKeysToNode) handler(proc process, message Message, node s
 		outCh := make(chan []byte)
 
 		go func() {
-			// Normally we would do some logic here, where the result is passed to outCh when done.
+			// Normally we would do some logic here, where the result is passed to outCh when done,
+			// so we can split up the working logic, and f.ex. sending a reply logic.
 			// In this case this go func and the below select is not needed, but keeping it so the
 			// structure is the same as the other handlers.
 			select {
@@ -2159,7 +2165,8 @@ func (m methodREQPublicKeysAllow) handler(proc process, message Message, node st
 		outCh := make(chan []byte)
 
 		go func() {
-			// Normally we would do some logic here, where the result is passed to outCh when done.
+			// Normally we would do some logic here, where the result is passed to outCh when done,
+			// so we can split up the working logic, and f.ex. sending a reply logic.
 			// In this case this go func and the below select is not needed, but keeping it so the
 			// structure is the same as the other handlers.
 			select {
