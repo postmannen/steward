@@ -1749,7 +1749,7 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 
 		proc.processes.wg.Add(1)
 		go func() {
-			proc.processes.wg.Done()
+			defer proc.processes.wg.Done()
 
 			cmd := exec.CommandContext(ctx, c, a...)
 
