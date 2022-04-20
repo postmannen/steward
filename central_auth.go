@@ -66,6 +66,16 @@ func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *cen
 func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	c.nodePublicKeys.mu.Lock()
 
+	// TODO: When receiviving a new or different keys for a node we should
+	// have a service with it's own storage for these keys, and an operator
+	// should have to acknowledge the new keys.
+	// For this we need:
+	//	- A service that keeps the state of all the new keys detected in the
+	//	  bytes.equal check below.
+	//	- A Log message should be thrown so we know that there is a new key.
+	//	- A Request method that can be used by operator to acknowledge a new
+	//	  key for a host.
+
 	// Check if a key for the current node already exists in the map.
 	existingKey, ok := c.nodePublicKeys.KeyMap[msg.FromNode]
 
