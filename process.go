@@ -100,7 +100,7 @@ type process struct {
 	// or subscriber processes
 	startup *startup
 	// Signatures
-	signatures *signatures
+	nodeAuth *nodeAuth
 	// centralAuth
 	centralAuth *centralAuth
 	// errorKernel
@@ -134,7 +134,7 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 		ctx:              ctx,
 		ctxCancel:        cancel,
 		startup:          newStartup(server),
-		signatures:       server.signatures,
+		nodeAuth:         server.nodeAuth,
 		centralAuth:      server.centralAuth,
 		errorKernel:      server.errorKernel,
 		metrics:          server.metrics,
@@ -523,7 +523,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		out := []byte{}
 		var err error
 
-		if p.signatures.verifySignature(message) {
+		if p.nodeAuth.verifySignature(message) {
 			// Call the method handler for the specified method.
 			out, err = mh.handler(p, message, thisNode)
 			if err != nil {
@@ -543,7 +543,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			p.errorKernel.errSend(p, message, er)
 		}
 
-		if p.signatures.verifySignature(message) {
+		if p.nodeAuth.verifySignature(message) {
 
 			_, err := mf.handler(p, message, thisNode)
 
@@ -629,7 +629,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 
 func (p process) addMethodArgSignature(m Message) []byte {
 	argsString := argsToString(m.MethodArgs)
-	sign := ed25519.Sign(p.signatures.SignPrivateKey, []byte(argsString))
+	sign := ed25519.Sign(p.nodeAuth.SignPrivateKey, []byte(argsString))
 
 	return sign
 }

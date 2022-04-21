@@ -3,7 +3,9 @@ package steward
 import (
 	"crypto/ed25519"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -17,7 +19,7 @@ type signature string
 // allowedSignatures is the structure for reading and writing from
 // the signatures map. It holds a mutex to use when interacting with
 // the map.
-type signatures struct {
+type nodeAuth struct {
 	// All the allowed signatures a node is allowed to recive from.
 	allowedSignatures *allowedSignatures
 
@@ -41,26 +43,26 @@ type signatures struct {
 	errorKernel *errorKernel
 }
 
-func newSignatures(configuration *Configuration, errorKernel *errorKernel) *signatures {
-	s := signatures{
+func newNodeAuth(configuration *Configuration, errorKernel *errorKernel) *nodeAuth {
+	n := nodeAuth{
 		allowedSignatures: newAllowedSignatures(),
-		publicKeys:        newPublicKeys(),
+		publicKeys:        newPublicKeys(configuration),
 		configuration:     configuration,
 		errorKernel:       errorKernel,
 	}
 
 	// Set the signing key paths.
-	s.SignKeyFolder = filepath.Join(configuration.ConfigFolder, "signing")
-	s.SignKeyPrivateKeyPath = filepath.Join(s.SignKeyFolder, "private.key")
-	s.SignKeyPublicKeyPath = filepath.Join(s.SignKeyFolder, "public.key")
+	n.SignKeyFolder = filepath.Join(configuration.ConfigFolder, "signing")
+	n.SignKeyPrivateKeyPath = filepath.Join(n.SignKeyFolder, "private.key")
+	n.SignKeyPublicKeyPath = filepath.Join(n.SignKeyFolder, "public.key")
 
-	err := s.loadSigningKeys()
+	err := n.loadSigningKeys()
 	if err != nil {
 		log.Printf("%v\n", err)
 		os.Exit(1)
 	}
 
-	return &s
+	return &n
 }
 
 type allowedSignatures struct {
@@ -79,24 +81,90 @@ func newAllowedSignatures() *allowedSignatures {
 
 type publicKeys struct {
 	// nodesKey is a map who holds all the public keys for nodes.
-	nodeKeys map[Node][]byte
+	NodeKeys map[Node][]byte
 	mu       sync.Mutex
+	filePath string
 }
 
-func newPublicKeys() *publicKeys {
+func newPublicKeys(c *Configuration) *publicKeys {
 	p := publicKeys{
-		nodeKeys: make(map[Node][]byte),
+		NodeKeys: make(map[Node][]byte),
+		filePath: filepath.Join(c.DatabaseFolder, "publickeys.txt"),
+	}
+
+	err := p.loadFromFile()
+	if err != nil {
+		log.Printf("error: loading public keys from file: %v\n", err)
+		// os.Exit(1)
 	}
 
 	return &p
 }
 
+// loadFromFile will try to load all the currently stored public keys from file,
+// and return the error if it fails.
+// If no file is found a nil error is returned.
+func (p *publicKeys) loadFromFile() error {
+	if _, err := os.Stat(p.filePath); os.IsNotExist(err) {
+		// Just logging the error since it is not crucial that a key file is missing,
+		// since a new one will be created on the next update.
+		log.Printf("no public keys file found at %v\n", p.filePath)
+		return nil
+	}
+
+	fh, err := os.OpenFile(p.filePath, os.O_RDONLY, 0600)
+	if err != nil {
+		return fmt.Errorf("error: failed to open public keys file: %v", err)
+	}
+	defer fh.Close()
+
+	b, err := io.ReadAll(fh)
+	if err != nil {
+		return err
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	err = json.Unmarshal(b, &p.NodeKeys)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("\n ***** DEBUG: Loaded existing keys from file: %v\n\n", p.NodeKeys)
+
+	return nil
+}
+
+// saveToFile will save all the public kets to file for persistent storage.
+// An error is returned if it fails.
+func (p *publicKeys) saveToFile() error {
+	fh, err := os.OpenFile(p.filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return fmt.Errorf("error: failed to open public keys file: %v", err)
+	}
+	defer fh.Close()
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	b, err := json.Marshal(p.NodeKeys)
+	if err != nil {
+		return err
+	}
+
+	_, err = fh.Write(b)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // loadSigningKeys will try to load the ed25519 signing keys. If the
 // files are not found new keys will be generated and written to disk.
-func (s *signatures) loadSigningKeys() error {
+func (n *nodeAuth) loadSigningKeys() error {
 	// Check if folder structure exist, if not create it.
-	if _, err := os.Stat(s.SignKeyFolder); os.IsNotExist(err) {
-		err := os.MkdirAll(s.SignKeyFolder, 0700)
+	if _, err := os.Stat(n.SignKeyFolder); os.IsNotExist(err) {
+		err := os.MkdirAll(n.SignKeyFolder, 0700)
 		if err != nil {
 			er := fmt.Errorf("error: failed to create directory for signing keys : %v", err)
 			return er
@@ -107,10 +175,10 @@ func (s *signatures) loadSigningKeys() error {
 	// Check if there already are any keys in the etc folder.
 	foundKey := false
 
-	if _, err := os.Stat(s.SignKeyPublicKeyPath); !os.IsNotExist(err) {
+	if _, err := os.Stat(n.SignKeyPublicKeyPath); !os.IsNotExist(err) {
 		foundKey = true
 	}
-	if _, err := os.Stat(s.SignKeyPrivateKeyPath); !os.IsNotExist(err) {
+	if _, err := os.Stat(n.SignKeyPrivateKeyPath); !os.IsNotExist(err) {
 		foundKey = true
 	}
 
@@ -126,21 +194,21 @@ func (s *signatures) loadSigningKeys() error {
 		privB64string := base64.RawStdEncoding.EncodeToString(priv)
 
 		// Write public key to file.
-		err = s.writeSigningKey(s.SignKeyPublicKeyPath, pubB64string)
+		err = n.writeSigningKey(n.SignKeyPublicKeyPath, pubB64string)
 		if err != nil {
 			return err
 		}
 
 		// Write private key to file.
-		err = s.writeSigningKey(s.SignKeyPrivateKeyPath, privB64string)
+		err = n.writeSigningKey(n.SignKeyPrivateKeyPath, privB64string)
 		if err != nil {
 			return err
 		}
 
 		// Also store the keys in the processes structure so we can
 		// reference them from there when we need them.
-		s.SignPublicKey = pub
-		s.SignPrivateKey = priv
+		n.SignPublicKey = pub
+		n.SignPrivateKey = priv
 
 		er := fmt.Errorf("info: no signing keys found, generating new keys")
 		log.Printf("%v\n", er)
@@ -150,24 +218,24 @@ func (s *signatures) loadSigningKeys() error {
 	}
 
 	// Key files found, load them into the processes struct fields.
-	pubKey, _, err := s.readKeyFile(s.SignKeyPublicKeyPath)
+	pubKey, _, err := n.readKeyFile(n.SignKeyPublicKeyPath)
 	if err != nil {
 		return err
 	}
-	s.SignPublicKey = pubKey
+	n.SignPublicKey = pubKey
 
-	privKey, _, err := s.readKeyFile(s.SignKeyPrivateKeyPath)
+	privKey, _, err := n.readKeyFile(n.SignKeyPrivateKeyPath)
 	if err != nil {
 		return err
 	}
-	s.SignPublicKey = pubKey
-	s.SignPrivateKey = privKey
+	n.SignPublicKey = pubKey
+	n.SignPrivateKey = privKey
 
 	return nil
 }
 
 // writeSigningKey will write the base64 encoded signing key to file.
-func (s *signatures) writeSigningKey(realPath string, keyB64 string) error {
+func (n *nodeAuth) writeSigningKey(realPath string, keyB64 string) error {
 	fh, err := os.OpenFile(realPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		er := fmt.Errorf("error: failed to open key file for writing: %v", err)
@@ -187,7 +255,7 @@ func (s *signatures) writeSigningKey(realPath string, keyB64 string) error {
 // readKeyFile will take the path of a key file as input, read the base64
 // encoded data, decode the data. It will return the raw data as []byte,
 // the base64 encoded data, and any eventual error.
-func (s *signatures) readKeyFile(keyFile string) (ed2519key []byte, b64Key []byte, err error) {
+func (n *nodeAuth) readKeyFile(keyFile string) (ed2519key []byte, b64Key []byte, err error) {
 	fh, err := os.Open(keyFile)
 	if err != nil {
 		er := fmt.Errorf("error: failed to open key file: %v", err)
@@ -211,9 +279,9 @@ func (s *signatures) readKeyFile(keyFile string) (ed2519key []byte, b64Key []byt
 }
 
 // verifySignature
-func (s *signatures) verifySignature(m Message) bool {
+func (n *nodeAuth) verifySignature(m Message) bool {
 	// fmt.Printf(" * DEBUG: verifySignature, method: %v\n", m.Method)
-	if !s.configuration.EnableSignatureCheck {
+	if !n.configuration.EnableSignatureCheck {
 		// fmt.Printf(" * DEBUG: verifySignature: AllowEmptySignature set to TRUE\n")
 		return true
 	}
@@ -226,7 +294,7 @@ func (s *signatures) verifySignature(m Message) bool {
 
 	// Verify if the signature matches.
 	argsStringified := argsToString(m.MethodArgs)
-	ok := ed25519.Verify(s.SignPublicKey, []byte(argsStringified), m.ArgSignature)
+	ok := ed25519.Verify(n.SignPublicKey, []byte(argsStringified), m.ArgSignature)
 
 	// fmt.Printf(" * DEBUG: verifySignature, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
 

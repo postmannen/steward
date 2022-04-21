@@ -36,7 +36,7 @@ type processes struct {
 	configuration *Configuration
 
 	// Signatures
-	Signatures *signatures
+	nodeAuth *nodeAuth
 }
 
 // newProcesses will prepare and return a *processes which
@@ -48,7 +48,7 @@ func newProcesses(ctx context.Context, server *server) *processes {
 		tui:           server.tui,
 		errorKernel:   server.errorKernel,
 		configuration: server.configuration,
-		Signatures:    server.signatures,
+		nodeAuth:      server.nodeAuth,
 		metrics:       server.metrics,
 	}
 
@@ -265,7 +265,7 @@ func (s startup) pubREQHello(p process) {
 
 			// d := fmt.Sprintf("Hello from %v\n", p.node)
 			// Send the ed25519 public key used for signing as the payload of the message.
-			d := s.server.signatures.SignPublicKey
+			d := s.server.nodeAuth.SignPublicKey
 
 			m := Message{
 				FileName:   "hello.log",

@@ -60,9 +60,9 @@ type server struct {
 	// processInitial is the initial process that all other processes are tied to.
 	processInitial process
 
-	// signatures  holds all the signatures,
-	// and the public keys
-	signatures *signatures
+	// nodeAuth holds all the signatures, the public keys and other components
+	// related to authentication on an individual node.
+	nodeAuth *nodeAuth
 	// helloRegister is a register of all the nodes that have sent hello messages
 	// to the central server
 	helloRegister *helloRegister
@@ -145,7 +145,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 
 	}
 
-	signatures := newSignatures(configuration, errorKernel)
+	nodeAuth := newNodeAuth(configuration, errorKernel)
 	// fmt.Printf(" * DEBUG: newServer: signatures contains: %+v\n", signatures)
 
 	s := server{
@@ -160,7 +160,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		version:        version,
 		tui:            tuiClient,
 		errorKernel:    errorKernel,
-		signatures:     signatures,
+		nodeAuth:       nodeAuth,
 		helloRegister:  newHelloRegister(),
 		centralAuth:    newCentralAuth(configuration, errorKernel),
 	}

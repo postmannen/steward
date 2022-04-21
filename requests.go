@@ -1996,7 +1996,7 @@ func (m methodREQPublicKey) handler(proc process, message Message, node string) 
 			// structure is the same as the other handlers.
 			select {
 			case <-ctx.Done():
-			case outCh <- proc.signatures.SignPublicKey:
+			case outCh <- proc.nodeAuth.SignPublicKey:
 			}
 		}()
 
@@ -2117,21 +2117,21 @@ func (m methodREQPublicKeysToNode) handler(proc process, message Message, node s
 		// case proc.toRingbufferCh <- []subjectAndMessage{sam}:
 		case <-ctx.Done():
 		case <-outCh:
-			keys := make(map[Node]string)
-			err := json.Unmarshal(message.Data, &keys)
+			// keys := make(map[Node]string)
+			proc.nodeAuth.publicKeys.mu.Lock()
+			err := json.Unmarshal(message.Data, &proc.nodeAuth.publicKeys.NodeKeys)
 			if err != nil {
 				er := fmt.Errorf("error: REQPublicKeysToNode : json unmarshal failed: %v, message: %v", err, message)
 				proc.errorKernel.errSend(proc, message, er)
 			}
+			fmt.Printf(" *** RECEIVED KEYS: %v\n", proc.nodeAuth.publicKeys.NodeKeys)
+			proc.nodeAuth.publicKeys.mu.Unlock()
 
-			fmt.Printf(" *** RECEIVED KEYS: %v\n", keys)
-
-			// TODO:
-			// - We need to store the public keys in a map in signatures.go
-			// - We should also persist that public keys map to file, so we can read
-			//   that file on startup to get all the previosly received keys.
-			// - The store to map and also that map to file should happen with a method
-			//   on signatures.publicKeys, so we do both in one go.
+			err = proc.nodeAuth.publicKeys.saveToFile()
+			if err != nil {
+				er := fmt.Errorf("error: REQPublicKeysToNode : save to file failed: %v, message: %v", err, message)
+				proc.errorKernel.errSend(proc, message, er)
+			}
 
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
