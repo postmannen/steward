@@ -28,6 +28,10 @@ The system will need processes for allowing CRUD of the auth database , and also
 
 The signatures should be created and sent as a part of the message from a node, and should not be be populated from CentralAuth to the end nodes up front.
 
+## Sync between multiple centrals
+
+.....
+
 ### Authorize an CentralAuth Server to avoid having rogue Auth Servers
 
 This can be done at the subject level on the broker since we are using NKEY's to identify the nodes.

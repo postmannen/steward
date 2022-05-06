@@ -11,9 +11,6 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-type signatureBase32 string
-type argsString string
-
 // centralAuth holds the logic related to handling public keys and auth maps.
 type centralAuth struct {
 	// schema           map[Node]map[argsString]signatureBase32
@@ -130,31 +127,31 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	//c.dbDump(c.bucketPublicKeys)
 }
 
-// dbGetPublicKey will look up and return a specific value if it exists for a key in a bucket in a DB.
-func (c *centralAuth) dbGetPublicKey(node string) ([]byte, error) {
-	var value []byte
-	// View is a help function to get values out of the database.
-	err := c.db.View(func(tx *bolt.Tx) error {
-		//Open a bucket to get key's and values from.
-		bu := tx.Bucket([]byte(c.bucketNamePublicKeys))
-		if bu == nil {
-			log.Printf("info: no db bucket exist: %v\n", c.bucketNamePublicKeys)
-			return nil
-		}
-
-		v := bu.Get([]byte(node))
-		if len(v) == 0 {
-			log.Printf("info: view: key not found\n")
-			return nil
-		}
-
-		value = v
-
-		return nil
-	})
-
-	return value, err
-}
+// // dbGetPublicKey will look up and return a specific value if it exists for a key in a bucket in a DB.
+// func (c *centralAuth) dbGetPublicKey(node string) ([]byte, error) {
+// 	var value []byte
+// 	// View is a help function to get values out of the database.
+// 	err := c.db.View(func(tx *bolt.Tx) error {
+// 		//Open a bucket to get key's and values from.
+// 		bu := tx.Bucket([]byte(c.bucketNamePublicKeys))
+// 		if bu == nil {
+// 			log.Printf("info: no db bucket exist: %v\n", c.bucketNamePublicKeys)
+// 			return nil
+// 		}
+//
+// 		v := bu.Get([]byte(node))
+// 		if len(v) == 0 {
+// 			log.Printf("info: view: key not found\n")
+// 			return nil
+// 		}
+//
+// 		value = v
+//
+// 		return nil
+// 	})
+//
+// 	return value, err
+// }
 
 //dbUpdatePublicKey will update the public key for a node in the db.
 func (c *centralAuth) dbUpdatePublicKey(node string, value []byte) error {
@@ -177,22 +174,22 @@ func (c *centralAuth) dbUpdatePublicKey(node string, value []byte) error {
 	return err
 }
 
-// deleteKeyFromBucket will delete the specified key from the specified
-// bucket if it exists.
-func (c *centralAuth) dbDeletePublicKey(key string) error {
-	err := c.db.Update(func(tx *bolt.Tx) error {
-		bu := tx.Bucket([]byte(c.bucketNamePublicKeys))
-
-		err := bu.Delete([]byte(key))
-		if err != nil {
-			log.Printf("error: delete key in bucket %v failed: %v\n", c.bucketNamePublicKeys, err)
-		}
-
-		return nil
-	})
-
-	return err
-}
+// // deleteKeyFromBucket will delete the specified key from the specified
+// // bucket if it exists.
+// func (c *centralAuth) dbDeletePublicKey(key string) error {
+// 	err := c.db.Update(func(tx *bolt.Tx) error {
+// 		bu := tx.Bucket([]byte(c.bucketNamePublicKeys))
+//
+// 		err := bu.Delete([]byte(key))
+// 		if err != nil {
+// 			log.Printf("error: delete key in bucket %v failed: %v\n", c.bucketNamePublicKeys, err)
+// 		}
+//
+// 		return nil
+// 	})
+//
+// 	return err
+// }
 
 // dumpBucket will dump out all they keys and values in the
 // specified bucket, and return a sorted []samDBValue
