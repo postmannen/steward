@@ -72,15 +72,15 @@ func newSchemaMain() *schemaMain {
 }
 
 type schemaGenerated struct {
-	ACLsToConvert map[node]map[node]map[command]struct{}
-	NodeMap       map[node]NodeDataWithHash
-	mu            sync.Mutex
+	ACLsToConvert    map[node]map[node]map[command]struct{}
+	GeneratedACLsMap map[node]NodeDataWithHash
+	mu               sync.Mutex
 }
 
 func newSchemaGenerated() *schemaGenerated {
 	s := schemaGenerated{
-		ACLsToConvert: map[node]map[node]map[command]struct{}{},
-		NodeMap:       make(map[node]NodeDataWithHash),
+		ACLsToConvert:    map[node]map[node]map[command]struct{}{},
+		GeneratedACLsMap: make(map[node]NodeDataWithHash),
 	}
 	return &s
 }
@@ -289,7 +289,7 @@ func (a *authSchema) generateACLsForAllNodes() error {
 			}
 
 			// and then store the cbor encoded data and the hash in the generated map.
-			a.schemaGenerated.NodeMap[n] = nd
+			a.schemaGenerated.GeneratedACLsMap[n] = nd
 
 		}
 	}()
@@ -467,7 +467,7 @@ func (c *centralAuth) printMaps() {
 
 		fmt.Println("----schemaGenerated------")
 		c.authorization.authSchema.schemaGenerated.mu.Lock()
-		for k, v := range c.authorization.authSchema.schemaGenerated.NodeMap {
+		for k, v := range c.authorization.authSchema.schemaGenerated.GeneratedACLsMap {
 			fmt.Printf("node: %v, NodeDataSerialized: %v\n", k, string(v.Data))
 			fmt.Printf("node: %v, Hash: %v\n", k, v.Hash)
 		}
