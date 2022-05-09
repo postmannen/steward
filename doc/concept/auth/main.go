@@ -166,7 +166,7 @@ func (a *authSchema) aclAdd(host node, source node, cmd command) {
 
 	a.schemaMain.ACLMap[host][source][cmd] = struct{}{}
 	// err := a.generateJSONForHostOrGroup(n)
-	err := a.generateJSONForAllNodes()
+	err := a.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: addCommandForFromNode: %v", err)
 		log.Printf("%v\n", er)
@@ -196,7 +196,7 @@ func (a *authSchema) aclDeleteCommand(host node, source node, cmd command) error
 
 	delete(a.schemaMain.ACLMap[host][source], cmd)
 
-	err := a.generateJSONForAllNodes()
+	err := a.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: aclNodeFromNodeCommandDelete: %v", err)
 		log.Printf("%v\n", er)
@@ -221,7 +221,7 @@ func (a *authSchema) aclDeleteSource(host node, source node) error {
 
 	delete(a.schemaMain.ACLMap[host], source)
 
-	err := a.generateJSONForAllNodes()
+	err := a.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: aclNodeFromnodeDelete: %v", err)
 		log.Printf("%v\n", er)
@@ -230,14 +230,14 @@ func (a *authSchema) aclDeleteSource(host node, source node) error {
 	return nil
 }
 
-// generateJSONForAllNodes will generate a json encoded representation of the node specific
+// generateACLsForAllNodes will generate a json encoded representation of the node specific
 // map values of authSchema, along with a hash of the data.
 //
 // Will range over all the host elements defined in the ACL, create a new authParser for each one,
 // and run a small state machine on each element to create the final ACL result to be used at host
 // nodes.
 // The result will be written to the schemaGenerated.ACLsToConvert map.
-func (a *authSchema) generateJSONForAllNodes() error {
+func (a *authSchema) generateACLsForAllNodes() error {
 	a.schemaGenerated.ACLsToConvert = make(map[node]map[node]map[command]struct{})
 
 	// Rangle all ACL's. Both for single hosts, and group of hosts.
@@ -297,12 +297,18 @@ func (a *authSchema) generateJSONForAllNodes() error {
 	return nil
 }
 
-type sourceNodes struct {
-	Node           node
-	SourceCommands []sourceCommands
+// sourceNode is used to convert the ACL map structure of a host into a slice,
+// and we then use the slice representation of the ACL to create the hash for
+// a specific host node.
+type sourceNode struct {
+	HostNode       node
+	SourceCommands []sourceNodeCommands
 }
 
-type sourceCommands struct {
+// sourceNodeCommand is used to convert the ACL map structure of a host into a slice,
+// and we then use the slice representation of the ACL to create the hash for
+// a specific host node.
+type sourceNodeCommands struct {
 	Source   node
 	Commands []command
 }
@@ -312,13 +318,13 @@ type sourceCommands struct {
 // defined for each fromNode are sorted.
 // This function is used when creating the hash of the nodeMap since we can not
 // guarantee the order of a hash map, but we can with a slice.
-func (a *authSchema) nodeMapToSlice(host node) sourceNodes {
-	srcNodes := sourceNodes{
-		Node: host,
+func (a *authSchema) nodeMapToSlice(host node) sourceNode {
+	srcNodes := sourceNode{
+		HostNode: host,
 	}
 
 	for sn, commandMap := range a.schemaGenerated.ACLsToConvert[host] {
-		srcC := sourceCommands{
+		srcC := sourceNodeCommands{
 			Source: sn,
 		}
 
