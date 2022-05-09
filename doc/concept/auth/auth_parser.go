@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -49,7 +48,7 @@ func (a *authParser) hostGroupOrSingle() parseFn {
 
 // hostIsGroup
 func (a *authParser) hostIsGroup() parseFn {
-	fmt.Printf("%v is a grp type\n", a.currentHost)
+	// fmt.Printf("%v is a grp type\n", a.currentHost)
 
 	hosts := a.authSchema.convToActualNodeSlice(a.currentHost)
 
@@ -78,14 +77,14 @@ func (a *authParser) hostIsGroup() parseFn {
 		}
 	}
 
-	fmt.Printf(" * ACLsToConvert=%+v\n", a.authSchema.schemaGenerated.ACLsToConvert)
+	// fmt.Printf(" * ACLsToConvert=%+v\n", a.authSchema.schemaGenerated.ACLsToConvert)
 	// Done with host. Return nil will make the main loop take the next host in the main for loop.
 	return nil
 }
 
 // hostIsNotGroup
 func (a *authParser) hostIsNotGroup() parseFn {
-	fmt.Printf("%v is a single node type\n", a.currentHost)
+	// fmt.Printf("%v is a single node type\n", a.currentHost)
 
 	host := a.currentHost
 
@@ -112,7 +111,7 @@ func (a *authParser) hostIsNotGroup() parseFn {
 		}
 	}
 
-	fmt.Printf(" * ACLsToConvert contains: %+v\n", a.authSchema.schemaGenerated.ACLsToConvert)
+	// fmt.Printf(" * ACLsToConvert contains: %+v\n", a.authSchema.schemaGenerated.ACLsToConvert)
 
 	// Done with host. Return nil will make the main loop take the next host in the main for loop.
 	return nil

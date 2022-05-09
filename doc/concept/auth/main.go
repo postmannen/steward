@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -265,10 +266,25 @@ func (a *authSchema) generateJSONForAllNodes() error {
 				os.Exit(1)
 			}
 
+			hash := func() [32]byte {
+				sns := a.nodeMapToSlice(n)
+
+				js, err := json.Marshal(sns)
+				if err != nil {
+					err := fmt.Errorf("error: authSchema, json for hash:  %v", err)
+					log.Printf("%v\n", err)
+					return [32]byte{}
+				}
+
+				hash := sha256.Sum256(js)
+				return hash
+			}()
+
 			nd := NodeDataWithHash{
 				Data: b,
 				// TODO: Also add the hash here.
 				// Hash: [32]byte,
+				Hash: hash,
 			}
 
 			a.schemaGenerated.NodeMap[n] = nd
@@ -294,26 +310,26 @@ type sourceCommands struct {
 // defined for each fromNode are sorted.
 // This function is used when creating the hash of the nodeMap since we can not
 // guarantee the order of a hash map, but we can with a slice.
-func (a *authSchema) nodeMapToSlice(n node) sourceNodes {
+func (a *authSchema) nodeMapToSlice(host node) sourceNodes {
 	srcNodes := sourceNodes{
-		Node: n,
+		Node: host,
 	}
 
-	for sn, commandMap := range a.schemaMain.ACLMap[n] {
-		fnc := sourceCommands{
+	for sn, commandMap := range a.schemaGenerated.ACLsToConvert[host] {
+		srcC := sourceCommands{
 			Source: sn,
 		}
 
 		for cmd := range commandMap {
-			fnc.Commands = append(fnc.Commands, cmd)
+			srcC.Commands = append(srcC.Commands, cmd)
 		}
 
 		// sort.Strings(fnc.Commands)
-		sort.SliceStable(fnc.Commands, func(i, j int) bool {
-			return fnc.Commands[i] < fnc.Commands[j]
+		sort.SliceStable(srcC.Commands, func(i, j int) bool {
+			return srcC.Commands[i] < srcC.Commands[j]
 		})
 
-		srcNodes.SourceCommands = append(srcNodes.SourceCommands, fnc)
+		srcNodes.SourceCommands = append(srcNodes.SourceCommands, srcC)
 	}
 
 	sort.SliceStable(srcNodes.SourceCommands, func(i, j int) bool {

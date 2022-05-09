@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -226,4 +227,24 @@ func TestSchemaMainACLMap(t *testing.T) {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship1, admin, tcpdump")
 	}
 	// --- TESTS ---
+}
+
+func TestHash(t *testing.T) {
+	if !*logging {
+		log.SetOutput(io.Discard)
+	}
+
+	c := newCentralAuth()
+
+	c.authorization.authSchema.aclAdd("ship101", "admin", "HORSE")
+
+	c.authorization.authSchema.groupNodesAddNode("grp_nodes_ships", "ship101")
+	c.authorization.authSchema.aclAdd("grp_nodes_ships", "admin", "HEN")
+
+	hash := [32]uint8{0xe6, 0xe9, 0xf3, 0x25, 0x36, 0x48, 0x53, 0x4, 0xb4, 0x9a, 0xfd, 0x7f, 0x53, 0x85, 0x4c, 0x95, 0x62, 0xa9, 0x49, 0x23, 0x25, 0x1c, 0xee, 0xc5, 0x3b, 0xf5, 0xd5, 0x3, 0xf7, 0x9e, 0xb7, 0x3c}
+	value := c.authorization.authSchema.schemaGenerated.NodeMap["ship101"].Hash
+
+	if bytes.Equal(hash[:], value[:]) == false {
+		t.Fatalf(" \U0001F631  [FAILED]: hash mismatch")
+	}
 }
