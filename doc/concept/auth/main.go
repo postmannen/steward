@@ -143,29 +143,27 @@ func (a *authSchema) convertToActualCommandSlice(c command) []command {
 	return commands
 }
 
-// aclNodeFromnodeCommandAdd will add a command for a fromNode.
+// aclAdd will add a command for a fromNode.
 // If the node or the fromNode do not exist they will be created.
 // The json encoded schema for a node and the hash of those data
 // will also be generated.
-//
-// TODO: Rename to aclAdd
-func (a *authSchema) aclAdd(n node, fn node, cmd command) {
+func (a *authSchema) aclAdd(host node, source node, cmd command) {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 
 	// Check if node exists in map.
-	if _, ok := a.schemaMain.ACLMap[n]; !ok {
+	if _, ok := a.schemaMain.ACLMap[host]; !ok {
 		// log.Printf("info: did not find node=%v in map, creating map[fromnode]map[command]struct{}\n", n)
-		a.schemaMain.ACLMap[n] = make(map[node]map[command]struct{})
+		a.schemaMain.ACLMap[host] = make(map[node]map[command]struct{})
 	}
 
-	// Check if also fromnode exists in map
-	if _, ok := a.schemaMain.ACLMap[n][fn]; !ok {
+	// Check if also source node exists in map
+	if _, ok := a.schemaMain.ACLMap[host][source]; !ok {
 		// log.Printf("info: did not find node=%v in map, creating map[fromnode]map[command]struct{}\n", fn)
-		a.schemaMain.ACLMap[n][fn] = make(map[command]struct{})
+		a.schemaMain.ACLMap[host][source] = make(map[command]struct{})
 	}
 
-	a.schemaMain.ACLMap[n][fn][cmd] = struct{}{}
+	a.schemaMain.ACLMap[host][source][cmd] = struct{}{}
 	// err := a.generateJSONForHostOrGroup(n)
 	err := a.generateJSONForAllNodes()
 	if err != nil {
@@ -206,7 +204,7 @@ func (a *authSchema) aclDeleteCommand(host node, source node, cmd command) error
 	return nil
 }
 
-// aclNodeFromnodeDelete will delete specified fromnode and all commands specified for it.
+// aclDeleteSource will delete specified source node and all commands specified for it.
 func (a *authSchema) aclDeleteSource(host node, source node) error {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
