@@ -279,13 +279,13 @@ func (a *authSchema) generateJSONForAllNodes() error {
 	return nil
 }
 
-type fromNodes struct {
-	Node      node
-	FromNodes []fromNodeCommands
+type sourceNodes struct {
+	Node           node
+	SourceCommands []sourceCommands
 }
 
-type fromNodeCommands struct {
-	FromNode node
+type sourceCommands struct {
+	Source   node
 	Commands []command
 }
 
@@ -294,14 +294,14 @@ type fromNodeCommands struct {
 // defined for each fromNode are sorted.
 // This function is used when creating the hash of the nodeMap since we can not
 // guarantee the order of a hash map, but we can with a slice.
-func (a *authSchema) nodeMapToSlice(n node) fromNodes {
-	fns := fromNodes{
+func (a *authSchema) nodeMapToSlice(n node) sourceNodes {
+	srcNodes := sourceNodes{
 		Node: n,
 	}
 
-	for fn, commandMap := range a.schemaMain.ACLMap[n] {
-		fnc := fromNodeCommands{
-			FromNode: fn,
+	for sn, commandMap := range a.schemaMain.ACLMap[n] {
+		fnc := sourceCommands{
+			Source: sn,
 		}
 
 		for cmd := range commandMap {
@@ -313,16 +313,16 @@ func (a *authSchema) nodeMapToSlice(n node) fromNodes {
 			return fnc.Commands[i] < fnc.Commands[j]
 		})
 
-		fns.FromNodes = append(fns.FromNodes, fnc)
+		srcNodes.SourceCommands = append(srcNodes.SourceCommands, fnc)
 	}
 
-	sort.SliceStable(fns.FromNodes, func(i, j int) bool {
-		return fns.FromNodes[i].FromNode < fns.FromNodes[j].FromNode
+	sort.SliceStable(srcNodes.SourceCommands, func(i, j int) bool {
+		return srcNodes.SourceCommands[i].Source < srcNodes.SourceCommands[j].Source
 	})
 
 	// fmt.Printf(" * nodeMapToSlice: fromNodes: %#v\n", fns)
 
-	return fns
+	return srcNodes
 }
 
 // groupNodesAddNode adds a node to a group. If the group does
