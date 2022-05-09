@@ -56,19 +56,23 @@ func (a *authParser) hostIsGroup() parseFn {
 	for source, cmdMap := range a.authSchema.schemaMain.ACLMap[a.currentHost] {
 
 		for cmd, emptyStruct := range cmdMap {
+			cmdSlice := a.authSchema.convertToActualCommandSlice(cmd)
 
 			// Expand eventual groups, so we use real fromNode nodenames in ACL for nodes.
 			sourceNodes := a.authSchema.convToActualNodeSlice(source)
 			for _, sourceNode := range sourceNodes {
 				for _, host := range hosts {
-					if a.authSchema.schemaGenerated.ACLsToConvert[host] == nil {
-						a.authSchema.schemaGenerated.ACLsToConvert[host] = make(map[node]map[command]struct{})
-					}
-					if a.authSchema.schemaGenerated.ACLsToConvert[host][sourceNode] == nil {
-						a.authSchema.schemaGenerated.ACLsToConvert[host][sourceNode] = make(map[command]struct{})
-					}
 
-					a.authSchema.schemaGenerated.ACLsToConvert[host][sourceNode][cmd] = emptyStruct
+					for _, cm := range cmdSlice {
+						if a.authSchema.schemaGenerated.ACLsToConvert[host] == nil {
+							a.authSchema.schemaGenerated.ACLsToConvert[host] = make(map[node]map[command]struct{})
+						}
+						if a.authSchema.schemaGenerated.ACLsToConvert[host][sourceNode] == nil {
+							a.authSchema.schemaGenerated.ACLsToConvert[host][sourceNode] = make(map[command]struct{})
+						}
+
+						a.authSchema.schemaGenerated.ACLsToConvert[host][sourceNode][cm] = emptyStruct
+					}
 				}
 			}
 		}

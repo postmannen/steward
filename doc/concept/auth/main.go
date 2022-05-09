@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -118,12 +120,12 @@ func (a *authSchema) convToActualNodeSlice(n node) []node {
 	return nodes
 }
 
-// convertCommandToCommandSlice will convert the given argument into a slice representation.
+// convertToActualCommandSlice will convert the given argument into a slice representation.
 // If the argument is a group, then all the members of that group will be expanded into
 // the slice.
 // If the argument is not a group kind of value, then only a slice with that single
 // value is returned.
-func (a *authSchema) convertCommandToCommandSlice(c command) []command {
+func (a *authSchema) convertToActualCommandSlice(c command) []command {
 	commands := []command{}
 
 	// Check if we are given a nodeGroup variable, and if we are, get all the
@@ -239,11 +241,42 @@ func (a *authSchema) aclSourceDelete(host node, source node) error {
 func (a *authSchema) generateJSONForAllNodes() error {
 	a.schemaGenerated.ACLsToConvert = make(map[node]map[node]map[command]struct{})
 
+	// Rangle all ACL's. Both for single hosts, and group of hosts.
+	// ACL's that are for a group of hosts will be generated split
+	// out in it's indivial host name, and that current ACL will
+	// be added to the individual host in the ACLsToConvert map to
+	// built a complete picture of what the ACL's looks like for each
+	// individual hosts.
 	for n := range a.schemaMain.ACLMap {
 		//a.schemaGenerated.ACLsToConvert = make(map[node]map[node]map[command]struct{})
 		ap := newAuthParser(n, a)
 		ap.parse()
 	}
+
+	// ACLsToConvert got the complete picture of what ACL's that
+	// are defined for each individual host node.
+	// Range this map, and generate a JSON representation of all
+	// the ACL's each host.
+	func() {
+		for n, m := range a.schemaGenerated.ACLsToConvert {
+
+			b, err := json.Marshal(m)
+			if err != nil {
+				er := fmt.Errorf("error: failed to generate json for host in schemaGenerated: %v", err)
+				log.Printf("%v\n", er)
+				os.Exit(1)
+			}
+
+			nd := NodeDataWithHash{
+				Data: b,
+				// TODO: Also add the hash here.
+				// Hash: [32]byte,
+			}
+
+			a.schemaGenerated.NodeMap[n] = nd
+
+		}
+	}()
 
 	return nil
 }
