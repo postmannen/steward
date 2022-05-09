@@ -149,7 +149,7 @@ func (a *authSchema) convertToActualCommandSlice(c command) []command {
 // will also be generated.
 //
 // TODO: Rename to aclAdd
-func (a *authSchema) aclCommandAdd(n node, fn node, cmd command) {
+func (a *authSchema) aclAdd(n node, fn node, cmd command) {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 
@@ -177,8 +177,8 @@ func (a *authSchema) aclCommandAdd(n node, fn node, cmd command) {
 
 }
 
-// aclNodeFromNodeCommandDelete will delete the specified command from the fromnode.
-func (a *authSchema) aclCommandDelete(host node, source node, cmd command) error {
+// aclDeleteCommand will delete the specified command from the fromnode.
+func (a *authSchema) aclDeleteCommand(host node, source node, cmd command) error {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 
@@ -207,7 +207,7 @@ func (a *authSchema) aclCommandDelete(host node, source node, cmd command) error
 }
 
 // aclNodeFromnodeDelete will delete specified fromnode and all commands specified for it.
-func (a *authSchema) aclSourceDelete(host node, source node) error {
+func (a *authSchema) aclDeleteSource(host node, source node) error {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 
