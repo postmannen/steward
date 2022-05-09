@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -10,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -259,34 +259,36 @@ func (a *authSchema) generateJSONForAllNodes() error {
 	func() {
 		for n, m := range a.schemaGenerated.ACLsToConvert {
 
-			b, err := json.Marshal(m)
+			// cbor marshal the data of the ACL map to store for the host node.
+			cb, err := cbor.Marshal(m)
 			if err != nil {
 				er := fmt.Errorf("error: failed to generate json for host in schemaGenerated: %v", err)
 				log.Printf("%v\n", er)
 				os.Exit(1)
 			}
 
+			// Create the hash for the data for the host node.
 			hash := func() [32]byte {
 				sns := a.nodeMapToSlice(n)
 
-				js, err := json.Marshal(sns)
+				b, err := cbor.Marshal(sns)
 				if err != nil {
 					err := fmt.Errorf("error: authSchema, json for hash:  %v", err)
 					log.Printf("%v\n", err)
 					return [32]byte{}
 				}
 
-				hash := sha256.Sum256(js)
+				hash := sha256.Sum256(b)
 				return hash
 			}()
 
+			// Store both the cbor marshaled data and the hash in a structure.
 			nd := NodeDataWithHash{
-				Data: b,
-				// TODO: Also add the hash here.
-				// Hash: [32]byte,
+				Data: cb,
 				Hash: hash,
 			}
 
+			// and then store the cbor encoded data and the hash in the generated map.
 			a.schemaGenerated.NodeMap[n] = nd
 
 		}

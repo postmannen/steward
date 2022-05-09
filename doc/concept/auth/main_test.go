@@ -2,12 +2,13 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"testing"
+
+	"github.com/fxamacker/cbor/v2"
 )
 
 // Set the default logging functionality of the package to false.
@@ -25,7 +26,7 @@ func TestACLSingleNode(t *testing.T) {
 	// --- TESTS ---
 
 	mapOfFromNodeCommands := make(map[node]map[command]struct{})
-	err := json.Unmarshal(c.authorization.authSchema.schemaGenerated.NodeMap["ship101"].Data, &mapOfFromNodeCommands)
+	err := cbor.Unmarshal(c.authorization.authSchema.schemaGenerated.NodeMap["ship101"].Data, &mapOfFromNodeCommands)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +82,7 @@ func TestACLWithGroups(t *testing.T) {
 	// }
 
 	mapOfFromNodeCommands := make(map[node]map[command]struct{})
-	err := json.Unmarshal(c.authorization.authSchema.schemaGenerated.NodeMap["ship101"].Data, &mapOfFromNodeCommands)
+	err := cbor.Unmarshal(c.authorization.authSchema.schemaGenerated.NodeMap["ship101"].Data, &mapOfFromNodeCommands)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +130,7 @@ func TestACLSingleNodeAndNodeGroup(t *testing.T) {
 	// --- TESTS ---
 
 	mapOfFromNodeCommands := make(map[node]map[command]struct{})
-	err := json.Unmarshal(c.authorization.authSchema.schemaGenerated.NodeMap["ship101"].Data, &mapOfFromNodeCommands)
+	err := cbor.Unmarshal(c.authorization.authSchema.schemaGenerated.NodeMap["ship101"].Data, &mapOfFromNodeCommands)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,8 +242,9 @@ func TestHash(t *testing.T) {
 	c.authorization.authSchema.groupNodesAddNode("grp_nodes_ships", "ship101")
 	c.authorization.authSchema.aclAdd("grp_nodes_ships", "admin", "HEN")
 
-	hash := [32]uint8{0xe6, 0xe9, 0xf3, 0x25, 0x36, 0x48, 0x53, 0x4, 0xb4, 0x9a, 0xfd, 0x7f, 0x53, 0x85, 0x4c, 0x95, 0x62, 0xa9, 0x49, 0x23, 0x25, 0x1c, 0xee, 0xc5, 0x3b, 0xf5, 0xd5, 0x3, 0xf7, 0x9e, 0xb7, 0x3c}
+	hash := [32]uint8{0x70, 0xac, 0xe, 0xf5, 0x98, 0x1e, 0x82, 0xe0, 0xb6, 0x5b, 0xc7, 0xd8, 0xa2, 0xf4, 0xa2, 0x30, 0xb2, 0xb8, 0x42, 0x5c, 0x4, 0xc, 0xce, 0x8d, 0xcc, 0x7a, 0xa1, 0xa3, 0xb7, 0xb9, 0x2c, 0xa8}
 	value := c.authorization.authSchema.schemaGenerated.NodeMap["ship101"].Hash
+	fmt.Printf("%#v\n", c.authorization.authSchema.schemaGenerated.NodeMap["ship101"].Hash)
 
 	if bytes.Equal(hash[:], value[:]) == false {
 		t.Fatalf(" \U0001F631  [FAILED]: hash mismatch")
