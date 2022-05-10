@@ -100,6 +100,177 @@ func TestACLWithGroups(t *testing.T) {
 
 }
 
+func TestACLNodesGroupDeleteNode(t *testing.T) {
+	if !*logging {
+		log.SetOutput(io.Discard)
+	}
+
+	c := newCentralAuth()
+
+	const (
+		grp_nodes_operators      = "grp_nodes_operators"
+		grp_nodes_ships          = "grp_nodes_ships"
+		grp_commands_commandset1 = "grp_commands_commandset1"
+	)
+
+	c.authorization.authSchema.groupNodesAddNode(grp_nodes_operators, "operator1")
+	c.authorization.authSchema.groupNodesAddNode(grp_nodes_operators, "operator2")
+
+	c.authorization.authSchema.groupNodesAddNode(grp_nodes_ships, "ship100")
+	c.authorization.authSchema.groupNodesAddNode(grp_nodes_ships, "ship101")
+
+	c.authorization.authSchema.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
+	c.authorization.authSchema.groupCommandsAddCommand(grp_commands_commandset1, "date")
+
+	c.authorization.authSchema.aclAdd(grp_nodes_ships, "admin", "useradd -m kongen")
+	c.authorization.authSchema.aclAdd("ship101", "admin", "HORSE")
+
+	c.authorization.authSchema.aclAdd(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
+
+	c.authorization.authSchema.groupNodesDeleteNode(grp_nodes_ships, "ship101")
+
+	// Check that we still got the data for ship100.
+	{
+		mapOfFromNodeCommands := make(map[node]map[command]struct{})
+		err := cbor.Unmarshal(c.authorization.authSchema.schemaGenerated.GeneratedACLsMap["ship100"].Data, &mapOfFromNodeCommands)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if _, ok := mapOfFromNodeCommands["admin"]["useradd -m kongen"]; !ok {
+			t.Fatal(" \U0001F631  [FAILED]: missing map entry")
+		}
+	}
+
+	// Check that we don't have any data for ship101.
+	{
+		mapOfFromNodeCommands := make(map[node]map[command]struct{})
+		err := cbor.Unmarshal(c.authorization.authSchema.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if _, ok := mapOfFromNodeCommands["admin"]["useradd -m kongen"]; ok {
+			t.Fatal(" \U0001F631  [FAILED]: missing map entry")
+		}
+	}
+
+}
+
+func TestGroupNodesDeleteGroup(t *testing.T) {
+	if !*logging {
+		log.SetOutput(io.Discard)
+	}
+
+	c := newCentralAuth()
+
+	const (
+		grp_nodes_operators      = "grp_nodes_operators"
+		grp_nodes_ships          = "grp_nodes_ships"
+		grp_commands_commandset1 = "grp_commands_commandset1"
+	)
+
+	c.authorization.authSchema.groupNodesAddNode(grp_nodes_operators, "operator1")
+	c.authorization.authSchema.groupNodesAddNode(grp_nodes_operators, "operator2")
+
+	c.authorization.authSchema.groupNodesAddNode(grp_nodes_ships, "ship100")
+	c.authorization.authSchema.groupNodesAddNode(grp_nodes_ships, "ship101")
+
+	c.authorization.authSchema.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
+	c.authorization.authSchema.groupCommandsAddCommand(grp_commands_commandset1, "date")
+
+	c.authorization.authSchema.aclAdd(grp_nodes_ships, "admin", "useradd -m kongen")
+	c.authorization.authSchema.aclAdd("ship101", "admin", "HORSE")
+
+	c.authorization.authSchema.aclAdd(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
+
+	c.authorization.authSchema.groupNodesDeleteGroup(grp_nodes_operators)
+
+	// Check that we still got the data for other ACL's.
+	{
+		mapOfFromNodeCommands := make(map[node]map[command]struct{})
+		err := cbor.Unmarshal(c.authorization.authSchema.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if _, ok := mapOfFromNodeCommands["admin"]["HORSE"]; !ok {
+			t.Fatal(" \U0001F631  [FAILED]: missing map entry")
+		}
+	}
+
+	// Check that we don't have any data for grp_nodes_operators
+	{
+		mapOfFromNodeCommands := make(map[node]map[command]struct{})
+		err := cbor.Unmarshal(c.authorization.authSchema.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if _, ok := mapOfFromNodeCommands["admin"]["dmesg"]; ok {
+			t.Fatal(" \U0001F631  [FAILED]: foud map entry")
+		}
+	}
+
+}
+
+func TestGroupCommandDeleteGroup(t *testing.T) {
+	if !*logging {
+		log.SetOutput(io.Discard)
+	}
+
+	c := newCentralAuth()
+
+	const (
+		grp_nodes_operators      = "grp_nodes_operators"
+		grp_nodes_ships          = "grp_nodes_ships"
+		grp_commands_commandset1 = "grp_commands_commandset1"
+	)
+
+	c.authorization.authSchema.groupNodesAddNode(grp_nodes_operators, "operator1")
+	c.authorization.authSchema.groupNodesAddNode(grp_nodes_operators, "operator2")
+
+	c.authorization.authSchema.groupNodesAddNode(grp_nodes_ships, "ship100")
+	c.authorization.authSchema.groupNodesAddNode(grp_nodes_ships, "ship101")
+
+	c.authorization.authSchema.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
+	c.authorization.authSchema.groupCommandsAddCommand(grp_commands_commandset1, "date")
+
+	c.authorization.authSchema.aclAdd(grp_nodes_ships, "admin", "useradd -m kongen")
+	c.authorization.authSchema.aclAdd("ship101", "admin", "HORSE")
+
+	c.authorization.authSchema.aclAdd(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
+
+	c.authorization.authSchema.groupCommandDeleteGroup(grp_commands_commandset1)
+
+	// Check that we still got the data for other ACL's.
+	{
+		mapOfFromNodeCommands := make(map[node]map[command]struct{})
+		err := cbor.Unmarshal(c.authorization.authSchema.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if _, ok := mapOfFromNodeCommands["admin"]["HORSE"]; !ok {
+			t.Fatal(" \U0001F631  [FAILED]: missing map entry")
+		}
+	}
+
+	// Check that we don't have any data for grp_nodes_operators
+	{
+		mapOfFromNodeCommands := make(map[node]map[command]struct{})
+		err := cbor.Unmarshal(c.authorization.authSchema.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if _, ok := mapOfFromNodeCommands["admin"]["dmesg"]; ok {
+			t.Fatal(" \U0001F631  [FAILED]: foud map entry")
+		}
+	}
+
+}
+
 func TestACLGenerated(t *testing.T) {
 	if !*logging {
 		log.SetOutput(io.Discard)
