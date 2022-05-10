@@ -55,6 +55,7 @@ type command string
 type nodeGroup string
 type commandGroup string
 
+// schemaMain is the structure that holds the user editable parts for creating ACL's.
 type schemaMain struct {
 	ACLMap          map[node]map[node]map[command]struct{}
 	NodeGroupMap    map[nodeGroup]map[node]struct{}
@@ -71,6 +72,9 @@ func newSchemaMain() *schemaMain {
 	return &s
 }
 
+// schemaGenerated is the structure that holds all the generated ACL's
+// to be sent to nodes.
+// The ACL's here are generated from the schemaMain.ACLMap.
 type schemaGenerated struct {
 	ACLsToConvert    map[node]map[node]map[command]struct{}
 	GeneratedACLsMap map[node]NodeDataWithHash
