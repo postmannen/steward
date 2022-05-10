@@ -50,6 +50,16 @@ type authSchema struct {
 	validator       *validator.Validate
 }
 
+func newAuthSchema() *authSchema {
+	a := authSchema{
+		schemaMain:      newSchemaMain(),
+		schemaGenerated: newSchemaGenerated(),
+		validator:       validator.New(),
+	}
+
+	return &a
+}
+
 type node string
 type command string
 type nodeGroup string
@@ -77,38 +87,31 @@ func newSchemaMain() *schemaMain {
 // The ACL's here are generated from the schemaMain.ACLMap.
 type schemaGenerated struct {
 	ACLsToConvert    map[node]map[node]map[command]struct{}
-	GeneratedACLsMap map[node]NodeDataWithHash
+	GeneratedACLsMap map[node]HostACLsSerializedWithHash
 	mu               sync.Mutex
 }
 
 func newSchemaGenerated() *schemaGenerated {
 	s := schemaGenerated{
 		ACLsToConvert:    map[node]map[node]map[command]struct{}{},
-		GeneratedACLsMap: make(map[node]NodeDataWithHash),
+		GeneratedACLsMap: make(map[node]HostACLsSerializedWithHash),
 	}
 	return &s
 }
 
-func newAuthSchema() *authSchema {
-	a := authSchema{
-		schemaMain:      newSchemaMain(),
-		schemaGenerated: newSchemaGenerated(),
-		validator:       validator.New(),
-	}
-
-	return &a
-}
-
-// NodeDataWithHash is the serialized representation node specific value in the authSchema.
+// HostACLsSerializedWithHash holds the serialized representation node specific ACL's in the authSchema.
 // There is also a sha256 hash of the data.
-type NodeDataWithHash struct {
-	// data is all the auth data for a specific node encoded in json.
+type HostACLsSerializedWithHash struct {
+	// data is all the ACL's for a specific node serialized.
 	Data []byte
-	// hash is the sha256 hash of the data.
+	// hash is the sha256 hash of the ACL's.
+	// With maps the order are not guaranteed, so A sorted appearance
+	// of the ACL map for a host node is used when creating the hash,
+	// so the hash stays the same unless the ACL is changed.
 	Hash [32]byte
 }
 
-func (a *authSchema) convToActualNodeSlice(n node) []node {
+func (a *authSchema) nodeAsSlice(n node) []node {
 	nodes := []node{}
 
 	// Check if we are given a nodeGroup variable, and if we are, get all the
@@ -125,12 +128,12 @@ func (a *authSchema) convToActualNodeSlice(n node) []node {
 	return nodes
 }
 
-// convertToActualCommandSlice will convert the given argument into a slice representation.
+// commandAsSlice will convert the given argument into a slice representation.
 // If the argument is a group, then all the members of that group will be expanded into
 // the slice.
 // If the argument is not a group kind of value, then only a slice with that single
 // value is returned.
-func (a *authSchema) convertToActualCommandSlice(c command) []command {
+func (a *authSchema) commandAsSlice(c command) []command {
 	commands := []command{}
 
 	// Check if we are given a nodeGroup variable, and if we are, get all the
@@ -242,6 +245,9 @@ func (a *authSchema) aclDeleteSource(host node, source node) error {
 // nodes.
 // The result will be written to the schemaGenerated.ACLsToConvert map.
 func (a *authSchema) generateACLsForAllNodes() error {
+	a.schemaGenerated.mu.Lock()
+	defer a.schemaGenerated.mu.Unlock()
+
 	a.schemaGenerated.ACLsToConvert = make(map[node]map[node]map[command]struct{})
 
 	// Rangle all ACL's. Both for single hosts, and group of hosts.
@@ -287,13 +293,13 @@ func (a *authSchema) generateACLsForAllNodes() error {
 			}()
 
 			// Store both the cbor marshaled data and the hash in a structure.
-			nd := NodeDataWithHash{
+			hostSerialized := HostACLsSerializedWithHash{
 				Data: cb,
 				Hash: hash,
 			}
 
 			// and then store the cbor encoded data and the hash in the generated map.
-			a.schemaGenerated.GeneratedACLsMap[n] = nd
+			a.schemaGenerated.GeneratedACLsMap[n] = hostSerialized
 
 		}
 	}()

@@ -50,15 +50,15 @@ func (a *authParser) hostGroupOrSingle() parseFn {
 func (a *authParser) hostIsGroup() parseFn {
 	// fmt.Printf("%v is a grp type\n", a.currentHost)
 
-	hosts := a.authSchema.convToActualNodeSlice(a.currentHost)
+	hosts := a.authSchema.nodeAsSlice(a.currentHost)
 
 	for source, cmdMap := range a.authSchema.schemaMain.ACLMap[a.currentHost] {
 
 		for cmd, emptyStruct := range cmdMap {
-			cmdSlice := a.authSchema.convertToActualCommandSlice(cmd)
+			cmdSlice := a.authSchema.commandAsSlice(cmd)
 
 			// Expand eventual groups, so we use real fromNode nodenames in ACL for nodes.
-			sourceNodes := a.authSchema.convToActualNodeSlice(source)
+			sourceNodes := a.authSchema.nodeAsSlice(source)
 			for _, sourceNode := range sourceNodes {
 				for _, host := range hosts {
 
@@ -91,10 +91,10 @@ func (a *authParser) hostIsNotGroup() parseFn {
 	for source, cmdMap := range a.authSchema.schemaMain.ACLMap[a.currentHost] {
 
 		for cmd, emptyStruct := range cmdMap {
-			cmdSlice := a.authSchema.convertToActualCommandSlice(cmd)
+			cmdSlice := a.authSchema.commandAsSlice(cmd)
 
 			// Expand eventual groups, so we use real fromNode nodenames in ACL for nodes.
-			sourceNodes := a.authSchema.convToActualNodeSlice(source)
+			sourceNodes := a.authSchema.nodeAsSlice(source)
 			for _, sourceNode := range sourceNodes {
 
 				for _, cm := range cmdSlice {
