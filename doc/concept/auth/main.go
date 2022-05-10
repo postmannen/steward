@@ -138,7 +138,7 @@ func (a *authSchema) commandAsSlice(c command) []command {
 
 	// Check if we are given a nodeGroup variable, and if we are, get all the
 	// nodes for that group.
-	if strings.HasPrefix(string(c), "grp_cmds_") {
+	if strings.HasPrefix(string(c), "grp_commands_") {
 		for cmd := range a.schemaMain.CommandGroupMap[commandGroup(c)] {
 			commands = append(commands, cmd)
 		}
@@ -415,9 +415,9 @@ func (a *authSchema) groupNodesDeleteGroup(ng nodeGroup) {
 // groupCommandsAddCommand adds a command to a group. If the group does
 // not exist it will be created.
 func (a *authSchema) groupCommandsAddCommand(cg commandGroup, c command) {
-	err := a.validator.Var(cg, "startswith=grp_cmds_")
+	err := a.validator.Var(cg, "startswith=grp_commands_")
 	if err != nil {
-		log.Printf("error: group name do not start with grp_cmds_ : %v\n", err)
+		log.Printf("error: group name do not start with grp_commands_ : %v\n", err)
 		return
 	}
 

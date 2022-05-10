@@ -49,9 +49,9 @@ func TestACLWithGroups(t *testing.T) {
 	c := newCentralAuth()
 
 	const (
-		grp_nodes_operators  = "grp_nodes_operators"
-		grp_nodes_ships      = "grp_nodes_ships"
-		grp_cmds_commandset1 = "grp_cmds_commandset1"
+		grp_nodes_operators      = "grp_nodes_operators"
+		grp_nodes_ships          = "grp_nodes_ships"
+		grp_commands_commandset1 = "grp_commands_commandset1"
 	)
 
 	c.authorization.authSchema.groupNodesAddNode(grp_nodes_operators, "operator1")
@@ -60,13 +60,13 @@ func TestACLWithGroups(t *testing.T) {
 	c.authorization.authSchema.groupNodesAddNode(grp_nodes_ships, "ship100")
 	c.authorization.authSchema.groupNodesAddNode(grp_nodes_ships, "ship101")
 
-	c.authorization.authSchema.groupCommandsAddCommand(grp_cmds_commandset1, "dmesg")
-	c.authorization.authSchema.groupCommandsAddCommand(grp_cmds_commandset1, "date")
+	c.authorization.authSchema.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
+	c.authorization.authSchema.groupCommandsAddCommand(grp_commands_commandset1, "date")
 
 	c.authorization.authSchema.aclAdd(grp_nodes_ships, "admin", "useradd -m kongen")
 	c.authorization.authSchema.aclAdd("ship101", "admin", "HORSE")
 
-	c.authorization.authSchema.aclAdd(grp_nodes_ships, grp_nodes_operators, grp_cmds_commandset1)
+	c.authorization.authSchema.aclAdd(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
 
 	// --- Tests ---
 
@@ -112,7 +112,7 @@ func TestACLWithGroups(t *testing.T) {
 
 }
 
-func TestACLSingleNodeAndNodeGroup(t *testing.T) {
+func TestACLGenerated(t *testing.T) {
 	if !*logging {
 		log.SetOutput(io.Discard)
 	}
@@ -123,6 +123,10 @@ func TestACLSingleNodeAndNodeGroup(t *testing.T) {
 
 	c.authorization.authSchema.groupNodesAddNode("grp_nodes_ships", "ship101")
 	c.authorization.authSchema.aclAdd("grp_nodes_ships", "admin", "HEN")
+
+	c.authorization.authSchema.groupCommandsAddCommand("grp_commands_test", "echo")
+	c.authorization.authSchema.groupCommandsAddCommand("grp_commands_test", "dmesg")
+	c.authorization.authSchema.aclAdd("grp_nodes_ships", "admin", "grp_commands_test")
 
 	// --- TESTS ---
 
@@ -142,11 +146,20 @@ func TestACLSingleNodeAndNodeGroup(t *testing.T) {
 
 	if _, ok := mapOfFromNodeCommands["admin"]["HEN"]; !ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: HEN: Content of Map: %v", mapOfFromNodeCommands)
+	}
+
+	if _, ok := mapOfFromNodeCommands["admin"]["echo"]; !ok {
+		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: echo: Content of Map: %v", mapOfFromNodeCommands)
+	}
+
+	if _, ok := mapOfFromNodeCommands["admin"]["dmesg"]; !ok {
+		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: echo: Content of Map: %v", mapOfFromNodeCommands)
 
 	}
+
 }
 
-func TestSchemaMainACLMap(t *testing.T) {
+func TestACLSchemaMainACLMap(t *testing.T) {
 	if !*logging {
 		log.SetOutput(io.Discard)
 	}
@@ -225,7 +238,7 @@ func TestSchemaMainACLMap(t *testing.T) {
 	// --- TESTS ---
 }
 
-func TestHash(t *testing.T) {
+func TestACLHash(t *testing.T) {
 	if !*logging {
 		log.SetOutput(io.Discard)
 	}
