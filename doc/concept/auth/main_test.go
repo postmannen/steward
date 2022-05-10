@@ -68,18 +68,6 @@ func TestACLWithGroups(t *testing.T) {
 
 	c.authorization.authSchema.aclAdd(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
 
-	// --- Tests ---
-
-	//if _, ok := c.authorization.authSchema.schemaMain.ACLMap[grp_nodes_ships][grp_nodes_operators][grp_cmds_commandset1]; !ok {
-	//	t.Fatal(" \U0001F631  [FAILED]: missing map entry")
-	//}
-
-	// Also check the generated data for the nodes.
-
-	// if _, ok := c.authorization.authSchema.schemaMain.ACLMap[grp_nodes_ships]["admin"]["useradd -m kongen"]; !ok {
-	// 	t.Fatal(" \U0001F631  [FAILED]: missing map entry")
-	// }
-
 	mapOfFromNodeCommands := make(map[node]map[command]struct{})
 	err := cbor.Unmarshal(c.authorization.authSchema.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 	if err != nil {
@@ -128,6 +116,8 @@ func TestACLGenerated(t *testing.T) {
 	c.authorization.authSchema.groupCommandsAddCommand("grp_commands_test", "dmesg")
 	c.authorization.authSchema.aclAdd("grp_nodes_ships", "admin", "grp_commands_test")
 
+	c.authorization.authSchema.groupCommandsDeleteCommand("grp_commands_test", "echo")
+
 	// --- TESTS ---
 
 	mapOfFromNodeCommands := make(map[node]map[command]struct{})
@@ -148,8 +138,8 @@ func TestACLGenerated(t *testing.T) {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: HEN: Content of Map: %v", mapOfFromNodeCommands)
 	}
 
-	if _, ok := mapOfFromNodeCommands["admin"]["echo"]; !ok {
-		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: echo: Content of Map: %v", mapOfFromNodeCommands)
+	if _, ok := mapOfFromNodeCommands["admin"]["echo"]; ok {
+		t.Fatalf(" \U0001F631  [FAILED]: should not contain map entry: echo: Content of Map: %v", mapOfFromNodeCommands)
 	}
 
 	if _, ok := mapOfFromNodeCommands["admin"]["dmesg"]; !ok {

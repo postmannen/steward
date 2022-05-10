@@ -378,6 +378,12 @@ func (a *authSchema) groupNodesAddNode(ng nodeGroup, n node) {
 
 	// fmt.Printf(" * groupNodesAddNode: After adding to group node looks like: %+v\n", a.schemaMain.NodeGroupMap)
 
+	err = a.generateACLsForAllNodes()
+	if err != nil {
+		er := fmt.Errorf("error: groupNodesAddNode: %v", err)
+		log.Printf("%v\n", er)
+	}
+
 }
 
 // groupNodesDeleteNode deletes a node from a group in the map.
@@ -393,6 +399,12 @@ func (a *authSchema) groupNodesDeleteNode(ng nodeGroup, n node) {
 
 	//fmt.Printf(" * After deleting nodeGroup map looks like: %+v\n", a.schemaMain.NodeGroupMap)
 
+	err := a.generateACLsForAllNodes()
+	if err != nil {
+		er := fmt.Errorf("error: groupNodesDeleteNode: %v", err)
+		log.Printf("%v\n", er)
+	}
+
 }
 
 // groupNodesDeleteGroup deletes a nodeGroup from map.
@@ -407,6 +419,12 @@ func (a *authSchema) groupNodesDeleteGroup(ng nodeGroup) {
 	delete(a.schemaMain.NodeGroupMap, ng)
 
 	//fmt.Printf(" * After deleting nodeGroup map looks like: %+v\n", a.schemaMain.NodeGroupMap)
+
+	err := a.generateACLsForAllNodes()
+	if err != nil {
+		er := fmt.Errorf("error: groupNodesDeleteGroup: %v", err)
+		log.Printf("%v\n", er)
+	}
 
 }
 
@@ -431,6 +449,12 @@ func (a *authSchema) groupCommandsAddCommand(cg commandGroup, c command) {
 
 	//fmt.Printf(" * groupCommandsAddCommand: After adding command=%v to command group=%v map looks like: %+v\n", c, cg, a.schemaMain.CommandGroupMap)
 
+	err = a.generateACLsForAllNodes()
+	if err != nil {
+		er := fmt.Errorf("error: groupCommandsAddCommand: %v", err)
+		log.Printf("%v\n", er)
+	}
+
 }
 
 // groupCommandsDeleteCommand deletes a command from a group in the map.
@@ -446,6 +470,12 @@ func (a *authSchema) groupCommandsDeleteCommand(cg commandGroup, c command) {
 
 	//fmt.Printf(" * After deleting command=%v from group=%v map looks like: %+v\n", c, cg, a.schemaMain.CommandGroupMap)
 
+	err := a.generateACLsForAllNodes()
+	if err != nil {
+		er := fmt.Errorf("error: groupCommandsDeleteCommand: %v", err)
+		log.Printf("%v\n", er)
+	}
+
 }
 
 // groupCommandDeleteGroup deletes a commandGroup map.
@@ -460,6 +490,12 @@ func (a *authSchema) groupCommandDeleteGroup(cg commandGroup) {
 	delete(a.schemaMain.CommandGroupMap, cg)
 
 	//fmt.Printf(" * After deleting commandGroup=%v map looks like: %+v\n", cg, a.schemaMain.CommandGroupMap)
+
+	err := a.generateACLsForAllNodes()
+	if err != nil {
+		er := fmt.Errorf("error: groupCommandDeleteGroup: %v", err)
+		log.Printf("%v\n", er)
+	}
 
 }
 
