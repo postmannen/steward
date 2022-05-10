@@ -3,8 +3,10 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"io"
 	"log"
+	"sync"
 	"testing"
 
 	"github.com/fxamacker/cbor/v2"
@@ -242,4 +244,47 @@ func TestHash(t *testing.T) {
 	if bytes.Equal(hash[:], value[:]) == false {
 		t.Fatalf(" \U0001F631  [FAILED]: hash mismatch")
 	}
+}
+
+func TestACLConcurrent(t *testing.T) {
+	c := newCentralAuth()
+
+	// -----------General testing and creation of some data----------------
+
+	// Start concurrent updating of the schema.
+	var wg sync.WaitGroup
+	for i := 0; i < 4000; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			c.authorization.authSchema.aclAdd("ship1", "operator2", "rm -rf")
+			c.authorization.authSchema.aclAdd("ship1", "operator1", "ls -lt")
+			c.authorization.authSchema.aclAdd("ship1", "operator1", "ls -lt")
+			c.authorization.authSchema.aclAdd("ship1", "operator2", "ls -l")
+			c.authorization.authSchema.aclAdd("ship3", "operator3", "ls -lt")
+			c.authorization.authSchema.aclAdd("ship3", "operator3", "vi /etc/hostname")
+			c.authorization.authSchema.aclDeleteCommand("ship3", "operator2", "ls -lt")
+			c.authorization.authSchema.aclDeleteSource("ship3", "operator3")
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// fmt.Println("----schemaMain------")
+			c.authorization.authSchema.schemaMain.mu.Lock()
+			for _, v := range c.authorization.authSchema.schemaMain.ACLMap {
+				_ = fmt.Sprintf("%+v\n", v)
+			}
+			c.authorization.authSchema.schemaMain.mu.Unlock()
+
+			// fmt.Println("----schemaGenerated------")
+			c.authorization.authSchema.schemaGenerated.mu.Lock()
+			for k, v := range c.authorization.authSchema.schemaGenerated.GeneratedACLsMap {
+				_ = fmt.Sprintf("node: %v, NodeDataSerialized: %v\n", k, string(v.Data))
+				_ = fmt.Sprintf("node: %v, Hash: %v\n", k, v.Hash)
+			}
+			c.authorization.authSchema.schemaGenerated.mu.Unlock()
+		}()
+	}
+	wg.Wait()
 }
