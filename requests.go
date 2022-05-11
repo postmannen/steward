@@ -2060,9 +2060,9 @@ func (m methodREQPublicKeysGet) handler(proc process, message Message, node stri
 		case <-ctx.Done():
 		// case out := <-outCh:
 		case <-outCh:
-			proc.centralAuth.nodePublicKeys.mu.Lock()
-			b, err := json.Marshal(proc.centralAuth.nodePublicKeys.KeyMap)
-			proc.centralAuth.nodePublicKeys.mu.Unlock()
+			proc.centralAuth.keys.nodePublicKeys.mu.Lock()
+			b, err := json.Marshal(proc.centralAuth.keys.nodePublicKeys.KeyMap)
+			proc.centralAuth.keys.nodePublicKeys.mu.Unlock()
 			if err != nil {
 				er := fmt.Errorf("error: REQPublicKeysGet, failed to marshal keys map: %v", err)
 				proc.errorKernel.errSend(proc, message, er)
@@ -2178,22 +2178,22 @@ func (m methodREQPublicKeysAllow) handler(proc process, message Message, node st
 		select {
 		case <-ctx.Done():
 		case <-outCh:
-			proc.centralAuth.nodeNotAckedPublicKeys.mu.Lock()
-			defer proc.centralAuth.nodeNotAckedPublicKeys.mu.Unlock()
+			proc.centralAuth.keys.nodeNotAckedPublicKeys.mu.Lock()
+			defer proc.centralAuth.keys.nodeNotAckedPublicKeys.mu.Unlock()
 
 			for _, n := range message.MethodArgs {
-				key, ok := proc.centralAuth.nodeNotAckedPublicKeys.KeyMap[Node(n)]
+				key, ok := proc.centralAuth.keys.nodeNotAckedPublicKeys.KeyMap[Node(n)]
 				if ok {
 					// Store/update the node and public key on the allowed pubKey map.
-					proc.centralAuth.nodePublicKeys.mu.Lock()
-					proc.centralAuth.nodePublicKeys.KeyMap[Node(n)] = key
-					proc.centralAuth.nodePublicKeys.mu.Unlock()
+					proc.centralAuth.keys.nodePublicKeys.mu.Lock()
+					proc.centralAuth.keys.nodePublicKeys.KeyMap[Node(n)] = key
+					proc.centralAuth.keys.nodePublicKeys.mu.Unlock()
 
 					// Add key to persistent storage.
-					proc.centralAuth.dbUpdatePublicKey(string(n), key)
+					proc.centralAuth.keys.dbUpdatePublicKey(string(n), key)
 
 					// Delete the key from the NotAcked map
-					delete(proc.centralAuth.nodeNotAckedPublicKeys.KeyMap, Node(n))
+					delete(proc.centralAuth.keys.nodeNotAckedPublicKeys.KeyMap, Node(n))
 
 					er := fmt.Errorf("info: REQPublicKeysAllow : allowed new/updated public key for %v to allowed public key map", n)
 					proc.errorKernel.infoSend(proc, message, er)

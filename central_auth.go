@@ -14,7 +14,21 @@ import (
 // centralAuth holds the logic related to handling public keys and auth maps.
 type centralAuth struct {
 	// schema           map[Node]map[argsString]signatureBase32
-	authorization          *authorization
+	authorization *authorization
+	keys          *keys
+}
+
+// newCentralAuth will return a new and prepared *centralAuth
+func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *centralAuth {
+	c := centralAuth{
+		authorization: newAuthorization(),
+		keys:          newKeys(configuration, errorKernel),
+	}
+
+	return &c
+}
+
+type keys struct {
 	nodePublicKeys         *nodePublicKeys
 	nodeNotAckedPublicKeys *nodeNotAckedPublicKeys
 	configuration          *Configuration
@@ -23,10 +37,9 @@ type centralAuth struct {
 	errorKernel            *errorKernel
 }
 
-// newCentralAuth will return a prepared *centralAuth with input values set.
-func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *centralAuth {
-	c := centralAuth{
-		authorization: newAuthorization(),
+// newKeys will return a prepared *keys with input values set.
+func newKeys(configuration *Configuration, errorKernel *errorKernel) *keys {
+	c := keys{
 		// schema:           make(map[Node]map[argsString]signatureBase32),
 		nodePublicKeys:         newNodePublicKeys(configuration),
 		nodeNotAckedPublicKeys: newNodeNotAckedPublicKeys(configuration),
@@ -64,7 +77,7 @@ func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *cen
 }
 
 // addPublicKey to the db if the node do not exist, or if it is a new value.
-func (c *centralAuth) addPublicKey(proc process, msg Message) {
+func (c *keys) addPublicKey(proc process, msg Message) {
 
 	// TODO: When receiviving a new or different keys for a node we should
 	// have a service with it's own storage for these keys, and an operator
@@ -156,7 +169,7 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 // }
 
 //dbUpdatePublicKey will update the public key for a node in the db.
-func (c *centralAuth) dbUpdatePublicKey(node string, value []byte) error {
+func (c *keys) dbUpdatePublicKey(node string, value []byte) error {
 	err := c.db.Update(func(tx *bolt.Tx) error {
 		//Create a bucket
 		bu, err := tx.CreateBucketIfNotExists([]byte(c.bucketNamePublicKeys))
@@ -195,7 +208,7 @@ func (c *centralAuth) dbUpdatePublicKey(node string, value []byte) error {
 
 // dumpBucket will dump out all they keys and values in the
 // specified bucket, and return a sorted []samDBValue
-func (c *centralAuth) dbDumpPublicKey() (map[Node][]byte, error) {
+func (c *keys) dbDumpPublicKey() (map[Node][]byte, error) {
 	m := make(map[Node][]byte)
 
 	err := c.db.View(func(tx *bolt.Tx) error {
