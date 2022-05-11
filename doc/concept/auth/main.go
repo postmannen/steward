@@ -45,8 +45,9 @@ func newAuthorization() *authorization {
 // authSchema holds both the main schema to update by operators,
 // and also the indvidual node generated data based on the main schema.
 type authSchema struct {
-	//         node      fromNode   commands
-	schemaMain      *schemaMain
+	// Holds the editable structures for ACL handling.
+	schemaMain *schemaMain
+	// Holds the generated based on the editable structures for ACL handling.
 	schemaGenerated *schemaGenerated
 	validator       *validator.Validate
 }
@@ -112,6 +113,11 @@ type HostACLsSerializedWithHash struct {
 	Hash [32]byte
 }
 
+// commandAsSlice will convert the given argument into a slice representation.
+// If the argument is a group, then all the members of that group will be expanded into
+// the slice.
+// If the argument is not a group kind of value, then only a slice with that single
+// value is returned.
 func (a *authSchema) nodeAsSlice(n node) []node {
 	nodes := []node{}
 
@@ -324,9 +330,9 @@ type sourceNodeCommands struct {
 	Commands []command
 }
 
-// nodeMapToSlice will return a fromNode structure, with the map fromNode part
+// nodeMapToSlice will return a sourceNode structure, with the map sourceNode part
 // of the map converted into a slice. Both the from node, and the commands
-// defined for each fromNode are sorted.
+// defined for each sourceNode are sorted.
 // This function is used when creating the hash of the nodeMap since we can not
 // guarantee the order of a hash map, but we can with a slice.
 func (a *authSchema) nodeMapToSlice(host node) sourceNode {
@@ -343,7 +349,7 @@ func (a *authSchema) nodeMapToSlice(host node) sourceNode {
 			srcC.Commands = append(srcC.Commands, cmd)
 		}
 
-		// sort.Strings(fnc.Commands)
+		// Sort all the commands.
 		sort.SliceStable(srcC.Commands, func(i, j int) bool {
 			return srcC.Commands[i] < srcC.Commands[j]
 		})
@@ -351,6 +357,7 @@ func (a *authSchema) nodeMapToSlice(host node) sourceNode {
 		srcNodes.SourceCommands = append(srcNodes.SourceCommands, srcC)
 	}
 
+	// Sort all the source nodes.
 	sort.SliceStable(srcNodes.SourceCommands, func(i, j int) bool {
 		return srcNodes.SourceCommands[i].Source < srcNodes.SourceCommands[j].Source
 	})
