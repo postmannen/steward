@@ -2072,7 +2072,7 @@ func (m methodREQPublicKeysGet) handler(proc process, message Message, node stri
 				er := fmt.Errorf("error: REQPublicKeysGet, failed to marshal keys map: %v", err)
 				proc.errorKernel.errSend(proc, message, er)
 			}
-
+			fmt.Printf("\n * SENDING KEYS TO NODE=%v\n", message.FromNode)
 			newReplyMessage(proc, message, b)
 		}
 	}()
@@ -2150,6 +2150,8 @@ func (m methodREQPublicKeysToNode) handler(proc process, message Message, node s
 }
 
 // ----
+
+// TODO: We should also add a request method methodREQPublicKeysRevoke
 
 type methodREQPublicKeysAllow struct {
 	event Event
