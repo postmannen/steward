@@ -2061,6 +2061,11 @@ func (m methodREQPublicKeysGet) handler(proc process, message Message, node stri
 		// case out := <-outCh:
 		case <-outCh:
 			proc.centralAuth.keys.nodePublicKeys.mu.Lock()
+			// TODO: We should probably create a hash of the current map content,
+			// store it alongside the KeyMap, and send both the KeyMap and hash
+			// back. We can then later send that hash when asking for keys, compare
+			// it with the current one for the KeyMap, and know if we need to send
+			// and update back to the node who published the request to here.
 			b, err := json.Marshal(proc.centralAuth.keys.nodePublicKeys.KeyMap)
 			proc.centralAuth.keys.nodePublicKeys.mu.Unlock()
 			if err != nil {
@@ -2154,7 +2159,11 @@ func (m methodREQPublicKeysAllow) getKind() Event {
 	return m.event
 }
 
-// Handler to get all the public ed25519 keys from a central server.
+// Handler to allow new public keys into the database on central auth.
+// Nodes will send the public key in the REQHello messages. When they
+// are recived on the central server they will be put into a temp key
+// map, and we need to acknowledge them before they are moved into the
+// main key map, and then allowed to be sent out to other nodes.
 func (m methodREQPublicKeysAllow) handler(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)

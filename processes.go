@@ -313,6 +313,10 @@ func (s startup) pubREQPublicKeysGet(p process) {
 		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.PublicKeysGetInterval))
 		for {
 
+			// TODO: We could send with the hash of the currently stored keys,
+			// so we would know on the subscriber at central if it should send
+			// and update with new keys back.
+
 			m := Message{
 				FileName:  "publickeysget.log",
 				Directory: "publickeysget",
