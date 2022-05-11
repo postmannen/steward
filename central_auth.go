@@ -14,6 +14,7 @@ import (
 // centralAuth holds the logic related to handling public keys and auth maps.
 type centralAuth struct {
 	// schema           map[Node]map[argsString]signatureBase32
+	authorization          *authorization
 	nodePublicKeys         *nodePublicKeys
 	nodeNotAckedPublicKeys *nodeNotAckedPublicKeys
 	configuration          *Configuration
@@ -25,6 +26,7 @@ type centralAuth struct {
 // newCentralAuth will return a prepared *centralAuth with input values set.
 func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *centralAuth {
 	c := centralAuth{
+		authorization: newAuthorization(),
 		// schema:           make(map[Node]map[argsString]signatureBase32),
 		nodePublicKeys:         newNodePublicKeys(configuration),
 		nodeNotAckedPublicKeys: newNodeNotAckedPublicKeys(configuration),
