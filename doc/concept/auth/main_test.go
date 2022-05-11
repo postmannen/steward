@@ -462,3 +462,57 @@ func TestACLConcurrent(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestExportACLs(t *testing.T) {
+	const (
+		grp_nodes_operators      = "grp_nodes_operators"
+		grp_nodes_ships          = "grp_nodes_ships"
+		grp_commands_commandset1 = "grp_commands_commandset1"
+	)
+
+	c := newCentralAuth()
+
+	c.authorization.authSchema.groupNodesAddNode(grp_nodes_operators, "operator1")
+	c.authorization.authSchema.groupNodesAddNode(grp_nodes_operators, "operator2")
+
+	c.authorization.authSchema.groupNodesAddNode(grp_nodes_ships, "ship100")
+	c.authorization.authSchema.groupNodesAddNode(grp_nodes_ships, "ship101")
+
+	c.authorization.authSchema.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
+	c.authorization.authSchema.groupCommandsAddCommand(grp_commands_commandset1, "date")
+
+	c.authorization.authSchema.aclAdd(grp_nodes_ships, "admin", "useradd -m kongen")
+	c.authorization.authSchema.aclAdd("ship101", "admin", "HORSE")
+
+	c.authorization.authSchema.aclAdd(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
+
+	js, err := c.authorization.authSchema.exportACLs()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	want := `{"grp_nodes_ships":{"admin":{"useradd -m kongen":{}},"grp_nodes_operators":{"grp_commands_commandset1":{}}},"ship101":{"admin":{"HORSE":{}}}}`
+
+	if string(js) != string(want) {
+		t.Fatalf("error: export does not match with what we want\n")
+	}
+}
+
+func TestImportACLs(t *testing.T) {
+	// js := `{"grp_nodes_ships":{"admin":{"useradd -m kongen":{}},"grp_nodes_operators":{"grp_commands_commandset1":{}}},"ship101":{"admin":{"HORSE":{}}}`
+
+	js := []byte{0x7b, 0x22, 0x67, 0x72, 0x70, 0x5f, 0x6e, 0x6f, 0x64, 0x65, 0x73, 0x5f, 0x73, 0x68, 0x69, 0x70, 0x73, 0x22, 0x3a, 0x7b, 0x22, 0x61, 0x64, 0x6d, 0x69, 0x6e, 0x22, 0x3a, 0x7b, 0x22, 0x75, 0x73, 0x65, 0x72, 0x61, 0x64, 0x64, 0x20, 0x2d, 0x6d, 0x20, 0x6b, 0x6f, 0x6e, 0x67, 0x65, 0x6e, 0x22, 0x3a, 0x7b, 0x7d, 0x7d, 0x2c, 0x22, 0x67, 0x72, 0x70, 0x5f, 0x6e, 0x6f, 0x64, 0x65, 0x73, 0x5f, 0x6f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x6f, 0x72, 0x73, 0x22, 0x3a, 0x7b, 0x22, 0x67, 0x72, 0x70, 0x5f, 0x63, 0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x73, 0x5f, 0x63, 0x6f, 0x6d, 0x6d, 0x61, 0x6e, 0x64, 0x73, 0x65, 0x74, 0x31, 0x22, 0x3a, 0x7b, 0x7d, 0x7d, 0x7d, 0x2c, 0x22, 0x73, 0x68, 0x69, 0x70, 0x31, 0x30, 0x31, 0x22, 0x3a, 0x7b, 0x22, 0x61, 0x64, 0x6d, 0x69, 0x6e, 0x22, 0x3a, 0x7b, 0x22, 0x48, 0x4f, 0x52, 0x53, 0x45, 0x22, 0x3a, 0x7b, 0x7d, 0x7d, 0x7d, 0x7d}
+
+	want := `map[grp_nodes_ships:map[admin:map[useradd -m kongen:{}] grp_nodes_operators:map[grp_commands_commandset1:{}]] ship101:map[admin:map[HORSE:{}]]]`
+
+	c := newCentralAuth()
+
+	err := c.authorization.authSchema.importACLs(js)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if fmt.Sprintf("%v", c.authorization.authSchema.schemaMain.ACLMap) != want {
+		t.Fatalf("error: import does not match with what we want\n")
+	}
+}

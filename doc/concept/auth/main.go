@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -499,26 +500,37 @@ func (a *authSchema) groupCommandDeleteGroup(cg commandGroup) {
 
 }
 
-// printMaps will print the auth maps for testing output.
-func (c *centralAuth) printMaps() {
-	{
-		fmt.Println("\n-----------------PRINTING OUT MAPS------------------------")
+// exportACLs will export the current content of the main ACLMap in JSON format.
+func (a *authSchema) exportACLs() ([]byte, error) {
 
-		fmt.Println("----schemaMain------")
-		c.authorization.authSchema.schemaMain.mu.Lock()
-		for k, v := range c.authorization.authSchema.schemaMain.ACLMap {
-			fmt.Printf("%v: %+v\n", k, v)
-		}
-		c.authorization.authSchema.schemaMain.mu.Unlock()
+	a.schemaMain.mu.Lock()
+	defer a.schemaMain.mu.Unlock()
 
-		fmt.Println("----schemaGenerated------")
-		c.authorization.authSchema.schemaGenerated.mu.Lock()
-		for k, v := range c.authorization.authSchema.schemaGenerated.GeneratedACLsMap {
-			fmt.Printf("node: %v, NodeDataSerialized: %v\n", k, string(v.Data))
-			fmt.Printf("node: %v, Hash: %v\n", k, v.Hash)
-		}
-		c.authorization.authSchema.schemaGenerated.mu.Unlock()
+	js, err := json.Marshal(a.schemaMain.ACLMap)
+	if err != nil {
+		return nil, fmt.Errorf("error: failed to marshal schemaMain.ACLMap: %v", err)
+
 	}
-	fmt.Println("-----------------END OF PRINTING OUT MAPS------------------------")
-	fmt.Println()
+
+	return js, nil
+
+}
+
+// importACLs will import and replace all current ACL's with the ACL's provided as input.
+func (a *authSchema) importACLs(js []byte) error {
+
+	a.schemaMain.mu.Lock()
+	defer a.schemaMain.mu.Unlock()
+
+	m := make(map[node]map[node]map[command]struct{})
+
+	err := json.Unmarshal(js, &m)
+	if err != nil {
+		return fmt.Errorf("error: failed to unmarshal into ACLMap: %v", err)
+	}
+
+	a.schemaMain.ACLMap = m
+
+	return nil
+
 }
