@@ -2070,7 +2070,16 @@ func (m methodREQPublicKeysGet) handler(proc process, message Message, node stri
 			// back. We can then later send that hash when asking for keys, compare
 			// it with the current one for the KeyMap, and know if we need to send
 			// and update back to the node who published the request to here.
-			b, err := json.Marshal(proc.centralAuth.pki.nodeKeysAndHash.KeyMap)
+
+			marsh := struct {
+				M map[Node][]byte
+				H [32]byte
+			}{
+				M: proc.centralAuth.pki.nodeKeysAndHash.KeyMap,
+				H: proc.centralAuth.pki.nodeKeysAndHash.Hash,
+			}
+
+			b, err := json.Marshal(marsh)
 			proc.centralAuth.pki.nodeKeysAndHash.mu.Unlock()
 			if err != nil {
 				er := fmt.Errorf("error: REQPublicKeysGet, failed to marshal keys map: %v", err)
@@ -2127,13 +2136,22 @@ func (m methodREQPublicKeysToNode) handler(proc process, message Message, node s
 		case <-ctx.Done():
 		case <-outCh:
 			// keys := make(map[Node]string)
+			marsh := struct {
+				M map[Node][]byte
+				H [32]byte
+			}{}
+
 			proc.nodeAuth.publicKeys.mu.Lock()
-			err := json.Unmarshal(message.Data, &proc.nodeAuth.publicKeys.NodeKeys)
+			err := json.Unmarshal(message.Data, &marsh)
 			if err != nil {
 				er := fmt.Errorf("error: REQPublicKeysToNode : json unmarshal failed: %v, message: %v", err, message)
 				proc.errorKernel.errSend(proc, message, er)
 			}
-			fmt.Printf(" *** RECEIVED KEYS: %v\n", proc.nodeAuth.publicKeys.NodeKeys)
+
+			proc.nodeAuth.publicKeys.NodeKeys = marsh.M
+			proc.nodeAuth.publicKeys.Hash = marsh.H
+
+			fmt.Printf(" *** RECEIVED KEYS: %+v\n", marsh)
 			proc.nodeAuth.publicKeys.mu.Unlock()
 
 			err = proc.nodeAuth.publicKeys.saveToFile()

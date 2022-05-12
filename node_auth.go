@@ -82,6 +82,7 @@ func newAllowedSignatures() *allowedSignatures {
 type publicKeys struct {
 	// nodesKey is a map who holds all the public keys for nodes.
 	NodeKeys map[Node][]byte
+	Hash     [32]byte
 	mu       sync.Mutex
 	filePath string
 }
