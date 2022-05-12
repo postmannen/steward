@@ -2064,14 +2064,14 @@ func (m methodREQPublicKeysGet) handler(proc process, message Message, node stri
 		case <-ctx.Done():
 		// case out := <-outCh:
 		case <-outCh:
-			proc.centralAuth.keys.NodePublicKeys.mu.Lock()
+			proc.centralAuth.pki.nodeKeysAndHash.mu.Lock()
 			// TODO: We should probably create a hash of the current map content,
 			// store it alongside the KeyMap, and send both the KeyMap and hash
 			// back. We can then later send that hash when asking for keys, compare
 			// it with the current one for the KeyMap, and know if we need to send
 			// and update back to the node who published the request to here.
-			b, err := json.Marshal(proc.centralAuth.keys.NodePublicKeys.KeyMap)
-			proc.centralAuth.keys.NodePublicKeys.mu.Unlock()
+			b, err := json.Marshal(proc.centralAuth.pki.nodeKeysAndHash.KeyMap)
+			proc.centralAuth.pki.nodeKeysAndHash.mu.Unlock()
 			if err != nil {
 				er := fmt.Errorf("error: REQPublicKeysGet, failed to marshal keys map: %v", err)
 				proc.errorKernel.errSend(proc, message, er)
@@ -2193,28 +2193,28 @@ func (m methodREQPublicKeysAllow) handler(proc process, message Message, node st
 		select {
 		case <-ctx.Done():
 		case <-outCh:
-			proc.centralAuth.keys.nodeNotAckedPublicKeys.mu.Lock()
-			defer proc.centralAuth.keys.nodeNotAckedPublicKeys.mu.Unlock()
+			proc.centralAuth.pki.nodeNotAckedPublicKeys.mu.Lock()
+			defer proc.centralAuth.pki.nodeNotAckedPublicKeys.mu.Unlock()
 
 			// Range over all the MethodArgs, where each element represents a node to allow,
 			// and move the node from the notAcked map to the allowed map.
 			for _, n := range message.MethodArgs {
-				key, ok := proc.centralAuth.keys.nodeNotAckedPublicKeys.KeyMap[Node(n)]
+				key, ok := proc.centralAuth.pki.nodeNotAckedPublicKeys.KeyMap[Node(n)]
 				if ok {
 
 					func() {
-						proc.centralAuth.keys.NodePublicKeys.mu.Lock()
-						defer proc.centralAuth.keys.NodePublicKeys.mu.Unlock()
+						proc.centralAuth.pki.nodeKeysAndHash.mu.Lock()
+						defer proc.centralAuth.pki.nodeKeysAndHash.mu.Unlock()
 
 						// Store/update the node and public key on the allowed pubKey map.
-						proc.centralAuth.keys.NodePublicKeys.KeyMap[Node(n)] = key
+						proc.centralAuth.pki.nodeKeysAndHash.KeyMap[Node(n)] = key
 					}()
 
 					// Add key to persistent storage.
-					proc.centralAuth.keys.dbUpdatePublicKey(string(n), key)
+					proc.centralAuth.pki.dbUpdatePublicKey(string(n), key)
 
 					// Delete the key from the NotAcked map
-					delete(proc.centralAuth.keys.nodeNotAckedPublicKeys.KeyMap, Node(n))
+					delete(proc.centralAuth.pki.nodeNotAckedPublicKeys.KeyMap, Node(n))
 
 					er := fmt.Errorf("info: REQPublicKeysAllow : allowed new/updated public key for %v to allowed public key map", n)
 					proc.errorKernel.infoSend(proc, message, er)
@@ -2224,8 +2224,8 @@ func (m methodREQPublicKeysAllow) handler(proc process, message Message, node st
 			// All new elements are now added, and we can create a new hash
 			// representing the current keys in the allowed map.
 			func() {
-				proc.centralAuth.keys.NodePublicKeys.mu.Lock()
-				defer proc.centralAuth.keys.NodePublicKeys.mu.Unlock()
+				proc.centralAuth.pki.nodeKeysAndHash.mu.Lock()
+				defer proc.centralAuth.pki.nodeKeysAndHash.mu.Unlock()
 
 				type NodesAndKeys struct {
 					Node Node
@@ -2236,7 +2236,7 @@ func (m methodREQPublicKeysAllow) handler(proc process, message Message, node st
 				sortedNodesAndKeys := []NodesAndKeys{}
 
 				// Range the map, and add each k/v to the sorted slice, to be sorted later.
-				for k, v := range proc.centralAuth.keys.NodePublicKeys.KeyMap {
+				for k, v := range proc.centralAuth.pki.nodeKeysAndHash.KeyMap {
 					nk := NodesAndKeys{
 						Node: k,
 						Key:  v,
@@ -2262,7 +2262,7 @@ func (m methodREQPublicKeysAllow) handler(proc process, message Message, node st
 					return
 				}
 
-				proc.centralAuth.keys.NodePublicKeys.Hash = sha256.Sum256(b)
+				proc.centralAuth.pki.nodeKeysAndHash.Hash = sha256.Sum256(b)
 
 			}()
 

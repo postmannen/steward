@@ -445,13 +445,13 @@ func (s startup) subREQHello(p process) {
 				return nil
 			}
 
-			s.centralAuth.keys.addPublicKey(proc, m)
+			s.centralAuth.pki.addPublicKey(proc, m)
 
 			// update the prometheus metrics
 
-			s.server.centralAuth.keys.NodePublicKeys.mu.Lock()
-			mapLen := len(s.server.centralAuth.keys.NodePublicKeys.KeyMap)
-			s.server.centralAuth.keys.NodePublicKeys.mu.Unlock()
+			s.server.centralAuth.pki.nodeKeysAndHash.mu.Lock()
+			mapLen := len(s.server.centralAuth.pki.nodeKeysAndHash.KeyMap)
+			s.server.centralAuth.pki.nodeKeysAndHash.mu.Unlock()
 			s.metrics.promHelloNodesTotal.Set(float64(mapLen))
 			s.metrics.promHelloNodesContactLast.With(prometheus.Labels{"nodeName": string(m.FromNode)}).SetToCurrentTime()
 

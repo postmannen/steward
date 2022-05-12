@@ -15,21 +15,21 @@ import (
 type centralAuth struct {
 	// schema           map[Node]map[argsString]signatureBase32
 	authorization *authorization
-	keys          *keys
+	pki           *pki
 }
 
 // newCentralAuth will return a new and prepared *centralAuth
 func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *centralAuth {
 	c := centralAuth{
 		authorization: newAuthorization(),
-		keys:          newKeys(configuration, errorKernel),
+		pki:           newPKI(configuration, errorKernel),
 	}
 
 	return &c
 }
 
-type keys struct {
-	NodePublicKeys         *nodePublicKeys
+type pki struct {
+	nodeKeysAndHash        *nodeKeysAndHash
 	nodeNotAckedPublicKeys *nodeNotAckedPublicKeys
 	configuration          *Configuration
 	db                     *bolt.DB
@@ -38,10 +38,10 @@ type keys struct {
 }
 
 // newKeys will return a prepared *keys with input values set.
-func newKeys(configuration *Configuration, errorKernel *errorKernel) *keys {
-	c := keys{
+func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
+	p := pki{
 		// schema:           make(map[Node]map[argsString]signatureBase32),
-		NodePublicKeys:         newNodePublicKeys(configuration),
+		nodeKeysAndHash:        newNodeKeysAndHash(configuration),
 		nodeNotAckedPublicKeys: newNodeNotAckedPublicKeys(configuration),
 		configuration:          configuration,
 		bucketNamePublicKeys:   "publicKeys",
@@ -57,27 +57,27 @@ func newKeys(configuration *Configuration, errorKernel *errorKernel) *keys {
 		os.Exit(1)
 	}
 
-	c.db = db
+	p.db = db
 
 	// Get public keys from db storage.
-	keys, err := c.dbDumpPublicKey()
+	keys, err := p.dbDumpPublicKey()
 	if err != nil {
 		log.Printf("debug: dbPublicKeyDump failed, probably empty db: %v\n", err)
 	}
 
 	// Only assign from storage to in memory map if the storage contained any values.
 	if keys != nil {
-		c.NodePublicKeys.KeyMap = keys
+		p.nodeKeysAndHash.KeyMap = keys
 		for k, v := range keys {
 			log.Printf("info: public keys db contains: %v, %v\n", k, []byte(v))
 		}
 	}
 
-	return &c
+	return &p
 }
 
 // addPublicKey to the db if the node do not exist, or if it is a new value.
-func (c *keys) addPublicKey(proc process, msg Message) {
+func (p *pki) addPublicKey(proc process, msg Message) {
 
 	// TODO: When receiviving a new or different keys for a node we should
 	// have a service with it's own storage for these keys, and an operator
@@ -90,32 +90,32 @@ func (c *keys) addPublicKey(proc process, msg Message) {
 	//	  key for a host.
 
 	// Check if a key for the current node already exists in the map.
-	c.NodePublicKeys.mu.Lock()
-	existingKey, ok := c.NodePublicKeys.KeyMap[msg.FromNode]
-	c.NodePublicKeys.mu.Unlock()
+	p.nodeKeysAndHash.mu.Lock()
+	existingKey, ok := p.nodeKeysAndHash.KeyMap[msg.FromNode]
+	p.nodeKeysAndHash.mu.Unlock()
 
 	if ok && bytes.Equal(existingKey, msg.Data) {
 		fmt.Printf(" * \nkey value for REGISTERED node %v is the same, doing nothing\n\n", msg.FromNode)
 		return
 	}
 
-	c.nodeNotAckedPublicKeys.mu.Lock()
-	existingNotAckedKey, ok := c.nodeNotAckedPublicKeys.KeyMap[msg.FromNode]
+	p.nodeNotAckedPublicKeys.mu.Lock()
+	existingNotAckedKey, ok := p.nodeNotAckedPublicKeys.KeyMap[msg.FromNode]
 	// We only want to send one notification to the error kernel about new key detection,
 	// so we check if the values are the same as the one we already got before we continue
 	// with registering and logging for the the new key.
 	if ok && bytes.Equal(existingNotAckedKey, msg.Data) {
 		fmt.Printf(" * \nkey value for NOT-REGISTERED node %v is the same, doing nothing\n\n", msg.FromNode)
-		c.nodeNotAckedPublicKeys.mu.Unlock()
+		p.nodeNotAckedPublicKeys.mu.Unlock()
 		return
 	}
 
-	c.nodeNotAckedPublicKeys.KeyMap[msg.FromNode] = msg.Data
-	c.nodeNotAckedPublicKeys.mu.Unlock()
+	p.nodeNotAckedPublicKeys.KeyMap[msg.FromNode] = msg.Data
+	p.nodeNotAckedPublicKeys.mu.Unlock()
 
 	er := fmt.Errorf("info: detected new public key for node: %v. This key will need to be authorized by operator to be allowed into the system", msg.FromNode)
 	fmt.Printf(" * %v\n", er)
-	c.errorKernel.infoSend(proc, msg, er)
+	p.errorKernel.infoSend(proc, msg, er)
 }
 
 // // dbGetPublicKey will look up and return a specific value if it exists for a key in a bucket in a DB.
@@ -145,10 +145,10 @@ func (c *keys) addPublicKey(proc process, msg Message) {
 // }
 
 //dbUpdatePublicKey will update the public key for a node in the db.
-func (c *keys) dbUpdatePublicKey(node string, value []byte) error {
-	err := c.db.Update(func(tx *bolt.Tx) error {
+func (p *pki) dbUpdatePublicKey(node string, value []byte) error {
+	err := p.db.Update(func(tx *bolt.Tx) error {
 		//Create a bucket
-		bu, err := tx.CreateBucketIfNotExists([]byte(c.bucketNamePublicKeys))
+		bu, err := tx.CreateBucketIfNotExists([]byte(p.bucketNamePublicKeys))
 		if err != nil {
 			return fmt.Errorf("error: CreateBuckerIfNotExists failed: %v", err)
 		}
@@ -184,11 +184,11 @@ func (c *keys) dbUpdatePublicKey(node string, value []byte) error {
 
 // dumpBucket will dump out all they keys and values in the
 // specified bucket, and return a sorted []samDBValue
-func (c *keys) dbDumpPublicKey() (map[Node][]byte, error) {
+func (p *pki) dbDumpPublicKey() (map[Node][]byte, error) {
 	m := make(map[Node][]byte)
 
-	err := c.db.View(func(tx *bolt.Tx) error {
-		bu := tx.Bucket([]byte(c.bucketNamePublicKeys))
+	err := p.db.View(func(tx *bolt.Tx) error {
+		bu := tx.Bucket([]byte(p.bucketNamePublicKeys))
 		if bu == nil {
 			return fmt.Errorf("error: dumpBucket: tx.bucket returned nil")
 		}
@@ -209,9 +209,9 @@ func (c *keys) dbDumpPublicKey() (map[Node][]byte, error) {
 	return m, nil
 }
 
-// nodePublicKeys holds all the gathered public keys of nodes in the system.
+// nodeKeysAndHash holds all the gathered public keys of nodes in the system.
 // The keys will be written to a k/v store for persistence.
-type nodePublicKeys struct {
+type nodeKeysAndHash struct {
 	mu     sync.RWMutex
 	KeyMap map[Node][]byte
 	// TODO TOMOROW: implement sorting of KeyMap,
@@ -221,9 +221,9 @@ type nodePublicKeys struct {
 	Hash [32]byte
 }
 
-// newNodePublicKeys will return a prepared type of nodePublicKeys.
-func newNodePublicKeys(configuration *Configuration) *nodePublicKeys {
-	n := nodePublicKeys{
+// newNnodeKeysAndHash will return a prepared type of nodeKeysAndHash.
+func newNodeKeysAndHash(configuration *Configuration) *nodeKeysAndHash {
+	n := nodeKeysAndHash{
 		KeyMap: make(map[Node][]byte),
 	}
 
