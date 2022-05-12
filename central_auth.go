@@ -29,7 +29,7 @@ func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *cen
 }
 
 type keys struct {
-	nodePublicKeys         *nodePublicKeys
+	NodePublicKeys         *nodePublicKeys
 	nodeNotAckedPublicKeys *nodeNotAckedPublicKeys
 	configuration          *Configuration
 	db                     *bolt.DB
@@ -41,7 +41,7 @@ type keys struct {
 func newKeys(configuration *Configuration, errorKernel *errorKernel) *keys {
 	c := keys{
 		// schema:           make(map[Node]map[argsString]signatureBase32),
-		nodePublicKeys:         newNodePublicKeys(configuration),
+		NodePublicKeys:         newNodePublicKeys(configuration),
 		nodeNotAckedPublicKeys: newNodeNotAckedPublicKeys(configuration),
 		configuration:          configuration,
 		bucketNamePublicKeys:   "publicKeys",
@@ -67,7 +67,7 @@ func newKeys(configuration *Configuration, errorKernel *errorKernel) *keys {
 
 	// Only assign from storage to in memory map if the storage contained any values.
 	if keys != nil {
-		c.nodePublicKeys.KeyMap = keys
+		c.NodePublicKeys.KeyMap = keys
 		for k, v := range keys {
 			log.Printf("info: public keys db contains: %v, %v\n", k, []byte(v))
 		}
@@ -90,9 +90,9 @@ func (c *keys) addPublicKey(proc process, msg Message) {
 	//	  key for a host.
 
 	// Check if a key for the current node already exists in the map.
-	c.nodePublicKeys.mu.Lock()
-	existingKey, ok := c.nodePublicKeys.KeyMap[msg.FromNode]
-	c.nodePublicKeys.mu.Unlock()
+	c.NodePublicKeys.mu.Lock()
+	existingKey, ok := c.NodePublicKeys.KeyMap[msg.FromNode]
+	c.NodePublicKeys.mu.Unlock()
 
 	if ok && bytes.Equal(existingKey, msg.Data) {
 		fmt.Printf(" * \nkey value for REGISTERED node %v is the same, doing nothing\n\n", msg.FromNode)
@@ -116,30 +116,6 @@ func (c *keys) addPublicKey(proc process, msg Message) {
 	er := fmt.Errorf("info: detected new public key for node: %v. This key will need to be authorized by operator to be allowed into the system", msg.FromNode)
 	fmt.Printf(" * %v\n", er)
 	c.errorKernel.infoSend(proc, msg, er)
-
-	// TODO: The below commented code should put used within the REQ handler instead to
-	// store the real keys into the allowed public keys map.
-	// Here we should only add new keys to the NotAcked map.
-
-	// // New key
-	// c.nodePublicKeys.KeyMap[msg.FromNode] = msg.Data
-	// c.nodePublicKeys.mu.Unlock()
-	//
-	// // Add key to persistent storage.
-	// c.dbUpdatePublicKey(string(msg.FromNode), msg.Data)
-	//
-	// if ok {
-	// 	er := fmt.Errorf("info: updated with new public key for node: %v", msg.FromNode)
-	// 	fmt.Printf(" * %v\n", er)
-	// 	c.errorKernel.infoSend(proc, msg, er)
-	// }
-	// if !ok {
-	// 	er := fmt.Errorf("info: added public key for new node: %v", msg.FromNode)
-	// 	fmt.Printf(" * %v\n", er)
-	// 	c.errorKernel.infoSend(proc, msg, er)
-	// }
-
-	//c.dbDump(c.bucketPublicKeys)
 }
 
 // // dbGetPublicKey will look up and return a specific value if it exists for a key in a bucket in a DB.
@@ -238,6 +214,11 @@ func (c *keys) dbDumpPublicKey() (map[Node][]byte, error) {
 type nodePublicKeys struct {
 	mu     sync.RWMutex
 	KeyMap map[Node][]byte
+	// TODO TOMOROW: implement sorting of KeyMap,
+	// Hash it and store the result into hash,
+	// marshal and send the whole nodePublicKeys to the end node.
+	// We should update the hash when a node is added with the allow key method.
+	Hash [32]byte
 }
 
 // newNodePublicKeys will return a prepared type of nodePublicKeys.

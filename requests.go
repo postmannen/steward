@@ -36,19 +36,23 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/hpcloud/tail"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -2060,14 +2064,14 @@ func (m methodREQPublicKeysGet) handler(proc process, message Message, node stri
 		case <-ctx.Done():
 		// case out := <-outCh:
 		case <-outCh:
-			proc.centralAuth.keys.nodePublicKeys.mu.Lock()
+			proc.centralAuth.keys.NodePublicKeys.mu.Lock()
 			// TODO: We should probably create a hash of the current map content,
 			// store it alongside the KeyMap, and send both the KeyMap and hash
 			// back. We can then later send that hash when asking for keys, compare
 			// it with the current one for the KeyMap, and know if we need to send
 			// and update back to the node who published the request to here.
-			b, err := json.Marshal(proc.centralAuth.keys.nodePublicKeys.KeyMap)
-			proc.centralAuth.keys.nodePublicKeys.mu.Unlock()
+			b, err := json.Marshal(proc.centralAuth.keys.NodePublicKeys.KeyMap)
+			proc.centralAuth.keys.NodePublicKeys.mu.Unlock()
 			if err != nil {
 				er := fmt.Errorf("error: REQPublicKeysGet, failed to marshal keys map: %v", err)
 				proc.errorKernel.errSend(proc, message, er)
@@ -2192,13 +2196,19 @@ func (m methodREQPublicKeysAllow) handler(proc process, message Message, node st
 			proc.centralAuth.keys.nodeNotAckedPublicKeys.mu.Lock()
 			defer proc.centralAuth.keys.nodeNotAckedPublicKeys.mu.Unlock()
 
+			// Range over all the MethodArgs, where each element represents a node to allow,
+			// and move the node from the notAcked map to the allowed map.
 			for _, n := range message.MethodArgs {
 				key, ok := proc.centralAuth.keys.nodeNotAckedPublicKeys.KeyMap[Node(n)]
 				if ok {
-					// Store/update the node and public key on the allowed pubKey map.
-					proc.centralAuth.keys.nodePublicKeys.mu.Lock()
-					proc.centralAuth.keys.nodePublicKeys.KeyMap[Node(n)] = key
-					proc.centralAuth.keys.nodePublicKeys.mu.Unlock()
+
+					func() {
+						proc.centralAuth.keys.NodePublicKeys.mu.Lock()
+						defer proc.centralAuth.keys.NodePublicKeys.mu.Unlock()
+
+						// Store/update the node and public key on the allowed pubKey map.
+						proc.centralAuth.keys.NodePublicKeys.KeyMap[Node(n)] = key
+					}()
 
 					// Add key to persistent storage.
 					proc.centralAuth.keys.dbUpdatePublicKey(string(n), key)
@@ -2210,6 +2220,51 @@ func (m methodREQPublicKeysAllow) handler(proc process, message Message, node st
 					proc.errorKernel.infoSend(proc, message, er)
 				}
 			}
+
+			// All new elements are now added, and we can create a new hash
+			// representing the current keys in the allowed map.
+			func() {
+				proc.centralAuth.keys.NodePublicKeys.mu.Lock()
+				defer proc.centralAuth.keys.NodePublicKeys.mu.Unlock()
+
+				type NodesAndKeys struct {
+					Node Node
+					Key  []byte
+				}
+
+				// Create a slice of all the map keys, and its value.
+				sortedNodesAndKeys := []NodesAndKeys{}
+
+				// Range the map, and add each k/v to the sorted slice, to be sorted later.
+				for k, v := range proc.centralAuth.keys.NodePublicKeys.KeyMap {
+					nk := NodesAndKeys{
+						Node: k,
+						Key:  v,
+					}
+
+					sortedNodesAndKeys = append(sortedNodesAndKeys, nk)
+				}
+
+				// sort the slice based on the node name.
+				// Sort all the commands.
+				sort.SliceStable(sortedNodesAndKeys, func(i, j int) bool {
+					return sortedNodesAndKeys[i].Node < sortedNodesAndKeys[j].Node
+				})
+
+				// Then create a hash based on the sorted slice.
+
+				b, err := cbor.Marshal(sortedNodesAndKeys)
+				if err != nil {
+					er := fmt.Errorf("error: methodREQPublicKeysAllow, failed to marshal slice, and will not update hash for public keys:  %v", err)
+					proc.errorKernel.errSend(proc, message, er)
+					log.Printf(" * DEBUG: %v\n", err)
+
+					return
+				}
+
+				proc.centralAuth.keys.NodePublicKeys.Hash = sha256.Sum256(b)
+
+			}()
 
 		}
 	}()
