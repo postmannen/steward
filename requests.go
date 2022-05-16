@@ -2064,27 +2064,38 @@ func (m methodREQPublicKeysGet) handler(proc process, message Message, node stri
 		case <-ctx.Done():
 		// case out := <-outCh:
 		case <-outCh:
-			proc.centralAuth.pki.nodesAcked.mu.Lock()
-			// TODO: We should probably create a hash of the current map content,
-			// store it alongside the KeyMap, and send both the KeyMap and hash
-			// back. We can then later send that hash when asking for keys, compare
-			// it with the current one for the KeyMap, and know if we need to send
-			// and update back to the node who published the request to here.
+			// Using a func here to set the scope of the lock, and then be able to
+			// defer the unlock when leaving that scope.
+			func() {
+				proc.centralAuth.pki.nodesAcked.mu.Lock()
+				defer proc.centralAuth.pki.nodesAcked.mu.Unlock()
+				// TODO: We should probably create a hash of the current map content,
+				// store it alongside the KeyMap, and send both the KeyMap and hash
+				// back. We can then later send that hash when asking for keys, compare
+				// it with the current one for the KeyMap, and know if we need to send
+				// and update back to the node who published the request to here.
 
-			fmt.Printf(" <---- methodREQPublicKeysGet: received hash from NODE=%v, HASH=%v\n", message.FromNode, message.Data)
+				fmt.Printf(" <---- methodREQPublicKeysGet: received hash from NODE=%v, HASH=%v\n", message.FromNode, message.Data)
 
-			fmt.Printf(" *     methodREQPublicKeysGet: marshalling new keys and hash to send: map=%v, hash=%v\n\n", proc.centralAuth.pki.nodesAcked.keysAndHash.Keys, proc.centralAuth.pki.nodesAcked.keysAndHash.Hash)
+				// Check if the received hash is the same as the one currently active,
+				if bytes.Equal(proc.centralAuth.pki.nodesAcked.keysAndHash.Hash[:], message.Data) {
+					fmt.Printf("\n ------------ NODE AND CENTRAL ARE EQUAL, NOTHING TO DO, EXITING HANDLER\n\n")
+					return
+				}
 
-			b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
+				fmt.Printf("\n ------------ NODE AND CENTRAL WERE NOT EQUAL, PREPARING TO SEND NEW VERSION OF KEYS\n\n")
 
-			proc.centralAuth.pki.nodesAcked.mu.Unlock()
+				fmt.Printf(" *     methodREQPublicKeysGet: marshalling new keys and hash to send: map=%v, hash=%v\n\n", proc.centralAuth.pki.nodesAcked.keysAndHash.Keys, proc.centralAuth.pki.nodesAcked.keysAndHash.Hash)
 
-			if err != nil {
-				er := fmt.Errorf("error: REQPublicKeysGet, failed to marshal keys map: %v", err)
-				proc.errorKernel.errSend(proc, message, er)
-			}
-			fmt.Printf("\n ----> methodREQPublicKeysGet: SENDING KEYS TO NODE=%v\n", message.FromNode)
-			newReplyMessage(proc, message, b)
+				b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
+
+				if err != nil {
+					er := fmt.Errorf("error: REQPublicKeysGet, failed to marshal keys map: %v", err)
+					proc.errorKernel.errSend(proc, message, er)
+				}
+				fmt.Printf("\n ----> methodREQPublicKeysGet: SENDING KEYS TO NODE=%v\n", message.FromNode)
+				newReplyMessage(proc, message, b)
+			}()
 		}
 	}()
 
