@@ -317,17 +317,21 @@ func (s startup) pubREQPublicKeysGet(p process) {
 			// so we would know on the subscriber at central if it should send
 			// and update with new keys back.
 
+			proc.nodeAuth.publicKeys.mu.Lock()
+			fmt.Printf("\n ----> REQPublicKeysGet: sending our current hash: %v\n\n", []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]))
+
 			m := Message{
-				FileName:  "publickeysget.log",
-				Directory: "publickeysget",
-				ToNode:    Node(p.configuration.CentralNodeName),
-				FromNode:  Node(p.node),
-				// Data:       []byte(d),
+				FileName:    "publickeysget.log",
+				Directory:   "publickeysget",
+				ToNode:      Node(p.configuration.CentralNodeName),
+				FromNode:    Node(p.node),
+				Data:        []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]),
 				Method:      REQPublicKeysGet,
 				ReplyMethod: REQPublicKeysToNode,
 				ACKTimeout:  proc.configuration.DefaultMessageTimeout,
 				Retries:     1,
 			}
+			proc.nodeAuth.publicKeys.mu.Unlock()
 
 			sam, err := newSubjectAndMessage(m)
 			if err != nil {
@@ -449,9 +453,9 @@ func (s startup) subREQHello(p process) {
 
 			// update the prometheus metrics
 
-			s.server.centralAuth.pki.nodeKeysAndHash.mu.Lock()
-			mapLen := len(s.server.centralAuth.pki.nodeKeysAndHash.KeyMap)
-			s.server.centralAuth.pki.nodeKeysAndHash.mu.Unlock()
+			s.server.centralAuth.pki.nodesAcked.mu.Lock()
+			mapLen := len(s.server.centralAuth.pki.nodesAcked.keysAndHash.Keys)
+			s.server.centralAuth.pki.nodesAcked.mu.Unlock()
 			s.metrics.promHelloNodesTotal.Set(float64(mapLen))
 			s.metrics.promHelloNodesContactLast.With(prometheus.Labels{"nodeName": string(m.FromNode)}).SetToCurrentTime()
 

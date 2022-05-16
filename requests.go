@@ -2064,28 +2064,26 @@ func (m methodREQPublicKeysGet) handler(proc process, message Message, node stri
 		case <-ctx.Done():
 		// case out := <-outCh:
 		case <-outCh:
-			proc.centralAuth.pki.nodeKeysAndHash.mu.Lock()
+			proc.centralAuth.pki.nodesAcked.mu.Lock()
 			// TODO: We should probably create a hash of the current map content,
 			// store it alongside the KeyMap, and send both the KeyMap and hash
 			// back. We can then later send that hash when asking for keys, compare
 			// it with the current one for the KeyMap, and know if we need to send
 			// and update back to the node who published the request to here.
 
-			marsh := struct {
-				M map[Node][]byte
-				H [32]byte
-			}{
-				M: proc.centralAuth.pki.nodeKeysAndHash.KeyMap,
-				H: proc.centralAuth.pki.nodeKeysAndHash.Hash,
-			}
+			fmt.Printf(" <---- methodREQPublicKeysGet: received hash from NODE=%v, HASH=%v\n", message.FromNode, message.Data)
 
-			b, err := json.Marshal(marsh)
-			proc.centralAuth.pki.nodeKeysAndHash.mu.Unlock()
+			fmt.Printf(" *     methodREQPublicKeysGet: marshalling new keys and hash to send: map=%v, hash=%v\n\n", proc.centralAuth.pki.nodesAcked.keysAndHash.Keys, proc.centralAuth.pki.nodesAcked.keysAndHash.Hash)
+
+			b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
+
+			proc.centralAuth.pki.nodesAcked.mu.Unlock()
+
 			if err != nil {
 				er := fmt.Errorf("error: REQPublicKeysGet, failed to marshal keys map: %v", err)
 				proc.errorKernel.errSend(proc, message, er)
 			}
-			fmt.Printf("\n * SENDING KEYS TO NODE=%v\n", message.FromNode)
+			fmt.Printf("\n ----> methodREQPublicKeysGet: SENDING KEYS TO NODE=%v\n", message.FromNode)
 			newReplyMessage(proc, message, b)
 		}
 	}()
@@ -2135,24 +2133,23 @@ func (m methodREQPublicKeysToNode) handler(proc process, message Message, node s
 		// case proc.toRingbufferCh <- []subjectAndMessage{sam}:
 		case <-ctx.Done():
 		case <-outCh:
-			// keys := make(map[Node]string)
-			marsh := struct {
-				M map[Node][]byte
-				H [32]byte
-			}{}
 
 			proc.nodeAuth.publicKeys.mu.Lock()
-			err := json.Unmarshal(message.Data, &marsh)
+
+			err := json.Unmarshal(message.Data, proc.nodeAuth.publicKeys.keysAndHash)
+			fmt.Printf("\n <---- REQPublicKeysToNode: after unmarshal, nodeAuth keysAndhash contains: %+v\n\n", proc.nodeAuth.publicKeys.keysAndHash)
+
+			proc.nodeAuth.publicKeys.mu.Unlock()
+
 			if err != nil {
 				er := fmt.Errorf("error: REQPublicKeysToNode : json unmarshal failed: %v, message: %v", err, message)
 				proc.errorKernel.errSend(proc, message, er)
 			}
 
-			proc.nodeAuth.publicKeys.NodeKeys = marsh.M
-			proc.nodeAuth.publicKeys.Hash = marsh.H
-
-			fmt.Printf(" *** RECEIVED KEYS: %+v\n", marsh)
-			proc.nodeAuth.publicKeys.mu.Unlock()
+			// TODO TOMORROW: The hash is not sent with the requests to get public keys, and
+			// the reason is that the hash is not stored on the nodes ?
+			// Idea: We need to also persist the hash on the receiving nodes. We can then load
+			//  that key upon startup, and send it along when we do a public keys get.
 
 			err = proc.nodeAuth.publicKeys.saveToFile()
 			if err != nil {
@@ -2221,11 +2218,11 @@ func (m methodREQPublicKeysAllow) handler(proc process, message Message, node st
 				if ok {
 
 					func() {
-						proc.centralAuth.pki.nodeKeysAndHash.mu.Lock()
-						defer proc.centralAuth.pki.nodeKeysAndHash.mu.Unlock()
+						proc.centralAuth.pki.nodesAcked.mu.Lock()
+						defer proc.centralAuth.pki.nodesAcked.mu.Unlock()
 
 						// Store/update the node and public key on the allowed pubKey map.
-						proc.centralAuth.pki.nodeKeysAndHash.KeyMap[Node(n)] = key
+						proc.centralAuth.pki.nodesAcked.keysAndHash.Keys[Node(n)] = key
 					}()
 
 					// Add key to persistent storage.
@@ -2242,8 +2239,8 @@ func (m methodREQPublicKeysAllow) handler(proc process, message Message, node st
 			// All new elements are now added, and we can create a new hash
 			// representing the current keys in the allowed map.
 			func() {
-				proc.centralAuth.pki.nodeKeysAndHash.mu.Lock()
-				defer proc.centralAuth.pki.nodeKeysAndHash.mu.Unlock()
+				proc.centralAuth.pki.nodesAcked.mu.Lock()
+				defer proc.centralAuth.pki.nodesAcked.mu.Unlock()
 
 				type NodesAndKeys struct {
 					Node Node
@@ -2254,7 +2251,7 @@ func (m methodREQPublicKeysAllow) handler(proc process, message Message, node st
 				sortedNodesAndKeys := []NodesAndKeys{}
 
 				// Range the map, and add each k/v to the sorted slice, to be sorted later.
-				for k, v := range proc.centralAuth.pki.nodeKeysAndHash.KeyMap {
+				for k, v := range proc.centralAuth.pki.nodesAcked.keysAndHash.Keys {
 					nk := NodesAndKeys{
 						Node: k,
 						Key:  v,
@@ -2275,12 +2272,24 @@ func (m methodREQPublicKeysAllow) handler(proc process, message Message, node st
 				if err != nil {
 					er := fmt.Errorf("error: methodREQPublicKeysAllow, failed to marshal slice, and will not update hash for public keys:  %v", err)
 					proc.errorKernel.errSend(proc, message, er)
-					log.Printf(" * DEBUG: %v\n", err)
+					log.Printf(" * DEBUG: %v\n", er)
 
 					return
 				}
 
-				proc.centralAuth.pki.nodeKeysAndHash.Hash = sha256.Sum256(b)
+				// Store the key in the key value map.
+				hash := sha256.Sum256(b)
+				proc.centralAuth.pki.nodesAcked.keysAndHash.Hash = hash
+
+				// Store the key to the db for persistence.
+				proc.centralAuth.pki.dbUpdateHash(hash[:])
+				if err != nil {
+					er := fmt.Errorf("error: methodREQPublicKeysAllow, failed to store the hash into the db:  %v", err)
+					proc.errorKernel.errSend(proc, message, er)
+					log.Printf(" * DEBUG: %v\n", er)
+
+					return
+				}
 
 			}()
 

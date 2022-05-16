@@ -8,6 +8,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.4.1-0.20210905002822-f057f0a857a1
 	github.com/go-playground/validator/v10 v10.10.1
 	github.com/hpcloud/tail v1.0.0
+	github.com/jinzhu/copier v0.3.5
 	github.com/klauspost/compress v1.14.2
 	github.com/nats-io/nats-server/v2 v2.6.2
 	github.com/nats-io/nats.go v1.14.0

@@ -13,9 +13,10 @@ import (
 
 // centralAuth holds the logic related to handling public keys and auth maps.
 type centralAuth struct {
-	// schema           map[Node]map[argsString]signatureBase32
+	// acl and authorization level related data and methods.
 	authorization *authorization
-	pki           *pki
+	// public key distribution related data and methods.
+	pki *pki
 }
 
 // newCentralAuth will return a new and prepared *centralAuth
@@ -28,8 +29,26 @@ func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *cen
 	return &c
 }
 
+// nodesAcked is the structure that holds all the keys that we have
+// acknowledged, and that are allowed to be distributed within the
+// system. It also contains a hash of all those keys.
+type nodesAcked struct {
+	mu          sync.Mutex
+	keysAndHash *keysAndHash
+}
+
+// newNodesAcked will return a prepared *nodesAcked structure.
+func newNodesAcked() *nodesAcked {
+	n := nodesAcked{
+		keysAndHash: newKeysAndHash(),
+	}
+
+	return &n
+}
+
+// pki holds the data and method relevant to key handling and distribution.
 type pki struct {
-	nodeKeysAndHash        *nodeKeysAndHash
+	nodesAcked             *nodesAcked
 	nodeNotAckedPublicKeys *nodeNotAckedPublicKeys
 	configuration          *Configuration
 	db                     *bolt.DB
@@ -41,7 +60,7 @@ type pki struct {
 func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 	p := pki{
 		// schema:           make(map[Node]map[argsString]signatureBase32),
-		nodeKeysAndHash:        newNodeKeysAndHash(configuration),
+		nodesAcked:             newNodesAcked(),
 		nodeNotAckedPublicKeys: newNodeNotAckedPublicKeys(configuration),
 		configuration:          configuration,
 		bucketNamePublicKeys:   "publicKeys",
@@ -67,10 +86,22 @@ func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 
 	// Only assign from storage to in memory map if the storage contained any values.
 	if keys != nil {
-		p.nodeKeysAndHash.KeyMap = keys
+		p.nodesAcked.keysAndHash.Keys = keys
 		for k, v := range keys {
 			log.Printf("info: public keys db contains: %v, %v\n", k, []byte(v))
 		}
+	}
+
+	// Get the current hash from db if one exists.
+	hash, err := p.dbViewHash()
+	if err != nil {
+		log.Printf("debug: dbViewHash failed: %v\n", err)
+	}
+
+	if hash != nil {
+		var h [32]byte
+		copy(h[:], hash)
+		p.nodesAcked.keysAndHash.Hash = h
 	}
 
 	return &p
@@ -90,12 +121,12 @@ func (p *pki) addPublicKey(proc process, msg Message) {
 	//	  key for a host.
 
 	// Check if a key for the current node already exists in the map.
-	p.nodeKeysAndHash.mu.Lock()
-	existingKey, ok := p.nodeKeysAndHash.KeyMap[msg.FromNode]
-	p.nodeKeysAndHash.mu.Unlock()
+	p.nodesAcked.mu.Lock()
+	existingKey, ok := p.nodesAcked.keysAndHash.Keys[msg.FromNode]
+	p.nodesAcked.mu.Unlock()
 
 	if ok && bytes.Equal(existingKey, msg.Data) {
-		fmt.Printf(" * \nkey value for REGISTERED node %v is the same, doing nothing\n\n", msg.FromNode)
+		fmt.Printf(" \n * public key value for REGISTERED node %v is the same, doing nothing\n\n", msg.FromNode)
 		return
 	}
 
@@ -165,6 +196,54 @@ func (p *pki) dbUpdatePublicKey(node string, value []byte) error {
 	return err
 }
 
+//dbUpdateHash will update the public key for a node in the db.
+func (p *pki) dbUpdateHash(hash []byte) error {
+	err := p.db.Update(func(tx *bolt.Tx) error {
+		//Create a bucket
+		bu, err := tx.CreateBucketIfNotExists([]byte("hash"))
+		if err != nil {
+			return fmt.Errorf("error: CreateBuckerIfNotExists failed: %v", err)
+		}
+
+		//Put a value into the bucket.
+		if err := bu.Put([]byte("hash"), []byte(hash)); err != nil {
+			return err
+		}
+
+		//If all was ok, we should return a nil for a commit to happen. Any error
+		// returned will do a rollback.
+		return nil
+	})
+	return err
+}
+
+// dbViewHash will look up and return a specific value if it exists for a key in a bucket in a DB.
+func (p *pki) dbViewHash() ([]byte, error) {
+	var value []byte
+	// View is a help function to get values out of the database.
+	err := p.db.View(func(tx *bolt.Tx) error {
+		//Open a bucket to get key's and values from.
+		bu := tx.Bucket([]byte("hash"))
+		if bu == nil {
+			log.Printf("info: no db hash bucket exist\n")
+			return nil
+		}
+
+		v := bu.Get([]byte("hash"))
+		if len(v) == 0 {
+			log.Printf("info: view: hash key not found\n")
+			return nil
+		}
+
+		value = v
+
+		return nil
+	})
+
+	return value, err
+
+}
+
 // // deleteKeyFromBucket will delete the specified key from the specified
 // // bucket if it exists.
 // func (c *centralAuth) dbDeletePublicKey(key string) error {
@@ -207,27 +286,6 @@ func (p *pki) dbDumpPublicKey() (map[Node][]byte, error) {
 	}
 
 	return m, nil
-}
-
-// nodeKeysAndHash holds all the gathered public keys of nodes in the system.
-// The keys will be written to a k/v store for persistence.
-type nodeKeysAndHash struct {
-	mu     sync.RWMutex
-	KeyMap map[Node][]byte
-	// TODO TOMOROW: implement sorting of KeyMap,
-	// Hash it and store the result into hash,
-	// marshal and send the whole nodePublicKeys to the end node.
-	// We should update the hash when a node is added with the allow key method.
-	Hash [32]byte
-}
-
-// newNnodeKeysAndHash will return a prepared type of nodeKeysAndHash.
-func newNodeKeysAndHash(configuration *Configuration) *nodeKeysAndHash {
-	n := nodeKeysAndHash{
-		KeyMap: make(map[Node][]byte),
-	}
-
-	return &n
 }
 
 // --- HERE

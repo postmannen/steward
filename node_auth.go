@@ -79,18 +79,28 @@ func newAllowedSignatures() *allowedSignatures {
 	return &a
 }
 
+type keysAndHash struct {
+	Keys map[Node][]byte
+	Hash [32]byte
+}
+
+func newKeysAndHash() *keysAndHash {
+	kh := keysAndHash{
+		Keys: make(map[Node][]byte),
+	}
+	return &kh
+}
+
 type publicKeys struct {
-	// nodesKey is a map who holds all the public keys for nodes.
-	NodeKeys map[Node][]byte
-	Hash     [32]byte
-	mu       sync.Mutex
-	filePath string
+	keysAndHash *keysAndHash
+	mu          sync.Mutex
+	filePath    string
 }
 
 func newPublicKeys(c *Configuration) *publicKeys {
 	p := publicKeys{
-		NodeKeys: make(map[Node][]byte),
-		filePath: filepath.Join(c.DatabaseFolder, "publickeys.txt"),
+		keysAndHash: newKeysAndHash(),
+		filePath:    filepath.Join(c.DatabaseFolder, "publickeys.txt"),
 	}
 
 	err := p.loadFromFile()
@@ -126,12 +136,12 @@ func (p *publicKeys) loadFromFile() error {
 
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	err = json.Unmarshal(b, &p.NodeKeys)
+	err = json.Unmarshal(b, &p.keysAndHash)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("\n ***** DEBUG: Loaded existing keys from file: %v\n\n", p.NodeKeys)
+	fmt.Printf("\n ***** DEBUG: Loaded existing keys from file: %v\n\n", p.keysAndHash.Hash)
 
 	return nil
 }
@@ -147,7 +157,7 @@ func (p *publicKeys) saveToFile() error {
 
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	b, err := json.Marshal(p.NodeKeys)
+	b, err := json.Marshal(p.keysAndHash)
 	if err != nil {
 		return err
 	}
