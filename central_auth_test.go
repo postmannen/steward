@@ -22,7 +22,7 @@ func TestACLSingleNode(t *testing.T) {
 
 	// --- TESTS ---
 
-	mapOfFromNodeCommands := make(map[node]map[command]struct{})
+	mapOfFromNodeCommands := make(map[Node]map[command]struct{})
 	err := cbor.Unmarshal(a.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 	if err != nil {
 		t.Fatal(err)
@@ -64,7 +64,7 @@ func TestACLWithGroups(t *testing.T) {
 
 	a.aclAdd(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
 
-	mapOfFromNodeCommands := make(map[node]map[command]struct{})
+	mapOfFromNodeCommands := make(map[Node]map[command]struct{})
 	err := cbor.Unmarshal(a.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 	if err != nil {
 		t.Fatal(err)
@@ -127,7 +127,7 @@ func TestACLNodesGroupDeleteNode(t *testing.T) {
 
 	// Check that we still got the data for ship100.
 	{
-		mapOfFromNodeCommands := make(map[node]map[command]struct{})
+		mapOfFromNodeCommands := make(map[Node]map[command]struct{})
 		err := cbor.Unmarshal(a.schemaGenerated.GeneratedACLsMap["ship100"].Data, &mapOfFromNodeCommands)
 		if err != nil {
 			t.Fatal(err)
@@ -140,7 +140,7 @@ func TestACLNodesGroupDeleteNode(t *testing.T) {
 
 	// Check that we don't have any data for ship101.
 	{
-		mapOfFromNodeCommands := make(map[node]map[command]struct{})
+		mapOfFromNodeCommands := make(map[Node]map[command]struct{})
 		err := cbor.Unmarshal(a.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 		if err != nil {
 			t.Fatal(err)
@@ -184,7 +184,7 @@ func TestGroupNodesDeleteGroup(t *testing.T) {
 
 	// Check that we still got the data for other ACL's.
 	{
-		mapOfFromNodeCommands := make(map[node]map[command]struct{})
+		mapOfFromNodeCommands := make(map[Node]map[command]struct{})
 		err := cbor.Unmarshal(a.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 		if err != nil {
 			t.Fatal(err)
@@ -197,7 +197,7 @@ func TestGroupNodesDeleteGroup(t *testing.T) {
 
 	// Check that we don't have any data for grp_nodes_operators
 	{
-		mapOfFromNodeCommands := make(map[node]map[command]struct{})
+		mapOfFromNodeCommands := make(map[Node]map[command]struct{})
 		err := cbor.Unmarshal(a.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 		if err != nil {
 			t.Fatal(err)
@@ -241,7 +241,7 @@ func TestGroupCommandDeleteGroup(t *testing.T) {
 
 	// Check that we still got the data for other ACL's.
 	{
-		mapOfFromNodeCommands := make(map[node]map[command]struct{})
+		mapOfFromNodeCommands := make(map[Node]map[command]struct{})
 		err := cbor.Unmarshal(a.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 		if err != nil {
 			t.Fatal(err)
@@ -254,7 +254,7 @@ func TestGroupCommandDeleteGroup(t *testing.T) {
 
 	// Check that we don't have any data for grp_nodes_operators
 	{
-		mapOfFromNodeCommands := make(map[node]map[command]struct{})
+		mapOfFromNodeCommands := make(map[Node]map[command]struct{})
 		err := cbor.Unmarshal(a.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 		if err != nil {
 			t.Fatal(err)
@@ -287,7 +287,7 @@ func TestACLGenerated(t *testing.T) {
 
 	// --- TESTS ---
 
-	mapOfFromNodeCommands := make(map[node]map[command]struct{})
+	mapOfFromNodeCommands := make(map[Node]map[command]struct{})
 	err := cbor.Unmarshal(a.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 	if err != nil {
 		t.Fatal(err)

@@ -48,23 +48,23 @@ func newAccessLists() *accessLists {
 	return &a
 }
 
-type node string
+// type node string
 type command string
 type nodeGroup string
 type commandGroup string
 
 // schemaMain is the structure that holds the user editable parts for creating ACL's.
 type schemaMain struct {
-	ACLMap          map[node]map[node]map[command]struct{}
-	NodeGroupMap    map[nodeGroup]map[node]struct{}
+	ACLMap          map[Node]map[Node]map[command]struct{}
+	NodeGroupMap    map[nodeGroup]map[Node]struct{}
 	CommandGroupMap map[commandGroup]map[command]struct{}
 	mu              sync.Mutex
 }
 
 func newSchemaMain() *schemaMain {
 	s := schemaMain{
-		ACLMap:          make(map[node]map[node]map[command]struct{}),
-		NodeGroupMap:    make(map[nodeGroup]map[node]struct{}),
+		ACLMap:          make(map[Node]map[Node]map[command]struct{}),
+		NodeGroupMap:    make(map[nodeGroup]map[Node]struct{}),
 		CommandGroupMap: make(map[commandGroup]map[command]struct{}),
 	}
 	return &s
@@ -74,15 +74,15 @@ func newSchemaMain() *schemaMain {
 // to be sent to nodes.
 // The ACL's here are generated from the schemaMain.ACLMap.
 type schemaGenerated struct {
-	ACLsToConvert    map[node]map[node]map[command]struct{}
-	GeneratedACLsMap map[node]HostACLsSerializedWithHash
+	ACLsToConvert    map[Node]map[Node]map[command]struct{}
+	GeneratedACLsMap map[Node]HostACLsSerializedWithHash
 	mu               sync.Mutex
 }
 
 func newSchemaGenerated() *schemaGenerated {
 	s := schemaGenerated{
-		ACLsToConvert:    map[node]map[node]map[command]struct{}{},
-		GeneratedACLsMap: make(map[node]HostACLsSerializedWithHash),
+		ACLsToConvert:    map[Node]map[Node]map[command]struct{}{},
+		GeneratedACLsMap: make(map[Node]HostACLsSerializedWithHash),
 	}
 	return &s
 }
@@ -104,8 +104,8 @@ type HostACLsSerializedWithHash struct {
 // the slice.
 // If the argument is not a group kind of value, then only a slice with that single
 // value is returned.
-func (a *accessLists) nodeAsSlice(n node) []node {
-	nodes := []node{}
+func (a *accessLists) nodeAsSlice(n Node) []Node {
+	nodes := []Node{}
 
 	// Check if we are given a nodeGroup variable, and if we are, get all the
 	// nodes for that group.
@@ -115,7 +115,7 @@ func (a *accessLists) nodeAsSlice(n node) []node {
 		}
 	} else {
 		// No group found meaning a single node was given as an argument.
-		nodes = []node{n}
+		nodes = []Node{n}
 	}
 
 	return nodes
@@ -148,14 +148,14 @@ func (a *accessLists) commandAsSlice(c command) []command {
 // If the node or the fromNode do not exist they will be created.
 // The json encoded schema for a node and the hash of those data
 // will also be generated.
-func (a *accessLists) aclAdd(host node, source node, cmd command) {
+func (a *accessLists) aclAdd(host Node, source Node, cmd command) {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 
 	// Check if node exists in map.
 	if _, ok := a.schemaMain.ACLMap[host]; !ok {
 		// log.Printf("info: did not find node=%v in map, creating map[fromnode]map[command]struct{}\n", n)
-		a.schemaMain.ACLMap[host] = make(map[node]map[command]struct{})
+		a.schemaMain.ACLMap[host] = make(map[Node]map[command]struct{})
 	}
 
 	// Check if also source node exists in map
@@ -177,7 +177,7 @@ func (a *accessLists) aclAdd(host node, source node, cmd command) {
 }
 
 // aclDeleteCommand will delete the specified command from the fromnode.
-func (a *accessLists) aclDeleteCommand(host node, source node, cmd command) error {
+func (a *accessLists) aclDeleteCommand(host Node, source Node, cmd command) error {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 
@@ -206,7 +206,7 @@ func (a *accessLists) aclDeleteCommand(host node, source node, cmd command) erro
 }
 
 // aclDeleteSource will delete specified source node and all commands specified for it.
-func (a *accessLists) aclDeleteSource(host node, source node) error {
+func (a *accessLists) aclDeleteSource(host Node, source Node) error {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 
@@ -241,7 +241,7 @@ func (a *accessLists) generateACLsForAllNodes() error {
 	a.schemaGenerated.mu.Lock()
 	defer a.schemaGenerated.mu.Unlock()
 
-	a.schemaGenerated.ACLsToConvert = make(map[node]map[node]map[command]struct{})
+	a.schemaGenerated.ACLsToConvert = make(map[Node]map[Node]map[command]struct{})
 
 	// Rangle all ACL's. Both for single hosts, and group of hosts.
 	// ACL's that are for a group of hosts will be generated split
@@ -304,7 +304,7 @@ func (a *accessLists) generateACLsForAllNodes() error {
 // and we then use the slice representation of the ACL to create the hash for
 // a specific host node.
 type sourceNode struct {
-	HostNode       node
+	HostNode       Node
 	SourceCommands []sourceNodeCommands
 }
 
@@ -312,7 +312,7 @@ type sourceNode struct {
 // and we then use the slice representation of the ACL to create the hash for
 // a specific host node.
 type sourceNodeCommands struct {
-	Source   node
+	Source   Node
 	Commands []command
 }
 
@@ -321,7 +321,7 @@ type sourceNodeCommands struct {
 // defined for each sourceNode are sorted.
 // This function is used when creating the hash of the nodeMap since we can not
 // guarantee the order of a hash map, but we can with a slice.
-func (a *accessLists) nodeMapToSlice(host node) sourceNode {
+func (a *accessLists) nodeMapToSlice(host Node) sourceNode {
 	srcNodes := sourceNode{
 		HostNode: host,
 	}
@@ -355,7 +355,7 @@ func (a *accessLists) nodeMapToSlice(host node) sourceNode {
 
 // groupNodesAddNode adds a node to a group. If the group does
 // not exist it will be created.
-func (a *accessLists) groupNodesAddNode(ng nodeGroup, n node) {
+func (a *accessLists) groupNodesAddNode(ng nodeGroup, n Node) {
 	err := a.validator.Var(ng, "startswith=grp_nodes_")
 	if err != nil {
 		log.Printf("error: group name do not start with grp_nodes_: %v\n", err)
@@ -365,7 +365,7 @@ func (a *accessLists) groupNodesAddNode(ng nodeGroup, n node) {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 	if _, ok := a.schemaMain.NodeGroupMap[ng]; !ok {
-		a.schemaMain.NodeGroupMap[ng] = make(map[node]struct{})
+		a.schemaMain.NodeGroupMap[ng] = make(map[Node]struct{})
 	}
 
 	a.schemaMain.NodeGroupMap[ng][n] = struct{}{}
@@ -381,7 +381,7 @@ func (a *accessLists) groupNodesAddNode(ng nodeGroup, n node) {
 }
 
 // groupNodesDeleteNode deletes a node from a group in the map.
-func (a *accessLists) groupNodesDeleteNode(ng nodeGroup, n node) {
+func (a *accessLists) groupNodesDeleteNode(ng nodeGroup, n Node) {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 	if _, ok := a.schemaMain.NodeGroupMap[ng][n]; !ok {
@@ -515,7 +515,7 @@ func (a *accessLists) importACLs(js []byte) error {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 
-	m := make(map[node]map[node]map[command]struct{})
+	m := make(map[Node]map[Node]map[command]struct{})
 
 	err := json.Unmarshal(js, &m)
 	if err != nil {

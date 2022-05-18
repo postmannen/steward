@@ -173,6 +173,7 @@ func (p *processes) Start(proc process) {
 	if proc.configuration.IsCentralAuth {
 		proc.startup.subREQPublicKeysGet(proc)
 		proc.startup.subREQPublicKeysAllow(proc)
+		proc.startup.subREQAclAddAccessList(proc)
 	}
 
 	if proc.configuration.StartSubREQPublicKeysToNode {
@@ -371,6 +372,13 @@ func (s startup) subREQPublicKeysAllow(p process) {
 func (s startup) subREQPublicKeysToNode(p process) {
 	log.Printf("Starting Public keys to Node subscriber: %#v\n", p.node)
 	sub := newSubject(REQPublicKeysToNode, string(p.node))
+	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
+	go proc.spawnWorker()
+}
+
+func (s startup) subREQAclAddAccessList(p process) {
+	log.Printf("Starting Add Access List subscriber: %#v\n", p.node)
+	sub := newSubject(REQAclAddAccessList, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
 }

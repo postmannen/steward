@@ -5,16 +5,16 @@ import (
 )
 
 type authParser struct {
-	currentHost node
-	authSchema  *accessLists
+	currentHost Node
+	accessLists *accessLists
 	//ACLsToConvert map[node]map[node]map[command]struct{}
 }
 
 // newAuthParser returns a new authParser, with the current host node set.
-func newAuthParser(n node, accessLists *accessLists) *authParser {
+func newAuthParser(n Node, accessLists *accessLists) *authParser {
 	a := authParser{
 		currentHost: n,
-		authSchema:  accessLists,
+		accessLists: accessLists,
 		//ACLsToConvert: make(map[node]map[node]map[command]struct{}),
 	}
 	return &a
@@ -50,27 +50,27 @@ func (a *authParser) hostGroupOrSingle() parseFn {
 func (a *authParser) hostIsGroup() parseFn {
 	// fmt.Printf("%v is a grp type\n", a.currentHost)
 
-	hosts := a.authSchema.nodeAsSlice(a.currentHost)
+	hosts := a.accessLists.nodeAsSlice(a.currentHost)
 
-	for source, cmdMap := range a.authSchema.schemaMain.ACLMap[a.currentHost] {
+	for source, cmdMap := range a.accessLists.schemaMain.ACLMap[a.currentHost] {
 
 		for cmd, emptyStruct := range cmdMap {
-			cmdSlice := a.authSchema.commandAsSlice(cmd)
+			cmdSlice := a.accessLists.commandAsSlice(cmd)
 
 			// Expand eventual groups, so we use real fromNode nodenames in ACL for nodes.
-			sourceNodes := a.authSchema.nodeAsSlice(source)
+			sourceNodes := a.accessLists.nodeAsSlice(source)
 			for _, sourceNode := range sourceNodes {
 				for _, host := range hosts {
 
 					for _, cm := range cmdSlice {
-						if a.authSchema.schemaGenerated.ACLsToConvert[host] == nil {
-							a.authSchema.schemaGenerated.ACLsToConvert[host] = make(map[node]map[command]struct{})
+						if a.accessLists.schemaGenerated.ACLsToConvert[host] == nil {
+							a.accessLists.schemaGenerated.ACLsToConvert[host] = make(map[Node]map[command]struct{})
 						}
-						if a.authSchema.schemaGenerated.ACLsToConvert[host][sourceNode] == nil {
-							a.authSchema.schemaGenerated.ACLsToConvert[host][sourceNode] = make(map[command]struct{})
+						if a.accessLists.schemaGenerated.ACLsToConvert[host][sourceNode] == nil {
+							a.accessLists.schemaGenerated.ACLsToConvert[host][sourceNode] = make(map[command]struct{})
 						}
 
-						a.authSchema.schemaGenerated.ACLsToConvert[host][sourceNode][cm] = emptyStruct
+						a.accessLists.schemaGenerated.ACLsToConvert[host][sourceNode][cm] = emptyStruct
 					}
 				}
 			}
@@ -88,24 +88,24 @@ func (a *authParser) hostIsNotGroup() parseFn {
 
 	host := a.currentHost
 
-	for source, cmdMap := range a.authSchema.schemaMain.ACLMap[a.currentHost] {
+	for source, cmdMap := range a.accessLists.schemaMain.ACLMap[a.currentHost] {
 
 		for cmd, emptyStruct := range cmdMap {
-			cmdSlice := a.authSchema.commandAsSlice(cmd)
+			cmdSlice := a.accessLists.commandAsSlice(cmd)
 
 			// Expand eventual groups, so we use real fromNode nodenames in ACL for nodes.
-			sourceNodes := a.authSchema.nodeAsSlice(source)
+			sourceNodes := a.accessLists.nodeAsSlice(source)
 			for _, sourceNode := range sourceNodes {
 
 				for _, cm := range cmdSlice {
-					if a.authSchema.schemaGenerated.ACLsToConvert[host] == nil {
-						a.authSchema.schemaGenerated.ACLsToConvert[host] = make(map[node]map[command]struct{})
+					if a.accessLists.schemaGenerated.ACLsToConvert[host] == nil {
+						a.accessLists.schemaGenerated.ACLsToConvert[host] = make(map[Node]map[command]struct{})
 					}
-					if a.authSchema.schemaGenerated.ACLsToConvert[host][sourceNode] == nil {
-						a.authSchema.schemaGenerated.ACLsToConvert[host][sourceNode] = make(map[command]struct{})
+					if a.accessLists.schemaGenerated.ACLsToConvert[host][sourceNode] == nil {
+						a.accessLists.schemaGenerated.ACLsToConvert[host][sourceNode] = make(map[command]struct{})
 					}
 
-					a.authSchema.schemaGenerated.ACLsToConvert[host][sourceNode][cm] = emptyStruct
+					a.accessLists.schemaGenerated.ACLsToConvert[host][sourceNode][cm] = emptyStruct
 				}
 			}
 		}

@@ -144,6 +144,8 @@ const (
 	REQPublicKeysToNode Method = "REQPublicKeysToNode"
 	// REQAuthPublicKeysAllow
 	REQPublicKeysAllow Method = "REQPublicKeysAllow"
+	// REQAclAddAcl
+	REQAclAddAccessList = "REQAclAddAccessList"
 )
 
 // The mapping of all the method constants specified, what type
@@ -232,6 +234,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				event: EventNACK,
 			},
 			REQPublicKeysAllow: methodREQPublicKeysAllow{
+				event: EventACK,
+			},
+			REQAclAddAccessList: methodREQAclAddAccessList{
 				event: EventACK,
 			},
 		},
