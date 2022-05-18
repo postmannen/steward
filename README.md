@@ -15,6 +15,7 @@ As long as you can do something as an operator on in a shell on a system you can
 
 - [steward](#steward)
   - [What is it ?](#what-is-it-)
+  - [Disclaimer](#disclaimer)
   - [Overview](#overview)
   - [Inspiration](#inspiration)
   - [Why](#why)
@@ -66,6 +67,9 @@ As long as you can do something as an operator on in a shell on a system you can
       - [ReqCliCommand](#reqclicommand-1)
     - [Errors reporting](#errors-reporting)
     - [Prometheus metrics](#prometheus-metrics)
+    - [Authrization and Key Distribution](#authrization-and-key-distribution)
+      - [Key registration on Central Server](#key-registration-on-central-server)
+      - [Key distribution to nodes](#key-distribution-to-nodes)
     - [Other](#other)
   - [Howto](#howto)
     - [Options for running](#options-for-running)
@@ -93,7 +97,6 @@ As long as you can do something as an operator on in a shell on a system you can
         - [Complete subject example](#complete-subject-example)
   - [TODO](#todo)
     - [Add Op option the remove messages from the queue on nodes](#add-op-option-the-remove-messages-from-the-queue-on-nodes)
-  - [Disclaimer](#disclaimer)
 
 ## What is it ?
 
@@ -122,6 +125,14 @@ An example of a **request method** to feed into the system. All fields are expla
 If the receiver `toNode` is down when the message was sent, it will be **retried** until delivered within the criterias set for `timeouts` and `retries`. The state of each message processed is handled by the owning steward instance where the message originated, and no state about the messages are stored in the NATS message broker.
 
 Since the initial connection from a Steward node is outbound towards the central NATS message broker no inbound firewall openings are needed.
+
+## Disclaimer
+
+All code in this repository are to be concidered not-production-ready, and the use is at your own responsibility and risk. The code are the attempt to concretize the idea of a purely async management system where the controlling unit is decoupled from the receiving unit, and that that we know the state of all the receiving units at all times.
+
+Also read the license file for further details.
+
+Expect the main branch to have breaking changes. If stability is needed, use the released packages, and read the release notes where changes will be explained.
 
 ## Overview
 
@@ -792,9 +803,33 @@ Or the same using bash's herestring:
 
 - Prometheus exporters for Metrics.
 
+### Authrization and Key Distribution
+
+#### Key registration on Central Server
+
+All nodes will generate a private and a public key pair. The public key will be sent to the central server as the payload in the **REQHello** messages.
+
+For storing the keys on the central server two databases are involved.
+
+- A Database for all the keys that have not been acknowledge.
+- A Database for all the keys that have been acknowledged into the system with a hash of all the keys. This is also the data base that gets distributed out to the nodes when they request and update
+
+1. When a new not already registered key is received on the central server it will be added to the **NO_ACK_DB** database, and a message will be sent to the operator to permit the key to be added to the system.
+1. When the operator permits the key, it will be added to the **Acknowledged** database, and the node will be removed from the Not-Acknowledged database.
+1. If the key is already in the acked database no changes will be made.
+
+#### Key distribution to nodes
+
+1. Steward nodes will request key updates by sending a message to the central server with the **REQGetKeys** method on a timed interval. The hash of the current keys on a node will be put as the payload of the message.
+2. On the Central server the received hash will be compared with the current hash on the central server. If the hashes are equal nothing will be done, and no reply message will be sent back to the end node.
+3. If the hashes are not equal a reply message of type **REQPublicKeysToNode** will be sent back to the end node with a copy of the acknowledged public keys database and a hash of those keys.
+4. The end node will then update it's local key database.
+
+NB: The update process is initiated by the end nodes on a timed interval. No key updates are initiaded from the central server.
+
 ### Other
 
-- More will come. In active development.
+- In active development.
 
 ## Howto
 
@@ -1338,11 +1373,3 @@ For CliCommand message to a node named "ship1" of type Event and it wants an Ack
 ### Add Op option the remove messages from the queue on nodes
 
 If messages have been sent, and not picked up by a node it might make sense to have some method to clear messages on a node. This could either be done by message ID, and/or time duration.
-
-## Disclaimer
-
-All code in this repository are to be concidered not-production-ready, and the use is at your own responsibility and risk. The code are the attempt to concretize the idea of a purely async management system where the controlling unit is decoupled from the receiving unit, and that that we know the state of all the receiving units at all times.
-
-Also read the license file for further details.
-
-Expect the main branch to have breaking changes. If stability is needed, use the released packages, and read the release notes where changes will be explained.
