@@ -14,7 +14,7 @@ import (
 // centralAuth holds the logic related to handling public keys and auth maps.
 type centralAuth struct {
 	// acl and authorization level related data and methods.
-	authorization *authorization
+	accessLists *accessLists
 	// public key distribution related data and methods.
 	pki *pki
 }
@@ -22,8 +22,8 @@ type centralAuth struct {
 // newCentralAuth will return a new and prepared *centralAuth
 func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *centralAuth {
 	c := centralAuth{
-		authorization: newAuthorization(),
-		pki:           newPKI(configuration, errorKernel),
+		accessLists: newAccessLists(),
+		pki:         newPKI(configuration, errorKernel),
 	}
 
 	return &c

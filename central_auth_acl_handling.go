@@ -30,21 +30,7 @@ import (
 
 // --------------------------------------
 
-type authorization struct {
-	authSchema *authSchema
-}
-
-func newAuthorization() *authorization {
-	a := authorization{
-		authSchema: newAuthSchema(),
-	}
-
-	return &a
-}
-
-// authSchema holds both the main schema to update by operators,
-// and also the indvidual node generated data based on the main schema.
-type authSchema struct {
+type accessLists struct {
 	// Holds the editable structures for ACL handling.
 	schemaMain *schemaMain
 	// Holds the generated based on the editable structures for ACL handling.
@@ -52,8 +38,8 @@ type authSchema struct {
 	validator       *validator.Validate
 }
 
-func newAuthSchema() *authSchema {
-	a := authSchema{
+func newAccessLists() *accessLists {
+	a := accessLists{
 		schemaMain:      newSchemaMain(),
 		schemaGenerated: newSchemaGenerated(),
 		validator:       validator.New(),
@@ -118,7 +104,7 @@ type HostACLsSerializedWithHash struct {
 // the slice.
 // If the argument is not a group kind of value, then only a slice with that single
 // value is returned.
-func (a *authSchema) nodeAsSlice(n node) []node {
+func (a *accessLists) nodeAsSlice(n node) []node {
 	nodes := []node{}
 
 	// Check if we are given a nodeGroup variable, and if we are, get all the
@@ -140,7 +126,7 @@ func (a *authSchema) nodeAsSlice(n node) []node {
 // the slice.
 // If the argument is not a group kind of value, then only a slice with that single
 // value is returned.
-func (a *authSchema) commandAsSlice(c command) []command {
+func (a *accessLists) commandAsSlice(c command) []command {
 	commands := []command{}
 
 	// Check if we are given a nodeGroup variable, and if we are, get all the
@@ -162,7 +148,7 @@ func (a *authSchema) commandAsSlice(c command) []command {
 // If the node or the fromNode do not exist they will be created.
 // The json encoded schema for a node and the hash of those data
 // will also be generated.
-func (a *authSchema) aclAdd(host node, source node, cmd command) {
+func (a *accessLists) aclAdd(host node, source node, cmd command) {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 
@@ -191,7 +177,7 @@ func (a *authSchema) aclAdd(host node, source node, cmd command) {
 }
 
 // aclDeleteCommand will delete the specified command from the fromnode.
-func (a *authSchema) aclDeleteCommand(host node, source node, cmd command) error {
+func (a *accessLists) aclDeleteCommand(host node, source node, cmd command) error {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 
@@ -220,7 +206,7 @@ func (a *authSchema) aclDeleteCommand(host node, source node, cmd command) error
 }
 
 // aclDeleteSource will delete specified source node and all commands specified for it.
-func (a *authSchema) aclDeleteSource(host node, source node) error {
+func (a *accessLists) aclDeleteSource(host node, source node) error {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 
@@ -251,7 +237,7 @@ func (a *authSchema) aclDeleteSource(host node, source node) error {
 // and run a small state machine on each element to create the final ACL result to be used at host
 // nodes.
 // The result will be written to the schemaGenerated.ACLsToConvert map.
-func (a *authSchema) generateACLsForAllNodes() error {
+func (a *accessLists) generateACLsForAllNodes() error {
 	a.schemaGenerated.mu.Lock()
 	defer a.schemaGenerated.mu.Unlock()
 
@@ -335,7 +321,7 @@ type sourceNodeCommands struct {
 // defined for each sourceNode are sorted.
 // This function is used when creating the hash of the nodeMap since we can not
 // guarantee the order of a hash map, but we can with a slice.
-func (a *authSchema) nodeMapToSlice(host node) sourceNode {
+func (a *accessLists) nodeMapToSlice(host node) sourceNode {
 	srcNodes := sourceNode{
 		HostNode: host,
 	}
@@ -369,7 +355,7 @@ func (a *authSchema) nodeMapToSlice(host node) sourceNode {
 
 // groupNodesAddNode adds a node to a group. If the group does
 // not exist it will be created.
-func (a *authSchema) groupNodesAddNode(ng nodeGroup, n node) {
+func (a *accessLists) groupNodesAddNode(ng nodeGroup, n node) {
 	err := a.validator.Var(ng, "startswith=grp_nodes_")
 	if err != nil {
 		log.Printf("error: group name do not start with grp_nodes_: %v\n", err)
@@ -395,7 +381,7 @@ func (a *authSchema) groupNodesAddNode(ng nodeGroup, n node) {
 }
 
 // groupNodesDeleteNode deletes a node from a group in the map.
-func (a *authSchema) groupNodesDeleteNode(ng nodeGroup, n node) {
+func (a *accessLists) groupNodesDeleteNode(ng nodeGroup, n node) {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 	if _, ok := a.schemaMain.NodeGroupMap[ng][n]; !ok {
@@ -416,7 +402,7 @@ func (a *authSchema) groupNodesDeleteNode(ng nodeGroup, n node) {
 }
 
 // groupNodesDeleteGroup deletes a nodeGroup from map.
-func (a *authSchema) groupNodesDeleteGroup(ng nodeGroup) {
+func (a *accessLists) groupNodesDeleteGroup(ng nodeGroup) {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 	if _, ok := a.schemaMain.NodeGroupMap[ng]; !ok {
@@ -440,7 +426,7 @@ func (a *authSchema) groupNodesDeleteGroup(ng nodeGroup) {
 
 // groupCommandsAddCommand adds a command to a group. If the group does
 // not exist it will be created.
-func (a *authSchema) groupCommandsAddCommand(cg commandGroup, c command) {
+func (a *accessLists) groupCommandsAddCommand(cg commandGroup, c command) {
 	err := a.validator.Var(cg, "startswith=grp_commands_")
 	if err != nil {
 		log.Printf("error: group name do not start with grp_commands_ : %v\n", err)
@@ -466,7 +452,7 @@ func (a *authSchema) groupCommandsAddCommand(cg commandGroup, c command) {
 }
 
 // groupCommandsDeleteCommand deletes a command from a group in the map.
-func (a *authSchema) groupCommandsDeleteCommand(cg commandGroup, c command) {
+func (a *accessLists) groupCommandsDeleteCommand(cg commandGroup, c command) {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 	if _, ok := a.schemaMain.CommandGroupMap[cg][c]; !ok {
@@ -487,7 +473,7 @@ func (a *authSchema) groupCommandsDeleteCommand(cg commandGroup, c command) {
 }
 
 // groupCommandDeleteGroup deletes a commandGroup map.
-func (a *authSchema) groupCommandDeleteGroup(cg commandGroup) {
+func (a *accessLists) groupCommandDeleteGroup(cg commandGroup) {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 	if _, ok := a.schemaMain.CommandGroupMap[cg]; !ok {
@@ -508,7 +494,7 @@ func (a *authSchema) groupCommandDeleteGroup(cg commandGroup) {
 }
 
 // exportACLs will export the current content of the main ACLMap in JSON format.
-func (a *authSchema) exportACLs() ([]byte, error) {
+func (a *accessLists) exportACLs() ([]byte, error) {
 
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
@@ -524,7 +510,7 @@ func (a *authSchema) exportACLs() ([]byte, error) {
 }
 
 // importACLs will import and replace all current ACL's with the ACL's provided as input.
-func (a *authSchema) importACLs(js []byte) error {
+func (a *accessLists) importACLs(js []byte) error {
 
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()

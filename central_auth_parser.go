@@ -6,15 +6,15 @@ import (
 
 type authParser struct {
 	currentHost node
-	authSchema  *authSchema
+	authSchema  *accessLists
 	//ACLsToConvert map[node]map[node]map[command]struct{}
 }
 
 // newAuthParser returns a new authParser, with the current host node set.
-func newAuthParser(n node, authSchema *authSchema) *authParser {
+func newAuthParser(n node, accessLists *accessLists) *authParser {
 	a := authParser{
 		currentHost: n,
-		authSchema:  authSchema,
+		authSchema:  accessLists,
 		//ACLsToConvert: make(map[node]map[node]map[command]struct{}),
 	}
 	return &a
