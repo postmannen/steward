@@ -144,11 +144,11 @@ func (a *accessLists) commandAsSlice(c command) []command {
 	return commands
 }
 
-// aclAdd will add a command for a fromNode.
+// aclAddCommand will add a command for a fromNode.
 // If the node or the fromNode do not exist they will be created.
 // The json encoded schema for a node and the hash of those data
 // will also be generated.
-func (a *accessLists) aclAdd(host Node, source Node, cmd command) {
+func (a *accessLists) aclAddCommand(host Node, source Node, cmd command) {
 	a.schemaMain.mu.Lock()
 	defer a.schemaMain.mu.Unlock()
 

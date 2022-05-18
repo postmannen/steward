@@ -173,7 +173,8 @@ func (p *processes) Start(proc process) {
 	if proc.configuration.IsCentralAuth {
 		proc.startup.subREQPublicKeysGet(proc)
 		proc.startup.subREQPublicKeysAllow(proc)
-		proc.startup.subREQAclAddAccessList(proc)
+		proc.startup.subREQAclAddCommand(proc)
+		proc.startup.subREQAclDeleteCommand(proc)
 	}
 
 	if proc.configuration.StartSubREQPublicKeysToNode {
@@ -376,9 +377,16 @@ func (s startup) subREQPublicKeysToNode(p process) {
 	go proc.spawnWorker()
 }
 
-func (s startup) subREQAclAddAccessList(p process) {
-	log.Printf("Starting Add Access List subscriber: %#v\n", p.node)
-	sub := newSubject(REQAclAddAccessList, string(p.node))
+func (s startup) subREQAclAddCommand(p process) {
+	log.Printf("Starting Acl Add Command subscriber: %#v\n", p.node)
+	sub := newSubject(REQAclAddCommand, string(p.node))
+	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
+	go proc.spawnWorker()
+}
+
+func (s startup) subREQAclDeleteCommand(p process) {
+	log.Printf("Starting Acl Delete Command subscriber: %#v\n", p.node)
+	sub := newSubject(REQAclDeleteCommand, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
 }

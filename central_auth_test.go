@@ -17,8 +17,8 @@ func TestACLSingleNode(t *testing.T) {
 	}
 
 	a := newAccessLists()
-	a.aclAdd("ship101", "admin", "HORSE")
-	a.aclAdd("ship101", "admin", "PIG")
+	a.aclAddCommand("ship101", "admin", "HORSE")
+	a.aclAddCommand("ship101", "admin", "PIG")
 
 	// --- TESTS ---
 
@@ -59,10 +59,10 @@ func TestACLWithGroups(t *testing.T) {
 	a.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
 	a.groupCommandsAddCommand(grp_commands_commandset1, "date")
 
-	a.aclAdd(grp_nodes_ships, "admin", "useradd -m kongen")
-	a.aclAdd("ship101", "admin", "HORSE")
+	a.aclAddCommand(grp_nodes_ships, "admin", "useradd -m kongen")
+	a.aclAddCommand("ship101", "admin", "HORSE")
 
-	a.aclAdd(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
+	a.aclAddCommand(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
 
 	mapOfFromNodeCommands := make(map[Node]map[command]struct{})
 	err := cbor.Unmarshal(a.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
@@ -118,10 +118,10 @@ func TestACLNodesGroupDeleteNode(t *testing.T) {
 	a.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
 	a.groupCommandsAddCommand(grp_commands_commandset1, "date")
 
-	a.aclAdd(grp_nodes_ships, "admin", "useradd -m kongen")
-	a.aclAdd("ship101", "admin", "HORSE")
+	a.aclAddCommand(grp_nodes_ships, "admin", "useradd -m kongen")
+	a.aclAddCommand("ship101", "admin", "HORSE")
 
-	a.aclAdd(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
+	a.aclAddCommand(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
 
 	a.groupNodesDeleteNode(grp_nodes_ships, "ship101")
 
@@ -175,10 +175,10 @@ func TestGroupNodesDeleteGroup(t *testing.T) {
 	a.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
 	a.groupCommandsAddCommand(grp_commands_commandset1, "date")
 
-	a.aclAdd(grp_nodes_ships, "admin", "useradd -m kongen")
-	a.aclAdd("ship101", "admin", "HORSE")
+	a.aclAddCommand(grp_nodes_ships, "admin", "useradd -m kongen")
+	a.aclAddCommand("ship101", "admin", "HORSE")
 
-	a.aclAdd(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
+	a.aclAddCommand(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
 
 	a.groupNodesDeleteGroup(grp_nodes_operators)
 
@@ -232,10 +232,10 @@ func TestGroupCommandDeleteGroup(t *testing.T) {
 	a.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
 	a.groupCommandsAddCommand(grp_commands_commandset1, "date")
 
-	a.aclAdd(grp_nodes_ships, "admin", "useradd -m kongen")
-	a.aclAdd("ship101", "admin", "HORSE")
+	a.aclAddCommand(grp_nodes_ships, "admin", "useradd -m kongen")
+	a.aclAddCommand("ship101", "admin", "HORSE")
 
-	a.aclAdd(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
+	a.aclAddCommand(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
 
 	a.groupCommandDeleteGroup(grp_commands_commandset1)
 
@@ -274,14 +274,14 @@ func TestACLGenerated(t *testing.T) {
 
 	a := newAccessLists()
 
-	a.aclAdd("ship101", "admin", "HORSE")
+	a.aclAddCommand("ship101", "admin", "HORSE")
 
 	a.groupNodesAddNode("grp_nodes_ships", "ship101")
-	a.aclAdd("grp_nodes_ships", "admin", "HEN")
+	a.aclAddCommand("grp_nodes_ships", "admin", "HEN")
 
 	a.groupCommandsAddCommand("grp_commands_test", "echo")
 	a.groupCommandsAddCommand("grp_commands_test", "dmesg")
-	a.aclAdd("grp_nodes_ships", "admin", "grp_commands_test")
+	a.aclAddCommand("grp_nodes_ships", "admin", "grp_commands_test")
 
 	a.groupCommandsDeleteCommand("grp_commands_test", "echo")
 
@@ -325,8 +325,8 @@ func TestACLSchemaMainACLMap(t *testing.T) {
 
 	//a.aclNodeFromnodeCommandAdd("ship101", "admin", "PIG")
 	// fmt.Printf("---------------ADDING COMMAND-------------\n")
-	a.aclAdd("ship0", "admin", "systemctl")
-	a.aclAdd("ship1", "admin", "tcpdump")
+	a.aclAddCommand("ship0", "admin", "systemctl")
+	a.aclAddCommand("ship1", "admin", "tcpdump")
 
 	if _, ok := a.schemaMain.ACLMap["ship0"]["admin"]["systemctl"]; !ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship0, admin, systemctl")
@@ -338,14 +338,14 @@ func TestACLSchemaMainACLMap(t *testing.T) {
 	// fmt.Printf("---------------ADDING COMMAND-------------\n")
 	a.groupNodesAddNode("grp_nodes_ships", "ship1")
 	a.groupNodesAddNode("grp_nodes_ships", "ship2")
-	a.aclAdd("grp_nodes_ships", "admin", "dmesg")
+	a.aclAddCommand("grp_nodes_ships", "admin", "dmesg")
 
 	if _, ok := a.schemaMain.ACLMap["grp_nodes_ships"]["admin"]["dmesg"]; !ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship1, admin, tcpdump")
 	}
 
 	// fmt.Printf("---------------ADDING COMMAND-------------\n")
-	a.aclAdd("ship2", "admin", "echo")
+	a.aclAddCommand("ship2", "admin", "echo")
 
 	if _, ok := a.schemaMain.ACLMap["ship2"]["admin"]["echo"]; !ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship1, admin, tcpdump")
@@ -402,10 +402,10 @@ func TestACLHash(t *testing.T) {
 
 	a := newAccessLists()
 
-	a.aclAdd("ship101", "admin", "HORSE")
+	a.aclAddCommand("ship101", "admin", "HORSE")
 
 	a.groupNodesAddNode("grp_nodes_ships", "ship101")
-	a.aclAdd("grp_nodes_ships", "admin", "HEN")
+	a.aclAddCommand("grp_nodes_ships", "admin", "HEN")
 
 	hash := [32]uint8{0xa4, 0x99, 0xbd, 0xa3, 0x18, 0x26, 0x52, 0xc2, 0x92, 0x60, 0x23, 0x19, 0x3c, 0xa, 0x7, 0xa9, 0xb7, 0x77, 0x4f, 0x11, 0x34, 0xd5, 0x2d, 0xd1, 0x8d, 0xab, 0x6c, 0x4b, 0x2, 0xfa, 0x5c, 0x7a}
 	value := a.schemaGenerated.GeneratedACLsMap["ship101"].Hash
@@ -427,12 +427,12 @@ func TestACLConcurrent(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			a.aclAdd("ship1", "operator2", "rm -rf")
-			a.aclAdd("ship1", "operator1", "ls -lt")
-			a.aclAdd("ship1", "operator1", "ls -lt")
-			a.aclAdd("ship1", "operator2", "ls -l")
-			a.aclAdd("ship3", "operator3", "ls -lt")
-			a.aclAdd("ship3", "operator3", "vi /etc/hostname")
+			a.aclAddCommand("ship1", "operator2", "rm -rf")
+			a.aclAddCommand("ship1", "operator1", "ls -lt")
+			a.aclAddCommand("ship1", "operator1", "ls -lt")
+			a.aclAddCommand("ship1", "operator2", "ls -l")
+			a.aclAddCommand("ship3", "operator3", "ls -lt")
+			a.aclAddCommand("ship3", "operator3", "vi /etc/hostname")
 			a.aclDeleteCommand("ship3", "operator2", "ls -lt")
 			a.aclDeleteSource("ship3", "operator3")
 		}()
@@ -477,10 +477,10 @@ func TestExportACLs(t *testing.T) {
 	a.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
 	a.groupCommandsAddCommand(grp_commands_commandset1, "date")
 
-	a.aclAdd(grp_nodes_ships, "admin", "useradd -m kongen")
-	a.aclAdd("ship101", "admin", "HORSE")
+	a.aclAddCommand(grp_nodes_ships, "admin", "useradd -m kongen")
+	a.aclAddCommand("ship101", "admin", "HORSE")
 
-	a.aclAdd(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
+	a.aclAddCommand(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
 
 	js, err := a.exportACLs()
 	if err != nil {
