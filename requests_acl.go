@@ -217,3 +217,143 @@ func (m methodREQAclDeleteSource) handler(proc process, message Message, node st
 }
 
 // ---
+
+type methodREQAclGroupNodesAddNode struct {
+	event Event
+}
+
+func (m methodREQAclGroupNodesAddNode) getKind() Event {
+	return m.event
+}
+
+func (m methodREQAclGroupNodesAddNode) handler(proc process, message Message, node string) ([]byte, error) {
+	inf := fmt.Errorf("<--- methodREQAclGroupNodesAddNode received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+
+	proc.processes.wg.Add(1)
+	go func() {
+		defer proc.processes.wg.Done()
+
+		switch {
+		case len(message.MethodArgs) < 2:
+			er := fmt.Errorf("error: methodREQAclGroupNodesAddNode: got <2 number methodArgs, want 2")
+			proc.errorKernel.errSend(proc, message, er)
+
+			return
+		}
+
+		// Get a context with the timeout specified in message.MethodTimeout.
+		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
+
+		outCh := make(chan []byte)
+
+		proc.processes.wg.Add(1)
+		go func() {
+			defer proc.processes.wg.Done()
+
+			ng := message.MethodArgs[0]
+			n := message.MethodArgs[1]
+
+			proc.centralAuth.accessLists.groupNodesAddNode(nodeGroup(ng), Node(n))
+
+			outString := fmt.Sprintf("added node to nodeGroup: nodeGroup=%v, node=%v\n", ng, n)
+			out := []byte(outString)
+
+			select {
+			case outCh <- out:
+			case <-ctx.Done():
+				return
+			}
+		}()
+
+		select {
+		case <-ctx.Done():
+
+			cancel()
+			er := fmt.Errorf("error: methodREQAclGroupNodesAddNode: method timed out: %v", message.MethodArgs)
+			proc.errorKernel.errSend(proc, message, er)
+
+		case out := <-outCh:
+
+			// Prepare and queue for sending a new message with the output
+			// of the action executed.
+			newReplyMessage(proc, message, out)
+		}
+
+	}()
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+// ---
+
+type methodREQAclGroupNodesDeleteNode struct {
+	event Event
+}
+
+func (m methodREQAclGroupNodesDeleteNode) getKind() Event {
+	return m.event
+}
+
+func (m methodREQAclGroupNodesDeleteNode) handler(proc process, message Message, node string) ([]byte, error) {
+	inf := fmt.Errorf("<--- methodREQAclGroupNodesDeleteNode received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+
+	proc.processes.wg.Add(1)
+	go func() {
+		defer proc.processes.wg.Done()
+
+		switch {
+		case len(message.MethodArgs) < 2:
+			er := fmt.Errorf("error: methodREQAclGroupNodesDeleteNode: got <2 number methodArgs, want 2")
+			proc.errorKernel.errSend(proc, message, er)
+
+			return
+		}
+
+		// Get a context with the timeout specified in message.MethodTimeout.
+		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
+
+		outCh := make(chan []byte)
+
+		proc.processes.wg.Add(1)
+		go func() {
+			defer proc.processes.wg.Done()
+
+			ng := message.MethodArgs[0]
+			n := message.MethodArgs[1]
+
+			proc.centralAuth.accessLists.groupNodesDeleteNode(nodeGroup(ng), Node(n))
+
+			outString := fmt.Sprintf("deleted node from nodeGroup: nodeGroup=%v, node=%v\n", ng, n)
+			out := []byte(outString)
+
+			select {
+			case outCh <- out:
+			case <-ctx.Done():
+				return
+			}
+		}()
+
+		select {
+		case <-ctx.Done():
+
+			cancel()
+			er := fmt.Errorf("error: methodREQAclGroupNodesDeleteNode: method timed out: %v", message.MethodArgs)
+			proc.errorKernel.errSend(proc, message, er)
+
+		case out := <-outCh:
+
+			// Prepare and queue for sending a new message with the output
+			// of the action executed.
+			newReplyMessage(proc, message, out)
+		}
+
+	}()
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+// ---
