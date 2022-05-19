@@ -175,6 +175,7 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQPublicKeysAllow(proc)
 		proc.startup.subREQAclAddCommand(proc)
 		proc.startup.subREQAclDeleteCommand(proc)
+		proc.startup.subREQAclDeleteSource(proc)
 	}
 
 	if proc.configuration.StartSubREQPublicKeysToNode {
@@ -387,6 +388,13 @@ func (s startup) subREQAclAddCommand(p process) {
 func (s startup) subREQAclDeleteCommand(p process) {
 	log.Printf("Starting Acl Delete Command subscriber: %#v\n", p.node)
 	sub := newSubject(REQAclDeleteCommand, string(p.node))
+	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
+	go proc.spawnWorker()
+}
+
+func (s startup) subREQAclDeleteSource(p process) {
+	log.Printf("Starting Acl Delete Source subscriber: %#v\n", p.node)
+	sub := newSubject(REQAclDeleteSource, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
 }

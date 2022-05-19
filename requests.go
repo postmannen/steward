@@ -130,6 +130,8 @@ const (
 	REQAclAddCommand = "REQAclAddCommand"
 	// REQAclDeleteCommand
 	REQAclDeleteCommand = "REQAclDeleteCommand"
+	// REQAclDeleteSource
+	REQAclDeleteSource = "REQAclDeleteSource"
 )
 
 // The mapping of all the method constants specified, what type
@@ -224,6 +226,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				event: EventACK,
 			},
 			REQAclDeleteCommand: methodREQAclDeleteCommand{
+				event: EventACK,
+			},
+			REQAclDeleteSource: methodREQAclDeleteSource{
 				event: EventACK,
 			},
 		},
