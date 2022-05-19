@@ -16,7 +16,7 @@ func TestACLSingleNode(t *testing.T) {
 		log.SetOutput(io.Discard)
 	}
 
-	a := newAccessLists()
+	a := newAccessLists(&errorKernel{})
 	a.aclAddCommand("ship101", "admin", "HORSE")
 	a.aclAddCommand("ship101", "admin", "PIG")
 
@@ -42,7 +42,7 @@ func TestACLWithGroups(t *testing.T) {
 		log.SetOutput(io.Discard)
 	}
 
-	a := newAccessLists()
+	a := newAccessLists(&errorKernel{})
 
 	const (
 		grp_nodes_operators      = "grp_nodes_operators"
@@ -101,7 +101,7 @@ func TestACLNodesGroupDeleteNode(t *testing.T) {
 		log.SetOutput(io.Discard)
 	}
 
-	a := newAccessLists()
+	a := newAccessLists(&errorKernel{})
 
 	const (
 		grp_nodes_operators      = "grp_nodes_operators"
@@ -158,7 +158,7 @@ func TestGroupNodesDeleteGroup(t *testing.T) {
 		log.SetOutput(io.Discard)
 	}
 
-	a := newAccessLists()
+	a := newAccessLists(&errorKernel{})
 
 	const (
 		grp_nodes_operators      = "grp_nodes_operators"
@@ -215,7 +215,7 @@ func TestGroupCommandDeleteGroup(t *testing.T) {
 		log.SetOutput(io.Discard)
 	}
 
-	a := newAccessLists()
+	a := newAccessLists(&errorKernel{})
 
 	const (
 		grp_nodes_operators      = "grp_nodes_operators"
@@ -272,7 +272,7 @@ func TestACLGenerated(t *testing.T) {
 		log.SetOutput(io.Discard)
 	}
 
-	a := newAccessLists()
+	a := newAccessLists(&errorKernel{})
 
 	a.aclAddCommand("ship101", "admin", "HORSE")
 
@@ -321,7 +321,7 @@ func TestACLSchemaMainACLMap(t *testing.T) {
 		log.SetOutput(io.Discard)
 	}
 
-	a := newAccessLists()
+	a := newAccessLists(&errorKernel{})
 
 	//a.aclNodeFromnodeCommandAdd("ship101", "admin", "PIG")
 	// fmt.Printf("---------------ADDING COMMAND-------------\n")
@@ -400,7 +400,7 @@ func TestACLHash(t *testing.T) {
 		log.SetOutput(io.Discard)
 	}
 
-	a := newAccessLists()
+	a := newAccessLists(&errorKernel{})
 
 	a.aclAddCommand("ship101", "admin", "HORSE")
 
@@ -417,7 +417,7 @@ func TestACLHash(t *testing.T) {
 }
 
 func TestACLConcurrent(t *testing.T) {
-	a := newAccessLists()
+	a := newAccessLists(&errorKernel{})
 
 	// -----------General testing and creation of some data----------------
 
@@ -466,7 +466,7 @@ func TestExportACLs(t *testing.T) {
 		grp_commands_commandset1 = "grp_commands_commandset1"
 	)
 
-	a := newAccessLists()
+	a := newAccessLists(&errorKernel{})
 
 	a.groupNodesAddNode(grp_nodes_operators, "operator1")
 	a.groupNodesAddNode(grp_nodes_operators, "operator2")
@@ -501,7 +501,7 @@ func TestImportACLs(t *testing.T) {
 
 	want := `map[grp_nodes_ships:map[admin:map[useradd -m kongen:{}] grp_nodes_operators:map[grp_commands_commandset1:{}]] ship101:map[admin:map[HORSE:{}]]]`
 
-	a := newAccessLists()
+	a := newAccessLists(&errorKernel{})
 
 	err := a.importACLs(js)
 	if err != nil {

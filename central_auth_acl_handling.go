@@ -36,13 +36,15 @@ type accessLists struct {
 	// Holds the generated based on the editable structures for ACL handling.
 	schemaGenerated *schemaGenerated
 	validator       *validator.Validate
+	errorKernel     *errorKernel
 }
 
-func newAccessLists() *accessLists {
+func newAccessLists(errorKernel *errorKernel) *accessLists {
 	a := accessLists{
 		schemaMain:      newSchemaMain(),
 		schemaGenerated: newSchemaGenerated(),
 		validator:       validator.New(),
+		errorKernel:     errorKernel,
 	}
 
 	return &a
