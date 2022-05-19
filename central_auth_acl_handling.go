@@ -259,8 +259,18 @@ func (a *accessLists) generateACLsForAllNodes() error {
 	// are defined for each individual host node.
 	// Range this map, and generate a JSON representation of all
 	// the ACL's each host.
+	fmt.Printf("\n --- DEBUG: IN GENERATE ACLsToConvert contains: %#v\n", a.schemaGenerated.ACLsToConvert)
 	func() {
+		// If the map to generate from map is empty we want to also set the generatedACLsMap
+		// to empty so we can make sure that no more generated ACL's exists to be distributed.
+		if len(a.schemaGenerated.ACLsToConvert) == 0 {
+			fmt.Printf(" ****** MAP IS EMPTY\n")
+			a.schemaGenerated.GeneratedACLsMap = make(map[Node]HostACLsSerializedWithHash)
+
+		}
+
 		for n, m := range a.schemaGenerated.ACLsToConvert {
+			fmt.Printf("\n ################ DEBUG: RANGE in generate: n=%v, m=%v\n", n, m)
 
 			// cbor marshal the data of the ACL map to store for the host node.
 			cb, err := cbor.Marshal(m)
@@ -296,6 +306,7 @@ func (a *accessLists) generateACLsForAllNodes() error {
 
 		}
 	}()
+	fmt.Printf("\n --- DEBUG: IN GENERATE GeneratedACLsMap contains: %v\n", a.schemaGenerated.GeneratedACLsMap)
 
 	return nil
 }

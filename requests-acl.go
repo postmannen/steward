@@ -47,11 +47,11 @@ func (m methodREQAclAddCommand) handler(proc process, message Message, node stri
 
 			// Just print out for testing.
 			proc.centralAuth.accessLists.schemaMain.mu.Lock()
-			fmt.Printf("\n ---------- content of main acl map: %v-----------\n", proc.centralAuth.accessLists.schemaMain.ACLMap)
+			fmt.Printf("\n ########### content of main acl map: %v###########\n", proc.centralAuth.accessLists.schemaMain.ACLMap)
 			proc.centralAuth.accessLists.schemaMain.mu.Unlock()
 
 			proc.centralAuth.accessLists.schemaGenerated.mu.Lock()
-			fmt.Printf("\n ---------- content of generated acl map: %v-----------\n", proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap)
+			fmt.Printf("\n ########### content of generated acl map: %v###########\n", proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap)
 			proc.centralAuth.accessLists.schemaGenerated.mu.Unlock()
 
 			outString := fmt.Sprintf("acl added: host=%v, source=%v, command=%v\n", host, source, cmd)
@@ -95,7 +95,7 @@ func (m methodREQAclDeleteCommand) getKind() Event {
 }
 
 func (m methodREQAclDeleteCommand) handler(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- methodREQAclAddAccessList received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	inf := fmt.Errorf("<--- methodREQAclDeleteCommand received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
 
 	proc.processes.wg.Add(1)
@@ -127,14 +127,14 @@ func (m methodREQAclDeleteCommand) handler(proc process, message Message, node s
 
 			// Just print out for testing.
 			proc.centralAuth.accessLists.schemaMain.mu.Lock()
-			fmt.Printf("\n ---------- content of main acl map: %v-----------\n", proc.centralAuth.accessLists.schemaMain.ACLMap)
+			fmt.Printf("\n ########### content of main acl map: %v###########\n", proc.centralAuth.accessLists.schemaMain.ACLMap)
 			proc.centralAuth.accessLists.schemaMain.mu.Unlock()
 
 			proc.centralAuth.accessLists.schemaGenerated.mu.Lock()
-			fmt.Printf("\n ---------- content of generated acl map: %v-----------\n", proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap)
+			fmt.Printf("\n ########### content of generated acl map: %v###########\n", proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap)
 			proc.centralAuth.accessLists.schemaGenerated.mu.Unlock()
 
-			outString := fmt.Sprintf("acl added: host=%v, source=%v, command=%v\n", host, source, cmd)
+			outString := fmt.Sprintf("acl deleted: host=%v, source=%v, command=%v\n", host, source, cmd)
 			out := []byte(outString)
 
 			select {
