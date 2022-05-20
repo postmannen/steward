@@ -178,6 +178,7 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQAclDeleteSource(proc)
 		proc.startup.subREQAclGroupNodesAddNode(proc)
 		proc.startup.subREQAclGroupNodesDeleteNode(proc)
+		proc.startup.subREQAclGroupNodesDeleteGroup(proc)
 	}
 
 	if proc.configuration.StartSubREQPublicKeysToNode {
@@ -411,6 +412,13 @@ func (s startup) subREQAclGroupNodesAddNode(p process) {
 func (s startup) subREQAclGroupNodesDeleteNode(p process) {
 	log.Printf("Starting Acl Delete node from nodeGroup subscriber: %#v\n", p.node)
 	sub := newSubject(REQAclGroupNodesDeleteNode, string(p.node))
+	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
+	go proc.spawnWorker()
+}
+
+func (s startup) subREQAclGroupNodesDeleteGroup(p process) {
+	log.Printf("Starting Acl Delete nodeGroup subscriber: %#v\n", p.node)
+	sub := newSubject(REQAclGroupNodesDeleteGroup, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
 }
