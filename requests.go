@@ -142,6 +142,8 @@ const (
 	REQAclGroupCommandsAddCommand = "REQAclGroupCommandsAddCommand"
 	// REQAclGroupCommandsDeleteCommand
 	REQAclGroupCommandsDeleteCommand = "REQAclGroupCommandsDeleteCommand"
+	// REQAclGroupCommandsDeleteGroup
+	REQAclGroupCommandsDeleteGroup = "REQAclGroupCommandsDeleteGroup"
 )
 
 // The mapping of all the method constants specified, what type
@@ -150,6 +152,11 @@ const (
 //  Allowed values for the Event field are:
 //   - EventACK
 //   - EventNack
+//
+// The primary use of this table is that messages are not able to
+// pass the actual type of the request since it is sent as a string,
+// so we use the below table to find the actual type based on that
+// string type.
 func (m Method) GetMethodsAvailable() MethodsAvailable {
 
 	ma := MethodsAvailable{
@@ -254,6 +261,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				event: EventACK,
 			},
 			REQAclGroupCommandsDeleteCommand: methodREQAclGroupCommandsDeleteCommand{
+				event: EventACK,
+			},
+			REQAclGroupCommandsDeleteGroup: methodREQAclGroupCommandsDeleteGroup{
 				event: EventACK,
 			},
 		},

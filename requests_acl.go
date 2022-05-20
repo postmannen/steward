@@ -566,3 +566,70 @@ func (m methodREQAclGroupCommandsDeleteCommand) handler(proc process, message Me
 }
 
 // ---
+
+type methodREQAclGroupCommandsDeleteGroup struct {
+	event Event
+}
+
+func (m methodREQAclGroupCommandsDeleteGroup) getKind() Event {
+	return m.event
+}
+
+func (m methodREQAclGroupCommandsDeleteGroup) handler(proc process, message Message, node string) ([]byte, error) {
+	inf := fmt.Errorf("<--- methodREQAclGroupCommandsDeleteGroup received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+
+	proc.processes.wg.Add(1)
+	go func() {
+		defer proc.processes.wg.Done()
+
+		switch {
+		case len(message.MethodArgs) < 1:
+			er := fmt.Errorf("error: methodREQAclGroupCommandsDeleteGroup: got <1 number methodArgs, want 1")
+			proc.errorKernel.errSend(proc, message, er)
+
+			return
+		}
+
+		// Get a context with the timeout specified in message.MethodTimeout.
+		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
+
+		outCh := make(chan []byte)
+
+		proc.processes.wg.Add(1)
+		go func() {
+			defer proc.processes.wg.Done()
+
+			cg := message.MethodArgs[0]
+
+			proc.centralAuth.accessLists.groupCommandDeleteGroup(commandGroup(cg))
+
+			outString := fmt.Sprintf("deleted commandGroup: commandGroup=%v\n", cg)
+			out := []byte(outString)
+
+			select {
+			case outCh <- out:
+			case <-ctx.Done():
+				return
+			}
+		}()
+
+		select {
+		case <-ctx.Done():
+
+			cancel()
+			er := fmt.Errorf("error: methodREQAclGroupCommandsDeleteGroup: method timed out: %v", message.MethodArgs)
+			proc.errorKernel.errSend(proc, message, er)
+
+		case out := <-outCh:
+
+			// Prepare and queue for sending a new message with the output
+			// of the action executed.
+			newReplyMessage(proc, message, out)
+		}
+
+	}()
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
