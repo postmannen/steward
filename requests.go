@@ -138,6 +138,8 @@ const (
 	REQAclGroupNodesDeleteNode = "REQAclGroupNodesDeleteNode"
 	// REQAclGroupNodesDeleteGroup
 	REQAclGroupNodesDeleteGroup = "REQAclGroupNodesDeleteGroup"
+	// REQAclGroupCommandsAddCommand
+	REQAclGroupCommandsAddCommand = "REQAclGroupCommandsAddCommand"
 )
 
 // The mapping of all the method constants specified, what type
@@ -244,6 +246,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				event: EventACK,
 			},
 			REQAclGroupNodesDeleteGroup: methodREQAclGroupNodesDeleteGroup{
+				event: EventACK,
+			},
+			REQAclGroupCommandsAddCommand: methodREQAclGroupCommandsAddCommand{
 				event: EventACK,
 			},
 		},
