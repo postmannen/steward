@@ -22,22 +22,20 @@ func (m methodREQAclAddCommand) handler(proc process, message Message, node stri
 	go func() {
 		defer proc.processes.wg.Done()
 
-		switch {
-		case len(message.MethodArgs) < 3:
-			er := fmt.Errorf("error: methodREQAclAddAccessList: got <3 number methodArgs, want 3")
-			proc.errorKernel.errSend(proc, message, er)
-
-			return
-		}
-
 		// Get a context with the timeout specified in message.MethodTimeout.
 		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
-
 		outCh := make(chan []byte)
+		errCh := make(chan error)
 
 		proc.processes.wg.Add(1)
 		go func() {
 			defer proc.processes.wg.Done()
+
+			switch {
+			case len(message.MethodArgs) < 3:
+				errCh <- fmt.Errorf("error: methodREQAclAddAccessList: got <3 number methodArgs, want 3")
+				return
+			}
 
 			host := message.MethodArgs[0]
 			source := message.MethodArgs[1]
@@ -56,14 +54,15 @@ func (m methodREQAclAddCommand) handler(proc process, message Message, node stri
 		}()
 
 		select {
-		case <-ctx.Done():
+		case err := <-errCh:
+			proc.errorKernel.errSend(proc, message, err)
 
+		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclAddAccessList: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er)
 
 		case out := <-outCh:
-
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
 			newReplyMessage(proc, message, out)
@@ -93,22 +92,20 @@ func (m methodREQAclDeleteCommand) handler(proc process, message Message, node s
 	go func() {
 		defer proc.processes.wg.Done()
 
-		switch {
-		case len(message.MethodArgs) < 3:
-			er := fmt.Errorf("error: methodREQAclDeleteCommand: got <3 number methodArgs, want 3")
-			proc.errorKernel.errSend(proc, message, er)
-
-			return
-		}
-
 		// Get a context with the timeout specified in message.MethodTimeout.
 		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
-
 		outCh := make(chan []byte)
+		errCh := make(chan error)
 
 		proc.processes.wg.Add(1)
 		go func() {
 			defer proc.processes.wg.Done()
+
+			switch {
+			case len(message.MethodArgs) < 3:
+				errCh <- fmt.Errorf("error: methodREQAclDeleteCommand: got <3 number methodArgs, want 3")
+				return
+			}
 
 			host := message.MethodArgs[0]
 			source := message.MethodArgs[1]
@@ -127,14 +124,15 @@ func (m methodREQAclDeleteCommand) handler(proc process, message Message, node s
 		}()
 
 		select {
-		case <-ctx.Done():
+		case err := <-errCh:
+			proc.errorKernel.errSend(proc, message, err)
 
+		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclDeleteCommand: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er)
 
 		case out := <-outCh:
-
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
 			newReplyMessage(proc, message, out)
@@ -164,22 +162,20 @@ func (m methodREQAclDeleteSource) handler(proc process, message Message, node st
 	go func() {
 		defer proc.processes.wg.Done()
 
-		switch {
-		case len(message.MethodArgs) < 2:
-			er := fmt.Errorf("error: methodREQAclDeleteSource: got <2 number methodArgs, want 2")
-			proc.errorKernel.errSend(proc, message, er)
-
-			return
-		}
-
 		// Get a context with the timeout specified in message.MethodTimeout.
 		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
-
 		outCh := make(chan []byte)
+		errCh := make(chan error)
 
 		proc.processes.wg.Add(1)
 		go func() {
 			defer proc.processes.wg.Done()
+
+			switch {
+			case len(message.MethodArgs) < 2:
+				errCh <- fmt.Errorf("error: methodREQAclDeleteSource: got <2 number methodArgs, want 2")
+				return
+			}
 
 			host := message.MethodArgs[0]
 			source := message.MethodArgs[1]
@@ -197,14 +193,15 @@ func (m methodREQAclDeleteSource) handler(proc process, message Message, node st
 		}()
 
 		select {
-		case <-ctx.Done():
+		case err := <-errCh:
+			proc.errorKernel.errSend(proc, message, err)
 
+		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclDeleteSource: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er)
 
 		case out := <-outCh:
-
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
 			newReplyMessage(proc, message, out)
@@ -234,22 +231,20 @@ func (m methodREQAclGroupNodesAddNode) handler(proc process, message Message, no
 	go func() {
 		defer proc.processes.wg.Done()
 
-		switch {
-		case len(message.MethodArgs) < 2:
-			er := fmt.Errorf("error: methodREQAclGroupNodesAddNode: got <2 number methodArgs, want 2")
-			proc.errorKernel.errSend(proc, message, er)
-
-			return
-		}
-
 		// Get a context with the timeout specified in message.MethodTimeout.
 		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
-
 		outCh := make(chan []byte)
+		errCh := make(chan error)
 
 		proc.processes.wg.Add(1)
 		go func() {
 			defer proc.processes.wg.Done()
+
+			switch {
+			case len(message.MethodArgs) < 2:
+				errCh <- fmt.Errorf("error: methodREQAclGroupNodesAddNode: got <2 number methodArgs, want 2")
+				return
+			}
 
 			ng := message.MethodArgs[0]
 			n := message.MethodArgs[1]
@@ -267,14 +262,15 @@ func (m methodREQAclGroupNodesAddNode) handler(proc process, message Message, no
 		}()
 
 		select {
-		case <-ctx.Done():
+		case err := <-errCh:
+			proc.errorKernel.errSend(proc, message, err)
 
+		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclGroupNodesAddNode: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er)
 
 		case out := <-outCh:
-
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
 			newReplyMessage(proc, message, out)
@@ -304,22 +300,20 @@ func (m methodREQAclGroupNodesDeleteNode) handler(proc process, message Message,
 	go func() {
 		defer proc.processes.wg.Done()
 
-		switch {
-		case len(message.MethodArgs) < 2:
-			er := fmt.Errorf("error: methodREQAclGroupNodesDeleteNode: got <2 number methodArgs, want 2")
-			proc.errorKernel.errSend(proc, message, er)
-
-			return
-		}
-
 		// Get a context with the timeout specified in message.MethodTimeout.
 		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
-
 		outCh := make(chan []byte)
+		errCh := make(chan error)
 
 		proc.processes.wg.Add(1)
 		go func() {
 			defer proc.processes.wg.Done()
+
+			switch {
+			case len(message.MethodArgs) < 2:
+				errCh <- fmt.Errorf("error: methodREQAclGroupNodesDeleteNode: got <2 number methodArgs, want 2")
+				return
+			}
 
 			ng := message.MethodArgs[0]
 			n := message.MethodArgs[1]
@@ -337,14 +331,15 @@ func (m methodREQAclGroupNodesDeleteNode) handler(proc process, message Message,
 		}()
 
 		select {
-		case <-ctx.Done():
+		case err := <-errCh:
+			proc.errorKernel.errSend(proc, message, err)
 
+		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclGroupNodesDeleteNode: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er)
 
 		case out := <-outCh:
-
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
 			newReplyMessage(proc, message, out)
@@ -374,22 +369,20 @@ func (m methodREQAclGroupNodesDeleteGroup) handler(proc process, message Message
 	go func() {
 		defer proc.processes.wg.Done()
 
-		switch {
-		case len(message.MethodArgs) < 1:
-			er := fmt.Errorf("error: methodREQAclGroupNodesDeleteGroup: got <1 number methodArgs, want 1")
-			proc.errorKernel.errSend(proc, message, er)
-
-			return
-		}
-
 		// Get a context with the timeout specified in message.MethodTimeout.
 		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
-
 		outCh := make(chan []byte)
+		errCh := make(chan error)
 
 		proc.processes.wg.Add(1)
 		go func() {
 			defer proc.processes.wg.Done()
+
+			switch {
+			case len(message.MethodArgs) < 1:
+				errCh <- fmt.Errorf("error: methodREQAclGroupNodesDeleteGroup: got <1 number methodArgs, want 1")
+				return
+			}
 
 			ng := message.MethodArgs[0]
 
@@ -406,14 +399,15 @@ func (m methodREQAclGroupNodesDeleteGroup) handler(proc process, message Message
 		}()
 
 		select {
-		case <-ctx.Done():
+		case err := <-errCh:
+			proc.errorKernel.errSend(proc, message, err)
 
+		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclGroupNodesDeleteGroup: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er)
 
 		case out := <-outCh:
-
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
 			newReplyMessage(proc, message, out)
@@ -443,22 +437,20 @@ func (m methodREQAclGroupCommandsAddCommand) handler(proc process, message Messa
 	go func() {
 		defer proc.processes.wg.Done()
 
-		switch {
-		case len(message.MethodArgs) < 2:
-			er := fmt.Errorf("error: methodREQAclGroupCommandsAddCommand: got <2 number methodArgs, want 1")
-			proc.errorKernel.errSend(proc, message, er)
-
-			return
-		}
-
 		// Get a context with the timeout specified in message.MethodTimeout.
 		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
-
 		outCh := make(chan []byte)
+		errCh := make(chan error)
 
 		proc.processes.wg.Add(1)
 		go func() {
 			defer proc.processes.wg.Done()
+
+			switch {
+			case len(message.MethodArgs) < 2:
+				errCh <- fmt.Errorf("error: methodREQAclGroupCommandsAddCommand: got <2 number methodArgs, want 1")
+				return
+			}
 
 			cg := message.MethodArgs[0]
 			c := message.MethodArgs[1]
@@ -476,14 +468,15 @@ func (m methodREQAclGroupCommandsAddCommand) handler(proc process, message Messa
 		}()
 
 		select {
-		case <-ctx.Done():
+		case err := <-errCh:
+			proc.errorKernel.errSend(proc, message, err)
 
+		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclGroupCommandsAddCommand: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er)
 
 		case out := <-outCh:
-
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
 			newReplyMessage(proc, message, out)
@@ -513,22 +506,20 @@ func (m methodREQAclGroupCommandsDeleteCommand) handler(proc process, message Me
 	go func() {
 		defer proc.processes.wg.Done()
 
-		switch {
-		case len(message.MethodArgs) < 1:
-			er := fmt.Errorf("error: methodREQAclGroupCommandsDeleteCommand: got <1 number methodArgs, want 1")
-			proc.errorKernel.errSend(proc, message, er)
-
-			return
-		}
-
 		// Get a context with the timeout specified in message.MethodTimeout.
 		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
-
 		outCh := make(chan []byte)
+		errCh := make(chan error)
 
 		proc.processes.wg.Add(1)
 		go func() {
 			defer proc.processes.wg.Done()
+
+			switch {
+			case len(message.MethodArgs) < 1:
+				errCh <- fmt.Errorf("error: methodREQAclGroupCommandsDeleteCommand: got <1 number methodArgs, want 1")
+				return
+			}
 
 			cg := message.MethodArgs[0]
 			c := message.MethodArgs[1]
@@ -546,14 +537,15 @@ func (m methodREQAclGroupCommandsDeleteCommand) handler(proc process, message Me
 		}()
 
 		select {
-		case <-ctx.Done():
+		case err := <-errCh:
+			proc.errorKernel.errSend(proc, message, err)
 
+		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclGroupCommandsDeleteCommand: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er)
 
 		case out := <-outCh:
-
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
 			newReplyMessage(proc, message, out)
@@ -583,22 +575,20 @@ func (m methodREQAclGroupCommandsDeleteGroup) handler(proc process, message Mess
 	go func() {
 		defer proc.processes.wg.Done()
 
-		switch {
-		case len(message.MethodArgs) < 1:
-			er := fmt.Errorf("error: methodREQAclGroupCommandsDeleteGroup: got <1 number methodArgs, want 1")
-			proc.errorKernel.errSend(proc, message, er)
-
-			return
-		}
-
 		// Get a context with the timeout specified in message.MethodTimeout.
 		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
-
 		outCh := make(chan []byte)
+		errCh := make(chan error)
 
 		proc.processes.wg.Add(1)
 		go func() {
 			defer proc.processes.wg.Done()
+
+			switch {
+			case len(message.MethodArgs) < 1:
+				errCh <- fmt.Errorf("error: methodREQAclGroupCommandsDeleteGroup: got <1 number methodArgs, want 1")
+				return
+			}
 
 			cg := message.MethodArgs[0]
 
@@ -615,14 +605,15 @@ func (m methodREQAclGroupCommandsDeleteGroup) handler(proc process, message Mess
 		}()
 
 		select {
-		case <-ctx.Done():
+		case err := <-errCh:
+			proc.errorKernel.errSend(proc, message, err)
 
+		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclGroupCommandsDeleteGroup: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er)
 
 		case out := <-outCh:
-
 			// Prepare and queue for sending a new message with the output
 			// of the action executed.
 			newReplyMessage(proc, message, out)
@@ -652,17 +643,8 @@ func (m methodREQAclExport) handler(proc process, message Message, node string) 
 	go func() {
 		defer proc.processes.wg.Done()
 
-		// switch {
-		// case len(message.MethodArgs) < 1:
-		// 	er := fmt.Errorf("error: methodREQAclImport: got <1 number methodArgs, want 1")
-		// 	proc.errorKernel.errSend(proc, message, er)
-		//
-		// 	return
-		// }
-
 		// Get a context with the timeout specified in message.MethodTimeout.
 		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
-
 		outCh := make(chan []byte)
 		errCh := make(chan error)
 
@@ -731,15 +713,15 @@ func (m methodREQAclImport) handler(proc process, message Message, node string) 
 		outCh := make(chan []byte)
 		errCh := make(chan error)
 
-		switch {
-		case len(message.MethodArgs) < 1:
-			errCh <- fmt.Errorf("error: methodREQAclImport: got <1 number methodArgs, want 1")
-			return
-		}
-
 		proc.processes.wg.Add(1)
 		go func() {
 			defer proc.processes.wg.Done()
+
+			switch {
+			case len(message.MethodArgs) < 1:
+				errCh <- fmt.Errorf("error: methodREQAclImport: got <1 number methodArgs, want 1")
+				return
+			}
 
 			js := []byte(message.MethodArgs[0])
 			err := proc.centralAuth.accessLists.importACLs(js)
