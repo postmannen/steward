@@ -146,6 +146,8 @@ const (
 	REQAclGroupCommandsDeleteGroup = "REQAclGroupCommandsDeleteGroup"
 	// REQAclExport
 	REQAclExport = "REQAclExport"
+	// REQAclImport
+	REQAclImport = "REQAclImport"
 )
 
 // The mapping of all the method constants specified, what type
@@ -269,6 +271,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				event: EventACK,
 			},
 			REQAclExport: methodREQAclExport{
+				event: EventACK,
+			},
+			REQAclImport: methodREQAclImport{
 				event: EventACK,
 			},
 		},

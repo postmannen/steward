@@ -183,6 +183,7 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQAclGroupCommandsDeleteCommand(proc)
 		proc.startup.subREQAclGroupCommandsDeleteGroup(proc)
 		proc.startup.subREQAclExport(proc)
+		proc.startup.subREQAclImport(proc)
 	}
 
 	if proc.configuration.StartSubREQPublicKeysToNode {
@@ -451,6 +452,13 @@ func (s startup) subREQAclGroupCommandsDeleteGroup(p process) {
 func (s startup) subREQAclExport(p process) {
 	log.Printf("Starting Acl export subscriber: %#v\n", p.node)
 	sub := newSubject(REQAclExport, string(p.node))
+	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
+	go proc.spawnWorker()
+}
+
+func (s startup) subREQAclImport(p process) {
+	log.Printf("Starting Acl import subscriber: %#v\n", p.node)
+	sub := newSubject(REQAclImport, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
 }
