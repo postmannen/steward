@@ -444,7 +444,7 @@ func (m methodREQTest) getKind() Event {
 // handler to be used as a reply method when testing requests.
 // We can then within the test listen on the testCh for received
 // data and validate it.
-// If not test is listening the data will be dropped.
+// If no test is listening the data will be dropped.
 func (m methodREQTest) handler(proc process, message Message, node string) ([]byte, error) {
 
 	go func() {

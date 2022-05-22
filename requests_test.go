@@ -2,7 +2,7 @@ package steward
 
 import (
 	"bytes"
-	"path/filepath"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -19,35 +19,18 @@ func newServerForTesting(t *testing.T) *server {
 	// tempdir := t.TempDir()
 
 	// Create the config to run a steward instance.
-	tempdir := "./tmp"
-	conf := &Configuration{
-		SocketFolder:   filepath.Join(tempdir, "tmp"),
-		DatabaseFolder: filepath.Join(tempdir, "var/lib"),
-		//SubscribersDataFolder: filepath.Join(tempdir, "data"),
-		SubscribersDataFolder: "./tmp/",
-		ConfigFolder:          "./tmp/etc",
-		BrokerAddress:         "127.0.0.1:42222",
-		PromHostAndPort:       ":2112",
-		NodeName:              "central",
-		CentralNodeName:       "central",
-		DefaultMessageRetries: 1,
-		DefaultMessageTimeout: 3,
-		EnableSocket:          true,
-		// AllowEmptySignature:   true,
-		EnableDebug: true,
+	//tempdir := "./tmp"
+	conf := newConfigurationDefaults()
+	conf.BrokerAddress = "127.0.0.1:42222"
+	conf.NodeName = "central"
+	conf.CentralNodeName = "central"
+	conf.ConfigFolder = "tmp"
+	conf.SubscribersDataFolder = "tmp"
+	conf.SocketFolder = "tmp"
+	conf.SubscribersDataFolder = "tmp"
+	conf.DatabaseFolder = "tmp"
 
-		StartSubREQCliCommand:     true,
-		StartSubREQCliCommandCont: true,
-		StartSubREQToConsole:      true,
-		StartSubREQToFileAppend:   true,
-		StartSubREQToFile:         true,
-		StartSubREQHello:          true,
-		StartSubREQErrorLog:       true,
-		StartSubREQHttpGet:        true,
-		StartSubREQTailFile:       true,
-		// StartSubREQToSocket:		flagNodeSlice{OK: true, Values: []Node{"*"}},
-	}
-	stewardServer, err := NewServer(conf, "test")
+	stewardServer, err := NewServer(&conf, "test")
 	if err != nil {
 		t.Fatalf(" * failed: could not start the Steward instance %v\n", err)
 	}
@@ -72,9 +55,15 @@ func newNatsServerForTesting(t *testing.T) *natsserver.Server {
 }
 
 func TestRequest(t *testing.T) {
+	type containsOrEquals int
+	const contains containsOrEquals = 1
+	const equals containsOrEquals = 2
+
 	type test struct {
+		info    string
 		message Message
 		want    []byte
+		containsOrEquals
 	}
 
 	ns := newNatsServerForTesting(t)
@@ -87,20 +76,70 @@ func TestRequest(t *testing.T) {
 	srv.Start()
 	defer srv.Stop()
 
+	// Web server for testing.
+	{
+		h := func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("web page content"))
+		}
+		http.HandleFunc("/", h)
+
+		go func() {
+			http.ListenAndServe(":10080", nil)
+		}()
+	}
+
 	tests := []test{
-		{message: Message{
-			ToNode:        "central",
-			FromNode:      "central",
-			Method:        REQCliCommand,
-			MethodArgs:    []string{"bash", "-c", "echo apekatt"},
-			MethodTimeout: 5,
-			ReplyMethod:   REQTest,
-		}, want: []byte("apekatt"),
+		{
+			info: "REQCliCommand test gris",
+			message: Message{
+				ToNode:        "central",
+				FromNode:      "central",
+				Method:        REQCliCommand,
+				MethodArgs:    []string{"bash", "-c", "echo gris"},
+				MethodTimeout: 5,
+				ReplyMethod:   REQTest,
+			}, want: []byte("gris"),
+			containsOrEquals: equals,
+		},
+		{
+			info: "REQCliCommand test sau",
+			message: Message{
+				ToNode:        "central",
+				FromNode:      "central",
+				Method:        REQCliCommand,
+				MethodArgs:    []string{"bash", "-c", "echo sau"},
+				MethodTimeout: 5,
+				ReplyMethod:   REQTest,
+			}, want: []byte("sau"),
+			containsOrEquals: equals,
+		},
+		{
+			info: "REQHttpGet test edgeos.raalabs.tech",
+			message: Message{
+				ToNode:        "central",
+				FromNode:      "central",
+				Method:        REQHttpGet,
+				MethodArgs:    []string{"http://localhost:10080"},
+				MethodTimeout: 5,
+				ReplyMethod:   REQTest,
+			}, want: []byte("web page content"),
+			containsOrEquals: contains,
+		},
+		{
+			info: "REQOpProcessList test",
+			message: Message{
+				ToNode:        "central",
+				FromNode:      "central",
+				Method:        REQOpProcessList,
+				MethodArgs:    []string{},
+				MethodTimeout: 5,
+				ReplyMethod:   REQTest,
+			}, want: []byte("central.REQHttpGet.EventACK"),
+			containsOrEquals: contains,
 		},
 	}
 
 	for _, tt := range tests {
-
 		sam, err := newSubjectAndMessage(tt.message)
 		if err != nil {
 			t.Fatalf("newSubjectAndMessage failed: %v\n", err)
@@ -109,12 +148,24 @@ func TestRequest(t *testing.T) {
 		srv.toRingBufferCh <- []subjectAndMessage{sam}
 
 		result := <-srv.errorKernel.testCh
+
 		resStr := string(result)
 		resStr = strings.TrimSuffix(resStr, "\n")
 		result = []byte(resStr)
 
-		if !bytes.Equal(result, tt.want) {
-			t.Fatalf("\n **** want: %v, got: %v\n", tt.want, result)
+		switch tt.containsOrEquals {
+
+		case equals:
+			if !bytes.Equal(result, tt.want) {
+				t.Fatalf(" \U0001F631  [FAILED]	:%v : want: %v, got: %v\n", tt.info, string(tt.want), string(result))
+			}
+			t.Logf(" \U0001f600 [SUCCESS]	: %v\n", tt.info)
+
+		case contains:
+			if !strings.Contains(string(result), string(tt.want)) {
+				t.Fatalf(" \U0001F631  [FAILED]	:%v : want: %v, got: %v\n", tt.info, string(tt.want), string(result))
+			}
+			t.Logf(" \U0001f600 [SUCCESS]	: %v\n", tt.info)
 		}
 	}
 }

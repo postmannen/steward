@@ -11,7 +11,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -66,7 +65,6 @@ func TestStewardServer(t *testing.T) {
 		StartSubREQToFile:         true,
 		StartSubREQHello:          true,
 		StartSubREQErrorLog:       true,
-		StartSubREQHttpGet:        true,
 		StartSubREQTailFile:       true,
 		// StartSubREQToSocket:		flagNodeSlice{OK: true, Values: []Node{"*"}},
 	}
@@ -84,7 +82,6 @@ func TestStewardServer(t *testing.T) {
 
 	// Specify all the test funcs to run in the slice.
 	funcs := []testFunc{
-		checkREQOpProcessListTest,
 		checkREQCliCommandTest,
 		checkREQCliCommandContTest,
 		// checkREQToConsoleTest(conf, t), NB: No tests will be made for console ouput.
@@ -92,16 +89,9 @@ func TestStewardServer(t *testing.T) {
 		// checkREQToFileTest(conf, t), NB: Already tested via others
 		checkREQHelloTest,
 		checkREQErrorLogTest,
-		// checkREQPingTest(conf, t)
-		// checkREQPongTest(conf, t)
-		checkREQHttpGetTest,
 		checkREQTailFileTest,
-		// checkREQToSocketTest(conf, t)
-
 		checkErrorKernelMalformedJSONtest,
 		checkMetricValuesTest,
-
-		// checkREQRelay
 	}
 
 	for _, f := range funcs {
@@ -119,36 +109,6 @@ func TestStewardServer(t *testing.T) {
 // ----------------------------------------------------------------------------
 // Check REQ types
 // ----------------------------------------------------------------------------
-
-// Testing op (operator) Commands.
-func checkREQOpProcessListTest(stewardServer *server, conf *Configuration, t *testing.T) error {
-	m := `[
-		{
-			"directory":"opCommand",
-			"fileName": "fileName.result",
-			"toNode": "central",
-			"data": [],
-			"method":"REQOpProcessList",
-			"replyMethod":"REQToFile",
-			"ACKTimeout":3,
-			"retries":3,
-			"replyACKTimeout":3,
-			"replyRetries":3,
-			"MethodTimeout": 7
-		}
-	]`
-
-	writeToSocketTest(conf, m, t)
-
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "opCommand", "central", "fileName.result")
-	_, err := findStringInFileTest("central.REQHttpGet.CommandACK", resultFile, conf, t)
-	if err != nil {
-		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQOpProcessListTest: %v", err)
-	}
-
-	t.Logf(" \U0001f600 [SUCCESS]	: checkREQOpCommandTest\n")
-	return nil
-}
 
 // Sending of CLI Commands.
 func checkREQCliCommandTest(stewardServer *server, conf *Configuration, t *testing.T) error {
@@ -247,45 +207,6 @@ func checkREQErrorLogTest(stewardServer *server, conf *Configuration, t *testing
 	}
 
 	t.Logf(" \U0001f600 [SUCCESS]	: checkREQErrorLogTest\n")
-	return nil
-}
-
-// Check http get method.
-func checkREQHttpGetTest(stewardServer *server, conf *Configuration, t *testing.T) error {
-	// Web server for testing.
-	{
-		h := func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("web page content"))
-		}
-		http.HandleFunc("/", h)
-
-		go func() {
-			http.ListenAndServe(":10080", nil)
-		}()
-	}
-
-	m := `[
-		{
-			"directory": "httpget",
-			"fileName":"fileName.result",
-			"toNode": "central",
-			"methodArgs": ["http://127.0.0.1:10080/"],
-			"method": "REQHttpGet",
-			"replyMethod":"REQToFile",
-        	"ACKTimeout":5,
-        	"methodTimeout": 5
-		}
-	]`
-
-	writeToSocketTest(conf, m, t)
-
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "httpget", "central", "fileName.result")
-	_, err := findStringInFileTest("web page content", resultFile, conf, t)
-	if err != nil {
-		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQHttpGetTest: %v", err)
-	}
-
-	t.Logf(" \U0001f600 [SUCCESS]	: checkREQHttpGetTest\n")
 	return nil
 }
 
