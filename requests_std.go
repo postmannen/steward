@@ -432,3 +432,32 @@ func (m methodREQTuiToConsole) handler(proc process, message Message, node strin
 }
 
 // ---
+
+type methodREQTest struct {
+	event Event
+}
+
+func (m methodREQTest) getKind() Event {
+	return m.event
+}
+
+// handler to be used as a reply method when testing requests.
+// We can then within the test listen on the testCh for received
+// data and validate it.
+// If not test is listening the data will be dropped.
+func (m methodREQTest) handler(proc process, message Message, node string) ([]byte, error) {
+
+	go func() {
+		// Try to send the received message data on the test channel. If we
+		// have a test started the data will be read from the testCh.
+		// If no test is reading from the testCh the data will be dropped.
+		select {
+		case proc.errorKernel.testCh <- message.Data:
+		default:
+			// drop.
+		}
+	}()
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}

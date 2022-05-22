@@ -118,6 +118,10 @@ const (
 	REQRelayInitial Method = "REQRelayInitial"
 	// REQNone is used when there should be no reply.
 	REQNone Method = "REQNone"
+	// REQTest is used only for testing to be able to grab the output
+	// of messages.
+	REQTest Method = "REQTest"
+
 	// REQPublicKey will get the public ed25519 key from a node.
 	REQPublicKey Method = "REQPublicKey"
 	// REQPublicKeysGet will get all the public keys from central.
@@ -126,6 +130,7 @@ const (
 	REQPublicKeysToNode Method = "REQPublicKeysToNode"
 	// REQAuthPublicKeysAllow
 	REQPublicKeysAllow Method = "REQPublicKeysAllow"
+
 	// REQAclAddCommand
 	REQAclAddCommand = "REQAclAddCommand"
 	// REQAclDeleteCommand
@@ -274,6 +279,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				event: EventACK,
 			},
 			REQAclImport: methodREQAclImport{
+				event: EventACK,
+			},
+			REQTest: methodREQTest{
 				event: EventACK,
 			},
 		},

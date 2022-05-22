@@ -114,6 +114,13 @@ func (p *processes) Start(proc process) {
 		go proc.spawnWorker()
 	}
 
+	{
+		log.Printf("Starting REQTest subscriber: %#v\n", proc.node)
+		sub := newSubject(REQTest, string(proc.node))
+		proc := newProcess(proc.ctx, p.server, sub, processKindSubscriber, nil)
+		go proc.spawnWorker()
+	}
+
 	if proc.configuration.StartSubREQToFileAppend {
 		proc.startup.subREQToFileAppend(proc)
 	}
