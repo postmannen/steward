@@ -9,7 +9,7 @@ import (
 	natsserver "github.com/nats-io/nats-server/v2/server"
 )
 
-func newServerForTesting(t *testing.T) *server {
+func newServerForTesting(t *testing.T, addressAndPort string) (*server, *Configuration) {
 	//if !*logging {
 	//	log.SetOutput(io.Discard)
 	//}
@@ -21,7 +21,7 @@ func newServerForTesting(t *testing.T) *server {
 	// Create the config to run a steward instance.
 	//tempdir := "./tmp"
 	conf := newConfigurationDefaults()
-	conf.BrokerAddress = "127.0.0.1:42222"
+	conf.BrokerAddress = addressAndPort
 	conf.NodeName = "central"
 	conf.CentralNodeName = "central"
 	conf.ConfigFolder = "tmp"
@@ -29,21 +29,22 @@ func newServerForTesting(t *testing.T) *server {
 	conf.SocketFolder = "tmp"
 	conf.SubscribersDataFolder = "tmp"
 	conf.DatabaseFolder = "tmp"
+	conf.StartSubREQErrorLog = true
 
 	stewardServer, err := NewServer(&conf, "test")
 	if err != nil {
 		t.Fatalf(" * failed: could not start the Steward instance %v\n", err)
 	}
 
-	return stewardServer
+	return stewardServer, &conf
 }
 
 // Start up the nats-server message broker for testing purposes.
-func newNatsServerForTesting(t *testing.T) *natsserver.Server {
+func newNatsServerForTesting(t *testing.T, port int) *natsserver.Server {
 	// Start up the nats-server message broker.
 	nsOpt := &natsserver.Options{
 		Host: "127.0.0.1",
-		Port: 42222,
+		Port: port,
 	}
 
 	ns, err := natsserver.NewServer(nsOpt)
@@ -66,13 +67,13 @@ func TestRequest(t *testing.T) {
 		containsOrEquals
 	}
 
-	ns := newNatsServerForTesting(t)
+	ns := newNatsServerForTesting(t, 42222)
 	if err := natsserver.Run(ns); err != nil {
 		natsserver.PrintAndDie(err.Error())
 	}
 	defer ns.Shutdown()
 
-	srv := newServerForTesting(t)
+	srv, _ := newServerForTesting(t, "127.0.0.1:42222")
 	srv.Start()
 	defer srv.Stop()
 

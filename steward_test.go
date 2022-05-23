@@ -29,50 +29,19 @@ var logging = flag.Bool("logging", false, "set to true to enable the normal logg
 // Message passing.
 // The different REQ types.
 func TestStewardServer(t *testing.T) {
-	if !*logging {
-		log.SetOutput(io.Discard)
+	// if !*logging {
+	// 	log.SetOutput(io.Discard)
+	// }
+
+	ns := newNatsServerForTesting(t, 40222)
+	if err := natsserver.Run(ns); err != nil {
+		natsserver.PrintAndDie(err.Error())
 	}
+	defer ns.Shutdown()
 
-	// Start the nats-server message broker.
-	startNatsServerTest(t)
-
-	// Start Steward instance
-	// ---------------------------------------
-	// tempdir := t.TempDir()
-
-	// Create the config to run a steward instance.
-	tempdir := "./tmp"
-	conf := &Configuration{
-		SocketFolder:   filepath.Join(tempdir, "tmp"),
-		DatabaseFolder: filepath.Join(tempdir, "var/lib"),
-		//SubscribersDataFolder: filepath.Join(tempdir, "data"),
-		SubscribersDataFolder: "./tmp/",
-		ConfigFolder:          "./tmp/etc",
-		BrokerAddress:         "127.0.0.1:40222",
-		PromHostAndPort:       ":2112",
-		NodeName:              "central",
-		CentralNodeName:       "central",
-		DefaultMessageRetries: 1,
-		DefaultMessageTimeout: 3,
-		EnableSocket:          true,
-		// AllowEmptySignature:   true,
-		EnableDebug: true,
-
-		StartSubREQCliCommand:     true,
-		StartSubREQCliCommandCont: true,
-		StartSubREQToConsole:      true,
-		StartSubREQToFileAppend:   true,
-		StartSubREQToFile:         true,
-		StartSubREQHello:          true,
-		StartSubREQErrorLog:       true,
-		StartSubREQTailFile:       true,
-		// StartSubREQToSocket:		flagNodeSlice{OK: true, Values: []Node{"*"}},
-	}
-	stewardServer, err := NewServer(conf, "test")
-	if err != nil {
-		t.Fatalf(" * failed: could not start the Steward instance %v\n", err)
-	}
-	stewardServer.Start()
+	srv, conf := newServerForTesting(t, "127.0.0.1:40222")
+	srv.Start()
+	defer srv.Stop()
 
 	// Run the message tests
 	//
@@ -95,14 +64,11 @@ func TestStewardServer(t *testing.T) {
 	}
 
 	for _, f := range funcs {
-		err := f(stewardServer, conf, t)
+		err := f(srv, conf, t)
 		if err != nil {
 			t.Errorf("%v\n", err)
 		}
 	}
-	// ---------------------------------------
-
-	stewardServer.Stop()
 
 }
 
@@ -213,7 +179,7 @@ func checkREQErrorLogTest(stewardServer *server, conf *Configuration, t *testing
 // Check the tailing of files type.
 func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing.T) error {
 	// Create a file with some content.
-	fh, err := os.OpenFile("test.file", os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
+	fh, err := os.OpenFile("tmp/test.file", os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
 	if err != nil {
 		return fmt.Errorf(" * failed: unable to open temporary file: %v", err)
 	}
@@ -248,7 +214,7 @@ func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing
 		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQTailFileTest: : getting current working directory: %v", err)
 	}
 
-	file := filepath.Join(wd, "test.file")
+	file := filepath.Join(wd, "tmp/test.file")
 
 	s := `[
 		{
