@@ -35,6 +35,8 @@ func TestACLSingleNode(t *testing.T) {
 	if _, ok := mapOfFromNodeCommands["admin"]["PIG"]; !ok {
 		t.Fatal(" \U0001F631  [FAILED]: missing map entry")
 	}
+
+	t.Logf(" \U0001f600 [SUCCESS]	: %v\n", "TestACLSingleNode")
 }
 
 func TestACLWithGroups(t *testing.T) {
@@ -94,6 +96,8 @@ func TestACLWithGroups(t *testing.T) {
 		t.Fatal(" \U0001F631  [FAILED]: missing map entry")
 	}
 
+	t.Logf(" \U0001f600 [SUCCESS]	: %v\n", "TestACLWithGroups")
+
 }
 
 func TestACLNodesGroupDeleteNode(t *testing.T) {
@@ -150,6 +154,8 @@ func TestACLNodesGroupDeleteNode(t *testing.T) {
 			t.Fatal(" \U0001F631  [FAILED]: missing map entry")
 		}
 	}
+
+	t.Logf(" \U0001f600 [SUCCESS]	: %v\n", "TestACLNodesGroupDeleteNode")
 
 }
 
@@ -208,6 +214,8 @@ func TestGroupNodesDeleteGroup(t *testing.T) {
 		}
 	}
 
+	t.Logf(" \U0001f600 [SUCCESS]	: %v\n", "TestGroupNodesDeleteGroup")
+
 }
 
 func TestGroupCommandDeleteGroup(t *testing.T) {
@@ -265,6 +273,8 @@ func TestGroupCommandDeleteGroup(t *testing.T) {
 		}
 	}
 
+	t.Logf(" \U0001f600 [SUCCESS]	: %v\n", "TestGroupCommandDeleteGroup")
+
 }
 
 func TestACLGenerated(t *testing.T) {
@@ -313,6 +323,8 @@ func TestACLGenerated(t *testing.T) {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: echo: Content of Map: %v", mapOfFromNodeCommands)
 
 	}
+
+	t.Logf(" \U0001f600 [SUCCESS]	: %v\n", "TestACLGenerated")
 
 }
 
@@ -392,7 +404,9 @@ func TestACLSchemaMainACLMap(t *testing.T) {
 	if _, ok := a.schemaMain.ACLMap["ship2"]["admin"]["echo"]; !ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship1, admin, tcpdump")
 	}
-	// --- TESTS ---
+
+	t.Logf(" \U0001f600 [SUCCESS]	: %v\n", "TestACLSchemaMainACLMap")
+
 }
 
 func TestACLHash(t *testing.T) {
@@ -414,6 +428,8 @@ func TestACLHash(t *testing.T) {
 	if bytes.Equal(hash[:], value[:]) == false {
 		t.Fatalf(" \U0001F631  [FAILED]: hash mismatch")
 	}
+
+	t.Logf(" \U0001f600 [SUCCESS]	: %v\n", "TestACLHash")
 }
 
 func TestACLConcurrent(t *testing.T) {
@@ -457,6 +473,9 @@ func TestACLConcurrent(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+
+	t.Logf(" \U0001f600 [SUCCESS]	: %v\n", "TestACLConcurrent")
+
 }
 
 func TestExportACLs(t *testing.T) {
@@ -492,6 +511,9 @@ func TestExportACLs(t *testing.T) {
 	if string(js) != string(want) {
 		t.Fatalf("error: export does not match with what we want\n")
 	}
+
+	t.Logf(" \U0001f600 [SUCCESS]	: %v\n", "TestExportACLs")
+
 }
 
 func TestImportACLs(t *testing.T) {
@@ -511,4 +533,7 @@ func TestImportACLs(t *testing.T) {
 	if fmt.Sprintf("%v", a.schemaMain.ACLMap) != want {
 		t.Fatalf("error: import does not match with what we want\n")
 	}
+
+	t.Logf(" \U0001f600 [SUCCESS]	: %v\n", "TestImportACLs")
+
 }
