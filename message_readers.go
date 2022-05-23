@@ -123,7 +123,7 @@ func (s *server) readStartupFolder() {
 func (s *server) getFilePaths(dirName string) ([]string, error) {
 	dirPath, err := os.Executable()
 	dirPath = filepath.Dir(dirPath)
-	fmt.Printf(" * DEBUG: %v\n", dirPath)
+	fmt.Printf(" * DEBUG: dirPath=%v\n", dirPath)
 	if err != nil {
 		return nil, fmt.Errorf("error: startup folder: unable to get the working directory %v: %v", dirPath, err)
 	}

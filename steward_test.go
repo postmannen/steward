@@ -33,30 +33,31 @@ func TestStewardServer(t *testing.T) {
 	// 	log.SetOutput(io.Discard)
 	// }
 
+	t.Logf("--------------- 1\n")
+
 	ns := newNatsServerForTesting(t, 40222)
 	if err := natsserver.Run(ns); err != nil {
 		natsserver.PrintAndDie(err.Error())
 	}
 	defer ns.Shutdown()
 
-	srv, conf := newServerForTesting(t, "127.0.0.1:40222")
+	t.Logf("--------------- 2\n")
+
+	tempDir := t.TempDir()
+	srv, conf := newServerForTesting(t, "127.0.0.1:40222", tempDir)
 	srv.Start()
 	defer srv.Stop()
+
+	t.Logf("--------------- 3\n")
 
 	// Run the message tests
 	//
 	// ---------------------------------------
 
-	type testFunc func(*server, *Configuration, *testing.T) error
+	type testFunc func(*server, *Configuration, *testing.T, string) error
 
 	// Specify all the test funcs to run in the slice.
 	funcs := []testFunc{
-		checkREQCliCommandTest,
-		checkREQCliCommandContTest,
-		// checkREQToConsoleTest(conf, t), NB: No tests will be made for console ouput.
-		// checkREQToFileAppendTest(conf, t), NB: Already tested via others
-		// checkREQToFileTest(conf, t), NB: Already tested via others
-		checkREQHelloTest,
 		checkREQErrorLogTest,
 		checkREQTailFileTest,
 		checkErrorKernelMalformedJSONtest,
@@ -64,7 +65,7 @@ func TestStewardServer(t *testing.T) {
 	}
 
 	for _, f := range funcs {
-		err := f(srv, conf, t)
+		err := f(srv, conf, t, tempDir)
 		if err != nil {
 			t.Errorf("%v\n", err)
 		}
@@ -76,88 +77,8 @@ func TestStewardServer(t *testing.T) {
 // Check REQ types
 // ----------------------------------------------------------------------------
 
-// Sending of CLI Commands.
-func checkREQCliCommandTest(stewardServer *server, conf *Configuration, t *testing.T) error {
-	m := `[
-		{
-			"directory":"commands-executed",
-			"fileName":"fileName.result",
-			"toNode": "central",
-			"methodArgs": ["bash","-c","echo apekatt"],
-			"replyMethod":"REQToFileAppend",
-			"method":"REQCliCommand",
-			"ACKTimeout":3,
-			"retries":3,
-			"methodTimeout": 10
-		}
-	]`
-
-	writeToSocketTest(conf, m, t)
-
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "fileName.result")
-	_, err := findStringInFileTest("apekatt", resultFile, conf, t)
-	if err != nil {
-		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQCliCommandTest: %v", err)
-	}
-
-	t.Logf(" \U0001f600 [SUCCESS]	: checkREQCliCommandTest\n")
-	return nil
-}
-
-// The continous non-sequential sending of CLI Commands.
-func checkREQCliCommandContTest(stewardServer *server, conf *Configuration, t *testing.T) error {
-	m := `[
-		{
-			"directory":"commands-executed",
-			"fileName":"fileName.result",
-			"toNode": "central",
-			"methodArgs": ["bash","-c","echo apekatt && sleep 5 && echo gris"],
-			"replyMethod":"REQToFileAppend",
-			"method":"REQCliCommandCont",
-			"ACKTimeout":3,
-			"retries":3,
-			"methodTimeout": 5
-		}
-	]`
-
-	writeToSocketTest(conf, m, t)
-
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "fileName.result")
-	_, err := findStringInFileTest("apekatt", resultFile, conf, t)
-	if err != nil {
-		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQCliCommandContTest: %v", err)
-	}
-
-	t.Logf(" \U0001f600 [SUCCESS]	: checkREQCliCommandContTest\n")
-	return nil
-}
-
-// Sending of Hello.
-func checkREQHelloTest(stewardServer *server, conf *Configuration, t *testing.T) error {
-	m := `[
-		{
-			"directory":"commands-executed",
-			"fileName":"fileName.result",
-			"toNode": "central",
-			"data": [],
-			"method":"REQHello"
-		}
-	]`
-
-	writeToSocketTest(conf, m, t)
-
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "commands-executed", "central", "fileName.result")
-	_, err := findStringInFileTest("Received hello from", resultFile, conf, t)
-	if err != nil {
-		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQHelloTest: %v", err)
-	}
-
-	t.Logf(" \U0001f600 [SUCCESS]	: checkREQHelloTest\n")
-	return nil
-}
-
 // Check the error logger type.
-func checkREQErrorLogTest(stewardServer *server, conf *Configuration, t *testing.T) error {
+func checkREQErrorLogTest(stewardServer *server, conf *Configuration, t *testing.T, tempDir string) error {
 	m := Message{
 		ToNode: "somenode",
 	}
@@ -177,9 +98,10 @@ func checkREQErrorLogTest(stewardServer *server, conf *Configuration, t *testing
 }
 
 // Check the tailing of files type.
-func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing.T) error {
+func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing.T, tmpDir string) error {
 	// Create a file with some content.
-	fh, err := os.OpenFile("tmp/test.file", os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
+	fp := filepath.Join(tmpDir, "test.file")
+	fh, err := os.OpenFile(fp, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
 	if err != nil {
 		return fmt.Errorf(" * failed: unable to open temporary file: %v", err)
 	}
@@ -208,20 +130,12 @@ func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing
 		}
 	}()
 
-	wd, err := os.Getwd()
-	if err != nil {
-		cancel()
-		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQTailFileTest: : getting current working directory: %v", err)
-	}
-
-	file := filepath.Join(wd, "tmp/test.file")
-
 	s := `[
 		{
 			"directory": "tail-files",
 			"fileName": "fileName.result",
 			"toNode": "central",
-			"methodArgs": ["` + file + `"],
+			"methodArgs": ["` + fp + `"],
 			"method":"REQTailFile",
 			"ACKTimeout":5,
 			"retries":3,
@@ -266,7 +180,7 @@ func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing
 // ----------------------------------------------------------------------------
 
 // Check errorKernel
-func checkErrorKernelMalformedJSONtest(stewardServer *server, conf *Configuration, t *testing.T) error {
+func checkErrorKernelMalformedJSONtest(stewardServer *server, conf *Configuration, t *testing.T, tempDir string) error {
 
 	// JSON message with error, missing brace.
 	m := `[
@@ -328,7 +242,7 @@ func checkErrorKernelMalformedJSONtest(stewardServer *server, conf *Configuratio
 	}
 }
 
-func checkMetricValuesTest(stewardServer *server, conf *Configuration, t *testing.T) error {
+func checkMetricValuesTest(stewardServer *server, conf *Configuration, t *testing.T, tempDir string) error {
 	mfs, err := stewardServer.metrics.promRegistry.Gather()
 	if err != nil {
 		return fmt.Errorf("error: promRegistry.gathering: %v", mfs)
@@ -426,7 +340,8 @@ func findStringInFileTest(want string, fileName string, conf *Configuration, t *
 		return false, fmt.Errorf(" * failed: could not read result file: %v", err)
 	}
 
-	if !strings.Contains(string(result), want) {
+	found := strings.Contains(string(result), want)
+	if !found {
 		return false, nil
 	}
 
@@ -446,22 +361,4 @@ func writeToSocketTest(conf *Configuration, messageText string, t *testing.T) {
 		t.Fatalf(" * failed: could not write to socket: %v\n", err)
 	}
 
-}
-
-// Start up the nats-server message broker.
-func startNatsServerTest(t *testing.T) {
-	// Start up the nats-server message broker.
-	nsOpt := &natsserver.Options{
-		Host: "127.0.0.1",
-		Port: 40222,
-	}
-
-	ns, err := natsserver.NewServer(nsOpt)
-	if err != nil {
-		t.Fatalf(" * failed: could not start the nats-server %v\n", err)
-	}
-
-	if err := natsserver.Run(ns); err != nil {
-		natsserver.PrintAndDie(err.Error())
-	}
 }

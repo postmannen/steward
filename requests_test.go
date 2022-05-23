@@ -3,6 +3,8 @@ package steward
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"log"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -12,10 +14,10 @@ import (
 	natsserver "github.com/nats-io/nats-server/v2/server"
 )
 
-func newServerForTesting(t *testing.T, addressAndPort string) (*server, *Configuration) {
-	//if !*logging {
-	//	log.SetOutput(io.Discard)
-	//}
+func newServerForTesting(t *testing.T, addressAndPort string, testFolder string) (*server, *Configuration) {
+	if !*logging {
+		log.SetOutput(io.Discard)
+	}
 
 	// Start Steward instance
 	// ---------------------------------------
@@ -27,11 +29,11 @@ func newServerForTesting(t *testing.T, addressAndPort string) (*server, *Configu
 	conf.BrokerAddress = addressAndPort
 	conf.NodeName = "central"
 	conf.CentralNodeName = "central"
-	conf.ConfigFolder = "tmp"
-	conf.SubscribersDataFolder = "tmp"
-	conf.SocketFolder = "tmp"
-	conf.SubscribersDataFolder = "tmp"
-	conf.DatabaseFolder = "tmp"
+	conf.ConfigFolder = testFolder
+	conf.SubscribersDataFolder = testFolder
+	conf.SocketFolder = testFolder
+	conf.SubscribersDataFolder = testFolder
+	conf.DatabaseFolder = testFolder
 	conf.StartSubREQErrorLog = true
 
 	stewardServer, err := NewServer(&conf, "test")
@@ -106,7 +108,8 @@ func TestRequest(t *testing.T) {
 	}
 	defer ns.Shutdown()
 
-	srv, conf := newServerForTesting(t, "127.0.0.1:42222")
+	tempdir := t.TempDir()
+	srv, conf := newServerForTesting(t, "127.0.0.1:42222", tempdir)
 	srv.Start()
 	defer srv.Stop()
 
@@ -123,6 +126,21 @@ func TestRequest(t *testing.T) {
 	}
 
 	tests := []test{
+		{
+			info: "REQHello test",
+			message: Message{
+				ToNode:        "central",
+				FromNode:      "central",
+				Method:        REQHello,
+				MethodArgs:    []string{},
+				MethodTimeout: 5,
+				// ReplyMethod:   REQTest,
+				Directory: "test",
+				FileName:  "hello.results",
+			}, want: []byte("Received hello from \"central\""),
+			containsOrEquals: fileContains,
+			viaSocketOrCh:    viaCh,
+		},
 		{
 			info: "REQCliCommand test, echo gris",
 			message: Message{
@@ -207,6 +225,7 @@ func TestRequest(t *testing.T) {
 		},
 	}
 
+	// Range over the tests defined, and execute them, one at a time.
 	for _, tt := range tests {
 		switch tt.viaSocketOrCh {
 		case viaCh:
@@ -249,8 +268,8 @@ func TestRequest(t *testing.T) {
 		case fileContains:
 			resultFile := filepath.Join(conf.SubscribersDataFolder, tt.message.Directory, string(tt.message.FromNode), tt.message.FileName)
 
-			_, err := findStringInFileTest(string(tt.want), resultFile, conf, t)
-			if err != nil {
+			found, err := findStringInFileTest(string(tt.want), resultFile, conf, t)
+			if err != nil || found == false {
 				t.Fatalf(" \U0001F631  [FAILED]	: %v: %v\n", tt.info, err)
 
 			}
