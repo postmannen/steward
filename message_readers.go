@@ -176,7 +176,7 @@ func (s *server) readSocket() {
 				b := make([]byte, 1500)
 				_, err = conn.Read(b)
 				if err != nil && err != io.EOF {
-					er := fmt.Errorf("error: failed to read data from tcp listener: %v", err)
+					er := fmt.Errorf("error: failed to read data from socket: %v", err)
 					s.errorKernel.errSend(s.processInitial, Message{}, er)
 					return
 				}

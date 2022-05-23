@@ -2,6 +2,8 @@ package steward
 
 import (
 	"bytes"
+	"encoding/json"
+	"net"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -56,17 +58,46 @@ func newNatsServerForTesting(t *testing.T, port int) *natsserver.Server {
 	return ns
 }
 
+// Write message to socket for testing purposes.
+func writeMsgsToSocketTest(conf *Configuration, messages []Message, t *testing.T) {
+	js, err := json.Marshal(messages)
+	if err != nil {
+		t.Fatalf("writeMsgsToSocketTest: %v\n ", err)
+	}
+
+	socket, err := net.Dial("unix", filepath.Join(conf.SocketFolder, "steward.sock"))
+	if err != nil {
+		t.Fatalf(" * failed: could to open socket file for writing: %v\n", err)
+	}
+	defer socket.Close()
+
+	_, err = socket.Write(js)
+	if err != nil {
+		t.Fatalf(" * failed: could not write to socket: %v\n", err)
+	}
+
+}
+
 func TestRequest(t *testing.T) {
 	type containsOrEquals int
-	const REQTestContains containsOrEquals = 1
-	const REQTestEquals containsOrEquals = 2
-	const fileContains containsOrEquals = 3
+	const (
+		REQTestContains containsOrEquals = iota
+		REQTestEquals   containsOrEquals = iota
+		fileContains    containsOrEquals = iota
+	)
+
+	type viaSocketOrCh int
+	const (
+		viaSocket viaSocketOrCh = iota
+		viaCh     viaSocketOrCh = iota
+	)
 
 	type test struct {
 		info    string
 		message Message
 		want    []byte
 		containsOrEquals
+		viaSocketOrCh
 	}
 
 	ns := newNatsServerForTesting(t, 42222)
@@ -93,7 +124,7 @@ func TestRequest(t *testing.T) {
 
 	tests := []test{
 		{
-			info: "REQCliCommand test gris",
+			info: "REQCliCommand test, echo gris",
 			message: Message{
 				ToNode:        "central",
 				FromNode:      "central",
@@ -103,9 +134,10 @@ func TestRequest(t *testing.T) {
 				ReplyMethod:   REQTest,
 			}, want: []byte("gris"),
 			containsOrEquals: REQTestEquals,
+			viaSocketOrCh:    viaCh,
 		},
 		{
-			info: "REQCliCommand test sau",
+			info: "REQCliCommand test via socket, echo sau",
 			message: Message{
 				ToNode:        "central",
 				FromNode:      "central",
@@ -115,9 +147,10 @@ func TestRequest(t *testing.T) {
 				ReplyMethod:   REQTest,
 			}, want: []byte("sau"),
 			containsOrEquals: REQTestEquals,
+			viaSocketOrCh:    viaSocket,
 		},
 		{
-			info: "REQCliCommand test result in file",
+			info: "REQCliCommand test, echo sau, result in file",
 			message: Message{
 				ToNode:        "central",
 				FromNode:      "central",
@@ -126,12 +159,28 @@ func TestRequest(t *testing.T) {
 				MethodTimeout: 5,
 				ReplyMethod:   REQToFile,
 				Directory:     "test",
-				FileName:      "clicommand.result",
+				FileName:      "file1.result",
 			}, want: []byte("sau"),
 			containsOrEquals: fileContains,
+			viaSocketOrCh:    viaCh,
 		},
 		{
-			info: "REQHttpGet test edgeos.raalabs.tech",
+			info: "REQCliCommand test, echo several, result in file continous",
+			message: Message{
+				ToNode:        "central",
+				FromNode:      "central",
+				Method:        REQCliCommand,
+				MethodArgs:    []string{"bash", "-c", "echo giraff && echo sau && echo apekatt"},
+				MethodTimeout: 5,
+				ReplyMethod:   REQToFile,
+				Directory:     "test",
+				FileName:      "file2.result",
+			}, want: []byte("sau"),
+			containsOrEquals: fileContains,
+			viaSocketOrCh:    viaCh,
+		},
+		{
+			info: "REQHttpGet test, localhost:10080",
 			message: Message{
 				ToNode:        "central",
 				FromNode:      "central",
@@ -141,6 +190,7 @@ func TestRequest(t *testing.T) {
 				ReplyMethod:   REQTest,
 			}, want: []byte("web page content"),
 			containsOrEquals: REQTestContains,
+			viaSocketOrCh:    viaCh,
 		},
 		{
 			info: "REQOpProcessList test",
@@ -153,19 +203,27 @@ func TestRequest(t *testing.T) {
 				ReplyMethod:   REQTest,
 			}, want: []byte("central.REQHttpGet.EventACK"),
 			containsOrEquals: REQTestContains,
+			viaSocketOrCh:    viaCh,
 		},
 	}
 
 	for _, tt := range tests {
-		sam, err := newSubjectAndMessage(tt.message)
-		if err != nil {
-			t.Fatalf("newSubjectAndMessage failed: %v\n", err)
+		switch tt.viaSocketOrCh {
+		case viaCh:
+			sam, err := newSubjectAndMessage(tt.message)
+			if err != nil {
+				t.Fatalf("newSubjectAndMessage failed: %v\n", err)
+			}
+
+			srv.toRingBufferCh <- []subjectAndMessage{sam}
+
+		case viaSocket:
+			msgs := []Message{tt.message}
+			writeMsgsToSocketTest(conf, msgs, t)
+
 		}
 
-		srv.toRingBufferCh <- []subjectAndMessage{sam}
-
 		switch tt.containsOrEquals {
-
 		case REQTestEquals:
 			result := <-srv.errorKernel.testCh
 			resStr := string(result)
