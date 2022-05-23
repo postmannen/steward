@@ -58,7 +58,6 @@ func TestStewardServer(t *testing.T) {
 
 	// Specify all the test funcs to run in the slice.
 	funcs := []testFunc{
-		checkREQErrorLogTest,
 		checkREQTailFileTest,
 		checkErrorKernelMalformedJSONtest,
 		checkMetricValuesTest,
@@ -76,26 +75,6 @@ func TestStewardServer(t *testing.T) {
 // ----------------------------------------------------------------------------
 // Check REQ types
 // ----------------------------------------------------------------------------
-
-// Check the error logger type.
-func checkREQErrorLogTest(stewardServer *server, conf *Configuration, t *testing.T, tempDir string) error {
-	m := Message{
-		ToNode: "somenode",
-	}
-
-	p := newProcess(stewardServer.ctx, stewardServer, Subject{}, processKindSubscriber, nil)
-
-	stewardServer.errorKernel.errSend(p, m, fmt.Errorf("some error"))
-
-	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "errorCentral", "error.log")
-	_, err := findStringInFileTest("some error", resultFile, conf, t)
-	if err != nil {
-		return fmt.Errorf(" \U0001F631  [FAILED]	: checkREQErrorLogTest: %v", err)
-	}
-
-	t.Logf(" \U0001f600 [SUCCESS]	: checkREQErrorLogTest\n")
-	return nil
-}
 
 // Check the tailing of files type.
 func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing.T, tmpDir string) error {

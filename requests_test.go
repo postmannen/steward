@@ -108,7 +108,8 @@ func TestRequest(t *testing.T) {
 	}
 	defer ns.Shutdown()
 
-	tempdir := t.TempDir()
+	// tempdir := t.TempDir()
+	tempdir := "tmp"
 	srv, conf := newServerForTesting(t, "127.0.0.1:42222", tempdir)
 	srv.Start()
 	defer srv.Stop()
@@ -126,6 +127,22 @@ func TestRequest(t *testing.T) {
 	}
 
 	tests := []test{
+		{
+			info: "REQHello test",
+			message: Message{
+				ToNode:        "errorCentral",
+				FromNode:      "errorCentral",
+				Method:        REQErrorLog,
+				MethodArgs:    []string{},
+				MethodTimeout: 5,
+				Data:          []byte("error data"),
+				// ReplyMethod:   REQTest,
+				Directory: "error_log",
+				FileName:  "error.results",
+			}, want: []byte("error data"),
+			containsOrEquals: fileContains,
+			viaSocketOrCh:    viaCh,
+		},
 		{
 			info: "REQHello test",
 			message: Message{
