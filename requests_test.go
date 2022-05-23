@@ -21,6 +21,7 @@ import (
 )
 
 var logging = flag.Bool("logging", false, "set to true to enable the normal logger of the package")
+var persistTmp = flag.Bool("persistTmp", false, "set to true to persist the tmp folder")
 
 func newServerForTesting(t *testing.T, addressAndPort string, testFolder string) (*server, *Configuration) {
 	if !*logging {
@@ -120,8 +121,13 @@ func TestRequest(t *testing.T) {
 	}
 	defer ns.Shutdown()
 
-	// tempdir := t.TempDir()
-	tempDir := "tmp"
+	var tempDir string
+	if *persistTmp {
+		tempDir = "tmp"
+	} else {
+		tempDir = t.TempDir()
+	}
+
 	srv, conf := newServerForTesting(t, "127.0.0.1:42222", tempDir)
 	srv.Start()
 	defer srv.Stop()
