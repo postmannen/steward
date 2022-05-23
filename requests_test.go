@@ -3,6 +3,7 @@ package steward
 import (
 	"bytes"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -57,8 +58,9 @@ func newNatsServerForTesting(t *testing.T, port int) *natsserver.Server {
 
 func TestRequest(t *testing.T) {
 	type containsOrEquals int
-	const contains containsOrEquals = 1
-	const equals containsOrEquals = 2
+	const REQTestContains containsOrEquals = 1
+	const REQTestEquals containsOrEquals = 2
+	const fileContains containsOrEquals = 3
 
 	type test struct {
 		info    string
@@ -73,7 +75,7 @@ func TestRequest(t *testing.T) {
 	}
 	defer ns.Shutdown()
 
-	srv, _ := newServerForTesting(t, "127.0.0.1:42222")
+	srv, conf := newServerForTesting(t, "127.0.0.1:42222")
 	srv.Start()
 	defer srv.Stop()
 
@@ -100,7 +102,7 @@ func TestRequest(t *testing.T) {
 				MethodTimeout: 5,
 				ReplyMethod:   REQTest,
 			}, want: []byte("gris"),
-			containsOrEquals: equals,
+			containsOrEquals: REQTestEquals,
 		},
 		{
 			info: "REQCliCommand test sau",
@@ -112,7 +114,21 @@ func TestRequest(t *testing.T) {
 				MethodTimeout: 5,
 				ReplyMethod:   REQTest,
 			}, want: []byte("sau"),
-			containsOrEquals: equals,
+			containsOrEquals: REQTestEquals,
+		},
+		{
+			info: "REQCliCommand test result in file",
+			message: Message{
+				ToNode:        "central",
+				FromNode:      "central",
+				Method:        REQCliCommand,
+				MethodArgs:    []string{"bash", "-c", "echo sau"},
+				MethodTimeout: 5,
+				ReplyMethod:   REQToFile,
+				Directory:     "test",
+				FileName:      "clicommand.result",
+			}, want: []byte("sau"),
+			containsOrEquals: fileContains,
 		},
 		{
 			info: "REQHttpGet test edgeos.raalabs.tech",
@@ -124,7 +140,7 @@ func TestRequest(t *testing.T) {
 				MethodTimeout: 5,
 				ReplyMethod:   REQTest,
 			}, want: []byte("web page content"),
-			containsOrEquals: contains,
+			containsOrEquals: REQTestContains,
 		},
 		{
 			info: "REQOpProcessList test",
@@ -136,7 +152,7 @@ func TestRequest(t *testing.T) {
 				MethodTimeout: 5,
 				ReplyMethod:   REQTest,
 			}, want: []byte("central.REQHttpGet.EventACK"),
-			containsOrEquals: contains,
+			containsOrEquals: REQTestContains,
 		},
 	}
 
@@ -148,24 +164,39 @@ func TestRequest(t *testing.T) {
 
 		srv.toRingBufferCh <- []subjectAndMessage{sam}
 
-		result := <-srv.errorKernel.testCh
-
-		resStr := string(result)
-		resStr = strings.TrimSuffix(resStr, "\n")
-		result = []byte(resStr)
-
 		switch tt.containsOrEquals {
 
-		case equals:
+		case REQTestEquals:
+			result := <-srv.errorKernel.testCh
+			resStr := string(result)
+			resStr = strings.TrimSuffix(resStr, "\n")
+			result = []byte(resStr)
+
 			if !bytes.Equal(result, tt.want) {
 				t.Fatalf(" \U0001F631  [FAILED]	:%v : want: %v, got: %v\n", tt.info, string(tt.want), string(result))
 			}
 			t.Logf(" \U0001f600 [SUCCESS]	: %v\n", tt.info)
 
-		case contains:
+		case REQTestContains:
+			result := <-srv.errorKernel.testCh
+			resStr := string(result)
+			resStr = strings.TrimSuffix(resStr, "\n")
+			result = []byte(resStr)
+
 			if !strings.Contains(string(result), string(tt.want)) {
 				t.Fatalf(" \U0001F631  [FAILED]	:%v : want: %v, got: %v\n", tt.info, string(tt.want), string(result))
 			}
+			t.Logf(" \U0001f600 [SUCCESS]	: %v\n", tt.info)
+
+		case fileContains:
+			resultFile := filepath.Join(conf.SubscribersDataFolder, tt.message.Directory, string(tt.message.FromNode), tt.message.FileName)
+
+			_, err := findStringInFileTest(string(tt.want), resultFile, conf, t)
+			if err != nil {
+				t.Fatalf(" \U0001F631  [FAILED]	: %v: %v\n", tt.info, err)
+
+			}
+
 			t.Logf(" \U0001f600 [SUCCESS]	: %v\n", tt.info)
 		}
 	}
