@@ -94,7 +94,7 @@ func newSchemaGenerated() *schemaGenerated {
 // HostACLsSerializedWithHash holds the serialized representation node specific ACL's in the authSchema.
 // There is also a sha256 hash of the data.
 type HostACLsSerializedWithHash struct {
-	// data is all the ACL's for a specific node serialized.
+	// data is all the ACL's for a specific node serialized serialized into cbor.
 	Data []byte
 	// hash is the sha256 hash of the ACL's.
 	// With maps the order are not guaranteed, so A sorted appearance

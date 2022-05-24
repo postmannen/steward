@@ -180,6 +180,9 @@ func (p *processes) Start(proc process) {
 	if proc.configuration.IsCentralAuth {
 		proc.startup.subREQKeysRequestUpdate(proc)
 		proc.startup.subREQKeysAllow(proc)
+
+		proc.startup.subREQAclRequestUpdate(proc)
+
 		proc.startup.subREQAclAddCommand(proc)
 		proc.startup.subREQAclDeleteCommand(proc)
 		proc.startup.subREQAclDeleteSource(proc)
@@ -379,6 +382,13 @@ func (s startup) subREQKeysRequestUpdate(p process) {
 	go proc.spawnWorker()
 }
 
+func (s startup) subREQKeysDeliverUpdate(p process) {
+	log.Printf("Starting Public keys to Node subscriber: %#v\n", p.node)
+	sub := newSubject(REQKeysDeliverUpdate, string(p.node))
+	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
+	go proc.spawnWorker()
+}
+
 func (s startup) subREQKeysAllow(p process) {
 	log.Printf("Starting Public keys allow subscriber: %#v\n", p.node)
 	sub := newSubject(REQKeysAllow, string(p.node))
@@ -386,12 +396,14 @@ func (s startup) subREQKeysAllow(p process) {
 	go proc.spawnWorker()
 }
 
-func (s startup) subREQKeysDeliverUpdate(p process) {
-	log.Printf("Starting Public keys to Node subscriber: %#v\n", p.node)
-	sub := newSubject(REQKeysDeliverUpdate, string(p.node))
+func (s startup) subREQAclRequestUpdate(p process) {
+	log.Printf("Starting Acl Request update subscriber: %#v\n", p.node)
+	sub := newSubject(REQAclRequestUpdate, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
 }
+
+// HERE!
 
 func (s startup) subREQAclAddCommand(p process) {
 	log.Printf("Starting Acl Add Command subscriber: %#v\n", p.node)

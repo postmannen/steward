@@ -2,7 +2,6 @@ package steward
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 )
 
@@ -42,30 +41,25 @@ func (m methodREQAclRequestUpdate) handler(proc process, message Message, node s
 			// Using a func here to set the scope of the lock, and then be able to
 			// defer the unlock when leaving that scope.
 			func() {
-				proc.centralAuth.pki.nodesAcked.mu.Lock()
-				defer proc.centralAuth.pki.nodesAcked.mu.Unlock()
+				proc.centralAuth.accessLists.schemaGenerated.mu.Lock()
+				defer proc.centralAuth.accessLists.schemaGenerated.mu.Unlock()
 
 				fmt.Printf(" <---- methodREQKeysRequestUpdate: received acl hash from NODE=%v, HASH=%v\n", message.FromNode, message.Data)
 
 				// Check if the received hash is the same as the one currently active,
-				// TODO: Replace this with checking the ACL hash for the node.
-				if bytes.Equal(proc.centralAuth.pki.nodesAcked.keysAndHash.Hash[:], message.Data) {
-					fmt.Printf("\n ------------ NODE AND CENTRAL ARE EQUAL, NOTHING TO DO, EXITING HANDLER\n\n")
+				// If it is the same we exit the handler immediately.
+				hash32 := proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap[message.FromNode].Hash
+				hash := hash32[:]
+				if bytes.Equal(hash, message.Data) {
+					fmt.Printf("\n ------------ NODE AND CENTRAL HAVE EQUAL ACL HASH, NOTHING TO DO, EXITING HANDLER\n\n")
 					return
 				}
 
-				fmt.Printf("\n ------------ NODE AND CENTRAL WERE NOT EQUAL, PREPARING TO SEND NEW VERSION OF KEYS\n\n")
+				fmt.Printf("\n ------------ NODE AND CENTRAL WERE NOT EQUAL ACL, PREPARING TO SEND NEW VERSION OF KEYS\n\n")
 
-				fmt.Printf(" *     methodREQKeysRequestUpdate: marshalling new keys and hash to send: map=%v, hash=%v\n\n", proc.centralAuth.pki.nodesAcked.keysAndHash.Keys, proc.centralAuth.pki.nodesAcked.keysAndHash.Hash)
-
-				b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
-
-				if err != nil {
-					er := fmt.Errorf("error: methodREQKeysRequestUpdate, failed to marshal keys map: %v", err)
-					proc.errorKernel.errSend(proc, message, er)
-				}
-				fmt.Printf("\n ----> methodREQKeysRequestUpdate: SENDING KEYS TO NODE=%v\n", message.FromNode)
-				newReplyMessage(proc, message, b)
+				fmt.Printf("\n ----> methodREQKeysRequestUpdate: SENDING ACL'S TO NODE=%v\n", message.FromNode)
+				// TODO: PUT THE BELOW LINE BACK AGAIN WHEN DONE TESTING!
+				// newReplyMessage(proc, message, proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap[message.FromNode].Data)
 			}()
 		}
 	}()
