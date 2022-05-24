@@ -133,6 +133,8 @@ const (
 
 	// REQAclRequestUpdate will get all node acl's from central if an update is available.
 	REQAclRequestUpdate Method = "REQAclRequestUpdate"
+	// REQAclDeliverUpdate will deliver the acl from central to a node.
+	REQAclDeliverUpdate Method = "REQAclDeliverUpdate"
 
 	// REQAclAddCommand
 	REQAclAddCommand = "REQAclAddCommand"
@@ -253,6 +255,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			},
 
 			REQAclRequestUpdate: methodREQAclRequestUpdate{
+				event: EventNACK,
+			},
+			REQAclDeliverUpdate: methodREQAclDeliverUpdate{
 				event: EventNACK,
 			},
 

@@ -117,11 +117,11 @@ func (m methodREQKeysRequestUpdate) handler(proc process, message Message, node 
 
 				// Check if the received hash is the same as the one currently active,
 				if bytes.Equal(proc.centralAuth.pki.nodesAcked.keysAndHash.Hash[:], message.Data) {
-					fmt.Printf("\n ------------ NODE AND CENTRAL ARE EQUAL, NOTHING TO DO, EXITING HANDLER\n\n")
+					fmt.Printf("\n ------------ NODE AND CENTRAL HAVE EQUAL KEYS, NOTHING TO DO, EXITING HANDLER\n\n")
 					return
 				}
 
-				fmt.Printf("\n ------------ NODE AND CENTRAL WERE NOT EQUAL, PREPARING TO SEND NEW VERSION OF KEYS\n\n")
+				fmt.Printf("\n ------------ NODE AND CENTRAL HAD NOT EQUAL KEYS, PREPARING TO SEND NEW VERSION OF KEYS\n\n")
 
 				fmt.Printf(" *     methodREQKeysRequestUpdate: marshalling new keys and hash to send: map=%v, hash=%v\n\n", proc.centralAuth.pki.nodesAcked.keysAndHash.Keys, proc.centralAuth.pki.nodesAcked.keysAndHash.Hash)
 
@@ -195,10 +195,8 @@ func (m methodREQKeysDeliverUpdate) handler(proc process, message Message, node 
 				proc.errorKernel.errSend(proc, message, er)
 			}
 
-			// TODO TOMORROW: The hash is not sent with the requests to get public keys, and
-			// the reason is that the hash is not stored on the nodes ?
-			// Idea: We need to also persist the hash on the receiving nodes. We can then load
-			//  that key upon startup, and send it along when we do a public keys get.
+			// We need to also persist the hash on the receiving nodes. We can then load
+			// that key upon startup.
 
 			err = proc.nodeAuth.publicKeys.saveToFile()
 			if err != nil {

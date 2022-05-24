@@ -2,7 +2,10 @@ package steward
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+
+	"github.com/fxamacker/cbor/v2"
 )
 
 // ----
@@ -44,7 +47,7 @@ func (m methodREQAclRequestUpdate) handler(proc process, message Message, node s
 				proc.centralAuth.accessLists.schemaGenerated.mu.Lock()
 				defer proc.centralAuth.accessLists.schemaGenerated.mu.Unlock()
 
-				fmt.Printf(" <---- methodREQKeysRequestUpdate: received acl hash from NODE=%v, HASH=%v\n", message.FromNode, message.Data)
+				fmt.Printf(" <---- methodREQAclRequestUpdate: received acl hash from NODE=%v, HASH=%v\n", message.FromNode, message.Data)
 
 				// Check if the received hash is the same as the one currently active,
 				// If it is the same we exit the handler immediately.
@@ -55,16 +58,100 @@ func (m methodREQAclRequestUpdate) handler(proc process, message Message, node s
 					return
 				}
 
-				fmt.Printf("\n ------------ NODE AND CENTRAL WERE NOT EQUAL ACL, PREPARING TO SEND NEW VERSION OF KEYS\n\n")
+				fmt.Printf("\n ------------ NODE AND CENTRAL HAD NOT EQUAL ACL, PREPARING TO SEND NEW VERSION OF Acl\n\n")
 
-				fmt.Printf("\n ----> methodREQKeysRequestUpdate: SENDING ACL'S TO NODE=%v\n", message.FromNode)
-				// TODO: PUT THE BELOW LINE BACK AGAIN WHEN DONE TESTING!
-				// newReplyMessage(proc, message, proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap[message.FromNode].Data)
+				fmt.Printf("\n ----> methodREQAclRequestUpdate: SENDING ACL'S TO NODE=%v\n", message.FromNode)
+
+				js, err := json.Marshal(proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap[message.FromNode])
+				if err != nil {
+					er := fmt.Errorf("error: REQAclRequestUpdate : json marshal failed: %v, message: %v", err, message)
+					proc.errorKernel.errSend(proc, message, er)
+				}
+
+				newReplyMessage(proc, message, js)
 			}()
 		}
 	}()
 
 	// NB: We're not sending an ACK message for this request type.
+	return nil, nil
+}
+
+// ----
+
+type methodREQAclDeliverUpdate struct {
+	event Event
+}
+
+func (m methodREQAclDeliverUpdate) getKind() Event {
+	return m.event
+}
+
+// Handler to receive the acls from a central server.
+func (m methodREQAclDeliverUpdate) handler(proc process, message Message, node string) ([]byte, error) {
+	// Get a context with the timeout specified in message.MethodTimeout.
+	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
+
+	proc.processes.wg.Add(1)
+	go func() {
+		defer proc.processes.wg.Done()
+		outCh := make(chan []byte)
+
+		go func() {
+			// Normally we would do some logic here, where the result is passed to outCh when done,
+			// so we can split up the working logic, and f.ex. sending a reply logic.
+			// In this case this go func and the below select is not needed, but keeping it so the
+			// structure is the same as the other handlers.
+			select {
+			case <-ctx.Done():
+
+			case outCh <- []byte{}:
+			}
+		}()
+
+		select {
+		// case proc.toRingbufferCh <- []subjectAndMessage{sam}:
+		case <-ctx.Done():
+		case <-outCh:
+
+			proc.nodeAuth.nodeAcl.mu.Lock()
+
+			hdh := HostACLsSerializedWithHash{}
+
+			err := json.Unmarshal(message.Data, &hdh)
+			if err != nil {
+				er := fmt.Errorf("error: REQAclDeliverUpdate : json unmarshal failed: %v, message: %v", err, message)
+				proc.errorKernel.errSend(proc, message, er)
+			}
+
+			mapOfFromNodeCommands := make(map[Node]map[command]struct{})
+			err = cbor.Unmarshal(hdh.Data, &mapOfFromNodeCommands)
+			if err != nil {
+				er := fmt.Errorf("error: REQAclDeliverUpdate : json unmarshal failed: %v, message: %v", err, message)
+				proc.errorKernel.errSend(proc, message, er)
+			}
+
+			proc.nodeAuth.nodeAcl.aclAndHash.Hash = hdh.Hash
+			proc.nodeAuth.nodeAcl.aclAndHash.Acl = mapOfFromNodeCommands
+
+			fmt.Printf("\n <---- REQAclDeliverUpdate: after unmarshal, nodeAuth aclAndhash contains: %+v\n\n", proc.nodeAuth.nodeAcl.aclAndHash)
+
+			proc.nodeAuth.nodeAcl.mu.Unlock()
+
+			err = proc.nodeAuth.nodeAcl.saveToFile()
+			if err != nil {
+				er := fmt.Errorf("error: REQAclDeliverUpdate : save to file failed: %v, message: %v", err, message)
+				proc.errorKernel.errSend(proc, message, er)
+			}
+
+			// Prepare and queue for sending a new message with the output
+			// of the action executed.
+			// newReplyMessage(proc, message, out)
+		}
+	}()
+
+	// Send back an ACK message.
+	// ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return nil, nil
 }
 

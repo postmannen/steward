@@ -280,7 +280,7 @@ func (a *accessLists) generateACLsForAllNodes() error {
 			// cbor marshal the data of the ACL map to store for the host node.
 			cb, err := cbor.Marshal(m)
 			if err != nil {
-				er := fmt.Errorf("error: failed to generate json for host in schemaGenerated: %v", err)
+				er := fmt.Errorf("error: failed to generate cbor for host in schemaGenerated: %v", err)
 				log.Printf("%v\n", er)
 				os.Exit(1)
 			}

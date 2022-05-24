@@ -175,6 +175,9 @@ func (p *processes) Start(proc process) {
 
 	if proc.configuration.StartPubREQKeysRequestUpdate {
 		proc.startup.pubREQKeysRequestUpdate(proc)
+		// TODO: Putting the acl publisher here.
+		// Maybe we should also change the name of the configuration flag to something auth related ?
+		proc.startup.pubREQAclRequestUpdate(proc)
 	}
 
 	if proc.configuration.IsCentralAuth {
@@ -353,6 +356,61 @@ func (s startup) pubREQKeysRequestUpdate(p process) {
 				Retries:     1,
 			}
 			proc.nodeAuth.publicKeys.mu.Unlock()
+
+			sam, err := newSubjectAndMessage(m)
+			if err != nil {
+				// In theory the system should drop the message before it reaches here.
+				p.errorKernel.errSend(p, m, err)
+				log.Printf("error: ProcessesStart: %v\n", err)
+			}
+			proc.toRingbufferCh <- []subjectAndMessage{sam}
+
+			select {
+			case <-ticker.C:
+			case <-ctx.Done():
+				er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
+				// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
+				log.Printf("%v\n", er)
+				return nil
+			}
+		}
+	}
+	go proc.spawnWorker()
+}
+
+// pubREQAclRequestUpdate defines the startup of a publisher that will send REQREQKeysRequestUpdate
+// to central server and ask for publics keys, and to get them deliver back with a request
+// of type pubREQKeysDeliverUpdate.
+func (s startup) pubREQAclRequestUpdate(p process) {
+	log.Printf("Starting REQAclRequestUpdate Publisher: %#v\n", p.node)
+
+	sub := newSubject(REQAclRequestUpdate, p.configuration.CentralNodeName)
+	proc := newProcess(p.ctx, s.server, sub, processKindPublisher, nil)
+
+	// Define the procFunc to be used for the process.
+	proc.procFunc = func(ctx context.Context, procFuncCh chan Message) error {
+		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.PublicKeysGetInterval))
+		for {
+
+			// TODO: We could send with the hash of the currently stored hash,
+			// so we would know on the subscriber at central if it should send
+			// and update with new keys back.
+
+			proc.nodeAuth.nodeAcl.mu.Lock()
+			fmt.Printf("\n ----> REQKeysRequestUpdate: sending our current hash: %v\n\n", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
+
+			m := Message{
+				FileName:    "aclRequestUpdate.log",
+				Directory:   "aclRequestUpdate",
+				ToNode:      Node(p.configuration.CentralNodeName),
+				FromNode:    Node(p.node),
+				Data:        []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]),
+				Method:      REQAclRequestUpdate,
+				ReplyMethod: REQAclDeliverUpdate,
+				ACKTimeout:  proc.configuration.DefaultMessageTimeout,
+				Retries:     1,
+			}
+			proc.nodeAuth.nodeAcl.mu.Unlock()
 
 			sam, err := newSubjectAndMessage(m)
 			if err != nil {
