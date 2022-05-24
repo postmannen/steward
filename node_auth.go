@@ -14,14 +14,12 @@ import (
 	"sync"
 )
 
-type signature string
-
-// allowedSignatures is the structure for reading and writing from
-// the signatures map. It holds a mutex to use when interacting with
-// the map.
+// nodeAuth is the structure that holds both keys and acl's
+// that the running steward node shall use for authorization.
+//It holds a mutex to use when interacting with the map.
 type nodeAuth struct {
-	// All the allowed signatures a node is allowed to recive from.
-	allowedSignatures *allowedSignatures
+	// ACL that defines where a node is allowed to recieve from.
+	nodeAcl *nodeAcl
 
 	// All the public keys for nodes a node is allowed to receive from.
 	publicKeys *publicKeys
@@ -45,10 +43,10 @@ type nodeAuth struct {
 
 func newNodeAuth(configuration *Configuration, errorKernel *errorKernel) *nodeAuth {
 	n := nodeAuth{
-		allowedSignatures: newAllowedSignatures(),
-		publicKeys:        newPublicKeys(configuration),
-		configuration:     configuration,
-		errorKernel:       errorKernel,
+		nodeAcl:       newNodeAcl(configuration),
+		publicKeys:    newPublicKeys(configuration),
+		configuration: configuration,
+		errorKernel:   errorKernel,
 	}
 
 	// Set the signing key paths.
@@ -65,19 +63,96 @@ func newNodeAuth(configuration *Configuration, errorKernel *errorKernel) *nodeAu
 	return &n
 }
 
-type allowedSignatures struct {
-	// allowed is a map for holding all the allowed signatures.
-	allowed map[signature]Node
-	mu      sync.Mutex
+// --------------------- ACL ---------------------
+
+type aclAndHash struct {
+	Acl  map[Node]map[command]struct{}
+	Hash [32]byte
 }
 
-func newAllowedSignatures() *allowedSignatures {
-	a := allowedSignatures{
-		allowed: make(map[signature]Node),
+func newAclAndHash() aclAndHash {
+	a := aclAndHash{
+		Acl: make(map[Node]map[command]struct{}),
 	}
 
-	return &a
+	return a
 }
+
+type nodeAcl struct {
+	// allowed is a map for holding all the allowed signatures.
+	aclAndHash aclAndHash
+	filePath   string
+	mu         sync.Mutex
+}
+
+func newNodeAcl(c *Configuration) *nodeAcl {
+	n := nodeAcl{
+		aclAndHash: newAclAndHash(),
+		filePath:   filepath.Join(c.DatabaseFolder, "acl.txt"),
+	}
+
+	return &n
+}
+
+// loadFromFile will try to load all the currently stored acl's from file,
+// and return the error if it fails.
+// If no file is found a nil error is returned.
+func (n *nodeAcl) loadFromFile() error {
+	if _, err := os.Stat(n.filePath); os.IsNotExist(err) {
+		// Just logging the error since it is not crucial that a key file is missing,
+		// since a new one will be created on the next update.
+		log.Printf("no acl file found at %v\n", n.filePath)
+		return nil
+	}
+
+	fh, err := os.OpenFile(n.filePath, os.O_RDONLY, 0600)
+	if err != nil {
+		return fmt.Errorf("error: failed to open acl file: %v", err)
+	}
+	defer fh.Close()
+
+	b, err := io.ReadAll(fh)
+	if err != nil {
+		return err
+	}
+
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	err = json.Unmarshal(b, &n.aclAndHash)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("\n ***** DEBUG: Loaded existing acl's from file: %v\n\n", n.aclAndHash.Hash)
+
+	return nil
+}
+
+// saveToFile will save the acl to file for persistent storage.
+// An error is returned if it fails.
+func (n *nodeAcl) saveToFile() error {
+	fh, err := os.OpenFile(n.filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return fmt.Errorf("error: failed to acl file: %v", err)
+	}
+	defer fh.Close()
+
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	b, err := json.Marshal(n.aclAndHash)
+	if err != nil {
+		return err
+	}
+
+	_, err = fh.Write(b)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// --------------------- KEYS ---------------------
 
 type keysAndHash struct {
 	Keys map[Node][]byte
