@@ -91,6 +91,12 @@ func newNodeAcl(c *Configuration) *nodeAcl {
 		filePath:   filepath.Join(c.DatabaseFolder, "acl.txt"),
 	}
 
+	err := n.loadFromFile()
+	if err != nil {
+		log.Printf("error: loading acl's from file: %v\n", err)
+		// os.Exit(1)
+	}
+
 	return &n
 }
 
