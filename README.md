@@ -822,7 +822,7 @@ For storing the keys on the central server two databases are involved.
 
 1. Steward nodes will request key updates by sending a message to the central server with the **REQGetKeys** method on a timed interval. The hash of the current keys on a node will be put as the payload of the message.
 2. On the Central server the received hash will be compared with the current hash on the central server. If the hashes are equal nothing will be done, and no reply message will be sent back to the end node.
-3. If the hashes are not equal a reply message of type **REQPublicKeysToNode** will be sent back to the end node with a copy of the acknowledged public keys database and a hash of those keys.
+3. If the hashes are not equal a reply message of type **REQKeysDeliverUpdate** will be sent back to the end node with a copy of the acknowledged public keys database and a hash of those keys.
 4. The end node will then update it's local key database.
 
 NB: The update process is initiated by the end nodes on a timed interval. No key updates are initiaded from the central server.

@@ -124,12 +124,12 @@ const (
 
 	// REQPublicKey will get the public ed25519 key from a node.
 	REQPublicKey Method = "REQPublicKey"
-	// REQPublicKeysGet will get all the public keys from central.
-	REQPublicKeysGet Method = "REQPublicKeysGet"
-	// REQPublicKeysToNode will put all the public received from central.
-	REQPublicKeysToNode Method = "REQPublicKeysToNode"
-	// REQAuthPublicKeysAllow
-	REQPublicKeysAllow Method = "REQPublicKeysAllow"
+	// REQKeysRequestUpdate will get all the public keys from central.
+	REQKeysRequestUpdate Method = "REQKeysRequestUpdate"
+	// REQKeysDeliverUpdate will deliver the public from central to a node.
+	REQKeysDeliverUpdate Method = "REQKeysDeliverUpdate"
+	// REQKeysAllow
+	REQKeysAllow Method = "REQKeysAllow"
 
 	// REQAclAddCommand
 	REQAclAddCommand = "REQAclAddCommand"
@@ -239,13 +239,13 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQPublicKey: methodREQPublicKey{
 				event: EventACK,
 			},
-			REQPublicKeysGet: methodREQPublicKeysGet{
+			REQKeysRequestUpdate: methodREQKeysRequestUpdate{
 				event: EventNACK,
 			},
-			REQPublicKeysToNode: methodREQPublicKeysToNode{
+			REQKeysDeliverUpdate: methodREQKeysDeliverUpdate{
 				event: EventNACK,
 			},
-			REQPublicKeysAllow: methodREQPublicKeysAllow{
+			REQKeysAllow: methodREQKeysAllow{
 				event: EventACK,
 			},
 			REQAclAddCommand: methodREQAclAddCommand{

@@ -372,7 +372,7 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 				//r.permStore <- fmt.Sprintf("%v\n", str)
 
 				// NB: Removed this one since it creates a data race with the storing of the hash value in
-				// the methodREQPublicKeysToNode. Sorted by splitting up the sprint below with the sprint
+				// the methodREQKeysDeliverUpdate. Sorted by splitting up the sprint below with the sprint
 				// above for now, but should investigate further what might be the case here, since the
 				// message have no reference to the proc and should in theory not create a race.
 				//

@@ -60,16 +60,16 @@ func (m methodREQPublicKey) handler(proc process, message Message, node string) 
 
 // ----
 
-type methodREQPublicKeysGet struct {
+type methodREQKeysRequestUpdate struct {
 	event Event
 }
 
-func (m methodREQPublicKeysGet) getKind() Event {
+func (m methodREQKeysRequestUpdate) getKind() Event {
 	return m.event
 }
 
 // Handler to get all the public ed25519 keys from a central server.
-func (m methodREQPublicKeysGet) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodREQKeysRequestUpdate) handler(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 
 	// TODO:
@@ -113,7 +113,7 @@ func (m methodREQPublicKeysGet) handler(proc process, message Message, node stri
 				// it with the current one for the KeyMap, and know if we need to send
 				// and update back to the node who published the request to here.
 
-				fmt.Printf(" <---- methodREQPublicKeysGet: received hash from NODE=%v, HASH=%v\n", message.FromNode, message.Data)
+				fmt.Printf(" <---- methodREQKeysRequestUpdate: received hash from NODE=%v, HASH=%v\n", message.FromNode, message.Data)
 
 				// Check if the received hash is the same as the one currently active,
 				if bytes.Equal(proc.centralAuth.pki.nodesAcked.keysAndHash.Hash[:], message.Data) {
@@ -123,15 +123,15 @@ func (m methodREQPublicKeysGet) handler(proc process, message Message, node stri
 
 				fmt.Printf("\n ------------ NODE AND CENTRAL WERE NOT EQUAL, PREPARING TO SEND NEW VERSION OF KEYS\n\n")
 
-				fmt.Printf(" *     methodREQPublicKeysGet: marshalling new keys and hash to send: map=%v, hash=%v\n\n", proc.centralAuth.pki.nodesAcked.keysAndHash.Keys, proc.centralAuth.pki.nodesAcked.keysAndHash.Hash)
+				fmt.Printf(" *     methodREQKeysRequestUpdate: marshalling new keys and hash to send: map=%v, hash=%v\n\n", proc.centralAuth.pki.nodesAcked.keysAndHash.Keys, proc.centralAuth.pki.nodesAcked.keysAndHash.Hash)
 
 				b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
 
 				if err != nil {
-					er := fmt.Errorf("error: REQPublicKeysGet, failed to marshal keys map: %v", err)
+					er := fmt.Errorf("error: methodREQKeysRequestUpdate, failed to marshal keys map: %v", err)
 					proc.errorKernel.errSend(proc, message, er)
 				}
-				fmt.Printf("\n ----> methodREQPublicKeysGet: SENDING KEYS TO NODE=%v\n", message.FromNode)
+				fmt.Printf("\n ----> methodREQKeysRequestUpdate: SENDING KEYS TO NODE=%v\n", message.FromNode)
 				newReplyMessage(proc, message, b)
 			}()
 		}
@@ -143,16 +143,16 @@ func (m methodREQPublicKeysGet) handler(proc process, message Message, node stri
 
 // ----
 
-type methodREQPublicKeysToNode struct {
+type methodREQKeysDeliverUpdate struct {
 	event Event
 }
 
-func (m methodREQPublicKeysToNode) getKind() Event {
+func (m methodREQKeysDeliverUpdate) getKind() Event {
 	return m.event
 }
 
-// Handler to put the public key replies received from a central server.
-func (m methodREQPublicKeysToNode) handler(proc process, message Message, node string) ([]byte, error) {
+// Handler to receive the public keys from a central server.
+func (m methodREQKeysDeliverUpdate) handler(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 
 	// TODO:
@@ -186,12 +186,12 @@ func (m methodREQPublicKeysToNode) handler(proc process, message Message, node s
 			proc.nodeAuth.publicKeys.mu.Lock()
 
 			err := json.Unmarshal(message.Data, proc.nodeAuth.publicKeys.keysAndHash)
-			fmt.Printf("\n <---- REQPublicKeysToNode: after unmarshal, nodeAuth keysAndhash contains: %+v\n\n", proc.nodeAuth.publicKeys.keysAndHash)
+			fmt.Printf("\n <---- REQKeysDeliverUpdate: after unmarshal, nodeAuth keysAndhash contains: %+v\n\n", proc.nodeAuth.publicKeys.keysAndHash)
 
 			proc.nodeAuth.publicKeys.mu.Unlock()
 
 			if err != nil {
-				er := fmt.Errorf("error: REQPublicKeysToNode : json unmarshal failed: %v, message: %v", err, message)
+				er := fmt.Errorf("error: REQKeysDeliverUpdate : json unmarshal failed: %v, message: %v", err, message)
 				proc.errorKernel.errSend(proc, message, er)
 			}
 
@@ -202,7 +202,7 @@ func (m methodREQPublicKeysToNode) handler(proc process, message Message, node s
 
 			err = proc.nodeAuth.publicKeys.saveToFile()
 			if err != nil {
-				er := fmt.Errorf("error: REQPublicKeysToNode : save to file failed: %v, message: %v", err, message)
+				er := fmt.Errorf("error: REQKeysDeliverUpdate : save to file failed: %v, message: %v", err, message)
 				proc.errorKernel.errSend(proc, message, er)
 			}
 
@@ -221,11 +221,11 @@ func (m methodREQPublicKeysToNode) handler(proc process, message Message, node s
 
 // TODO: We should also add a request method methodREQPublicKeysRevoke
 
-type methodREQPublicKeysAllow struct {
+type methodREQKeysAllow struct {
 	event Event
 }
 
-func (m methodREQPublicKeysAllow) getKind() Event {
+func (m methodREQKeysAllow) getKind() Event {
 	return m.event
 }
 
@@ -234,7 +234,7 @@ func (m methodREQPublicKeysAllow) getKind() Event {
 // are recived on the central server they will be put into a temp key
 // map, and we need to acknowledge them before they are moved into the
 // main key map, and then allowed to be sent out to other nodes.
-func (m methodREQPublicKeysAllow) handler(proc process, message Message, node string) ([]byte, error) {
+func (m methodREQKeysAllow) handler(proc process, message Message, node string) ([]byte, error) {
 	// Get a context with the timeout specified in message.MethodTimeout.
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
 
@@ -280,7 +280,7 @@ func (m methodREQPublicKeysAllow) handler(proc process, message Message, node st
 					// Delete the key from the NotAcked map
 					delete(proc.centralAuth.pki.nodeNotAckedPublicKeys.KeyMap, Node(n))
 
-					er := fmt.Errorf("info: REQPublicKeysAllow : allowed new/updated public key for %v to allowed public key map", n)
+					er := fmt.Errorf("info: REQKeysAllow : allowed new/updated public key for %v to allowed public key map", n)
 					proc.errorKernel.infoSend(proc, message, er)
 				}
 			}
@@ -319,7 +319,7 @@ func (m methodREQPublicKeysAllow) handler(proc process, message Message, node st
 
 				b, err := cbor.Marshal(sortedNodesAndKeys)
 				if err != nil {
-					er := fmt.Errorf("error: methodREQPublicKeysAllow, failed to marshal slice, and will not update hash for public keys:  %v", err)
+					er := fmt.Errorf("error: methodREQKeysAllow, failed to marshal slice, and will not update hash for public keys:  %v", err)
 					proc.errorKernel.errSend(proc, message, er)
 					log.Printf(" * DEBUG: %v\n", er)
 
@@ -333,7 +333,7 @@ func (m methodREQPublicKeysAllow) handler(proc process, message Message, node st
 				// Store the key to the db for persistence.
 				proc.centralAuth.pki.dbUpdateHash(hash[:])
 				if err != nil {
-					er := fmt.Errorf("error: methodREQPublicKeysAllow, failed to store the hash into the db:  %v", err)
+					er := fmt.Errorf("error: methodREQKeysAllow, failed to store the hash into the db:  %v", err)
 					proc.errorKernel.errSend(proc, message, er)
 					log.Printf(" * DEBUG: %v\n", er)
 

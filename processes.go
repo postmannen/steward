@@ -173,13 +173,13 @@ func (p *processes) Start(proc process) {
 		proc.startup.pubREQHello(proc)
 	}
 
-	if proc.configuration.StartPubREQPublicKeysGet {
-		proc.startup.pubREQPublicKeysGet(proc)
+	if proc.configuration.StartPubREQKeysRequestUpdate {
+		proc.startup.pubREQKeysRequestUpdate(proc)
 	}
 
 	if proc.configuration.IsCentralAuth {
-		proc.startup.subREQPublicKeysGet(proc)
-		proc.startup.subREQPublicKeysAllow(proc)
+		proc.startup.subREQKeysRequestUpdate(proc)
+		proc.startup.subREQKeysAllow(proc)
 		proc.startup.subREQAclAddCommand(proc)
 		proc.startup.subREQAclDeleteCommand(proc)
 		proc.startup.subREQAclDeleteSource(proc)
@@ -193,8 +193,8 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQAclImport(proc)
 	}
 
-	if proc.configuration.StartSubREQPublicKeysToNode {
-		proc.startup.subREQPublicKeysToNode(proc)
+	if proc.configuration.StartSubREQKeysDeliverUpdate {
+		proc.startup.subREQKeysDeliverUpdate(proc)
 	}
 
 	if proc.configuration.StartSubREQHttpGet {
@@ -317,13 +317,13 @@ func (s startup) pubREQHello(p process) {
 	go proc.spawnWorker()
 }
 
-// pubREQPublicKeysGet defines the startup of a publisher that will send REQPublicKeysGet
+// pubREQKeysRequestUpdate defines the startup of a publisher that will send REQREQKeysRequestUpdate
 // to central server and ask for publics keys, and to get them deliver back with a request
-// of type pubREQPublicKeysToNode.
-func (s startup) pubREQPublicKeysGet(p process) {
+// of type pubREQKeysDeliverUpdate.
+func (s startup) pubREQKeysRequestUpdate(p process) {
 	log.Printf("Starting PublicKeysGet Publisher: %#v\n", p.node)
 
-	sub := newSubject(REQPublicKeysGet, p.configuration.CentralNodeName)
+	sub := newSubject(REQKeysRequestUpdate, p.configuration.CentralNodeName)
 	proc := newProcess(p.ctx, s.server, sub, processKindPublisher, nil)
 
 	// Define the procFunc to be used for the process.
@@ -336,7 +336,7 @@ func (s startup) pubREQPublicKeysGet(p process) {
 			// and update with new keys back.
 
 			proc.nodeAuth.publicKeys.mu.Lock()
-			fmt.Printf("\n ----> REQPublicKeysGet: sending our current hash: %v\n\n", []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]))
+			fmt.Printf("\n ----> REQKeysRequestUpdate: sending our current hash: %v\n\n", []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]))
 
 			m := Message{
 				FileName:    "publickeysget.log",
@@ -344,8 +344,8 @@ func (s startup) pubREQPublicKeysGet(p process) {
 				ToNode:      Node(p.configuration.CentralNodeName),
 				FromNode:    Node(p.node),
 				Data:        []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]),
-				Method:      REQPublicKeysGet,
-				ReplyMethod: REQPublicKeysToNode,
+				Method:      REQKeysRequestUpdate,
+				ReplyMethod: REQKeysDeliverUpdate,
 				ACKTimeout:  proc.configuration.DefaultMessageTimeout,
 				Retries:     1,
 			}
@@ -372,23 +372,23 @@ func (s startup) pubREQPublicKeysGet(p process) {
 	go proc.spawnWorker()
 }
 
-func (s startup) subREQPublicKeysGet(p process) {
-	log.Printf("Starting Public keys get subscriber: %#v\n", p.node)
-	sub := newSubject(REQPublicKeysGet, string(p.node))
+func (s startup) subREQKeysRequestUpdate(p process) {
+	log.Printf("Starting Public keys request update subscriber: %#v\n", p.node)
+	sub := newSubject(REQKeysRequestUpdate, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
 }
 
-func (s startup) subREQPublicKeysAllow(p process) {
+func (s startup) subREQKeysAllow(p process) {
 	log.Printf("Starting Public keys allow subscriber: %#v\n", p.node)
-	sub := newSubject(REQPublicKeysAllow, string(p.node))
+	sub := newSubject(REQKeysAllow, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
 }
 
-func (s startup) subREQPublicKeysToNode(p process) {
+func (s startup) subREQKeysDeliverUpdate(p process) {
 	log.Printf("Starting Public keys to Node subscriber: %#v\n", p.node)
-	sub := newSubject(REQPublicKeysToNode, string(p.node))
+	sub := newSubject(REQKeysDeliverUpdate, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
 }
