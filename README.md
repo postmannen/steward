@@ -70,6 +70,19 @@ As long as you can do something as an operator on in a shell on a system you can
     - [Authrization and Key Distribution](#authrization-and-key-distribution)
       - [Key registration on Central Server](#key-registration-on-central-server)
       - [Key distribution to nodes](#key-distribution-to-nodes)
+      - [Acl updates](#acl-updates)
+      - [Management of the Acl on the central server](#management-of-the-acl-on-the-central-server)
+        - [REQAclAddCommand](#reqacladdcommand)
+        - [REQAclDeleteCommand](#reqacldeletecommand)
+        - [REQAclDeleteSource](#reqacldeletesource)
+        - [REQAclGroupNodesAddNode](#reqaclgroupnodesaddnode)
+        - [REQAclGroupNodesDeleteNode](#reqaclgroupnodesdeletenode)
+        - [REQAclGroupNodesDeleteGroup](#reqaclgroupnodesdeletegroup)
+        - [REQAclGroupCommandsAddCommand](#reqaclgroupcommandsaddcommand)
+        - [REQAclGroupCommandsDeleteCommand](#reqaclgroupcommandsdeletecommand)
+        - [REQAclGroupCommandsDeleteGroup](#reqaclgroupcommandsdeletegroup)
+        - [REQAclExport](#reqaclexport)
+        - [REQAclImport](#reqaclimport)
     - [Other](#other)
   - [Howto](#howto)
     - [Options for running](#options-for-running)
@@ -820,12 +833,77 @@ For storing the keys on the central server two databases are involved.
 
 #### Key distribution to nodes
 
-1. Steward nodes will request key updates by sending a message to the central server with the **REQGetKeys** method on a timed interval. The hash of the current keys on a node will be put as the payload of the message.
+1. Steward nodes will request key updates by sending a message to the central server with the **REQKeysRequestUpdate** method on a timed interval. The hash of the current keys on a node will be put as the payload of the message.
 2. On the Central server the received hash will be compared with the current hash on the central server. If the hashes are equal nothing will be done, and no reply message will be sent back to the end node.
 3. If the hashes are not equal a reply message of type **REQKeysDeliverUpdate** will be sent back to the end node with a copy of the acknowledged public keys database and a hash of those keys.
 4. The end node will then update it's local key database.
 
+The interval of the updates can be controlled with it's own config or flag **REQKeysRequestUpdateInterval**
+
 NB: The update process is initiated by the end nodes on a timed interval. No key updates are initiaded from the central server.
+
+#### Acl updates
+
+1. Steward nodes will request key updates by sending a message to the central server with the **REQAclRequestUpdate** method on a timed interval. The hash of the current Acl on a node will be put as the payload of the message.
+2. On the Central server the received hash will be compared with the current hash on the central server. If the hashes are equal nothing will be done, and no reply message will be sent back to the end node.
+3. If the hashes are not equal a reply message of type **REQAclDeliverUpdate** will be sent back to the end node with a copy of the Acl's database for the node the request came from, and a hash of that Acl.
+4. The end node will then replace it's local Acl database with the update.
+
+The interval of the updates can be controlled with it's own config or flag **REQAclRequestUpdateInterval**
+
+NB: The update process is initiated by the end nodes on a timed interval. No key updates are initiaded from the central server.
+
+#### Management of the Acl on the central server
+
+Several Request methods exists for handling the management of the active Acl's on the central server.
+
+If the element specified is prefixed with **grp_** it will be treated as a group, otherwise it will be treated as a single node or command.
+
+Groups or nodes do not have to exist to be used with an acl. The acl will be created with the elements specifed, and if a non existing group was specified you will have an Acl that is not yet functional, but it will become functional as soon as you add elements to the group's. 
+
+##### REQAclAddCommand
+
+Takes the methodArgs: ["host or group of hosts", "src or group of src","cmd or group of cmd"]
+
+##### REQAclDeleteCommand
+
+Takes the methodArgs: ["host or group of hosts", "src or group of src","cmd or group of cmd"]
+
+##### REQAclDeleteSource
+
+Takes the methodArgs: ["host or group of hosts", "src or group of src"]
+
+##### REQAclGroupNodesAddNode
+
+Takes the methodArgs: ["nodegroup name", "node name"]
+
+##### REQAclGroupNodesDeleteNode
+
+Takes the methodArgs: ["nodegroup name", "node name"]
+
+##### REQAclGroupNodesDeleteGroup
+
+Takes the methodArgs: ["nodegroup name"]
+
+##### REQAclGroupCommandsAddCommand
+
+Takes the methodArgs: ["commandgroup name", "command"]
+
+##### REQAclGroupCommandsDeleteCommand
+
+Takes the methodArgs: ["commandgroup name", "command"]
+
+##### REQAclGroupCommandsDeleteGroup
+
+Takes the methodArgs: ["commandgroup name"]
+
+##### REQAclExport
+
+Creates an export of the current Acl's database, and delivers it to the requesting node with the replyMethod specified.
+
+##### REQAclImport
+
+Imports the Acl given in JSON format in the first argument of the methodArgs.
 
 ### Other
 
