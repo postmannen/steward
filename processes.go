@@ -175,8 +175,10 @@ func (p *processes) Start(proc process) {
 
 	if proc.configuration.StartPubREQKeysRequestUpdate {
 		proc.startup.pubREQKeysRequestUpdate(proc)
-		// TODO: Putting the acl publisher here.
-		// Maybe we should also change the name of the configuration flag to something auth related ?
+		proc.startup.subREQKeysDeliverUpdate(proc)
+	}
+
+	if proc.configuration.StartPubREQAclRequestUpdate {
 		proc.startup.pubREQAclRequestUpdate(proc)
 		proc.startup.subREQAclDeliverUpdate(proc)
 	}
@@ -200,9 +202,10 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQAclImport(proc)
 	}
 
-	if proc.configuration.StartSubREQKeysDeliverUpdate {
-		proc.startup.subREQKeysDeliverUpdate(proc)
-	}
+	// Moved this together with proc.configuration.StartPubREQKeysRequestUpdate since they belong together.
+	// if proc.configuration.StartSubREQKeysDeliverUpdate {
+	// 	proc.startup.subREQKeysDeliverUpdate(proc)
+	// }
 
 	if proc.configuration.StartSubREQHttpGet {
 		proc.startup.subREQHttpGet(proc)
@@ -335,7 +338,7 @@ func (s startup) pubREQKeysRequestUpdate(p process) {
 
 	// Define the procFunc to be used for the process.
 	proc.procFunc = func(ctx context.Context, procFuncCh chan Message) error {
-		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.PublicKeysGetInterval))
+		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.REQKeysRequestUpdateInterval))
 		for {
 
 			// TODO: We could send with the hash of the currently stored keys,
@@ -390,7 +393,7 @@ func (s startup) pubREQAclRequestUpdate(p process) {
 
 	// Define the procFunc to be used for the process.
 	proc.procFunc = func(ctx context.Context, procFuncCh chan Message) error {
-		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.PublicKeysGetInterval))
+		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.REQAclRequestUpdateInterval))
 		for {
 
 			// TODO: We could send with the hash of the currently stored hash,
