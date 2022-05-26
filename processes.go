@@ -178,6 +178,7 @@ func (p *processes) Start(proc process) {
 		// TODO: Putting the acl publisher here.
 		// Maybe we should also change the name of the configuration flag to something auth related ?
 		proc.startup.pubREQAclRequestUpdate(proc)
+		proc.startup.subREQAclDeliverUpdate(proc)
 	}
 
 	if proc.configuration.IsCentralAuth {
@@ -342,7 +343,7 @@ func (s startup) pubREQKeysRequestUpdate(p process) {
 			// and update with new keys back.
 
 			proc.nodeAuth.publicKeys.mu.Lock()
-			fmt.Printf("\n ----> REQKeysRequestUpdate: sending our current hash: %v\n\n", []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]))
+			fmt.Printf("\n ----> publisher REQKeysRequestUpdate: sending our current hash: %v\n\n", []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]))
 
 			m := Message{
 				FileName:    "publickeysget.log",
@@ -397,7 +398,7 @@ func (s startup) pubREQAclRequestUpdate(p process) {
 			// and update with new keys back.
 
 			proc.nodeAuth.nodeAcl.mu.Lock()
-			fmt.Printf("\n ----> REQKeysRequestUpdate: sending our current hash: %v\n\n", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
+			fmt.Printf("\n ----> publisher REQAclRequestUpdate: sending our current hash: %v\n\n", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
 
 			m := Message{
 				FileName:    "aclRequestUpdate.log",
@@ -457,6 +458,13 @@ func (s startup) subREQKeysAllow(p process) {
 func (s startup) subREQAclRequestUpdate(p process) {
 	log.Printf("Starting Acl Request update subscriber: %#v\n", p.node)
 	sub := newSubject(REQAclRequestUpdate, string(p.node))
+	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
+	go proc.spawnWorker()
+}
+
+func (s startup) subREQAclDeliverUpdate(p process) {
+	log.Printf("Starting Acl deliver update subscriber: %#v\n", p.node)
+	sub := newSubject(REQAclDeliverUpdate, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
 }

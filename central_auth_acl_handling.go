@@ -4,8 +4,10 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -42,12 +44,16 @@ type accessLists struct {
 
 func newAccessLists(errorKernel *errorKernel, configuration *Configuration) *accessLists {
 	a := accessLists{
-		schemaMain:      newSchemaMain(),
+		schemaMain:      newSchemaMain(configuration),
 		schemaGenerated: newSchemaGenerated(),
 		validator:       validator.New(),
 		errorKernel:     errorKernel,
 		configuration:   configuration,
 	}
+
+	// The main acl map gets loaded from disk in the newSchemaMain function, but since that
+	// function do not have access to the generated map we have to generate it here.
+	a.generateACLsForAllNodes()
 
 	return &a
 }
@@ -60,17 +66,52 @@ type commandGroup string
 // schemaMain is the structure that holds the user editable parts for creating ACL's.
 type schemaMain struct {
 	ACLMap          map[Node]map[Node]map[command]struct{}
+	ACLMapFilePath  string
 	NodeGroupMap    map[nodeGroup]map[Node]struct{}
 	CommandGroupMap map[commandGroup]map[command]struct{}
 	mu              sync.Mutex
 }
 
-func newSchemaMain() *schemaMain {
+func newSchemaMain(configuration *Configuration) *schemaMain {
 	s := schemaMain{
 		ACLMap:          make(map[Node]map[Node]map[command]struct{}),
+		ACLMapFilePath:  filepath.Join(configuration.DatabaseFolder, "central_aclmap.txt"),
 		NodeGroupMap:    make(map[nodeGroup]map[Node]struct{}),
 		CommandGroupMap: make(map[commandGroup]map[command]struct{}),
 	}
+
+	// Load ACLMap from disk if present.
+	func() {
+		if _, err := os.Stat(s.ACLMapFilePath); os.IsNotExist(err) {
+			er := fmt.Errorf("error: newSchemaMain: no file for ACLMap found %v: %v", s.ACLMapFilePath, err)
+			log.Printf("%v\n", er)
+
+			// If no aclmap is present on disk we just return from this
+			// function without loading any values.
+			return
+		}
+
+		fh, err := os.Open(s.ACLMapFilePath)
+		if err != nil {
+			er := fmt.Errorf("error: newSchemaMain: failed to open file for reading %v: %v", s.ACLMapFilePath, err)
+			log.Printf("%v\n", er)
+		}
+
+		b, err := io.ReadAll(fh)
+		if err != nil {
+			er := fmt.Errorf("error: newSchemaMain: failed to ReadAll file %v: %v", s.ACLMapFilePath, err)
+			log.Printf("%v\n", er)
+		}
+
+		// Unmarshal the data read from disk.
+		err = json.Unmarshal(b, &s.ACLMap)
+		if err != nil {
+			er := fmt.Errorf("error: newSchemaMain: failed to unmarshal content from file %v: %v", s.ACLMapFilePath, err)
+			log.Printf("%v\n", er)
+		}
+
+		// Generate the aclGenerated map happens in the function where this function is called.
+	}()
 	return &s
 }
 
@@ -242,6 +283,27 @@ func (a *accessLists) aclDeleteSource(host Node, source Node) error {
 // nodes.
 // The result will be written to the schemaGenerated.ACLsToConvert map.
 func (a *accessLists) generateACLsForAllNodes() error {
+	// We first one to save the current main ACLMap.
+	func() {
+		fh, err := os.OpenFile(a.schemaMain.ACLMapFilePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600)
+		if err != nil {
+			er := fmt.Errorf("error: generateACLsForAllNodes: opening file for writing: %v, err: %v", a.schemaMain.ACLMapFilePath, err)
+			log.Printf("%v\n", er)
+			return
+		}
+		defer fh.Close()
+
+		// a.schemaMain.mu.Lock()
+		// defer a.schemaMain.mu.Unlock()
+		enc := json.NewEncoder(fh)
+		enc.Encode(a.schemaMain.ACLMap)
+		if err != nil {
+			er := fmt.Errorf("error: generateACLsForAllNodes: encoding json to file failed: %v, err: %v", a.schemaMain.ACLMapFilePath, err)
+			log.Printf("%v\n", er)
+			return
+		}
+	}()
+
 	a.schemaGenerated.mu.Lock()
 	defer a.schemaGenerated.mu.Unlock()
 

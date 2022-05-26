@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/fxamacker/cbor/v2"
 )
@@ -20,6 +21,11 @@ func (m methodREQAclRequestUpdate) getKind() Event {
 
 // Handler to get all acl's from a central server.
 func (m methodREQAclRequestUpdate) handler(proc process, message Message, node string) ([]byte, error) {
+	inf := fmt.Errorf("<--- subscriber methodREQAclRequestUpdate received from: %v, and the data which is the nodes current acl hash containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+
+	fmt.Printf("\n --- subscriber methodREQAclRequestUpdate: the message brought to handler : %+v\n", message)
+
 	// Get a context with the timeout specified in message.MethodTimeout.
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
 
@@ -47,26 +53,46 @@ func (m methodREQAclRequestUpdate) handler(proc process, message Message, node s
 				proc.centralAuth.accessLists.schemaGenerated.mu.Lock()
 				defer proc.centralAuth.accessLists.schemaGenerated.mu.Unlock()
 
-				fmt.Printf(" <---- methodREQAclRequestUpdate: received acl hash from NODE=%v, HASH=%v\n", message.FromNode, message.Data)
+				// DEBUGGING:
+				{
+					proc.centralAuth.accessLists.schemaMain.mu.Lock()
+					fmt.Printf("\n --- DEBUGGING: subscriber methodREQAclRequestUpdate: schemaGenerated contains: %v\n\n", proc.centralAuth.accessLists.schemaGenerated)
+					fmt.Printf("\n --- DEBUGGING: subscriber methodREQAclRequestUpdate: schemaMain contains: %v\n\n", proc.centralAuth.accessLists.schemaMain)
+					proc.centralAuth.accessLists.schemaMain.mu.Unlock()
+
+					// TODO: PROBLEM: The existing generated acl's are not loaded when starting, or not stored at all.
+				}
+
+				fmt.Printf(" ---- subscriber methodREQAclRequestUpdate: got acl hash from NODE=%v, HASH=%v\n", message.FromNode, message.Data)
 
 				// Check if the received hash is the same as the one currently active,
 				// If it is the same we exit the handler immediately.
 				hash32 := proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap[message.FromNode].Hash
 				hash := hash32[:]
+				fmt.Printf("\n ---- subscriber methodREQAclRequestUpdate:  on central hash32=%v\n\n", hash32)
 				if bytes.Equal(hash, message.Data) {
-					fmt.Printf("\n ------------ NODE AND CENTRAL HAVE EQUAL ACL HASH, NOTHING TO DO, EXITING HANDLER\n\n")
+					fmt.Printf("\n ---- subscriber methodREQAclRequestUpdate:  NODE AND CENTRAL HAVE EQUAL ACL HASH, NOTHING TO DO, EXITING HANDLER\n\n")
 					return
 				}
 
-				fmt.Printf("\n ------------ NODE AND CENTRAL HAD NOT EQUAL ACL, PREPARING TO SEND NEW VERSION OF Acl\n\n")
+				fmt.Printf("\n ---- subscriber methodREQAclRequestUpdate: NODE AND CENTRAL HAD NOT EQUAL ACL, PREPARING TO SEND NEW VERSION OF Acl\n\n")
 
-				fmt.Printf("\n ----> methodREQAclRequestUpdate: SENDING ACL'S TO NODE=%v\n", message.FromNode)
+				// Generate JSON for Message.Data
 
-				js, err := json.Marshal(proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap[message.FromNode])
+				hdh := HostACLsSerializedWithHash{}
+				hdh.Data = proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap[message.FromNode].Data
+				fmt.Printf("\n * DEBUGGING: before marshalling, hdh.Data=%v\n", hdh.Data)
+				hdh.Hash = proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap[message.FromNode].Hash
+				fmt.Printf("\n * DEBUGGING: before marshalling, hdh.Hash=%v\n\n", hdh.Hash)
+
+				js, err := json.Marshal(hdh)
 				if err != nil {
 					er := fmt.Errorf("error: REQAclRequestUpdate : json marshal failed: %v, message: %v", err, message)
 					proc.errorKernel.errSend(proc, message, er)
+					log.Fatalf("%v\n", er)
 				}
+
+				fmt.Printf("\n ----> subscriber methodREQAclRequestUpdate: SENDING ACL'S TO NODE=%v, serializedAndHash=%+v\n", message.FromNode, hdh)
 
 				newReplyMessage(proc, message, js)
 			}()
@@ -89,6 +115,11 @@ func (m methodREQAclDeliverUpdate) getKind() Event {
 
 // Handler to receive the acls from a central server.
 func (m methodREQAclDeliverUpdate) handler(proc process, message Message, node string) ([]byte, error) {
+	inf := fmt.Errorf("<--- subscriber methodREQAclDeliverUpdate received from: %v, containing: %v", message.FromNode, message.Data)
+	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+
+	fmt.Printf("\n --- subscriber methodREQAclRequestUpdate: the message received on handler : %+v\n\n", message)
+
 	// Get a context with the timeout specified in message.MethodTimeout.
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
 
@@ -120,27 +151,30 @@ func (m methodREQAclDeliverUpdate) handler(proc process, message Message, node s
 
 			err := json.Unmarshal(message.Data, &hdh)
 			if err != nil {
-				er := fmt.Errorf("error: REQAclDeliverUpdate : json unmarshal failed: %v, message: %v", err, message)
+				er := fmt.Errorf("error: subscriber REQAclDeliverUpdate : json unmarshal failed: %v, message: %v", err, message)
 				proc.errorKernel.errSend(proc, message, er)
+				log.Fatalf("\n * DEBUG: ER: %v\n", er)
 			}
 
 			mapOfFromNodeCommands := make(map[Node]map[command]struct{})
 			err = cbor.Unmarshal(hdh.Data, &mapOfFromNodeCommands)
 			if err != nil {
-				er := fmt.Errorf("error: REQAclDeliverUpdate : json unmarshal failed: %v, message: %v", err, message)
+				er := fmt.Errorf("error: subscriber REQAclDeliverUpdate : json unmarshal failed: %v, message: %v", err, message)
 				proc.errorKernel.errSend(proc, message, er)
+				log.Fatalf("\n * DEBUG: ER: %v\n", er)
+
 			}
 
 			proc.nodeAuth.nodeAcl.aclAndHash.Hash = hdh.Hash
 			proc.nodeAuth.nodeAcl.aclAndHash.Acl = mapOfFromNodeCommands
 
-			fmt.Printf("\n <---- REQAclDeliverUpdate: after unmarshal, nodeAuth aclAndhash contains: %+v\n\n", proc.nodeAuth.nodeAcl.aclAndHash)
+			fmt.Printf("\n <---- subscriber REQAclDeliverUpdate: after unmarshal, nodeAuth aclAndhash contains: %+v\n\n", proc.nodeAuth.nodeAcl.aclAndHash)
 
 			proc.nodeAuth.nodeAcl.mu.Unlock()
 
 			err = proc.nodeAuth.nodeAcl.saveToFile()
 			if err != nil {
-				er := fmt.Errorf("error: REQAclDeliverUpdate : save to file failed: %v, message: %v", err, message)
+				er := fmt.Errorf("error: subscriber REQAclDeliverUpdate : save to file failed: %v, message: %v", err, message)
 				proc.errorKernel.errSend(proc, message, er)
 			}
 
@@ -841,6 +875,9 @@ func (m methodREQAclExport) handler(proc process, message Message, node string) 
 }
 
 // ---
+
+// TODO: IMPORTANT: We also need to add importing and exporting of the groups to the
+//  import and export methods.
 
 type methodREQAclImport struct {
 	event Event
