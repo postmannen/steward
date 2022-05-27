@@ -54,14 +54,14 @@ func (m methodREQAclRequestUpdate) handler(proc process, message Message, node s
 				defer proc.centralAuth.accessLists.schemaGenerated.mu.Unlock()
 
 				// DEBUGGING:
-				{
-					proc.centralAuth.accessLists.schemaMain.mu.Lock()
-					fmt.Printf("\n --- DEBUGGING: subscriber methodREQAclRequestUpdate: schemaGenerated contains: %v\n\n", proc.centralAuth.accessLists.schemaGenerated)
-					fmt.Printf("\n --- DEBUGGING: subscriber methodREQAclRequestUpdate: schemaMain contains: %v\n\n", proc.centralAuth.accessLists.schemaMain)
-					proc.centralAuth.accessLists.schemaMain.mu.Unlock()
-
-					// TODO: PROBLEM: The existing generated acl's are not loaded when starting, or not stored at all.
-				}
+				//{
+				//	proc.centralAuth.accessLists.schemaMain.mu.Lock()
+				//	fmt.Printf("\n --- DEBUGGING: subscriber methodREQAclRequestUpdate: schemaGenerated contains: %v\n\n", proc.centralAuth.accessLists.schemaGenerated)
+				//	fmt.Printf("\n --- DEBUGGING: subscriber methodREQAclRequestUpdate: schemaMain contains: %v\n\n", proc.centralAuth.accessLists.schemaMain)
+				//	proc.centralAuth.accessLists.schemaMain.mu.Unlock()
+				//
+				//	// TODO: PROBLEM: The existing generated acl's are not loaded when starting, or not stored at all.
+				//}
 
 				fmt.Printf(" ---- subscriber methodREQAclRequestUpdate: got acl hash from NODE=%v, HASH=%v\n", message.FromNode, message.Data)
 
@@ -81,9 +81,9 @@ func (m methodREQAclRequestUpdate) handler(proc process, message Message, node s
 
 				hdh := HostACLsSerializedWithHash{}
 				hdh.Data = proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap[message.FromNode].Data
-				fmt.Printf("\n * DEBUGGING: before marshalling, hdh.Data=%v\n", hdh.Data)
+				// fmt.Printf("\n * DEBUGGING: before marshalling, hdh.Data=%v\n", hdh.Data)
 				hdh.Hash = proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap[message.FromNode].Hash
-				fmt.Printf("\n * DEBUGGING: before marshalling, hdh.Hash=%v\n\n", hdh.Hash)
+				// fmt.Printf("\n * DEBUGGING: before marshalling, hdh.Hash=%v\n\n", hdh.Hash)
 
 				js, err := json.Marshal(hdh)
 				if err != nil {
@@ -118,7 +118,7 @@ func (m methodREQAclDeliverUpdate) handler(proc process, message Message, node s
 	inf := fmt.Errorf("<--- subscriber methodREQAclDeliverUpdate received from: %v, containing: %v", message.FromNode, message.Data)
 	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
 
-	fmt.Printf("\n --- subscriber methodREQAclRequestUpdate: the message received on handler : %+v\n\n", message)
+	// fmt.Printf("\n --- subscriber methodREQAclRequestUpdate: the message received on handler : %+v\n\n", message)
 
 	// Get a context with the timeout specified in message.MethodTimeout.
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)

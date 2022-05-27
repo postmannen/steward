@@ -378,6 +378,8 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 		return true
 	}
 
+	log.Printf(" * DEBUG: verifySignature: EnableSignatureCheck set to true\n")
+
 	// NB: Only enable signature checking for REQCliCommand for now.
 	if m.Method != REQCliCommand {
 		// fmt.Printf(" * DEBUG: verifySignature: WAS OTHER THAN CLI COMMAND\n")
@@ -386,9 +388,11 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 
 	// Verify if the signature matches.
 	argsStringified := argsToString(m.MethodArgs)
-	ok := ed25519.Verify(n.SignPublicKey, []byte(argsStringified), m.ArgSignature)
+	n.publicKeys.mu.Lock()
+	ok := ed25519.Verify(n.publicKeys.keysAndHash.Keys[m.FromNode], []byte(argsStringified), m.ArgSignature)
+	n.publicKeys.mu.Unlock()
 
-	fmt.Printf(" * DEBUG: verifySignature, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
+	log.Printf("info: verifySignature, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
 
 	return ok
 }

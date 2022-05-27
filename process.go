@@ -523,13 +523,41 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		out := []byte{}
 		var err error
 
-		if p.nodeAuth.verifySignature(message) {
-			// Call the method handler for the specified method.
+		// The verify functions will return true if the signature or acl is correct,
+		// but will return false if the signature or acl is wrong.
+		// They will also return true if the configuration flag for checking the acl
+		// or the signature is set to false.
+		sigOK := p.nodeAuth.verifySignature(message)
+		log.Printf("info: sigOK=%v\n", sigOK)
+		aclOK := p.nodeAuth.verifyAcl(message)
+		log.Printf("info: aclOK=%v\n", aclOK)
+
+		// We should allow to call the handler if either:
+		//  1. signature and acl is OK for when acl verification is enabled.
+		//  2. just signature is OK, if just signature checking is enabled.
+		//  3. Since the verify functions return true if the verification is
+		//     disabled, the handler will be called if both are disabled.
+		switch {
+		case sigOK && aclOK || sigOK:
+			log.Printf("info: subscriberHandler: signature and acl check successful: %v", err)
 			out, err = mh.handler(p, message, thisNode)
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
 				p.errorKernel.errSend(p, message, er)
+				log.Printf("%v\n", er)
 			}
+		case sigOK && !aclOK:
+			er := fmt.Errorf("error: subscriberHandler: acl check failed: %v", err)
+			p.errorKernel.errSend(p, message, er)
+			log.Printf("%v\n", er)
+		case !sigOK && !aclOK:
+			er := fmt.Errorf("error: subscriberHandler: signature and acl check failed: %v", err)
+			p.errorKernel.errSend(p, message, er)
+			log.Printf("%v\n", er)
+		case !sigOK:
+			er := fmt.Errorf("error: subscriberHandler: signature check failed: %v", err)
+			p.errorKernel.errSend(p, message, er)
+			log.Printf("%v\n", er)
 		}
 
 		// Send a confirmation message back to the publisher
@@ -543,7 +571,19 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			p.errorKernel.errSend(p, message, er)
 		}
 
-		if p.nodeAuth.verifySignature(message) {
+		// The verify functions will return true if the signature or acl is correct,
+		// but will return false if the signature or acl is wrong.
+		// They will also return true if the configuration flag for checking the acl
+		// or the signature is set to false.
+		sigOK := p.nodeAuth.verifySignature(message)
+		aclOK := p.nodeAuth.verifyAcl(message)
+
+		// We should allow to call the handler if either:
+		//  1. signature and acl is OK for when acl verification is enabled.
+		//  2. just signature is OK, if just signature checking is enabled.
+		//  3. Since the verify functions return true if the verification is
+		//     disabled, the handler will be called if both are disabled.
+		if sigOK && aclOK || sigOK {
 
 			_, err := mf.handler(p, message, thisNode)
 
