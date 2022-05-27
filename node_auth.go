@@ -374,11 +374,11 @@ func (n *nodeAuth) readKeyFile(keyFile string) (ed2519key []byte, b64Key []byte,
 func (n *nodeAuth) verifySignature(m Message) bool {
 	// fmt.Printf(" * DEBUG: verifySignature, method: %v\n", m.Method)
 	if !n.configuration.EnableSignatureCheck {
-		// fmt.Printf(" * DEBUG: verifySignature: AllowEmptySignature set to TRUE\n")
+		log.Printf(" * DEBUG: verifySignature: EnableSignatureCheck set to false\n")
 		return true
 	}
 
-	// TODO: Only enable signature checking for REQCliCommand for now.
+	// NB: Only enable signature checking for REQCliCommand for now.
 	if m.Method != REQCliCommand {
 		// fmt.Printf(" * DEBUG: verifySignature: WAS OTHER THAN CLI COMMAND\n")
 		return true
@@ -388,7 +388,46 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 	argsStringified := argsToString(m.MethodArgs)
 	ok := ed25519.Verify(n.SignPublicKey, []byte(argsStringified), m.ArgSignature)
 
-	// fmt.Printf(" * DEBUG: verifySignature, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
+	fmt.Printf(" * DEBUG: verifySignature, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
+
+	return ok
+}
+
+// verifyAcl
+func (n *nodeAuth) verifyAcl(m Message) bool {
+	// fmt.Printf(" * DEBUG: verifyAcl, method: %v\n", m.Method)
+	if !n.configuration.EnableAclCheck {
+		log.Printf(" * DEBUG: verifyAcl: EnableAclCheck set to false\n")
+		return true
+	}
+
+	// NB: Only enable acl checking for REQCliCommand for now.
+	if m.Method != REQCliCommand {
+		// fmt.Printf(" * DEBUG: verifyAcl: WAS OTHER THAN CLI COMMAND\n")
+		return true
+	}
+
+	argsStringified := argsToString(m.MethodArgs)
+
+	// Verify if the command matches the one in the acl map.
+	n.nodeAcl.mu.Lock()
+	defer n.nodeAcl.mu.Unlock()
+
+	cmdMap, ok := n.nodeAcl.aclAndHash.Acl[m.FromNode]
+	if !ok {
+		log.Printf(" * DEBUG: verifyAcl: The fromNode was not found in the acl\n")
+		return false
+	}
+
+	_, ok = cmdMap[command(argsStringified)]
+	if !ok {
+		log.Printf(" * DEBUG: verifyAcl: The command was NOT FOUND in the acl\n")
+		return false
+	}
+
+	log.Printf(" * DEBUG: verifyAcl: The command was FOUND in the acl\n")
+
+	fmt.Printf(" * DEBUG: verifyAcl, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
 
 	return ok
 }
