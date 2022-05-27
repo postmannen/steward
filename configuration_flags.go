@@ -83,6 +83,8 @@ type Configuration struct {
 	EnableTUI bool
 	// EnableSignatureCheck
 	EnableSignatureCheck bool
+	// EnableAclCheck
+	EnableAclCheck bool
 	// IsCentralAuth
 	IsCentralAuth bool
 	// EnableDebug will also enable printing all the messages received in the errorKernel
@@ -172,6 +174,7 @@ type ConfigurationFromFile struct {
 	EnableSocket                 *bool
 	EnableTUI                    *bool
 	EnableSignatureCheck         *bool
+	EnableAclCheck               *bool
 	IsCentralAuth                *bool
 	EnableDebug                  *bool
 
@@ -239,6 +242,7 @@ func newConfigurationDefaults() Configuration {
 		EnableSocket:                 true,
 		EnableTUI:                    false,
 		EnableSignatureCheck:         false,
+		EnableAclCheck:               false,
 		IsCentralAuth:                false,
 		EnableDebug:                  false,
 
@@ -433,6 +437,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.EnableSignatureCheck = *cf.EnableSignatureCheck
 	}
+	if cf.EnableAclCheck == nil {
+		conf.EnableAclCheck = cd.EnableAclCheck
+	} else {
+		conf.EnableAclCheck = *cf.EnableAclCheck
+	}
 	if cf.IsCentralAuth == nil {
 		conf.IsCentralAuth = cd.IsCentralAuth
 	} else {
@@ -617,6 +626,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.EnableSocket, "enableSocket", fc.EnableSocket, "true/false, for enabling the creation of a steward.sock file")
 	flag.BoolVar(&c.EnableTUI, "enableTUI", fc.EnableTUI, "true/false for enabling the Terminal User Interface")
 	flag.BoolVar(&c.EnableSignatureCheck, "enableSignatureCheck", fc.EnableSignatureCheck, "true/false *TESTING* enable signature checking.")
+	flag.BoolVar(&c.EnableAclCheck, "enableAclCheck", fc.EnableAclCheck, "true/false *TESTING* enable Acl checking.")
 	flag.BoolVar(&c.IsCentralAuth, "isCentralAuth", fc.IsCentralAuth, "true/false, *TESTING* is this the central auth server")
 	flag.BoolVar(&c.EnableDebug, "enableDebug", fc.EnableDebug, "true/false, will enable debug logging so all messages sent to the errorKernel will also be printed to STDERR")
 

@@ -859,7 +859,7 @@ Several Request methods exists for handling the management of the active Acl's o
 
 If the element specified is prefixed with **grp_** it will be treated as a group, otherwise it will be treated as a single node or command.
 
-Groups or nodes do not have to exist to be used with an acl. The acl will be created with the elements specifed, and if a non existing group was specified you will have an Acl that is not yet functional, but it will become functional as soon as you add elements to the group's. 
+Groups or nodes do not have to exist to be used with an acl. The acl will be created with the elements specifed, and if a non existing group was specified you will have an Acl that is not yet functional, but it will become functional as soon as you add elements to the group's.
 
 ##### REQAclAddCommand
 
