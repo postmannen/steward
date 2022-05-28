@@ -129,7 +129,7 @@ func (n *nodeAcl) loadFromFile() error {
 		return err
 	}
 
-	fmt.Printf("\n ***** DEBUG: Loaded existing acl's from file: %v\n\n", n.aclAndHash.Hash)
+	log.Printf("\n ***** DEBUG: Loaded existing acl's from file: %v\n\n", n.aclAndHash.Hash)
 
 	return nil
 }
@@ -222,7 +222,7 @@ func (p *publicKeys) loadFromFile() error {
 		return err
 	}
 
-	fmt.Printf("\n ***** DEBUG: Loaded existing keys from file: %v\n\n", p.keysAndHash.Hash)
+	log.Printf("\n ***** DEBUG: Loaded existing keys from file: %v\n\n", p.keysAndHash.Hash)
 
 	return nil
 }
@@ -393,11 +393,11 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 
 // verifyAcl
 func (n *nodeAuth) verifyAcl(m Message) bool {
-	fmt.Printf(" * DEBUG: verifyAcl, method: %v\n", m.Method)
+	log.Printf(" * DEBUG: verifyAcl, method: %v\n", m.Method)
 
 	// NB: Only enable acl checking for REQCliCommand for now.
 	if m.Method != REQCliCommand {
-		// fmt.Printf(" * DEBUG: verifyAcl: WAS OTHER THAN CLI COMMAND\n")
+		log.Printf(" * DEBUG: verifyAcl: WAS OTHER THAN CLI COMMAND\n")
 		return true
 	}
 
@@ -421,7 +421,7 @@ func (n *nodeAuth) verifyAcl(m Message) bool {
 
 	log.Printf(" * DEBUG: verifyAcl: The command was FOUND in the acl\n")
 
-	fmt.Printf(" * DEBUG: verifyAcl, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
+	log.Printf(" * DEBUG: verifyAcl, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
 
 	return ok
 }
