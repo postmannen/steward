@@ -523,39 +523,59 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		out := []byte{}
 		var err error
 
-		// The verify functions will return true if the signature or acl is correct,
-		// but will return false if the signature or acl is wrong.
-		// They will also return true if the configuration flag for checking the acl
-		// or the signature is set to false.
-		sigOK := p.nodeAuth.verifySignature(message)
-		log.Printf("info: sigOK=%v\n", sigOK)
-		aclOK := p.nodeAuth.verifyAcl(message)
-		log.Printf("info: aclOK=%v\n", aclOK)
+		doHandler := false
 
-		// We should allow to call the handler if either:
-		//  1. signature and acl is OK for when acl verification is enabled.
-		//  2. just signature is OK, if just signature checking is enabled.
-		//  3. Since the verify functions return true if the verification is
-		//     disabled, the handler will be called if both are disabled.
 		switch {
-		case sigOK && aclOK || sigOK:
-			log.Printf("info: subscriberHandler: signature and acl check successful: %v", err)
+
+		// If no checking enabled we should just allow the message.
+		case !p.nodeAuth.configuration.EnableSignatureCheck && !p.nodeAuth.configuration.EnableAclCheck:
+			log.Printf(" * DEBUG: verify acl/sig: EnableSignatureCheck=false, EnableAclCheck=false\n")
+			log.Printf(" * DEBUG: no checking at all is enabled, allow the message\n")
+			doHandler = true
+
+		// If only sig check enabled, and sig OK, we should allow the message.
+		case p.nodeAuth.configuration.EnableSignatureCheck && !p.nodeAuth.configuration.EnableAclCheck:
+			log.Printf(" * DEBUG: verify acl/sig: EnableSignatureCheck=true, EnableAclCheck=false\n")
+			log.Printf(" * DEBUG: only signature checking enabled, allow the message if sigOK\n")
+
+			sigOK := p.nodeAuth.verifySignature(message)
+			log.Printf("info: sigOK=%v\n", sigOK)
+
+			if sigOK {
+				doHandler = true
+			}
+
+		// If both sig and acl check enabled, and sig and acl OK, we should allow the message.
+		case p.nodeAuth.configuration.EnableSignatureCheck && p.nodeAuth.configuration.EnableAclCheck:
+			log.Printf(" * DEBUG: verify acl/sig: EnableSignatureCheck=true, EnableAclCheck=true\n")
+			log.Printf(" * DEBUG: both signature and acl checking enabled, allow the message if sigOK and aclOK\n")
+
+			sigOK := p.nodeAuth.verifySignature(message)
+			log.Printf("info: sigOK=%v\n", sigOK)
+			aclOK := p.nodeAuth.verifyAcl(message)
+			log.Printf("info: aclOK=%v\n", aclOK)
+
+			if sigOK && aclOK {
+				doHandler = true
+			}
+
+			// none of the verification options matched, we should keep the default value
+			// of doHandler=false, so the handler is not done.
+		default:
+			log.Printf(" * DEBUG: verify acl/sig: None of the verify flags matched, not doing handler for message\n")
+		}
+
+		switch {
+		case doHandler:
+			log.Printf("info: subscriberHandler: doHandler=true: %v\n", doHandler)
 			out, err = mh.handler(p, message, thisNode)
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
 				p.errorKernel.errSend(p, message, er)
 				log.Printf("%v\n", er)
 			}
-		case sigOK && !aclOK:
-			er := fmt.Errorf("error: subscriberHandler: acl check failed: %v", err)
-			p.errorKernel.errSend(p, message, er)
-			log.Printf("%v\n", er)
-		case !sigOK && !aclOK:
-			er := fmt.Errorf("error: subscriberHandler: signature and acl check failed: %v", err)
-			p.errorKernel.errSend(p, message, er)
-			log.Printf("%v\n", er)
-		case !sigOK:
-			er := fmt.Errorf("error: subscriberHandler: signature check failed: %v", err)
+		default:
+			er := fmt.Errorf("error: subscriberHandler: doHandler=false, doing nothing")
 			p.errorKernel.errSend(p, message, er)
 			log.Printf("%v\n", er)
 		}

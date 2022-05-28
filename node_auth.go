@@ -372,17 +372,11 @@ func (n *nodeAuth) readKeyFile(keyFile string) (ed2519key []byte, b64Key []byte,
 
 // verifySignature
 func (n *nodeAuth) verifySignature(m Message) bool {
-	// fmt.Printf(" * DEBUG: verifySignature, method: %v\n", m.Method)
-	if !n.configuration.EnableSignatureCheck {
-		log.Printf(" * DEBUG: verifySignature: EnableSignatureCheck set to false\n")
-		return true
-	}
-
-	log.Printf(" * DEBUG: verifySignature: EnableSignatureCheck set to true\n")
+	log.Printf(" * DEBUG: verifySignature, method: %v\n", m.Method)
 
 	// NB: Only enable signature checking for REQCliCommand for now.
 	if m.Method != REQCliCommand {
-		// fmt.Printf(" * DEBUG: verifySignature: WAS OTHER THAN CLI COMMAND\n")
+		log.Printf(" * DEBUG: verifySignature: WAS OTHER THAN CLI COMMAND\n")
 		return true
 	}
 
@@ -399,11 +393,7 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 
 // verifyAcl
 func (n *nodeAuth) verifyAcl(m Message) bool {
-	// fmt.Printf(" * DEBUG: verifyAcl, method: %v\n", m.Method)
-	if !n.configuration.EnableAclCheck {
-		log.Printf(" * DEBUG: verifyAcl: EnableAclCheck set to false\n")
-		return true
-	}
+	fmt.Printf(" * DEBUG: verifyAcl, method: %v\n", m.Method)
 
 	// NB: Only enable acl checking for REQCliCommand for now.
 	if m.Method != REQCliCommand {
