@@ -93,15 +93,11 @@ type Configuration struct {
 
 	// Make the current node send hello messages to central at given interval in seconds
 	StartPubREQHello int
-	// Publisher for asking central for public keys
-	StartPubREQKeysRequestUpdate bool
-	// Subscriber for receiving updates of public keys from central
-	StartSubREQKeysDeliverUpdate bool
+	// Enable the updates of public keys
+	EnableKeyUpdates bool
 
-	// Publisher for asking central for public acl updates
-	StartPubREQAclRequestUpdate bool
-	// Subscriber for receiving updates of acl's from central
-	StartSubREQAclDeliverUpdate bool
+	// Enable the updates of acl's
+	EnableAclUpdates bool
 
 	// Start the central error logger.
 	StartSubREQErrorLog bool
@@ -178,27 +174,25 @@ type ConfigurationFromFile struct {
 	IsCentralAuth                *bool
 	EnableDebug                  *bool
 
-	StartPubREQHello             *int
-	StartPubREQKeysRequestUpdate *bool
-	StartSubREQKeysDeliverUpdate *bool
-	StartPubREQAclRequestUpdate  *bool
-	StartSubREQAclDeliverUpdate  *bool
-	StartSubREQErrorLog          *bool
-	StartSubREQHello             *bool
-	StartSubREQToFileAppend      *bool
-	StartSubREQToFile            *bool
-	StartSubREQToFileNACK        *bool
-	StartSubREQCopyFileFrom      *bool
-	StartSubREQCopyFileTo        *bool
-	StartSubREQPing              *bool
-	StartSubREQPong              *bool
-	StartSubREQCliCommand        *bool
-	StartSubREQToConsole         *bool
-	StartSubREQHttpGet           *bool
-	StartSubREQHttpGetScheduled  *bool
-	StartSubREQTailFile          *bool
-	StartSubREQCliCommandCont    *bool
-	StartSubREQRelay             *bool
+	StartPubREQHello            *int
+	EnableKeyUpdates            *bool
+	EnableAclUpdates            *bool
+	StartSubREQErrorLog         *bool
+	StartSubREQHello            *bool
+	StartSubREQToFileAppend     *bool
+	StartSubREQToFile           *bool
+	StartSubREQToFileNACK       *bool
+	StartSubREQCopyFileFrom     *bool
+	StartSubREQCopyFileTo       *bool
+	StartSubREQPing             *bool
+	StartSubREQPong             *bool
+	StartSubREQCliCommand       *bool
+	StartSubREQToConsole        *bool
+	StartSubREQHttpGet          *bool
+	StartSubREQHttpGetScheduled *bool
+	StartSubREQTailFile         *bool
+	StartSubREQCliCommandCont   *bool
+	StartSubREQRelay            *bool
 }
 
 // NewConfiguration will return a *Configuration.
@@ -246,27 +240,25 @@ func newConfigurationDefaults() Configuration {
 		IsCentralAuth:                false,
 		EnableDebug:                  false,
 
-		StartPubREQHello:             30,
-		StartPubREQKeysRequestUpdate: true,
-		StartSubREQKeysDeliverUpdate: true,
-		StartPubREQAclRequestUpdate:  true,
-		StartSubREQAclDeliverUpdate:  true,
-		StartSubREQErrorLog:          false,
-		StartSubREQHello:             true,
-		StartSubREQToFileAppend:      true,
-		StartSubREQToFile:            true,
-		StartSubREQToFileNACK:        true,
-		StartSubREQCopyFileFrom:      true,
-		StartSubREQCopyFileTo:        true,
-		StartSubREQPing:              true,
-		StartSubREQPong:              true,
-		StartSubREQCliCommand:        true,
-		StartSubREQToConsole:         true,
-		StartSubREQHttpGet:           true,
-		StartSubREQHttpGetScheduled:  true,
-		StartSubREQTailFile:          true,
-		StartSubREQCliCommandCont:    true,
-		StartSubREQRelay:             false,
+		StartPubREQHello:            30,
+		EnableKeyUpdates:            true,
+		EnableAclUpdates:            true,
+		StartSubREQErrorLog:         false,
+		StartSubREQHello:            true,
+		StartSubREQToFileAppend:     true,
+		StartSubREQToFile:           true,
+		StartSubREQToFileNACK:       true,
+		StartSubREQCopyFileFrom:     true,
+		StartSubREQCopyFileTo:       true,
+		StartSubREQPing:             true,
+		StartSubREQPong:             true,
+		StartSubREQCliCommand:       true,
+		StartSubREQToConsole:        true,
+		StartSubREQHttpGet:          true,
+		StartSubREQHttpGetScheduled: true,
+		StartSubREQTailFile:         true,
+		StartSubREQCliCommandCont:   true,
+		StartSubREQRelay:            false,
 	}
 	return c
 }
@@ -460,26 +452,16 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.StartPubREQHello = *cf.StartPubREQHello
 	}
-	if cf.StartPubREQKeysRequestUpdate == nil {
-		conf.StartPubREQKeysRequestUpdate = cd.StartPubREQKeysRequestUpdate
+	if cf.EnableKeyUpdates == nil {
+		conf.EnableKeyUpdates = cd.EnableKeyUpdates
 	} else {
-		conf.StartPubREQKeysRequestUpdate = *cf.StartPubREQKeysRequestUpdate
-	}
-	if cf.StartSubREQKeysDeliverUpdate == nil {
-		conf.StartSubREQKeysDeliverUpdate = cd.StartSubREQKeysDeliverUpdate
-	} else {
-		conf.StartSubREQKeysDeliverUpdate = *cf.StartSubREQKeysDeliverUpdate
+		conf.EnableKeyUpdates = *cf.EnableKeyUpdates
 	}
 
-	if cf.StartPubREQAclRequestUpdate == nil {
-		conf.StartPubREQAclRequestUpdate = cd.StartPubREQAclRequestUpdate
+	if cf.EnableAclUpdates == nil {
+		conf.EnableAclUpdates = cd.EnableAclUpdates
 	} else {
-		conf.StartPubREQAclRequestUpdate = *cf.StartPubREQAclRequestUpdate
-	}
-	if cf.StartSubREQAclDeliverUpdate == nil {
-		conf.StartSubREQAclDeliverUpdate = cd.StartSubREQAclDeliverUpdate
-	} else {
-		conf.StartSubREQAclDeliverUpdate = *cf.StartSubREQAclDeliverUpdate
+		conf.EnableAclUpdates = *cf.EnableAclUpdates
 	}
 
 	if cf.StartSubREQErrorLog == nil {
@@ -634,11 +616,9 @@ func (c *Configuration) CheckFlags() error {
 
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 
-	flag.BoolVar(&c.StartPubREQKeysRequestUpdate, "startPubREQKeysRequestUpdate", fc.StartPubREQKeysRequestUpdate, "true/false")
-	flag.BoolVar(&c.StartSubREQKeysDeliverUpdate, "startSubREQKeysDeliverUpdate", fc.StartSubREQKeysDeliverUpdate, "true/false")
+	flag.BoolVar(&c.EnableKeyUpdates, "EnableKeyUpdates", fc.EnableKeyUpdates, "true/false")
 
-	flag.BoolVar(&c.StartPubREQAclRequestUpdate, "startPubREQAclRequestUpdate", fc.StartPubREQAclRequestUpdate, "true/false")
-	flag.BoolVar(&c.StartSubREQAclDeliverUpdate, "startSubREQAclDeliverUpdate", fc.StartSubREQAclDeliverUpdate, "true/false")
+	flag.BoolVar(&c.EnableAclUpdates, "EnableAclUpdates", fc.EnableAclUpdates, "true/false")
 
 	flag.BoolVar(&c.StartSubREQErrorLog, "startSubREQErrorLog", fc.StartSubREQErrorLog, "true/false")
 	flag.BoolVar(&c.StartSubREQHello, "startSubREQHello", fc.StartSubREQHello, "true/false")

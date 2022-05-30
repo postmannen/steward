@@ -173,12 +173,12 @@ func (p *processes) Start(proc process) {
 		proc.startup.pubREQHello(proc)
 	}
 
-	if proc.configuration.StartPubREQKeysRequestUpdate {
+	if proc.configuration.EnableKeyUpdates {
 		proc.startup.pubREQKeysRequestUpdate(proc)
 		proc.startup.subREQKeysDeliverUpdate(proc)
 	}
 
-	if proc.configuration.StartPubREQAclRequestUpdate {
+	if proc.configuration.EnableAclUpdates {
 		proc.startup.pubREQAclRequestUpdate(proc)
 		proc.startup.subREQAclDeliverUpdate(proc)
 	}
