@@ -340,7 +340,6 @@ func (m methodREQKeysAllow) handler(proc process, message Message, node string) 
 
 			}()
 
-			// HERE:
 			// If new keys were allowed into the main map, we should send out one
 			// single update to all the registered nodes to inform of an update.
 			// NB: If a node is not reachable at the time the update is sent it is
@@ -366,22 +365,15 @@ func (m methodREQKeysAllow) handler(proc process, message Message, node string) 
 					return nil
 				}()
 
-				fmt.Printf("\n DEBUG DEBUG DEBUG 1 \n\n")
-
 				if err != nil {
 					return err
 				}
 
-				fmt.Printf("\n DEBUG DEBUG DEBUG 2 \n\n")
-
 				// proc.centralAuth.pki.nodeNotAckedPublicKeys.mu.Lock()
 				// defer proc.centralAuth.pki.nodeNotAckedPublicKeys.mu.Unlock()
 
-				fmt.Printf("\n DEBUG DEBUG DEBUG 3: %v \n\n", proc.centralAuth.pki.nodeNotAckedPublicKeys.KeyMap)
-
 				// For all nodes that is not ack'ed we try to send an update once.
 				for n := range proc.centralAuth.pki.nodeNotAckedPublicKeys.KeyMap {
-					fmt.Printf("\n DEBUG DEBUG DEBUG 4: ranging map, working on node %v \n\n", n)
 					msg := Message{
 						ToNode:      n,
 						Method:      REQKeysDeliverUpdate,
@@ -402,7 +394,6 @@ func (m methodREQKeysAllow) handler(proc process, message Message, node string) 
 
 				// For all nodes that is ack'ed we try to send an update once.
 				for n := range proc.centralAuth.pki.nodesAcked.keysAndHash.Keys {
-					fmt.Printf("\n DEBUG DEBUG DEBUG 5: ranging map, working on node %v \n\n", n)
 					msg := Message{
 						ToNode:      n,
 						Method:      REQKeysDeliverUpdate,
@@ -418,7 +409,7 @@ func (m methodREQKeysAllow) handler(proc process, message Message, node string) 
 
 					proc.toRingbufferCh <- []subjectAndMessage{sam}
 
-					fmt.Printf("\n ----> methodREQKeysAllow: SENDING KEYS TO NODE=%v\n", message.FromNode)
+					log.Printf("\n ----> methodREQKeysAllow: sending keys update to node=%v\n", message.FromNode)
 				}
 
 				return nil
