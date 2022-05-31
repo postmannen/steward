@@ -593,7 +593,7 @@ func (p process) verifySigOrAclFlag(message Message) bool {
 		log.Printf(" * DEBUG: only signature checking enabled, allow the message if sigOK\n")
 
 		sigOK := p.nodeAuth.verifySignature(message)
-		log.Printf("info: sigOK=%v\n", sigOK)
+		log.Printf("info: sigOK=%v, method %v\n", sigOK, message.Method)
 
 		if sigOK {
 			doHandler = true
@@ -605,7 +605,7 @@ func (p process) verifySigOrAclFlag(message Message) bool {
 		log.Printf(" * DEBUG: both signature and acl checking enabled, allow the message if sigOK and aclOK\n")
 
 		sigOK := p.nodeAuth.verifySignature(message)
-		log.Printf("info: sigOK=%v\n", sigOK)
+		log.Printf("info: sigOK=%v, method=%v\n", sigOK, message.Method)
 		aclOK := p.nodeAuth.verifyAcl(message)
 		log.Printf("info: aclOK=%v\n", aclOK)
 
