@@ -23,7 +23,40 @@ import (
 var logging = flag.Bool("logging", false, "set to true to enable the normal logger of the package")
 var persistTmp = flag.Bool("persistTmp", false, "set to true to persist the tmp folder")
 
-func newServerForTesting(t *testing.T, addressAndPort string, testFolder string) (*server, *Configuration) {
+var tstSrv *server
+var tstConf *Configuration
+var tstNats *natsserver.Server
+var tstTempDir string
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+
+	if *persistTmp {
+		tstTempDir = "tmp"
+	} else {
+		tstTempDir = os.TempDir()
+	}
+
+	// TODO: Forcing this for now.
+	tstTempDir = "tmp"
+
+	tstNats = newNatsServerForTesting(42222)
+	if err := natsserver.Run(tstNats); err != nil {
+		natsserver.PrintAndDie(err.Error())
+	}
+
+	tstSrv, tstConf = newServerForTesting("127.0.0.1:42222", tstTempDir)
+	tstSrv.Start()
+
+	exitCode := m.Run()
+
+	tstSrv.Stop()
+	tstNats.Shutdown()
+
+	os.Exit(exitCode)
+}
+
+func newServerForTesting(addressAndPort string, testFolder string) (*server, *Configuration) {
 	if !*logging {
 		log.SetOutput(io.Discard)
 	}
@@ -44,17 +77,19 @@ func newServerForTesting(t *testing.T, addressAndPort string, testFolder string)
 	conf.SubscribersDataFolder = testFolder
 	conf.DatabaseFolder = testFolder
 	conf.StartSubREQErrorLog = true
+	conf.IsCentralAuth = true
+	conf.EnableDebug = true
 
 	stewardServer, err := NewServer(&conf, "test")
 	if err != nil {
-		t.Fatalf(" * failed: could not start the Steward instance %v\n", err)
+		log.Fatalf(" * failed: could not start the Steward instance %v\n", err)
 	}
 
 	return stewardServer, &conf
 }
 
 // Start up the nats-server message broker for testing purposes.
-func newNatsServerForTesting(t *testing.T, port int) *natsserver.Server {
+func newNatsServerForTesting(port int) *natsserver.Server {
 	// Start up the nats-server message broker.
 	nsOpt := &natsserver.Options{
 		Host: "127.0.0.1",
@@ -63,7 +98,7 @@ func newNatsServerForTesting(t *testing.T, port int) *natsserver.Server {
 
 	ns, err := natsserver.NewServer(nsOpt)
 	if err != nil {
-		t.Fatalf(" * failed: could not start the nats-server %v\n", err)
+		log.Fatalf(" * failed: could not start the nats-server %v\n", err)
 	}
 
 	return ns
@@ -114,23 +149,6 @@ func TestRequest(t *testing.T) {
 		containsOrEquals
 		viaSocketOrCh
 	}
-
-	ns := newNatsServerForTesting(t, 42222)
-	if err := natsserver.Run(ns); err != nil {
-		natsserver.PrintAndDie(err.Error())
-	}
-	defer ns.Shutdown()
-
-	var tempDir string
-	if *persistTmp {
-		tempDir = "tmp"
-	} else {
-		tempDir = t.TempDir()
-	}
-
-	srv, conf := newServerForTesting(t, "127.0.0.1:42222", tempDir)
-	srv.Start()
-	defer srv.Stop()
 
 	// Web server for testing.
 	{
@@ -269,17 +287,17 @@ func TestRequest(t *testing.T) {
 				t.Fatalf("newSubjectAndMessage failed: %v\n", err)
 			}
 
-			srv.toRingBufferCh <- []subjectAndMessage{sam}
+			tstSrv.toRingBufferCh <- []subjectAndMessage{sam}
 
 		case viaSocket:
 			msgs := []Message{tt.message}
-			writeMsgsToSocketTest(conf, msgs, t)
+			writeMsgsToSocketTest(tstConf, msgs, t)
 
 		}
 
 		switch tt.containsOrEquals {
 		case REQTestEquals:
-			result := <-srv.errorKernel.testCh
+			result := <-tstSrv.errorKernel.testCh
 			resStr := string(result)
 			resStr = strings.TrimSuffix(resStr, "\n")
 			result = []byte(resStr)
@@ -290,7 +308,7 @@ func TestRequest(t *testing.T) {
 			t.Logf(" \U0001f600 [SUCCESS]	: %v\n", tt.info)
 
 		case REQTestContains:
-			result := <-srv.errorKernel.testCh
+			result := <-tstSrv.errorKernel.testCh
 			resStr := string(result)
 			resStr = strings.TrimSuffix(resStr, "\n")
 			result = []byte(resStr)
@@ -301,9 +319,9 @@ func TestRequest(t *testing.T) {
 			t.Logf(" \U0001f600 [SUCCESS]	: %v\n", tt.info)
 
 		case fileContains:
-			resultFile := filepath.Join(conf.SubscribersDataFolder, tt.message.Directory, string(tt.message.FromNode), tt.message.FileName)
+			resultFile := filepath.Join(tstConf.SubscribersDataFolder, tt.message.Directory, string(tt.message.FromNode), tt.message.FileName)
 
-			found, err := findStringInFileTest(string(tt.want), resultFile, conf, t)
+			found, err := findStringInFileTest(string(tt.want), resultFile, tstConf, t)
 			if err != nil || found == false {
 				t.Fatalf(" \U0001F631  [FAILED]	: %v: %v\n", tt.info, err)
 
@@ -315,9 +333,9 @@ func TestRequest(t *testing.T) {
 
 	// --- Other REQ tests that does not fit well into the general table above.
 
-	checkREQTailFileTest(srv, conf, t, tempDir)
-	checkMetricValuesTest(srv, conf, t, tempDir)
-	checkErrorKernelMalformedJSONtest(srv, conf, t, tempDir)
+	checkREQTailFileTest(tstSrv, tstConf, t, tstTempDir)
+	checkMetricValuesTest(tstSrv, tstConf, t, tstTempDir)
+	checkErrorKernelMalformedJSONtest(tstSrv, tstConf, t, tstTempDir)
 }
 
 // Check the tailing of files type.
