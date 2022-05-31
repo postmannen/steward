@@ -382,9 +382,25 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 
 	// Verify if the signature matches.
 	argsStringified := argsToString(m.MethodArgs)
-	n.publicKeys.mu.Lock()
-	ok := ed25519.Verify(n.publicKeys.keysAndHash.Keys[m.FromNode], []byte(argsStringified), m.ArgSignature)
-	n.publicKeys.mu.Unlock()
+	var ok bool
+
+	err := func() error {
+		n.publicKeys.mu.Lock()
+		pubKey := n.publicKeys.keysAndHash.Keys[m.FromNode]
+		if len(pubKey) != 32 {
+			err := fmt.Errorf("DEBUG: Length of publicKey: %v", len(pubKey))
+			return err
+		}
+
+		ok = ed25519.Verify(pubKey, []byte(argsStringified), m.ArgSignature)
+		n.publicKeys.mu.Unlock()
+
+		return nil
+	}()
+
+	if err != nil {
+		log.Printf("%v\n", err)
+	}
 
 	log.Printf("info: verifySignature, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
 

@@ -340,6 +340,96 @@ func (m methodREQKeysAllow) handler(proc process, message Message, node string) 
 
 			}()
 
+			// HERE:
+			// If new keys were allowed into the main map, we should send out one
+			// single update to all the registered nodes to inform of an update.
+			// NB: If a node is not reachable at the time the update is sent it is
+			// not a problem since the nodes will periodically check for updates.
+			//
+			// If there are errors we will return from the function, and send no
+			// updates.
+			err := func() error {
+				var knh []byte
+
+				err := func() error {
+					proc.centralAuth.pki.nodesAcked.mu.Lock()
+					defer proc.centralAuth.pki.nodesAcked.mu.Unlock()
+
+					b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
+					if err != nil {
+						er := fmt.Errorf("error: methodREQKeysAllow, failed to marshal keys map: %v", err)
+						return er
+					}
+
+					copy(knh, b)
+
+					return nil
+				}()
+
+				fmt.Printf("\n DEBUG DEBUG DEBUG 1 \n\n")
+
+				if err != nil {
+					return err
+				}
+
+				fmt.Printf("\n DEBUG DEBUG DEBUG 2 \n\n")
+
+				// proc.centralAuth.pki.nodeNotAckedPublicKeys.mu.Lock()
+				// defer proc.centralAuth.pki.nodeNotAckedPublicKeys.mu.Unlock()
+
+				fmt.Printf("\n DEBUG DEBUG DEBUG 3: %v \n\n", proc.centralAuth.pki.nodeNotAckedPublicKeys.KeyMap)
+
+				// For all nodes that is not ack'ed we try to send an update once.
+				for n := range proc.centralAuth.pki.nodeNotAckedPublicKeys.KeyMap {
+					fmt.Printf("\n DEBUG DEBUG DEBUG 4: ranging map, working on node %v \n\n", n)
+					msg := Message{
+						ToNode:      n,
+						Method:      REQKeysDeliverUpdate,
+						ReplyMethod: REQNone,
+					}
+
+					sam, err := newSubjectAndMessage(msg)
+					if err != nil {
+						// In theory the system should drop the message before it reaches here.
+						er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
+						proc.errorKernel.errSend(proc, message, er)
+					}
+
+					proc.toRingbufferCh <- []subjectAndMessage{sam}
+
+					fmt.Printf("\n ----> methodREQKeysAllow: SENDING KEYS TO NODE=%v\n", message.FromNode)
+				}
+
+				// For all nodes that is ack'ed we try to send an update once.
+				for n := range proc.centralAuth.pki.nodesAcked.keysAndHash.Keys {
+					fmt.Printf("\n DEBUG DEBUG DEBUG 5: ranging map, working on node %v \n\n", n)
+					msg := Message{
+						ToNode:      n,
+						Method:      REQKeysDeliverUpdate,
+						ReplyMethod: REQNone,
+					}
+
+					sam, err := newSubjectAndMessage(msg)
+					if err != nil {
+						// In theory the system should drop the message before it reaches here.
+						er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
+						proc.errorKernel.errSend(proc, message, er)
+					}
+
+					proc.toRingbufferCh <- []subjectAndMessage{sam}
+
+					fmt.Printf("\n ----> methodREQKeysAllow: SENDING KEYS TO NODE=%v\n", message.FromNode)
+				}
+
+				return nil
+
+			}()
+
+			if err != nil {
+				proc.errorKernel.errSend(proc, message, err)
+				return
+			}
+
 		}
 	}()
 
