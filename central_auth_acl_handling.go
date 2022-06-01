@@ -43,13 +43,14 @@ type accessLists struct {
 	pki             *pki
 }
 
-func newAccessLists(errorKernel *errorKernel, configuration *Configuration) *accessLists {
+func newAccessLists(pki *pki, errorKernel *errorKernel, configuration *Configuration) *accessLists {
 	a := accessLists{
 		schemaMain:      newSchemaMain(configuration),
 		schemaGenerated: newSchemaGenerated(),
 		validator:       validator.New(),
 		errorKernel:     errorKernel,
 		configuration:   configuration,
+		pki:             pki,
 	}
 
 	return &a
