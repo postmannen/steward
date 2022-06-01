@@ -24,10 +24,9 @@ type centralAuth struct {
 
 // newCentralAuth will return a new and prepared *centralAuth
 func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *centralAuth {
-	c := centralAuth{
-		accessLists: newAccessLists(errorKernel, configuration),
-		pki:         newPKI(configuration, errorKernel),
-	}
+	c := centralAuth{}
+	c.pki = newPKI(configuration, errorKernel)
+	c.accessLists = newAccessLists(c.pki, errorKernel, configuration)
 
 	return &c
 }
