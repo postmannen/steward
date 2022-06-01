@@ -37,7 +37,7 @@ func (a *authParser) parse() {
 // hostGroupOrSingle checks if host grp or single node.
 func (a *authParser) hostGroupOrSingle() parseFn {
 	switch {
-	case strings.HasPrefix(string(a.currentHost), "grp_nodes_"):
+	case strings.HasPrefix(string(a.currentHost), "grp_nodes_") || a.currentHost == "*":
 		// Is group
 		return a.hostIsGroup
 	default:

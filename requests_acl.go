@@ -157,12 +157,15 @@ func (m methodREQAclDeliverUpdate) handler(proc process, message Message, node s
 			}
 
 			mapOfFromNodeCommands := make(map[Node]map[command]struct{})
-			err = cbor.Unmarshal(hdh.Data, &mapOfFromNodeCommands)
-			if err != nil {
-				er := fmt.Errorf("error: subscriber REQAclDeliverUpdate : json unmarshal failed: %v, message: %v", err, message)
-				proc.errorKernel.errSend(proc, message, er)
-				log.Fatalf("\n * DEBUG: ER: %v\n", er)
 
+			if len(hdh.Data) != 0 {
+				err = cbor.Unmarshal(hdh.Data, &mapOfFromNodeCommands)
+				if err != nil {
+					er := fmt.Errorf("error: subscriber REQAclDeliverUpdate : cbor unmarshal failed: %v, message: %v", err, message)
+					proc.errorKernel.errSend(proc, message, er)
+					log.Fatalf("\n * DEBUG: ER: %v\n", er)
+
+				}
 			}
 
 			proc.nodeAuth.nodeAcl.aclAndHash.Hash = hdh.Hash

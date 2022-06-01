@@ -88,7 +88,7 @@ type nodeAcl struct {
 func newNodeAcl(c *Configuration) *nodeAcl {
 	n := nodeAcl{
 		aclAndHash: newAclAndHash(),
-		filePath:   filepath.Join(c.DatabaseFolder, "acl.txt"),
+		filePath:   filepath.Join(c.DatabaseFolder, "node_aclmap.txt"),
 	}
 
 	err := n.loadFromFile()
@@ -136,6 +136,7 @@ func (n *nodeAcl) loadFromFile() error {
 
 // saveToFile will save the acl to file for persistent storage.
 // An error is returned if it fails.
+// TODO: HERE: not saving deleted wildcard map entry for some reason!
 func (n *nodeAcl) saveToFile() error {
 	fh, err := os.OpenFile(n.filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {

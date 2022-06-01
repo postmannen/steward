@@ -156,13 +156,26 @@ func (a *accessLists) nodeAsSlice(n Node) []Node {
 
 	// Check if we are given a nodeGroup variable, and if we are, get all the
 	// nodes for that group.
-	if strings.HasPrefix(string(n), "grp_nodes_") {
+	switch {
+	case strings.HasPrefix(string(n), "grp_nodes_"):
 		for nd := range a.schemaMain.NodeGroupMap[nodeGroup(n)] {
 			nodes = append(nodes, nd)
 		}
-	} else {
+
+	case string(n) == "*":
+		func() {
+			a.pki.nodesAcked.mu.Lock()
+			defer a.pki.nodesAcked.mu.Unlock()
+
+			for nd := range a.pki.nodesAcked.keysAndHash.Keys {
+				nodes = append(nodes, nd)
+			}
+		}()
+
+	default:
 		// No group found meaning a single node was given as an argument.
 		nodes = []Node{n}
+
 	}
 
 	return nodes
