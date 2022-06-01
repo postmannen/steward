@@ -26,7 +26,9 @@ type centralAuth struct {
 func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *centralAuth {
 	c := centralAuth{}
 	c.pki = newPKI(configuration, errorKernel)
-	c.accessLists = newAccessLists(c.pki, errorKernel, configuration)
+	c.accessLists = newAccessLists(errorKernel, configuration)
+
+	c.generateACLsForAllNodes()
 
 	return &c
 }

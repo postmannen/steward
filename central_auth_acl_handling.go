@@ -43,19 +43,14 @@ type accessLists struct {
 	pki             *pki
 }
 
-func newAccessLists(pki *pki, errorKernel *errorKernel, configuration *Configuration) *accessLists {
+func newAccessLists(errorKernel *errorKernel, configuration *Configuration) *accessLists {
 	a := accessLists{
 		schemaMain:      newSchemaMain(configuration),
 		schemaGenerated: newSchemaGenerated(),
 		validator:       validator.New(),
 		errorKernel:     errorKernel,
 		configuration:   configuration,
-		pki:             pki,
 	}
-
-	// The main acl map gets loaded from disk in the newSchemaMain function, but since that
-	// function do not have access to the generated map we have to generate it here.
-	a.generateACLsForAllNodes()
 
 	return &a
 }
@@ -208,25 +203,25 @@ func (a *accessLists) commandAsSlice(c command) []command {
 // If the node or the fromNode do not exist they will be created.
 // The json encoded schema for a node and the hash of those data
 // will also be generated.
-func (a *accessLists) aclAddCommand(host Node, source Node, cmd command) {
-	a.schemaMain.mu.Lock()
-	defer a.schemaMain.mu.Unlock()
+func (c *centralAuth) aclAddCommand(host Node, source Node, cmd command) {
+	c.accessLists.schemaMain.mu.Lock()
+	defer c.accessLists.schemaMain.mu.Unlock()
 
 	// Check if node exists in map.
-	if _, ok := a.schemaMain.ACLMap[host]; !ok {
+	if _, ok := c.accessLists.schemaMain.ACLMap[host]; !ok {
 		// log.Printf("info: did not find node=%v in map, creating map[fromnode]map[command]struct{}\n", n)
-		a.schemaMain.ACLMap[host] = make(map[Node]map[command]struct{})
+		c.accessLists.schemaMain.ACLMap[host] = make(map[Node]map[command]struct{})
 	}
 
 	// Check if also source node exists in map
-	if _, ok := a.schemaMain.ACLMap[host][source]; !ok {
+	if _, ok := c.accessLists.schemaMain.ACLMap[host][source]; !ok {
 		// log.Printf("info: did not find node=%v in map, creating map[fromnode]map[command]struct{}\n", fn)
-		a.schemaMain.ACLMap[host][source] = make(map[command]struct{})
+		c.accessLists.schemaMain.ACLMap[host][source] = make(map[command]struct{})
 	}
 
-	a.schemaMain.ACLMap[host][source][cmd] = struct{}{}
+	c.accessLists.schemaMain.ACLMap[host][source][cmd] = struct{}{}
 	// err := a.generateJSONForHostOrGroup(n)
-	err := a.generateACLsForAllNodes()
+	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: addCommandForFromNode: %v", err)
 		log.Printf("%v\n", er)
@@ -237,26 +232,26 @@ func (a *accessLists) aclAddCommand(host Node, source Node, cmd command) {
 }
 
 // aclDeleteCommand will delete the specified command from the fromnode.
-func (a *accessLists) aclDeleteCommand(host Node, source Node, cmd command) error {
-	a.schemaMain.mu.Lock()
-	defer a.schemaMain.mu.Unlock()
+func (c *centralAuth) aclDeleteCommand(host Node, source Node, cmd command) error {
+	c.accessLists.schemaMain.mu.Lock()
+	defer c.accessLists.schemaMain.mu.Unlock()
 
 	// Check if node exists in map.
-	if _, ok := a.schemaMain.ACLMap[host]; !ok {
+	if _, ok := c.accessLists.schemaMain.ACLMap[host]; !ok {
 		return fmt.Errorf("authSchema: no such node=%v to delete on in schema exists", host)
 	}
 
-	if _, ok := a.schemaMain.ACLMap[host][source]; !ok {
+	if _, ok := c.accessLists.schemaMain.ACLMap[host][source]; !ok {
 		return fmt.Errorf("authSchema: no such fromnode=%v to delete on in schema for node=%v exists", source, host)
 	}
 
-	if _, ok := a.schemaMain.ACLMap[host][source][cmd]; !ok {
+	if _, ok := c.accessLists.schemaMain.ACLMap[host][source][cmd]; !ok {
 		return fmt.Errorf("authSchema: no such command=%v from fromnode=%v to delete on in schema for node=%v exists", cmd, source, host)
 	}
 
-	delete(a.schemaMain.ACLMap[host][source], cmd)
+	delete(c.accessLists.schemaMain.ACLMap[host][source], cmd)
 
-	err := a.generateACLsForAllNodes()
+	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: aclNodeFromNodeCommandDelete: %v", err)
 		log.Printf("%v\n", er)
@@ -266,22 +261,22 @@ func (a *accessLists) aclDeleteCommand(host Node, source Node, cmd command) erro
 }
 
 // aclDeleteSource will delete specified source node and all commands specified for it.
-func (a *accessLists) aclDeleteSource(host Node, source Node) error {
-	a.schemaMain.mu.Lock()
-	defer a.schemaMain.mu.Unlock()
+func (c *centralAuth) aclDeleteSource(host Node, source Node) error {
+	c.accessLists.schemaMain.mu.Lock()
+	defer c.accessLists.schemaMain.mu.Unlock()
 
 	// Check if node exists in map.
-	if _, ok := a.schemaMain.ACLMap[host]; !ok {
+	if _, ok := c.accessLists.schemaMain.ACLMap[host]; !ok {
 		return fmt.Errorf("authSchema: no such node=%v to delete on in schema exists", host)
 	}
 
-	if _, ok := a.schemaMain.ACLMap[host][source]; !ok {
+	if _, ok := c.accessLists.schemaMain.ACLMap[host][source]; !ok {
 		return fmt.Errorf("authSchema: no such fromnode=%v to delete on in schema for node=%v exists", source, host)
 	}
 
-	delete(a.schemaMain.ACLMap[host], source)
+	delete(c.accessLists.schemaMain.ACLMap[host], source)
 
-	err := a.generateACLsForAllNodes()
+	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: aclNodeFromnodeDelete: %v", err)
 		log.Printf("%v\n", er)
@@ -297,12 +292,12 @@ func (a *accessLists) aclDeleteSource(host Node, source Node) error {
 // and run a small state machine on each element to create the final ACL result to be used at host
 // nodes.
 // The result will be written to the schemaGenerated.ACLsToConvert map.
-func (a *accessLists) generateACLsForAllNodes() error {
+func (c *centralAuth) generateACLsForAllNodes() error {
 	// We first one to save the current main ACLMap.
 	func() {
-		fh, err := os.OpenFile(a.schemaMain.ACLMapFilePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600)
+		fh, err := os.OpenFile(c.accessLists.schemaMain.ACLMapFilePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600)
 		if err != nil {
-			er := fmt.Errorf("error: generateACLsForAllNodes: opening file for writing: %v, err: %v", a.schemaMain.ACLMapFilePath, err)
+			er := fmt.Errorf("error: generateACLsForAllNodes: opening file for writing: %v, err: %v", c.accessLists.schemaMain.ACLMapFilePath, err)
 			log.Printf("%v\n", er)
 			return
 		}
@@ -311,18 +306,18 @@ func (a *accessLists) generateACLsForAllNodes() error {
 		// a.schemaMain.mu.Lock()
 		// defer a.schemaMain.mu.Unlock()
 		enc := json.NewEncoder(fh)
-		enc.Encode(a.schemaMain.ACLMap)
+		enc.Encode(c.accessLists.schemaMain.ACLMap)
 		if err != nil {
-			er := fmt.Errorf("error: generateACLsForAllNodes: encoding json to file failed: %v, err: %v", a.schemaMain.ACLMapFilePath, err)
+			er := fmt.Errorf("error: generateACLsForAllNodes: encoding json to file failed: %v, err: %v", c.accessLists.schemaMain.ACLMapFilePath, err)
 			log.Printf("%v\n", er)
 			return
 		}
 	}()
 
-	a.schemaGenerated.mu.Lock()
-	defer a.schemaGenerated.mu.Unlock()
+	c.accessLists.schemaGenerated.mu.Lock()
+	defer c.accessLists.schemaGenerated.mu.Unlock()
 
-	a.schemaGenerated.ACLsToConvert = make(map[Node]map[Node]map[command]struct{})
+	c.accessLists.schemaGenerated.ACLsToConvert = make(map[Node]map[Node]map[command]struct{})
 
 	// Rangle all ACL's. Both for single hosts, and group of hosts.
 	// ACL's that are for a group of hosts will be generated split
@@ -330,14 +325,14 @@ func (a *accessLists) generateACLsForAllNodes() error {
 	// be added to the individual host in the ACLsToConvert map to
 	// built a complete picture of what the ACL's looks like for each
 	// individual hosts.
-	for n := range a.schemaMain.ACLMap {
+	for n := range c.accessLists.schemaMain.ACLMap {
 		//a.schemaGenerated.ACLsToConvert = make(map[node]map[node]map[command]struct{})
-		ap := newAuthParser(n, a)
+		ap := newAuthParser(n, c.accessLists)
 		ap.parse()
 	}
 
-	inf := fmt.Errorf("generateACLsFor all nodes, ACLsToConvert contains: %#v", a.schemaGenerated.ACLsToConvert)
-	a.errorKernel.logConsoleOnlyIfDebug(inf, a.configuration)
+	inf := fmt.Errorf("generateACLsFor all nodes, ACLsToConvert contains: %#v", c.accessLists.schemaGenerated.ACLsToConvert)
+	c.accessLists.errorKernel.logConsoleOnlyIfDebug(inf, c.accessLists.configuration)
 
 	// ACLsToConvert got the complete picture of what ACL's that
 	// are defined for each individual host node.
@@ -346,12 +341,12 @@ func (a *accessLists) generateACLsForAllNodes() error {
 	func() {
 		// If the map to generate from map is empty we want to also set the generatedACLsMap
 		// to empty so we can make sure that no more generated ACL's exists to be distributed.
-		if len(a.schemaGenerated.ACLsToConvert) == 0 {
-			a.schemaGenerated.GeneratedACLsMap = make(map[Node]HostACLsSerializedWithHash)
+		if len(c.accessLists.schemaGenerated.ACLsToConvert) == 0 {
+			c.accessLists.schemaGenerated.GeneratedACLsMap = make(map[Node]HostACLsSerializedWithHash)
 
 		}
 
-		for n, m := range a.schemaGenerated.ACLsToConvert {
+		for n, m := range c.accessLists.schemaGenerated.ACLsToConvert {
 			//fmt.Printf("\n ################ DEBUG: RANGE in generate: n=%v, m=%v\n", n, m)
 
 			// cbor marshal the data of the ACL map to store for the host node.
@@ -364,7 +359,7 @@ func (a *accessLists) generateACLsForAllNodes() error {
 
 			// Create the hash for the data for the host node.
 			hash := func() [32]byte {
-				sns := a.nodeMapToSlice(n)
+				sns := c.accessLists.nodeMapToSlice(n)
 
 				b, err := cbor.Marshal(sns)
 				if err != nil {
@@ -384,13 +379,13 @@ func (a *accessLists) generateACLsForAllNodes() error {
 			}
 
 			// and then store the cbor encoded data and the hash in the generated map.
-			a.schemaGenerated.GeneratedACLsMap[n] = hostSerialized
+			c.accessLists.schemaGenerated.GeneratedACLsMap[n] = hostSerialized
 
 		}
 	}()
 
-	inf = fmt.Errorf("generateACLsFor all nodes, GeneratedACLsMap contains: %#v", a.schemaGenerated.GeneratedACLsMap)
-	a.errorKernel.logConsoleOnlyIfDebug(inf, a.configuration)
+	inf = fmt.Errorf("generateACLsFor all nodes, GeneratedACLsMap contains: %#v", c.accessLists.schemaGenerated.GeneratedACLsMap)
+	c.accessLists.errorKernel.logConsoleOnlyIfDebug(inf, c.accessLists.configuration)
 
 	return nil
 }
@@ -450,24 +445,24 @@ func (a *accessLists) nodeMapToSlice(host Node) sourceNode {
 
 // groupNodesAddNode adds a node to a group. If the group does
 // not exist it will be created.
-func (a *accessLists) groupNodesAddNode(ng nodeGroup, n Node) {
-	err := a.validator.Var(ng, "startswith=grp_nodes_")
+func (c *centralAuth) groupNodesAddNode(ng nodeGroup, n Node) {
+	err := c.accessLists.validator.Var(ng, "startswith=grp_nodes_")
 	if err != nil {
 		log.Printf("error: group name do not start with grp_nodes_: %v\n", err)
 		return
 	}
 
-	a.schemaMain.mu.Lock()
-	defer a.schemaMain.mu.Unlock()
-	if _, ok := a.schemaMain.NodeGroupMap[ng]; !ok {
-		a.schemaMain.NodeGroupMap[ng] = make(map[Node]struct{})
+	c.accessLists.schemaMain.mu.Lock()
+	defer c.accessLists.schemaMain.mu.Unlock()
+	if _, ok := c.accessLists.schemaMain.NodeGroupMap[ng]; !ok {
+		c.accessLists.schemaMain.NodeGroupMap[ng] = make(map[Node]struct{})
 	}
 
-	a.schemaMain.NodeGroupMap[ng][n] = struct{}{}
+	c.accessLists.schemaMain.NodeGroupMap[ng][n] = struct{}{}
 
 	// fmt.Printf(" * groupNodesAddNode: After adding to group node looks like: %+v\n", a.schemaMain.NodeGroupMap)
 
-	err = a.generateACLsForAllNodes()
+	err = c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: groupNodesAddNode: %v", err)
 		log.Printf("%v\n", er)
@@ -476,19 +471,19 @@ func (a *accessLists) groupNodesAddNode(ng nodeGroup, n Node) {
 }
 
 // groupNodesDeleteNode deletes a node from a group in the map.
-func (a *accessLists) groupNodesDeleteNode(ng nodeGroup, n Node) {
-	a.schemaMain.mu.Lock()
-	defer a.schemaMain.mu.Unlock()
-	if _, ok := a.schemaMain.NodeGroupMap[ng][n]; !ok {
+func (c *centralAuth) groupNodesDeleteNode(ng nodeGroup, n Node) {
+	c.accessLists.schemaMain.mu.Lock()
+	defer c.accessLists.schemaMain.mu.Unlock()
+	if _, ok := c.accessLists.schemaMain.NodeGroupMap[ng][n]; !ok {
 		log.Printf("info: no such node with name=%v found in group=%v\n", ng, n)
 		return
 	}
 
-	delete(a.schemaMain.NodeGroupMap[ng], n)
+	delete(c.accessLists.schemaMain.NodeGroupMap[ng], n)
 
 	//fmt.Printf(" * After deleting nodeGroup map looks like: %+v\n", a.schemaMain.NodeGroupMap)
 
-	err := a.generateACLsForAllNodes()
+	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: groupNodesDeleteNode: %v", err)
 		log.Printf("%v\n", er)
@@ -497,19 +492,19 @@ func (a *accessLists) groupNodesDeleteNode(ng nodeGroup, n Node) {
 }
 
 // groupNodesDeleteGroup deletes a nodeGroup from map.
-func (a *accessLists) groupNodesDeleteGroup(ng nodeGroup) {
-	a.schemaMain.mu.Lock()
-	defer a.schemaMain.mu.Unlock()
-	if _, ok := a.schemaMain.NodeGroupMap[ng]; !ok {
+func (c *centralAuth) groupNodesDeleteGroup(ng nodeGroup) {
+	c.accessLists.schemaMain.mu.Lock()
+	defer c.accessLists.schemaMain.mu.Unlock()
+	if _, ok := c.accessLists.schemaMain.NodeGroupMap[ng]; !ok {
 		log.Printf("info: no such group found: %v\n", ng)
 		return
 	}
 
-	delete(a.schemaMain.NodeGroupMap, ng)
+	delete(c.accessLists.schemaMain.NodeGroupMap, ng)
 
 	//fmt.Printf(" * After deleting nodeGroup map looks like: %+v\n", a.schemaMain.NodeGroupMap)
 
-	err := a.generateACLsForAllNodes()
+	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: groupNodesDeleteGroup: %v", err)
 		log.Printf("%v\n", er)
@@ -521,24 +516,24 @@ func (a *accessLists) groupNodesDeleteGroup(ng nodeGroup) {
 
 // groupCommandsAddCommand adds a command to a group. If the group does
 // not exist it will be created.
-func (a *accessLists) groupCommandsAddCommand(cg commandGroup, c command) {
-	err := a.validator.Var(cg, "startswith=grp_commands_")
+func (c *centralAuth) groupCommandsAddCommand(cg commandGroup, cmd command) {
+	err := c.accessLists.validator.Var(cg, "startswith=grp_commands_")
 	if err != nil {
 		log.Printf("error: group name do not start with grp_commands_ : %v\n", err)
 		return
 	}
 
-	a.schemaMain.mu.Lock()
-	defer a.schemaMain.mu.Unlock()
-	if _, ok := a.schemaMain.CommandGroupMap[cg]; !ok {
-		a.schemaMain.CommandGroupMap[cg] = make(map[command]struct{})
+	c.accessLists.schemaMain.mu.Lock()
+	defer c.accessLists.schemaMain.mu.Unlock()
+	if _, ok := c.accessLists.schemaMain.CommandGroupMap[cg]; !ok {
+		c.accessLists.schemaMain.CommandGroupMap[cg] = make(map[command]struct{})
 	}
 
-	a.schemaMain.CommandGroupMap[cg][c] = struct{}{}
+	c.accessLists.schemaMain.CommandGroupMap[cg][cmd] = struct{}{}
 
 	//fmt.Printf(" * groupCommandsAddCommand: After adding command=%v to command group=%v map looks like: %+v\n", c, cg, a.schemaMain.CommandGroupMap)
 
-	err = a.generateACLsForAllNodes()
+	err = c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: groupCommandsAddCommand: %v", err)
 		log.Printf("%v\n", er)
@@ -547,19 +542,19 @@ func (a *accessLists) groupCommandsAddCommand(cg commandGroup, c command) {
 }
 
 // groupCommandsDeleteCommand deletes a command from a group in the map.
-func (a *accessLists) groupCommandsDeleteCommand(cg commandGroup, c command) {
-	a.schemaMain.mu.Lock()
-	defer a.schemaMain.mu.Unlock()
-	if _, ok := a.schemaMain.CommandGroupMap[cg][c]; !ok {
+func (c *centralAuth) groupCommandsDeleteCommand(cg commandGroup, cmd command) {
+	c.accessLists.schemaMain.mu.Lock()
+	defer c.accessLists.schemaMain.mu.Unlock()
+	if _, ok := c.accessLists.schemaMain.CommandGroupMap[cg][cmd]; !ok {
 		log.Printf("info: no such command with name=%v found in group=%v\n", c, cg)
 		return
 	}
 
-	delete(a.schemaMain.CommandGroupMap[cg], c)
+	delete(c.accessLists.schemaMain.CommandGroupMap[cg], cmd)
 
 	//fmt.Printf(" * After deleting command=%v from group=%v map looks like: %+v\n", c, cg, a.schemaMain.CommandGroupMap)
 
-	err := a.generateACLsForAllNodes()
+	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: groupCommandsDeleteCommand: %v", err)
 		log.Printf("%v\n", er)
@@ -568,19 +563,19 @@ func (a *accessLists) groupCommandsDeleteCommand(cg commandGroup, c command) {
 }
 
 // groupCommandDeleteGroup deletes a commandGroup map.
-func (a *accessLists) groupCommandDeleteGroup(cg commandGroup) {
-	a.schemaMain.mu.Lock()
-	defer a.schemaMain.mu.Unlock()
-	if _, ok := a.schemaMain.CommandGroupMap[cg]; !ok {
+func (c *centralAuth) groupCommandDeleteGroup(cg commandGroup) {
+	c.accessLists.schemaMain.mu.Lock()
+	defer c.accessLists.schemaMain.mu.Unlock()
+	if _, ok := c.accessLists.schemaMain.CommandGroupMap[cg]; !ok {
 		log.Printf("info: no such group found: %v\n", cg)
 		return
 	}
 
-	delete(a.schemaMain.CommandGroupMap, cg)
+	delete(c.accessLists.schemaMain.CommandGroupMap, cg)
 
 	//fmt.Printf(" * After deleting commandGroup=%v map looks like: %+v\n", cg, a.schemaMain.CommandGroupMap)
 
-	err := a.generateACLsForAllNodes()
+	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: groupCommandDeleteGroup: %v", err)
 		log.Printf("%v\n", er)
@@ -589,12 +584,12 @@ func (a *accessLists) groupCommandDeleteGroup(cg commandGroup) {
 }
 
 // exportACLs will export the current content of the main ACLMap in JSON format.
-func (a *accessLists) exportACLs() ([]byte, error) {
+func (c *centralAuth) exportACLs() ([]byte, error) {
 
-	a.schemaMain.mu.Lock()
-	defer a.schemaMain.mu.Unlock()
+	c.accessLists.schemaMain.mu.Lock()
+	defer c.accessLists.schemaMain.mu.Unlock()
 
-	js, err := json.Marshal(a.schemaMain.ACLMap)
+	js, err := json.Marshal(c.accessLists.schemaMain.ACLMap)
 	if err != nil {
 		return nil, fmt.Errorf("error: failed to marshal schemaMain.ACLMap: %v", err)
 
@@ -605,10 +600,10 @@ func (a *accessLists) exportACLs() ([]byte, error) {
 }
 
 // importACLs will import and replace all current ACL's with the ACL's provided as input.
-func (a *accessLists) importACLs(js []byte) error {
+func (c *centralAuth) importACLs(js []byte) error {
 
-	a.schemaMain.mu.Lock()
-	defer a.schemaMain.mu.Unlock()
+	c.accessLists.schemaMain.mu.Lock()
+	defer c.accessLists.schemaMain.mu.Unlock()
 
 	m := make(map[Node]map[Node]map[command]struct{})
 
@@ -617,7 +612,7 @@ func (a *accessLists) importACLs(js []byte) error {
 		return fmt.Errorf("error: failed to unmarshal into ACLMap: %v", err)
 	}
 
-	a.schemaMain.ACLMap = m
+	c.accessLists.schemaMain.ACLMap = m
 
 	return nil
 

@@ -229,7 +229,7 @@ func (m methodREQAclAddCommand) handler(proc process, message Message, node stri
 			source := message.MethodArgs[1]
 			cmd := message.MethodArgs[2]
 
-			proc.centralAuth.accessLists.aclAddCommand(Node(host), Node(source), command(cmd))
+			proc.centralAuth.aclAddCommand(Node(host), Node(source), command(cmd))
 
 			outString := fmt.Sprintf("acl added: host=%v, source=%v, command=%v\n", host, source, cmd)
 			out := []byte(outString)
@@ -299,7 +299,7 @@ func (m methodREQAclDeleteCommand) handler(proc process, message Message, node s
 			source := message.MethodArgs[1]
 			cmd := message.MethodArgs[2]
 
-			proc.centralAuth.accessLists.aclDeleteCommand(Node(host), Node(source), command(cmd))
+			proc.centralAuth.aclDeleteCommand(Node(host), Node(source), command(cmd))
 
 			outString := fmt.Sprintf("acl deleted: host=%v, source=%v, command=%v\n", host, source, cmd)
 			out := []byte(outString)
@@ -368,7 +368,7 @@ func (m methodREQAclDeleteSource) handler(proc process, message Message, node st
 			host := message.MethodArgs[0]
 			source := message.MethodArgs[1]
 
-			proc.centralAuth.accessLists.aclDeleteSource(Node(host), Node(source))
+			proc.centralAuth.aclDeleteSource(Node(host), Node(source))
 
 			outString := fmt.Sprintf("acl deleted: host=%v, source=%v\n", host, source)
 			out := []byte(outString)
@@ -437,7 +437,7 @@ func (m methodREQAclGroupNodesAddNode) handler(proc process, message Message, no
 			ng := message.MethodArgs[0]
 			n := message.MethodArgs[1]
 
-			proc.centralAuth.accessLists.groupNodesAddNode(nodeGroup(ng), Node(n))
+			proc.centralAuth.groupNodesAddNode(nodeGroup(ng), Node(n))
 
 			outString := fmt.Sprintf("added node to nodeGroup: nodeGroup=%v, node=%v\n", ng, n)
 			out := []byte(outString)
@@ -506,7 +506,7 @@ func (m methodREQAclGroupNodesDeleteNode) handler(proc process, message Message,
 			ng := message.MethodArgs[0]
 			n := message.MethodArgs[1]
 
-			proc.centralAuth.accessLists.groupNodesDeleteNode(nodeGroup(ng), Node(n))
+			proc.centralAuth.groupNodesDeleteNode(nodeGroup(ng), Node(n))
 
 			outString := fmt.Sprintf("deleted node from nodeGroup: nodeGroup=%v, node=%v\n", ng, n)
 			out := []byte(outString)
@@ -574,7 +574,7 @@ func (m methodREQAclGroupNodesDeleteGroup) handler(proc process, message Message
 
 			ng := message.MethodArgs[0]
 
-			proc.centralAuth.accessLists.groupNodesDeleteGroup(nodeGroup(ng))
+			proc.centralAuth.groupNodesDeleteGroup(nodeGroup(ng))
 
 			outString := fmt.Sprintf("deleted nodeGroup: nodeGroup=%v\n", ng)
 			out := []byte(outString)
@@ -643,7 +643,7 @@ func (m methodREQAclGroupCommandsAddCommand) handler(proc process, message Messa
 			cg := message.MethodArgs[0]
 			c := message.MethodArgs[1]
 
-			proc.centralAuth.accessLists.groupCommandsAddCommand(commandGroup(cg), command(c))
+			proc.centralAuth.groupCommandsAddCommand(commandGroup(cg), command(c))
 
 			outString := fmt.Sprintf("added command to commandGroup: commandGroup=%v, command=%v\n", cg, c)
 			out := []byte(outString)
@@ -712,7 +712,7 @@ func (m methodREQAclGroupCommandsDeleteCommand) handler(proc process, message Me
 			cg := message.MethodArgs[0]
 			c := message.MethodArgs[1]
 
-			proc.centralAuth.accessLists.groupCommandsDeleteCommand(commandGroup(cg), command(c))
+			proc.centralAuth.groupCommandsDeleteCommand(commandGroup(cg), command(c))
 
 			outString := fmt.Sprintf("deleted command from commandGroup: commandGroup=%v, command=%v\n", cg, c)
 			out := []byte(outString)
@@ -780,7 +780,7 @@ func (m methodREQAclGroupCommandsDeleteGroup) handler(proc process, message Mess
 
 			cg := message.MethodArgs[0]
 
-			proc.centralAuth.accessLists.groupCommandDeleteGroup(commandGroup(cg))
+			proc.centralAuth.groupCommandDeleteGroup(commandGroup(cg))
 
 			outString := fmt.Sprintf("deleted commandGroup: commandGroup=%v\n", cg)
 			out := []byte(outString)
@@ -840,7 +840,7 @@ func (m methodREQAclExport) handler(proc process, message Message, node string) 
 		go func() {
 			defer proc.processes.wg.Done()
 
-			out, err := proc.centralAuth.accessLists.exportACLs()
+			out, err := proc.centralAuth.exportACLs()
 			if err != nil {
 				errCh <- fmt.Errorf("error: methodREQAclExport failed: %v", err)
 				return
@@ -915,7 +915,7 @@ func (m methodREQAclImport) handler(proc process, message Message, node string) 
 			}
 
 			js := []byte(message.MethodArgs[0])
-			err := proc.centralAuth.accessLists.importACLs(js)
+			err := proc.centralAuth.importACLs(js)
 			if err != nil {
 				errCh <- fmt.Errorf("error: methodREQAclImport failed: %v", err)
 				return
