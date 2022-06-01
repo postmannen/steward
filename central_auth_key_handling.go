@@ -110,55 +110,55 @@ func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 }
 
 // addPublicKey to the db if the node do not exist, or if it is a new value.
-func (p *pki) addPublicKey(proc process, msg Message) {
+func (c *centralAuth) addPublicKey(proc process, msg Message) {
 
 	// Check if a key for the current node already exists in the map.
-	p.nodesAcked.mu.Lock()
-	existingKey, ok := p.nodesAcked.keysAndHash.Keys[msg.FromNode]
-	p.nodesAcked.mu.Unlock()
+	c.pki.nodesAcked.mu.Lock()
+	existingKey, ok := c.pki.nodesAcked.keysAndHash.Keys[msg.FromNode]
+	c.pki.nodesAcked.mu.Unlock()
 
 	if ok && bytes.Equal(existingKey, msg.Data) {
 		fmt.Printf(" \n * public key value for REGISTERED node %v is the same, doing nothing\n\n", msg.FromNode)
 		return
 	}
 
-	p.nodeNotAckedPublicKeys.mu.Lock()
-	existingNotAckedKey, ok := p.nodeNotAckedPublicKeys.KeyMap[msg.FromNode]
+	c.pki.nodeNotAckedPublicKeys.mu.Lock()
+	existingNotAckedKey, ok := c.pki.nodeNotAckedPublicKeys.KeyMap[msg.FromNode]
 	// We only want to send one notification to the error kernel about new key detection,
 	// so we check if the values are the same as the one we already got before we continue
 	// with registering and logging for the the new key.
 	if ok && bytes.Equal(existingNotAckedKey, msg.Data) {
 		fmt.Printf(" * \nkey value for NOT-REGISTERED node %v is the same, doing nothing\n\n", msg.FromNode)
-		p.nodeNotAckedPublicKeys.mu.Unlock()
+		c.pki.nodeNotAckedPublicKeys.mu.Unlock()
 		return
 	}
 
-	p.nodeNotAckedPublicKeys.KeyMap[msg.FromNode] = msg.Data
-	p.nodeNotAckedPublicKeys.mu.Unlock()
+	c.pki.nodeNotAckedPublicKeys.KeyMap[msg.FromNode] = msg.Data
+	c.pki.nodeNotAckedPublicKeys.mu.Unlock()
 
 	er := fmt.Errorf("info: detected new public key for node: %v. This key will need to be authorized by operator to be allowed into the system", msg.FromNode)
 	fmt.Printf(" * %v\n", er)
-	p.errorKernel.infoSend(proc, msg, er)
+	c.pki.errorKernel.infoSend(proc, msg, er)
 }
 
 // deletePublicKeys to the db if the node do not exist, or if it is a new value.
-func (p *pki) deletePublicKeys(proc process, msg Message, nodes []string) {
+func (c *centralAuth) deletePublicKeys(proc process, msg Message, nodes []string) {
 
 	// Check if a key for the current node already exists in the map.
 	func() {
-		p.nodesAcked.mu.Lock()
-		defer p.nodesAcked.mu.Unlock()
+		c.pki.nodesAcked.mu.Lock()
+		defer c.pki.nodesAcked.mu.Unlock()
 
 		for _, n := range nodes {
-			delete(p.nodesAcked.keysAndHash.Keys, Node(n))
+			delete(c.pki.nodesAcked.keysAndHash.Keys, Node(n))
 		}
 	}()
 
-	p.dbDeletePublicKeys(p.bucketNamePublicKeys, nodes)
+	c.pki.dbDeletePublicKeys(c.pki.bucketNamePublicKeys, nodes)
 
 	er := fmt.Errorf("info: detected new public key for node: %v. This key will need to be authorized by operator to be allowed into the system", msg.FromNode)
 	fmt.Printf(" * %v\n", er)
-	p.errorKernel.infoSend(proc, msg, er)
+	c.pki.errorKernel.infoSend(proc, msg, er)
 }
 
 // // dbGetPublicKey will look up and return a specific value if it exists for a key in a bucket in a DB.
@@ -248,9 +248,9 @@ func (p *pki) dbUpdateHash(hash []byte) error {
 	return err
 }
 
-func (p *pki) updateHash(proc process, message Message) {
-	p.nodesAcked.mu.Lock()
-	defer p.nodesAcked.mu.Unlock()
+func (c *centralAuth) updateHash(proc process, message Message) {
+	c.pki.nodesAcked.mu.Lock()
+	defer c.pki.nodesAcked.mu.Unlock()
 
 	type NodesAndKeys struct {
 		Node Node
@@ -261,7 +261,7 @@ func (p *pki) updateHash(proc process, message Message) {
 	sortedNodesAndKeys := []NodesAndKeys{}
 
 	// Range the map, and add each k/v to the sorted slice, to be sorted later.
-	for k, v := range p.nodesAcked.keysAndHash.Keys {
+	for k, v := range c.pki.nodesAcked.keysAndHash.Keys {
 		nk := NodesAndKeys{
 			Node: k,
 			Key:  v,
@@ -281,7 +281,7 @@ func (p *pki) updateHash(proc process, message Message) {
 	b, err := cbor.Marshal(sortedNodesAndKeys)
 	if err != nil {
 		er := fmt.Errorf("error: methodREQKeysAllow, failed to marshal slice, and will not update hash for public keys:  %v", err)
-		p.errorKernel.errSend(proc, message, er)
+		c.pki.errorKernel.errSend(proc, message, er)
 		log.Printf(" * DEBUG: %v\n", er)
 
 		return
@@ -289,13 +289,13 @@ func (p *pki) updateHash(proc process, message Message) {
 
 	// Store the key in the key value map.
 	hash := sha256.Sum256(b)
-	p.nodesAcked.keysAndHash.Hash = hash
+	c.pki.nodesAcked.keysAndHash.Hash = hash
 
 	// Store the key to the db for persistence.
-	p.dbUpdateHash(hash[:])
+	c.pki.dbUpdateHash(hash[:])
 	if err != nil {
 		er := fmt.Errorf("error: methodREQKeysAllow, failed to store the hash into the db:  %v", err)
-		p.errorKernel.errSend(proc, message, er)
+		c.pki.errorKernel.errSend(proc, message, er)
 		log.Printf(" * DEBUG: %v\n", er)
 
 		return

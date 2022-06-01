@@ -633,7 +633,7 @@ func (s startup) subREQHello(p process) {
 				return nil
 			}
 
-			s.centralAuth.pki.addPublicKey(proc, m)
+			s.centralAuth.addPublicKey(proc, m)
 
 			// update the prometheus metrics
 

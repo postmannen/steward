@@ -291,7 +291,7 @@ func (m methodREQKeysAllow) handler(proc process, message Message, node string) 
 
 			// All new elements are now added, and we can create a new hash
 			// representing the current keys in the allowed map.
-			proc.centralAuth.pki.updateHash(proc, message)
+			proc.centralAuth.updateHash(proc, message)
 
 			// TODO: FAILS: The push keys updates when change fails with that the
 			// subscriber gets stuck. Need to look more into this later.
@@ -432,12 +432,12 @@ func (m methodREQKeysDelete) handler(proc process, message Message, node string)
 			//  so all keys can be deleted in 1 go, and we create 1 new hash, instead
 			//  of doing it for each node delete.
 
-			proc.centralAuth.pki.deletePublicKeys(proc, message, message.MethodArgs)
+			proc.centralAuth.deletePublicKeys(proc, message, message.MethodArgs)
 			log.Printf(" * DEBUG Deleted public keys: %v\n", message.MethodArgs)
 
 			// All new elements are now added, and we can create a new hash
 			// representing the current keys in the allowed map.
-			proc.centralAuth.pki.updateHash(proc, message)
+			proc.centralAuth.updateHash(proc, message)
 			log.Printf(" * DEBUG updated hash for public keys\n")
 
 			outString := fmt.Sprintf("deleted public keys for the nodes=%v\n", message.MethodArgs)
