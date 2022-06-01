@@ -186,6 +186,7 @@ func (p *processes) Start(proc process) {
 	if proc.configuration.IsCentralAuth {
 		proc.startup.subREQKeysRequestUpdate(proc)
 		proc.startup.subREQKeysAllow(proc)
+		proc.startup.subREQKeysDelete(proc)
 
 		proc.startup.subREQAclRequestUpdate(proc)
 
@@ -454,6 +455,13 @@ func (s startup) subREQKeysDeliverUpdate(p process) {
 func (s startup) subREQKeysAllow(p process) {
 	log.Printf("Starting Public keys allow subscriber: %#v\n", p.node)
 	sub := newSubject(REQKeysAllow, string(p.node))
+	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
+	go proc.spawnWorker()
+}
+
+func (s startup) subREQKeysDelete(p process) {
+	log.Printf("Starting Public keys delete subscriber: %#v\n", p.node)
+	sub := newSubject(REQKeysDelete, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
 }

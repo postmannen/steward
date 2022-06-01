@@ -130,6 +130,8 @@ const (
 	REQKeysDeliverUpdate Method = "REQKeysDeliverUpdate"
 	// REQKeysAllow
 	REQKeysAllow Method = "REQKeysAllow"
+	// REQKeysDelete
+	REQKeysDelete Method = "REQKeysDelete"
 
 	// REQAclRequestUpdate will get all node acl's from central if an update is available.
 	REQAclRequestUpdate Method = "REQAclRequestUpdate"
@@ -251,6 +253,9 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				event: EventNACK,
 			},
 			REQKeysAllow: methodREQKeysAllow{
+				event: EventACK,
+			},
+			REQKeysDelete: methodREQKeysDelete{
 				event: EventACK,
 			},
 

@@ -2,13 +2,9 @@ package steward
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"log"
-	"sort"
-
-	"github.com/fxamacker/cbor/v2"
 )
 
 // ---
@@ -107,11 +103,6 @@ func (m methodREQKeysRequestUpdate) handler(proc process, message Message, node 
 			func() {
 				proc.centralAuth.pki.nodesAcked.mu.Lock()
 				defer proc.centralAuth.pki.nodesAcked.mu.Unlock()
-				// TODO: We should probably create a hash of the current map content,
-				// store it alongside the KeyMap, and send both the KeyMap and hash
-				// back. We can then later send that hash when asking for keys, compare
-				// it with the current one for the KeyMap, and know if we need to send
-				// and update back to the node who published the request to here.
 
 				fmt.Printf(" <---- methodREQKeysRequestUpdate: received hash from NODE=%v, HASH=%v\n", message.FromNode, message.Data)
 
@@ -185,8 +176,23 @@ func (m methodREQKeysDeliverUpdate) handler(proc process, message Message, node 
 
 			proc.nodeAuth.publicKeys.mu.Lock()
 
-			err := json.Unmarshal(message.Data, proc.nodeAuth.publicKeys.keysAndHash)
-			fmt.Printf("\n <---- REQKeysDeliverUpdate: after unmarshal, nodeAuth keysAndhash contains: %+v\n\n", proc.nodeAuth.publicKeys.keysAndHash)
+			var keysAndHash keysAndHash
+
+			err := json.Unmarshal(message.Data, &keysAndHash)
+			if err != nil {
+				er := fmt.Errorf("error: REQKeysDeliverUpdate : json unmarshal failed: %v, message: %v", err, message)
+				proc.errorKernel.errSend(proc, message, er)
+			}
+
+			fmt.Printf("\n <---- REQKeysDeliverUpdate: after unmarshal, nodeAuth keysAndhash contains: %+v\n\n", keysAndHash)
+
+			// If the received map was empty we also want to delete all the locally stored keys,
+			// else we copy the marshaled keysAndHash we received from central into our map.
+			if len(keysAndHash.Keys) < 1 {
+				proc.nodeAuth.publicKeys.keysAndHash = newKeysAndHash()
+			} else {
+				proc.nodeAuth.publicKeys.keysAndHash = &keysAndHash
+			}
 
 			proc.nodeAuth.publicKeys.mu.Unlock()
 
@@ -285,60 +291,7 @@ func (m methodREQKeysAllow) handler(proc process, message Message, node string) 
 
 			// All new elements are now added, and we can create a new hash
 			// representing the current keys in the allowed map.
-			func() {
-				proc.centralAuth.pki.nodesAcked.mu.Lock()
-				defer proc.centralAuth.pki.nodesAcked.mu.Unlock()
-
-				type NodesAndKeys struct {
-					Node Node
-					Key  []byte
-				}
-
-				// Create a slice of all the map keys, and its value.
-				sortedNodesAndKeys := []NodesAndKeys{}
-
-				// Range the map, and add each k/v to the sorted slice, to be sorted later.
-				for k, v := range proc.centralAuth.pki.nodesAcked.keysAndHash.Keys {
-					nk := NodesAndKeys{
-						Node: k,
-						Key:  v,
-					}
-
-					sortedNodesAndKeys = append(sortedNodesAndKeys, nk)
-				}
-
-				// sort the slice based on the node name.
-				// Sort all the commands.
-				sort.SliceStable(sortedNodesAndKeys, func(i, j int) bool {
-					return sortedNodesAndKeys[i].Node < sortedNodesAndKeys[j].Node
-				})
-
-				// Then create a hash based on the sorted slice.
-
-				b, err := cbor.Marshal(sortedNodesAndKeys)
-				if err != nil {
-					er := fmt.Errorf("error: methodREQKeysAllow, failed to marshal slice, and will not update hash for public keys:  %v", err)
-					proc.errorKernel.errSend(proc, message, er)
-					log.Printf(" * DEBUG: %v\n", er)
-
-					return
-				}
-
-				// Store the key in the key value map.
-				hash := sha256.Sum256(b)
-				proc.centralAuth.pki.nodesAcked.keysAndHash.Hash = hash
-
-				// Store the key to the db for persistence.
-				proc.centralAuth.pki.dbUpdateHash(hash[:])
-				if err != nil {
-					er := fmt.Errorf("error: methodREQKeysAllow, failed to store the hash into the db:  %v", err)
-					proc.errorKernel.errSend(proc, message, er)
-					log.Printf(" * DEBUG: %v\n", er)
-
-					return
-				}
-
-			}()
+			proc.centralAuth.pki.updateHash(proc, message)
 
 			// TODO: FAILS: The push keys updates when change fails with that the
 			// subscriber gets stuck. Need to look more into this later.
@@ -435,6 +388,83 @@ func (m methodREQKeysAllow) handler(proc process, message Message, node string) 
 			// }
 
 		}
+	}()
+
+	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
+	return ackMsg, nil
+}
+
+type methodREQKeysDelete struct {
+	event Event
+}
+
+func (m methodREQKeysDelete) getKind() Event {
+	return m.event
+}
+
+func (m methodREQKeysDelete) handler(proc process, message Message, node string) ([]byte, error) {
+	inf := fmt.Errorf("<--- methodREQKeysDelete received from: %v, containing: %v", message.FromNode, message.MethodArgs)
+	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+
+	proc.processes.wg.Add(1)
+	go func() {
+		defer proc.processes.wg.Done()
+
+		// Get a context with the timeout specified in message.MethodTimeout.
+		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
+		outCh := make(chan []byte)
+		errCh := make(chan error)
+
+		proc.processes.wg.Add(1)
+		go func() {
+			defer proc.processes.wg.Done()
+
+			switch {
+			case len(message.MethodArgs) < 1:
+				errCh <- fmt.Errorf("error: methodREQAclGroupNodesDeleteNode: got <1 number methodArgs, want >0")
+				return
+			}
+
+			// HERE:
+			//  We want to be able to define more nodes keys to delete.
+			//  Loop over the methodArgs, and call the keyDelete function for each node,
+			//  or rewrite the deleteKey to deleteKeys and it takes a []node as input
+			//  so all keys can be deleted in 1 go, and we create 1 new hash, instead
+			//  of doing it for each node delete.
+
+			proc.centralAuth.pki.deletePublicKeys(proc, message, message.MethodArgs)
+			log.Printf(" * DEBUG Deleted public keys: %v\n", message.MethodArgs)
+
+			// All new elements are now added, and we can create a new hash
+			// representing the current keys in the allowed map.
+			proc.centralAuth.pki.updateHash(proc, message)
+			log.Printf(" * DEBUG updated hash for public keys\n")
+
+			outString := fmt.Sprintf("deleted public keys for the nodes=%v\n", message.MethodArgs)
+			out := []byte(outString)
+
+			select {
+			case outCh <- out:
+			case <-ctx.Done():
+				return
+			}
+		}()
+
+		select {
+		case err := <-errCh:
+			proc.errorKernel.errSend(proc, message, err)
+
+		case <-ctx.Done():
+			cancel()
+			er := fmt.Errorf("error: methodREQAclGroupNodesDeleteNode: method timed out: %v", message.MethodArgs)
+			proc.errorKernel.errSend(proc, message, er)
+
+		case out := <-outCh:
+			// Prepare and queue for sending a new message with the output
+			// of the action executed.
+			newReplyMessage(proc, message, out)
+		}
+
 	}()
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))

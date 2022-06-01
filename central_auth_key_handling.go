@@ -2,12 +2,15 @@ package steward
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 
+	"github.com/fxamacker/cbor/v2"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -110,16 +113,6 @@ func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 // addPublicKey to the db if the node do not exist, or if it is a new value.
 func (p *pki) addPublicKey(proc process, msg Message) {
 
-	// TODO: When receiviving a new or different keys for a node we should
-	// have a service with it's own storage for these keys, and an operator
-	// should have to acknowledge the new keys.
-	// For this we need:
-	//	- A service that keeps the state of all the new keys detected in the
-	//	  bytes.equal check below.
-	//	- A Log message should be thrown so we know that there is a new key.
-	//	- A Request method that can be used by operator to acknowledge a new
-	//	  key for a host.
-
 	// Check if a key for the current node already exists in the map.
 	p.nodesAcked.mu.Lock()
 	existingKey, ok := p.nodesAcked.keysAndHash.Keys[msg.FromNode]
@@ -143,6 +136,26 @@ func (p *pki) addPublicKey(proc process, msg Message) {
 
 	p.nodeNotAckedPublicKeys.KeyMap[msg.FromNode] = msg.Data
 	p.nodeNotAckedPublicKeys.mu.Unlock()
+
+	er := fmt.Errorf("info: detected new public key for node: %v. This key will need to be authorized by operator to be allowed into the system", msg.FromNode)
+	fmt.Printf(" * %v\n", er)
+	p.errorKernel.infoSend(proc, msg, er)
+}
+
+// deletePublicKeys to the db if the node do not exist, or if it is a new value.
+func (p *pki) deletePublicKeys(proc process, msg Message, nodes []string) {
+
+	// Check if a key for the current node already exists in the map.
+	func() {
+		p.nodesAcked.mu.Lock()
+		defer p.nodesAcked.mu.Unlock()
+
+		for _, n := range nodes {
+			delete(p.nodesAcked.keysAndHash.Keys, Node(n))
+		}
+	}()
+
+	p.dbDeletePublicKeys(p.bucketNamePublicKeys, nodes)
 
 	er := fmt.Errorf("info: detected new public key for node: %v. This key will need to be authorized by operator to be allowed into the system", msg.FromNode)
 	fmt.Printf(" * %v\n", er)
@@ -196,6 +209,25 @@ func (p *pki) dbUpdatePublicKey(node string, value []byte) error {
 	return err
 }
 
+// dbDeletePublicKeys will delete the specified key from the specified
+// bucket if it exists.
+func (p *pki) dbDeletePublicKeys(bucket string, nodes []string) error {
+	err := p.db.Update(func(tx *bolt.Tx) error {
+		bu := tx.Bucket([]byte(bucket))
+
+		for _, n := range nodes {
+			err := bu.Delete([]byte(n))
+			if err != nil {
+				log.Printf("error: delete key in bucket %v failed: %v\n", bucket, err)
+			}
+		}
+
+		return nil
+	})
+
+	return err
+}
+
 //dbUpdateHash will update the public key for a node in the db.
 func (p *pki) dbUpdateHash(hash []byte) error {
 	err := p.db.Update(func(tx *bolt.Tx) error {
@@ -215,6 +247,61 @@ func (p *pki) dbUpdateHash(hash []byte) error {
 		return nil
 	})
 	return err
+}
+
+func (p *pki) updateHash(proc process, message Message) {
+	p.nodesAcked.mu.Lock()
+	defer p.nodesAcked.mu.Unlock()
+
+	type NodesAndKeys struct {
+		Node Node
+		Key  []byte
+	}
+
+	// Create a slice of all the map keys, and its value.
+	sortedNodesAndKeys := []NodesAndKeys{}
+
+	// Range the map, and add each k/v to the sorted slice, to be sorted later.
+	for k, v := range p.nodesAcked.keysAndHash.Keys {
+		nk := NodesAndKeys{
+			Node: k,
+			Key:  v,
+		}
+
+		sortedNodesAndKeys = append(sortedNodesAndKeys, nk)
+	}
+
+	// sort the slice based on the node name.
+	// Sort all the commands.
+	sort.SliceStable(sortedNodesAndKeys, func(i, j int) bool {
+		return sortedNodesAndKeys[i].Node < sortedNodesAndKeys[j].Node
+	})
+
+	// Then create a hash based on the sorted slice.
+
+	b, err := cbor.Marshal(sortedNodesAndKeys)
+	if err != nil {
+		er := fmt.Errorf("error: methodREQKeysAllow, failed to marshal slice, and will not update hash for public keys:  %v", err)
+		p.errorKernel.errSend(proc, message, er)
+		log.Printf(" * DEBUG: %v\n", er)
+
+		return
+	}
+
+	// Store the key in the key value map.
+	hash := sha256.Sum256(b)
+	p.nodesAcked.keysAndHash.Hash = hash
+
+	// Store the key to the db for persistence.
+	p.dbUpdateHash(hash[:])
+	if err != nil {
+		er := fmt.Errorf("error: methodREQKeysAllow, failed to store the hash into the db:  %v", err)
+		p.errorKernel.errSend(proc, message, er)
+		log.Printf(" * DEBUG: %v\n", er)
+
+		return
+	}
+
 }
 
 // dbViewHash will look up and return a specific value if it exists for a key in a bucket in a DB.
