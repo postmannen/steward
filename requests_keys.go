@@ -297,95 +297,95 @@ func (m methodREQKeysAllow) handler(proc process, message Message, node string) 
 			// subscriber gets stuck. Need to look more into this later.
 			// Disabling for now since the node will update at the timed interval.
 			//
-			// // If new keys were allowed into the main map, we should send out one
-			// // single update to all the registered nodes to inform of an update.
-			// // NB: If a node is not reachable at the time the update is sent it is
-			// // not a problem since the nodes will periodically check for updates.
-			// //
-			// // If there are errors we will return from the function, and send no
-			// // updates.
-			// err := func() error {
-			// 	var knh []byte
+			// If new keys were allowed into the main map, we should send out one
+			// single update to all the registered nodes to inform of an update.
+			// NB: If a node is not reachable at the time the update is sent it is
+			// not a problem since the nodes will periodically check for updates.
 			//
-			// 	err := func() error {
-			// 		proc.centralAuth.pki.nodesAcked.mu.Lock()
-			// 		defer proc.centralAuth.pki.nodesAcked.mu.Unlock()
-			//
-			// 		b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
-			// 		if err != nil {
-			// 			er := fmt.Errorf("error: methodREQKeysAllow, failed to marshal keys map: %v", err)
-			// 			return er
-			// 		}
-			//
-			// 		copy(knh, b)
-			//
-			// 		return nil
-			// 	}()
-			//
-			// 	if err != nil {
-			// 		return err
-			// 	}
-			//
-			// 	// proc.centralAuth.pki.nodeNotAckedPublicKeys.mu.Lock()
-			// 	// defer proc.centralAuth.pki.nodeNotAckedPublicKeys.mu.Unlock()
-			//
-			// 	// For all nodes that is not ack'ed we try to send an update once.
-			// 	for n := range proc.centralAuth.pki.nodeNotAckedPublicKeys.KeyMap {
-			// 		msg := Message{
-			// 			ToNode:      n,
-			// 			Method:      REQKeysDeliverUpdate,
-			// 			ReplyMethod: REQNone,
-			// 		}
-			//
-			// 		sam, err := newSubjectAndMessage(msg)
-			// 		if err != nil {
-			// 			// In theory the system should drop the message before it reaches here.
-			// 			er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
-			// 			proc.errorKernel.errSend(proc, message, er)
-			// 		}
-			//
-			// 		proc.toRingbufferCh <- []subjectAndMessage{sam}
-			//
-			// 		fmt.Printf("\n ----> methodREQKeysAllow: SENDING KEYS TO NODE=%v\n", message.FromNode)
-			// 	}
-			//
-			// 	// Create the data payload of the current allowed keys.
-			// 	b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
-			//
-			// 	if err != nil {
-			// 		er := fmt.Errorf("error: methodREQKeysAllow, failed to marshal keys map: %v", err)
-			// 		proc.errorKernel.errSend(proc, message, er)
-			// 	}
-			//
-			// 	// For all nodes that is ack'ed we try to send an update once.
-			// 	for n := range proc.centralAuth.pki.nodesAcked.keysAndHash.Keys {
-			// 		msg := Message{
-			// 			ToNode:      n,
-			// 			Method:      REQKeysDeliverUpdate,
-			// 			Data:        b,
-			// 			ReplyMethod: REQNone,
-			// 		}
-			//
-			// 		sam, err := newSubjectAndMessage(msg)
-			// 		if err != nil {
-			// 			// In theory the system should drop the message before it reaches here.
-			// 			er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
-			// 			proc.errorKernel.errSend(proc, message, er)
-			// 		}
-			//
-			// 		proc.toRingbufferCh <- []subjectAndMessage{sam}
-			//
-			// 		log.Printf("\n ----> methodREQKeysAllow: sending keys update to node=%v\n", message.FromNode)
-			// 	}
-			//
-			// 	return nil
-			//
-			// }()
-			//
-			// if err != nil {
-			// 	proc.errorKernel.errSend(proc, message, err)
-			// 	return
-			// }
+			// If there are errors we will return from the function, and send no
+			// updates.
+			err := func() error {
+				var knh []byte
+
+				err := func() error {
+					proc.centralAuth.pki.nodesAcked.mu.Lock()
+					defer proc.centralAuth.pki.nodesAcked.mu.Unlock()
+
+					b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
+					if err != nil {
+						er := fmt.Errorf("error: methodREQKeysAllow, failed to marshal keys map: %v", err)
+						return er
+					}
+
+					copy(knh, b)
+
+					return nil
+				}()
+
+				if err != nil {
+					return err
+				}
+
+				// proc.centralAuth.pki.nodeNotAckedPublicKeys.mu.Lock()
+				// defer proc.centralAuth.pki.nodeNotAckedPublicKeys.mu.Unlock()
+
+				// For all nodes that is not ack'ed we try to send an update once.
+				for n := range proc.centralAuth.pki.nodeNotAckedPublicKeys.KeyMap {
+					msg := Message{
+						ToNode:      n,
+						Method:      REQKeysDeliverUpdate,
+						ReplyMethod: REQNone,
+					}
+
+					sam, err := newSubjectAndMessage(msg)
+					if err != nil {
+						// In theory the system should drop the message before it reaches here.
+						er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
+						proc.errorKernel.errSend(proc, message, er)
+					}
+
+					proc.toRingbufferCh <- []subjectAndMessage{sam}
+
+					fmt.Printf("\n ----> methodREQKeysAllow: SENDING KEYS TO NODE=%v\n", message.FromNode)
+				}
+
+				// Create the data payload of the current allowed keys.
+				b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
+
+				if err != nil {
+					er := fmt.Errorf("error: methodREQKeysAllow, failed to marshal keys map: %v", err)
+					proc.errorKernel.errSend(proc, message, er)
+				}
+
+				// For all nodes that is ack'ed we try to send an update once.
+				for n := range proc.centralAuth.pki.nodesAcked.keysAndHash.Keys {
+					msg := Message{
+						ToNode:      n,
+						Method:      REQKeysDeliverUpdate,
+						Data:        b,
+						ReplyMethod: REQNone,
+					}
+
+					sam, err := newSubjectAndMessage(msg)
+					if err != nil {
+						// In theory the system should drop the message before it reaches here.
+						er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
+						proc.errorKernel.errSend(proc, message, er)
+					}
+
+					proc.toRingbufferCh <- []subjectAndMessage{sam}
+
+					log.Printf("\n ----> methodREQKeysAllow: sending keys update to node=%v\n", message.FromNode)
+				}
+
+				return nil
+
+			}()
+
+			if err != nil {
+				proc.errorKernel.errSend(proc, message, err)
+				return
+			}
 
 		}
 	}()
