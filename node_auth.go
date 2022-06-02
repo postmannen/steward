@@ -146,15 +146,21 @@ func (n *nodeAcl) saveToFile() error {
 
 	n.mu.Lock()
 	defer n.mu.Unlock()
-	b, err := json.Marshal(n.aclAndHash)
+
+	enc := json.NewEncoder(fh)
+	enc.SetEscapeHTML(false)
+	enc.Encode(n.aclAndHash)
+
+	// HERE
+	// b, err := json.Marshal(n.aclAndHash)
 	if err != nil {
 		return err
 	}
 
-	_, err = fh.Write(b)
-	if err != nil {
-		return err
-	}
+	// _, err = fh.Write(b)
+	// if err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
@@ -373,11 +379,9 @@ func (n *nodeAuth) readKeyFile(keyFile string) (ed2519key []byte, b64Key []byte,
 
 // verifySignature
 func (n *nodeAuth) verifySignature(m Message) bool {
-	log.Printf(" * DEBUG: verifySignature, method: %v\n", m.Method)
-
 	// NB: Only enable signature checking for REQCliCommand for now.
 	if m.Method != REQCliCommand {
-		log.Printf(" * DEBUG: verifySignature: WAS OTHER THAN CLI COMMAND\n")
+		log.Printf(" * DEBUG: verifySignature,not REQCliCommand and will not do signature check, method: %v\n", m.Method)
 		return true
 	}
 
@@ -410,11 +414,9 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 
 // verifyAcl
 func (n *nodeAuth) verifyAcl(m Message) bool {
-	log.Printf(" * DEBUG: verifyAcl, method: %v\n", m.Method)
-
 	// NB: Only enable acl checking for REQCliCommand for now.
 	if m.Method != REQCliCommand {
-		log.Printf(" * DEBUG: verifyAcl: WAS OTHER THAN CLI COMMAND\n")
+		log.Printf(" * DEBUG: verifyAcl: not REQCliCommand and will not do acl check, method: %v\n", m.Method)
 		return true
 	}
 
@@ -426,21 +428,25 @@ func (n *nodeAuth) verifyAcl(m Message) bool {
 
 	cmdMap, ok := n.nodeAcl.aclAndHash.Acl[m.FromNode]
 	if !ok {
-		log.Printf(" * DEBUG: verifyAcl: The fromNode was not found in the acl\n")
+		log.Printf(" * DEBUG: verifyAcl: The fromNode=%v was not found in the acl\n", m.FromNode)
 		return false
+	}
+
+	_, ok = cmdMap[command("*")]
+	if ok {
+		log.Printf(" * DEBUG: verifyAcl: The acl said \"*\", all commands allowed from node=%v\n", m.FromNode)
+		return true
 	}
 
 	_, ok = cmdMap[command(argsStringified)]
 	if !ok {
-		log.Printf(" * DEBUG: verifyAcl: The command was NOT FOUND in the acl\n")
+		log.Printf(" * DEBUG: verifyAcl: The command=%v was NOT FOUND in the acl\n", m.MethodArgs)
 		return false
 	}
 
-	log.Printf(" * DEBUG: verifyAcl: The command was FOUND in the acl\n")
+	log.Printf(" * DEBUG: The command was FOUND in the acl, verifyAcl, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
 
-	log.Printf(" * DEBUG: verifyAcl, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
-
-	return ok
+	return true
 }
 
 // argsToString takes args in the format of []string and returns a string.

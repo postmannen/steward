@@ -307,6 +307,7 @@ func (c *centralAuth) generateACLsForAllNodes() error {
 		// a.schemaMain.mu.Lock()
 		// defer a.schemaMain.mu.Unlock()
 		enc := json.NewEncoder(fh)
+		enc.SetEscapeHTML(false)
 		enc.Encode(c.accessLists.schemaMain.ACLMap)
 		if err != nil {
 			er := fmt.Errorf("error: generateACLsForAllNodes: encoding json to file failed: %v, err: %v", c.accessLists.schemaMain.ACLMapFilePath, err)
@@ -353,7 +354,7 @@ func (c *centralAuth) generateACLsForAllNodes() error {
 			// cbor marshal the data of the ACL map to store for the host node.
 			cb, err := cbor.Marshal(m)
 			if err != nil {
-				er := fmt.Errorf("error: failed to generate cbor for host in schemaGenerated: %v", err)
+				er := fmt.Errorf("error: generateACLsForAllNodes: failed to generate cbor for host in schemaGenerated: %v", err)
 				log.Printf("%v\n", er)
 				os.Exit(1)
 			}
@@ -364,7 +365,7 @@ func (c *centralAuth) generateACLsForAllNodes() error {
 
 				b, err := cbor.Marshal(sns)
 				if err != nil {
-					err := fmt.Errorf("error: authSchema, json for hash:  %v", err)
+					err := fmt.Errorf("error: generateACLsForAllNodes: failed to generate cbor for hash:  %v", err)
 					log.Printf("%v\n", err)
 					return [32]byte{}
 				}

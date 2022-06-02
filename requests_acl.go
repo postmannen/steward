@@ -21,10 +21,10 @@ func (m methodREQAclRequestUpdate) getKind() Event {
 
 // Handler to get all acl's from a central server.
 func (m methodREQAclRequestUpdate) handler(proc process, message Message, node string) ([]byte, error) {
-	inf := fmt.Errorf("<--- subscriber methodREQAclRequestUpdate received from: %v, and the data which is the nodes current acl hash containing: %v", message.FromNode, message.MethodArgs)
+	inf := fmt.Errorf("<--- subscriber methodREQAclRequestUpdate received from: %v, hash data = %v", message.FromNode, message.Data)
 	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
 
-	fmt.Printf("\n --- subscriber methodREQAclRequestUpdate: the message brought to handler : %+v\n", message)
+	// fmt.Printf("\n --- subscriber methodREQAclRequestUpdate: the message brought to handler : %+v\n", message)
 
 	// Get a context with the timeout specified in message.MethodTimeout.
 	ctx, _ := getContextForMethodTimeout(proc.ctx, message)
@@ -63,19 +63,19 @@ func (m methodREQAclRequestUpdate) handler(proc process, message Message, node s
 				//	// TODO: PROBLEM: The existing generated acl's are not loaded when starting, or not stored at all.
 				//}
 
-				fmt.Printf(" ---- subscriber methodREQAclRequestUpdate: got acl hash from NODE=%v, HASH=%v\n", message.FromNode, message.Data)
+				log.Printf(" ---- subscriber methodREQAclRequestUpdate: got acl hash from NODE=%v, HASH data =%v\n", message.FromNode, message.Data)
 
 				// Check if the received hash is the same as the one currently active,
 				// If it is the same we exit the handler immediately.
 				hash32 := proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap[message.FromNode].Hash
 				hash := hash32[:]
-				fmt.Printf("\n ---- subscriber methodREQAclRequestUpdate:  on central hash32=%v\n\n", hash32)
+				log.Printf("---- subscriber methodREQAclRequestUpdate:  the central acl hash=%v\n", hash32)
 				if bytes.Equal(hash, message.Data) {
-					fmt.Printf("\n ---- subscriber methodREQAclRequestUpdate:  NODE AND CENTRAL HAVE EQUAL ACL HASH, NOTHING TO DO, EXITING HANDLER\n\n")
+					log.Printf("---- subscriber methodREQAclRequestUpdate:  NODE AND CENTRAL HAVE EQUAL ACL HASH, NOTHING TO DO, EXITING HANDLER\n")
 					return
 				}
 
-				fmt.Printf("\n ---- subscriber methodREQAclRequestUpdate: NODE AND CENTRAL HAD NOT EQUAL ACL, PREPARING TO SEND NEW VERSION OF Acl\n\n")
+				log.Printf("---- subscriber methodREQAclRequestUpdate: NODE AND CENTRAL HAD NOT EQUAL ACL, PREPARING TO SEND NEW VERSION OF Acl\n")
 
 				// Generate JSON for Message.Data
 
@@ -92,7 +92,7 @@ func (m methodREQAclRequestUpdate) handler(proc process, message Message, node s
 					log.Fatalf("%v\n", er)
 				}
 
-				fmt.Printf("\n ----> subscriber methodREQAclRequestUpdate: SENDING ACL'S TO NODE=%v, serializedAndHash=%+v\n", message.FromNode, hdh)
+				fmt.Printf(" ----> subscriber methodREQAclRequestUpdate: SENDING ACL'S TO NODE=%v, serializedAndHash=%+v\n", message.FromNode, hdh)
 
 				newReplyMessage(proc, message, js)
 			}()

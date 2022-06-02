@@ -583,17 +583,14 @@ func (p process) verifySigOrAclFlag(message Message) bool {
 
 	// If no checking enabled we should just allow the message.
 	case !p.nodeAuth.configuration.EnableSignatureCheck && !p.nodeAuth.configuration.EnableAclCheck:
-		log.Printf(" * DEBUG: verify acl/sig: EnableSignatureCheck=false, EnableAclCheck=false\n")
-		log.Printf(" * DEBUG: no checking at all is enabled, allow the message\n")
+		log.Printf(" * DEBUG: verify acl/sig: no acl or signature checking at all is enabled, ALLOW the message, method=%v\n", message.Method)
 		doHandler = true
 
 	// If only sig check enabled, and sig OK, we should allow the message.
 	case p.nodeAuth.configuration.EnableSignatureCheck && !p.nodeAuth.configuration.EnableAclCheck:
-		log.Printf(" * DEBUG: verify acl/sig: EnableSignatureCheck=true, EnableAclCheck=false\n")
-		log.Printf(" * DEBUG: only signature checking enabled, allow the message if sigOK\n")
-
 		sigOK := p.nodeAuth.verifySignature(message)
-		log.Printf("info: sigOK=%v, method %v\n", sigOK, message.Method)
+
+		log.Printf(" * DEBUG: verify acl/sig: Only signature checking enabled, ALLOW the message if sigOK, sigOK=%v, method %v\n", sigOK, message.Method)
 
 		if sigOK {
 			doHandler = true
@@ -601,13 +598,10 @@ func (p process) verifySigOrAclFlag(message Message) bool {
 
 	// If both sig and acl check enabled, and sig and acl OK, we should allow the message.
 	case p.nodeAuth.configuration.EnableSignatureCheck && p.nodeAuth.configuration.EnableAclCheck:
-		log.Printf(" * DEBUG: verify acl/sig: EnableSignatureCheck=true, EnableAclCheck=true\n")
-		log.Printf(" * DEBUG: both signature and acl checking enabled, allow the message if sigOK and aclOK\n")
-
 		sigOK := p.nodeAuth.verifySignature(message)
-		log.Printf("info: sigOK=%v, method=%v\n", sigOK, message.Method)
 		aclOK := p.nodeAuth.verifyAcl(message)
-		log.Printf("info: aclOK=%v\n", aclOK)
+
+		log.Printf(" * DEBUG: verify acl/sig:both signature and acl checking enabled, allow the message if sigOK and aclOK, or method is not REQCliCommand, sigOK=%v, aclOK=%v, method=%v\n", sigOK, aclOK, message.Method)
 
 		if sigOK && aclOK {
 			doHandler = true
@@ -616,7 +610,7 @@ func (p process) verifySigOrAclFlag(message Message) bool {
 		// none of the verification options matched, we should keep the default value
 		// of doHandler=false, so the handler is not done.
 	default:
-		log.Printf(" * DEBUG: verify acl/sig: None of the verify flags matched, not doing handler for message\n")
+		log.Printf(" * DEBUG: verify acl/sig: None of the verify flags matched, not doing handler for message, method=%v\n", message.Method)
 	}
 
 	return doHandler
