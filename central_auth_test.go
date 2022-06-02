@@ -15,15 +15,13 @@ func TestACLSingleNode(t *testing.T) {
 		log.SetOutput(io.Discard)
 	}
 
-	c := newCentralAuth(tstConf, &errorKernel{})
-
-	c.aclAddCommand("ship101", "admin", "HORSE")
-	c.aclAddCommand("ship101", "admin", "PIG")
+	tstSrv.centralAuth.aclAddCommand("ship101", "admin", "HORSE")
+	tstSrv.centralAuth.aclAddCommand("ship101", "admin", "PIG")
 
 	// --- TESTS ---
 
 	mapOfFromNodeCommands := make(map[Node]map[command]struct{})
-	err := cbor.Unmarshal(c.accessLists.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
+	err := cbor.Unmarshal(tstSrv.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,30 +42,28 @@ func TestACLWithGroups(t *testing.T) {
 		log.SetOutput(io.Discard)
 	}
 
-	c := newCentralAuth(tstConf, &errorKernel{})
-
 	const (
 		grp_nodes_operators      = "grp_nodes_operators"
 		grp_nodes_ships          = "grp_nodes_ships"
 		grp_commands_commandset1 = "grp_commands_commandset1"
 	)
 
-	c.groupNodesAddNode(grp_nodes_operators, "operator1")
-	c.groupNodesAddNode(grp_nodes_operators, "operator2")
+	tstSrv.centralAuth.groupNodesAddNode(grp_nodes_operators, "operator1")
+	tstSrv.centralAuth.groupNodesAddNode(grp_nodes_operators, "operator2")
 
-	c.groupNodesAddNode(grp_nodes_ships, "ship100")
-	c.groupNodesAddNode(grp_nodes_ships, "ship101")
+	tstSrv.centralAuth.groupNodesAddNode(grp_nodes_ships, "ship100")
+	tstSrv.centralAuth.groupNodesAddNode(grp_nodes_ships, "ship101")
 
-	c.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
-	c.groupCommandsAddCommand(grp_commands_commandset1, "date")
+	tstSrv.centralAuth.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
+	tstSrv.centralAuth.groupCommandsAddCommand(grp_commands_commandset1, "date")
 
-	c.aclAddCommand(grp_nodes_ships, "admin", "useradd -m kongen")
-	c.aclAddCommand("ship101", "admin", "HORSE")
+	tstSrv.centralAuth.aclAddCommand(grp_nodes_ships, "admin", "useradd -m kongen")
+	tstSrv.centralAuth.aclAddCommand("ship101", "admin", "HORSE")
 
-	c.aclAddCommand(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
+	tstSrv.centralAuth.aclAddCommand(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
 
 	mapOfFromNodeCommands := make(map[Node]map[command]struct{})
-	err := cbor.Unmarshal(c.accessLists.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
+	err := cbor.Unmarshal(tstSrv.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,34 +101,32 @@ func TestACLNodesGroupDeleteNode(t *testing.T) {
 		log.SetOutput(io.Discard)
 	}
 
-	c := newCentralAuth(tstConf, &errorKernel{})
-
 	const (
 		grp_nodes_operators      = "grp_nodes_operators"
 		grp_nodes_ships          = "grp_nodes_ships"
 		grp_commands_commandset1 = "grp_commands_commandset1"
 	)
 
-	c.groupNodesAddNode(grp_nodes_operators, "operator1")
-	c.groupNodesAddNode(grp_nodes_operators, "operator2")
+	tstSrv.centralAuth.groupNodesAddNode(grp_nodes_operators, "operator1")
+	tstSrv.centralAuth.groupNodesAddNode(grp_nodes_operators, "operator2")
 
-	c.groupNodesAddNode(grp_nodes_ships, "ship100")
-	c.groupNodesAddNode(grp_nodes_ships, "ship101")
+	tstSrv.centralAuth.groupNodesAddNode(grp_nodes_ships, "ship100")
+	tstSrv.centralAuth.groupNodesAddNode(grp_nodes_ships, "ship101")
 
-	c.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
-	c.groupCommandsAddCommand(grp_commands_commandset1, "date")
+	tstSrv.centralAuth.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
+	tstSrv.centralAuth.groupCommandsAddCommand(grp_commands_commandset1, "date")
 
-	c.aclAddCommand(grp_nodes_ships, "admin", "useradd -m kongen")
-	c.aclAddCommand("ship101", "admin", "HORSE")
+	tstSrv.centralAuth.aclAddCommand(grp_nodes_ships, "admin", "useradd -m kongen")
+	tstSrv.centralAuth.aclAddCommand("ship101", "admin", "HORSE")
 
-	c.aclAddCommand(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
+	tstSrv.centralAuth.aclAddCommand(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
 
-	c.groupNodesDeleteNode(grp_nodes_ships, "ship101")
+	tstSrv.centralAuth.groupNodesDeleteNode(grp_nodes_ships, "ship101")
 
 	// Check that we still got the data for ship100.
 	{
 		mapOfFromNodeCommands := make(map[Node]map[command]struct{})
-		err := cbor.Unmarshal(c.accessLists.schemaGenerated.GeneratedACLsMap["ship100"].Data, &mapOfFromNodeCommands)
+		err := cbor.Unmarshal(tstSrv.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap["ship100"].Data, &mapOfFromNodeCommands)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -145,7 +139,7 @@ func TestACLNodesGroupDeleteNode(t *testing.T) {
 	// Check that we don't have any data for ship101.
 	{
 		mapOfFromNodeCommands := make(map[Node]map[command]struct{})
-		err := cbor.Unmarshal(c.accessLists.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
+		err := cbor.Unmarshal(tstSrv.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -164,34 +158,32 @@ func TestGroupNodesDeleteGroup(t *testing.T) {
 		log.SetOutput(io.Discard)
 	}
 
-	c := newCentralAuth(tstConf, &errorKernel{})
-
 	const (
 		grp_nodes_operators      = "grp_nodes_operators"
 		grp_nodes_ships          = "grp_nodes_ships"
 		grp_commands_commandset1 = "grp_commands_commandset1"
 	)
 
-	c.groupNodesAddNode(grp_nodes_operators, "operator1")
-	c.groupNodesAddNode(grp_nodes_operators, "operator2")
+	tstSrv.centralAuth.groupNodesAddNode(grp_nodes_operators, "operator1")
+	tstSrv.centralAuth.groupNodesAddNode(grp_nodes_operators, "operator2")
 
-	c.groupNodesAddNode(grp_nodes_ships, "ship100")
-	c.groupNodesAddNode(grp_nodes_ships, "ship101")
+	tstSrv.centralAuth.groupNodesAddNode(grp_nodes_ships, "ship100")
+	tstSrv.centralAuth.groupNodesAddNode(grp_nodes_ships, "ship101")
 
-	c.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
-	c.groupCommandsAddCommand(grp_commands_commandset1, "date")
+	tstSrv.centralAuth.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
+	tstSrv.centralAuth.groupCommandsAddCommand(grp_commands_commandset1, "date")
 
-	c.aclAddCommand(grp_nodes_ships, "admin", "useradd -m kongen")
-	c.aclAddCommand("ship101", "admin", "HORSE")
+	tstSrv.centralAuth.aclAddCommand(grp_nodes_ships, "admin", "useradd -m kongen")
+	tstSrv.centralAuth.aclAddCommand("ship101", "admin", "HORSE")
 
-	c.aclAddCommand(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
+	tstSrv.centralAuth.aclAddCommand(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
 
-	c.groupNodesDeleteGroup(grp_nodes_operators)
+	tstSrv.centralAuth.groupNodesDeleteGroup(grp_nodes_operators)
 
 	// Check that we still got the data for other ACL's.
 	{
 		mapOfFromNodeCommands := make(map[Node]map[command]struct{})
-		err := cbor.Unmarshal(c.accessLists.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
+		err := cbor.Unmarshal(tstSrv.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -204,7 +196,7 @@ func TestGroupNodesDeleteGroup(t *testing.T) {
 	// Check that we don't have any data for grp_nodes_operators
 	{
 		mapOfFromNodeCommands := make(map[Node]map[command]struct{})
-		err := cbor.Unmarshal(c.accessLists.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
+		err := cbor.Unmarshal(tstSrv.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -223,34 +215,32 @@ func TestGroupCommandDeleteGroup(t *testing.T) {
 		log.SetOutput(io.Discard)
 	}
 
-	c := newCentralAuth(tstConf, &errorKernel{})
-
 	const (
 		grp_nodes_operators      = "grp_nodes_operators"
 		grp_nodes_ships          = "grp_nodes_ships"
 		grp_commands_commandset1 = "grp_commands_commandset1"
 	)
 
-	c.groupNodesAddNode(grp_nodes_operators, "operator1")
-	c.groupNodesAddNode(grp_nodes_operators, "operator2")
+	tstSrv.centralAuth.groupNodesAddNode(grp_nodes_operators, "operator1")
+	tstSrv.centralAuth.groupNodesAddNode(grp_nodes_operators, "operator2")
 
-	c.groupNodesAddNode(grp_nodes_ships, "ship100")
-	c.groupNodesAddNode(grp_nodes_ships, "ship101")
+	tstSrv.centralAuth.groupNodesAddNode(grp_nodes_ships, "ship100")
+	tstSrv.centralAuth.groupNodesAddNode(grp_nodes_ships, "ship101")
 
-	c.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
-	c.groupCommandsAddCommand(grp_commands_commandset1, "date")
+	tstSrv.centralAuth.groupCommandsAddCommand(grp_commands_commandset1, "dmesg")
+	tstSrv.centralAuth.groupCommandsAddCommand(grp_commands_commandset1, "date")
 
-	c.aclAddCommand(grp_nodes_ships, "admin", "useradd -m kongen")
-	c.aclAddCommand("ship101", "admin", "HORSE")
+	tstSrv.centralAuth.aclAddCommand(grp_nodes_ships, "admin", "useradd -m kongen")
+	tstSrv.centralAuth.aclAddCommand("ship101", "admin", "HORSE")
 
-	c.aclAddCommand(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
+	tstSrv.centralAuth.aclAddCommand(grp_nodes_ships, grp_nodes_operators, grp_commands_commandset1)
 
-	c.groupCommandDeleteGroup(grp_commands_commandset1)
+	tstSrv.centralAuth.groupCommandDeleteGroup(grp_commands_commandset1)
 
 	// Check that we still got the data for other ACL's.
 	{
 		mapOfFromNodeCommands := make(map[Node]map[command]struct{})
-		err := cbor.Unmarshal(c.accessLists.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
+		err := cbor.Unmarshal(tstSrv.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -263,7 +253,7 @@ func TestGroupCommandDeleteGroup(t *testing.T) {
 	// Check that we don't have any data for grp_nodes_operators
 	{
 		mapOfFromNodeCommands := make(map[Node]map[command]struct{})
-		err := cbor.Unmarshal(c.accessLists.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
+		err := cbor.Unmarshal(tstSrv.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -282,23 +272,21 @@ func TestACLGenerated(t *testing.T) {
 		log.SetOutput(io.Discard)
 	}
 
-	c := newCentralAuth(tstConf, &errorKernel{})
+	tstSrv.centralAuth.aclAddCommand("ship101", "admin", "HORSE")
 
-	c.aclAddCommand("ship101", "admin", "HORSE")
+	tstSrv.centralAuth.groupNodesAddNode("grp_nodes_ships", "ship101")
+	tstSrv.centralAuth.aclAddCommand("grp_nodes_ships", "admin", "HEN")
 
-	c.groupNodesAddNode("grp_nodes_ships", "ship101")
-	c.aclAddCommand("grp_nodes_ships", "admin", "HEN")
+	tstSrv.centralAuth.groupCommandsAddCommand("grp_commands_test", "echo")
+	tstSrv.centralAuth.groupCommandsAddCommand("grp_commands_test", "dmesg")
+	tstSrv.centralAuth.aclAddCommand("grp_nodes_ships", "admin", "grp_commands_test")
 
-	c.groupCommandsAddCommand("grp_commands_test", "echo")
-	c.groupCommandsAddCommand("grp_commands_test", "dmesg")
-	c.aclAddCommand("grp_nodes_ships", "admin", "grp_commands_test")
-
-	c.groupCommandsDeleteCommand("grp_commands_test", "echo")
+	tstSrv.centralAuth.groupCommandsDeleteCommand("grp_commands_test", "echo")
 
 	// --- TESTS ---
 
 	mapOfFromNodeCommands := make(map[Node]map[command]struct{})
-	err := cbor.Unmarshal(c.accessLists.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
+	err := cbor.Unmarshal(tstSrv.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap["ship101"].Data, &mapOfFromNodeCommands)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -333,75 +321,73 @@ func TestACLSchemaMainACLMap(t *testing.T) {
 		log.SetOutput(io.Discard)
 	}
 
-	c := newCentralAuth(tstConf, &errorKernel{})
-
 	//a.aclNodeFromnodeCommandAdd("ship101", "admin", "PIG")
 	// fmt.Printf("---------------ADDING COMMAND-------------\n")
-	c.aclAddCommand("ship0", "admin", "systemctl")
-	c.aclAddCommand("ship1", "admin", "tcpdump")
+	tstSrv.centralAuth.aclAddCommand("ship0", "admin", "systemctl")
+	tstSrv.centralAuth.aclAddCommand("ship1", "admin", "tcpdump")
 
-	if _, ok := c.accessLists.schemaMain.ACLMap["ship0"]["admin"]["systemctl"]; !ok {
+	if _, ok := tstSrv.centralAuth.accessLists.schemaMain.ACLMap["ship0"]["admin"]["systemctl"]; !ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship0, admin, systemctl")
 	}
-	if _, ok := c.accessLists.schemaMain.ACLMap["ship1"]["admin"]["tcpdump"]; !ok {
+	if _, ok := tstSrv.centralAuth.accessLists.schemaMain.ACLMap["ship1"]["admin"]["tcpdump"]; !ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship1, admin, tcpdump")
 	}
 
 	// fmt.Printf("---------------ADDING COMMAND-------------\n")
-	c.groupNodesAddNode("grp_nodes_ships", "ship1")
-	c.groupNodesAddNode("grp_nodes_ships", "ship2")
-	c.aclAddCommand("grp_nodes_ships", "admin", "dmesg")
+	tstSrv.centralAuth.groupNodesAddNode("grp_nodes_ships", "ship1")
+	tstSrv.centralAuth.groupNodesAddNode("grp_nodes_ships", "ship2")
+	tstSrv.centralAuth.aclAddCommand("grp_nodes_ships", "admin", "dmesg")
 
-	if _, ok := c.accessLists.schemaMain.ACLMap["grp_nodes_ships"]["admin"]["dmesg"]; !ok {
+	if _, ok := tstSrv.centralAuth.accessLists.schemaMain.ACLMap["grp_nodes_ships"]["admin"]["dmesg"]; !ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship1, admin, tcpdump")
 	}
 
 	// fmt.Printf("---------------ADDING COMMAND-------------\n")
-	c.aclAddCommand("ship2", "admin", "echo")
+	tstSrv.centralAuth.aclAddCommand("ship2", "admin", "echo")
 
-	if _, ok := c.accessLists.schemaMain.ACLMap["ship2"]["admin"]["echo"]; !ok {
+	if _, ok := tstSrv.centralAuth.accessLists.schemaMain.ACLMap["ship2"]["admin"]["echo"]; !ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship1, admin, tcpdump")
 	}
 
 	// fmt.Printf("---------------DELETING COMMAND grp_nodes_ships, admin, dmesg-------------\n")
-	c.aclDeleteCommand("grp_nodes_ships", "admin", "dmesg")
+	tstSrv.centralAuth.aclDeleteCommand("grp_nodes_ships", "admin", "dmesg")
 
-	if _, ok := c.accessLists.schemaMain.ACLMap["grp_nodes_ships"]["admin"]["dmesg"]; ok {
+	if _, ok := tstSrv.centralAuth.accessLists.schemaMain.ACLMap["grp_nodes_ships"]["admin"]["dmesg"]; ok {
 		t.Fatalf(" \U0001F631  [FAILED]: found map entry: grp_nodes_ships, admin, dmesg")
 	}
 	// Check that the remaining are still ok.
-	if _, ok := c.accessLists.schemaMain.ACLMap["ship0"]["admin"]["systemctl"]; !ok {
+	if _, ok := tstSrv.centralAuth.accessLists.schemaMain.ACLMap["ship0"]["admin"]["systemctl"]; !ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship0, admin, systemctl")
 	}
-	if _, ok := c.accessLists.schemaMain.ACLMap["ship1"]["admin"]["tcpdump"]; !ok {
+	if _, ok := tstSrv.centralAuth.accessLists.schemaMain.ACLMap["ship1"]["admin"]["tcpdump"]; !ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship1, admin, tcpdump")
 	}
-	if _, ok := c.accessLists.schemaMain.ACLMap["ship2"]["admin"]["echo"]; !ok {
+	if _, ok := tstSrv.centralAuth.accessLists.schemaMain.ACLMap["ship2"]["admin"]["echo"]; !ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship1, admin, tcpdump")
 	}
 
 	// fmt.Printf("---------------DELETING COMMAND ship0, admin, systemctl-------------\n")
-	c.aclDeleteCommand("ship0", "admin", "systemctl")
+	tstSrv.centralAuth.aclDeleteCommand("ship0", "admin", "systemctl")
 
-	if _, ok := c.accessLists.schemaMain.ACLMap["ship0"]["admin"]["systemctl"]; ok {
+	if _, ok := tstSrv.centralAuth.accessLists.schemaMain.ACLMap["ship0"]["admin"]["systemctl"]; ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship0, admin, systemctl")
 	}
 	// Check that the remaining are ok.
-	if _, ok := c.accessLists.schemaMain.ACLMap["ship1"]["admin"]["tcpdump"]; !ok {
+	if _, ok := tstSrv.centralAuth.accessLists.schemaMain.ACLMap["ship1"]["admin"]["tcpdump"]; !ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship1, admin, tcpdump")
 	}
-	if _, ok := c.accessLists.schemaMain.ACLMap["ship2"]["admin"]["echo"]; !ok {
+	if _, ok := tstSrv.centralAuth.accessLists.schemaMain.ACLMap["ship2"]["admin"]["echo"]; !ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship1, admin, tcpdump")
 	}
 
 	// fmt.Printf("---------------DELETING SOURCE ship1, admin-------------\n")
-	c.aclDeleteSource("ship1", "admin")
+	tstSrv.centralAuth.aclDeleteSource("ship1", "admin")
 
-	if _, ok := c.accessLists.schemaMain.ACLMap["ship1"]["admin"]; ok {
+	if _, ok := tstSrv.centralAuth.accessLists.schemaMain.ACLMap["ship1"]["admin"]; ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship1, admin, tcpdump")
 	}
 	// Check that the remaining are ok.
-	if _, ok := c.accessLists.schemaMain.ACLMap["ship2"]["admin"]["echo"]; !ok {
+	if _, ok := tstSrv.centralAuth.accessLists.schemaMain.ACLMap["ship2"]["admin"]["echo"]; !ok {
 		t.Fatalf(" \U0001F631  [FAILED]: missing map entry: ship1, admin, tcpdump")
 	}
 
@@ -435,7 +421,6 @@ func TestACLSchemaMainACLMap(t *testing.T) {
 // }
 
 func TestACLConcurrent(t *testing.T) {
-	c := newCentralAuth(tstConf, &errorKernel{})
 
 	// -----------General testing and creation of some data----------------
 
@@ -445,33 +430,33 @@ func TestACLConcurrent(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			c.aclAddCommand("ship1", "operator2", "rm -rf")
-			c.aclAddCommand("ship1", "operator1", "ls -lt")
-			c.aclAddCommand("ship1", "operator1", "ls -lt")
-			c.aclAddCommand("ship1", "operator2", "ls -l")
-			c.aclAddCommand("ship3", "operator3", "ls -lt")
-			c.aclAddCommand("ship3", "operator3", "vi /etc/hostname")
-			c.aclDeleteCommand("ship3", "operator2", "ls -lt")
-			c.aclDeleteSource("ship3", "operator3")
+			tstSrv.centralAuth.aclAddCommand("ship1", "operator2", "rm -rf")
+			tstSrv.centralAuth.aclAddCommand("ship1", "operator1", "ls -lt")
+			tstSrv.centralAuth.aclAddCommand("ship1", "operator1", "ls -lt")
+			tstSrv.centralAuth.aclAddCommand("ship1", "operator2", "ls -l")
+			tstSrv.centralAuth.aclAddCommand("ship3", "operator3", "ls -lt")
+			tstSrv.centralAuth.aclAddCommand("ship3", "operator3", "vi /etc/hostname")
+			tstSrv.centralAuth.aclDeleteCommand("ship3", "operator2", "ls -lt")
+			tstSrv.centralAuth.aclDeleteSource("ship3", "operator3")
 		}()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			// fmt.Println("----schemaMain------")
-			c.accessLists.schemaMain.mu.Lock()
-			for _, v := range c.accessLists.schemaMain.ACLMap {
+			tstSrv.centralAuth.accessLists.schemaMain.mu.Lock()
+			for _, v := range tstSrv.centralAuth.accessLists.schemaMain.ACLMap {
 				_ = fmt.Sprintf("%+v\n", v)
 			}
-			c.accessLists.schemaMain.mu.Unlock()
+			tstSrv.centralAuth.accessLists.schemaMain.mu.Unlock()
 
 			// fmt.Println("----schemaGenerated------")
-			c.accessLists.schemaGenerated.mu.Lock()
-			for k, v := range c.accessLists.schemaGenerated.GeneratedACLsMap {
+			tstSrv.centralAuth.accessLists.schemaGenerated.mu.Lock()
+			for k, v := range tstSrv.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap {
 				_ = fmt.Sprintf("node: %v, NodeDataSerialized: %v\n", k, string(v.Data))
 				_ = fmt.Sprintf("node: %v, Hash: %v\n", k, v.Hash)
 			}
-			c.accessLists.schemaGenerated.mu.Unlock()
+			tstSrv.centralAuth.accessLists.schemaGenerated.mu.Unlock()
 		}()
 	}
 	wg.Wait()
@@ -530,14 +515,12 @@ func TestImportACLs(t *testing.T) {
 
 	want := `map[grp_nodes_ships:map[admin:map[useradd -m kongen:{}] grp_nodes_operators:map[grp_commands_commandset1:{}]] ship101:map[admin:map[HORSE:{}]]]`
 
-	c := newCentralAuth(tstConf, &errorKernel{})
-
-	err := c.importACLs(js)
+	err := tstSrv.centralAuth.importACLs(js)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 
-	if fmt.Sprintf("%v", c.accessLists.schemaMain.ACLMap) != want {
+	if fmt.Sprintf("%v", tstSrv.centralAuth.accessLists.schemaMain.ACLMap) != want {
 		t.Fatalf("error: import does not match with what we want\n")
 	}
 
