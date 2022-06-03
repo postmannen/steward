@@ -100,7 +100,7 @@ type Configuration struct {
 	EnableAclUpdates bool
 
 	// Start the central error logger.
-	StartSubREQErrorLog bool
+	IsCentralErrorLogger bool
 	// Subscriber for hello messages
 	StartSubREQHello bool
 	// Subscriber for text logging
@@ -177,7 +177,7 @@ type ConfigurationFromFile struct {
 	StartPubREQHello            *int
 	EnableKeyUpdates            *bool
 	EnableAclUpdates            *bool
-	StartSubREQErrorLog         *bool
+	IsCentralErrorLogger        *bool
 	StartSubREQHello            *bool
 	StartSubREQToFileAppend     *bool
 	StartSubREQToFile           *bool
@@ -243,7 +243,7 @@ func newConfigurationDefaults() Configuration {
 		StartPubREQHello:            30,
 		EnableKeyUpdates:            true,
 		EnableAclUpdates:            true,
-		StartSubREQErrorLog:         false,
+		IsCentralErrorLogger:        false,
 		StartSubREQHello:            true,
 		StartSubREQToFileAppend:     true,
 		StartSubREQToFile:           true,
@@ -464,10 +464,10 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 		conf.EnableAclUpdates = *cf.EnableAclUpdates
 	}
 
-	if cf.StartSubREQErrorLog == nil {
-		conf.StartSubREQErrorLog = cd.StartSubREQErrorLog
+	if cf.IsCentralErrorLogger == nil {
+		conf.IsCentralErrorLogger = cd.IsCentralErrorLogger
 	} else {
-		conf.StartSubREQErrorLog = *cf.StartSubREQErrorLog
+		conf.IsCentralErrorLogger = *cf.IsCentralErrorLogger
 	}
 	if cf.StartSubREQHello == nil {
 		conf.StartSubREQHello = cd.StartSubREQHello
@@ -620,7 +620,7 @@ func (c *Configuration) CheckFlags() error {
 
 	flag.BoolVar(&c.EnableAclUpdates, "EnableAclUpdates", fc.EnableAclUpdates, "true/false")
 
-	flag.BoolVar(&c.StartSubREQErrorLog, "startSubREQErrorLog", fc.StartSubREQErrorLog, "true/false")
+	flag.BoolVar(&c.IsCentralErrorLogger, "isCentralErrorLogger", fc.IsCentralErrorLogger, "true/false")
 	flag.BoolVar(&c.StartSubREQHello, "startSubREQHello", fc.StartSubREQHello, "true/false")
 	flag.BoolVar(&c.StartSubREQToFileAppend, "startSubREQToFileAppend", fc.StartSubREQToFileAppend, "true/false")
 	flag.BoolVar(&c.StartSubREQToFile, "startSubREQToFile", fc.StartSubREQToFile, "true/false")

@@ -145,7 +145,7 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQHello(proc)
 	}
 
-	if proc.configuration.StartSubREQErrorLog {
+	if proc.configuration.IsCentralErrorLogger {
 		proc.startup.subREQErrorLog(proc)
 	}
 

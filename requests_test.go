@@ -76,7 +76,7 @@ func newServerForTesting(addressAndPort string, testFolder string) (*server, *Co
 	conf.SocketFolder = testFolder
 	conf.SubscribersDataFolder = testFolder
 	conf.DatabaseFolder = testFolder
-	conf.StartSubREQErrorLog = true
+	conf.IsCentralErrorLogger = true
 	conf.IsCentralAuth = true
 	conf.EnableDebug = true
 
