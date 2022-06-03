@@ -67,29 +67,36 @@ As long as you can do something as an operator on in a shell on a system you can
       - [ReqCliCommand](#reqclicommand-1)
     - [Errors reporting](#errors-reporting)
     - [Prometheus metrics](#prometheus-metrics)
-    - [Authrization and Key Distribution](#authrization-and-key-distribution)
-      - [Key registration on Central Server](#key-registration-on-central-server)
-      - [Key distribution to nodes](#key-distribution-to-nodes)
-      - [Acl updates](#acl-updates)
-      - [Management of the Acl on the central server](#management-of-the-acl-on-the-central-server)
-        - [REQAclAddCommand](#reqacladdcommand)
-        - [REQAclDeleteCommand](#reqacldeletecommand)
-        - [REQAclDeleteSource](#reqacldeletesource)
-        - [REQAclGroupNodesAddNode](#reqaclgroupnodesaddnode)
-        - [REQAclGroupNodesDeleteNode](#reqaclgroupnodesdeletenode)
-        - [REQAclGroupNodesDeleteGroup](#reqaclgroupnodesdeletegroup)
-        - [REQAclGroupCommandsAddCommand](#reqaclgroupcommandsaddcommand)
-        - [REQAclGroupCommandsDeleteCommand](#reqaclgroupcommandsdeletecommand)
-        - [REQAclGroupCommandsDeleteGroup](#reqaclgroupcommandsdeletegroup)
-        - [REQAclExport](#reqaclexport)
-        - [REQAclImport](#reqaclimport)
+    - [Security / Authorization](#security--authorization)
+      - [Authorization based on the NATS subject](#authorization-based-on-the-nats-subject)
+      - [Authorization based on the message payload](#authorization-based-on-the-message-payload)
+        - [Key registration on Central Server](#key-registration-on-central-server)
+        - [Key distribution to nodes](#key-distribution-to-nodes)
+        - [Management of the keys on the central server](#management-of-the-keys-on-the-central-server)
+          - [REQKeysAllow](#reqkeysallow)
+          - [REQKeysDelete](#reqkeysdelete)
+        - [Acl updates](#acl-updates)
+        - [Management of the Acl on the central server](#management-of-the-acl-on-the-central-server)
+          - [REQAclAddCommand](#reqacladdcommand)
+          - [REQAclDeleteCommand](#reqacldeletecommand)
+          - [REQAclDeleteSource](#reqacldeletesource)
+          - [REQAclGroupNodesAddNode](#reqaclgroupnodesaddnode)
+          - [REQAclGroupNodesDeleteNode](#reqaclgroupnodesdeletenode)
+          - [REQAclGroupNodesDeleteGroup](#reqaclgroupnodesdeletegroup)
+          - [REQAclGroupCommandsAddCommand](#reqaclgroupcommandsaddcommand)
+          - [REQAclGroupCommandsDeleteCommand](#reqaclgroupcommandsdeletecommand)
+          - [REQAclGroupCommandsDeleteGroup](#reqaclgroupcommandsdeletegroup)
+          - [REQAclExport](#reqaclexport)
+          - [REQAclImport](#reqaclimport)
     - [Other](#other)
   - [Howto](#howto)
     - [Options for running](#options-for-running)
     - [How to Run](#how-to-run)
       - [Run Steward in the simplest possible way for testing](#run-steward-in-the-simplest-possible-way-for-testing)
         - [Nats-server](#nats-server)
-        - [Steward](#steward-1)
+        - [Build from source](#build-from-source)
+        - [Download release binary](#download-release-binary)
+        - [Get it up and running](#get-it-up-and-running)
         - [Send messages with Steward](#send-messages-with-steward)
       - [Example for starting steward with some more options set](#example-for-starting-steward-with-some-more-options-set)
       - [Nkey Authentication](#nkey-authentication)
@@ -110,6 +117,8 @@ As long as you can do something as an operator on in a shell on a system you can
         - [Complete subject example](#complete-subject-example)
   - [TODO](#todo)
     - [Add Op option the remove messages from the queue on nodes](#add-op-option-the-remove-messages-from-the-queue-on-nodes)
+  - [Appendix-A](#appendix-a)
+  - [Appendix-B](#appendix-b)
 
 ## What is it ?
 
@@ -816,44 +825,69 @@ Or the same using bash's herestring:
 
 - Prometheus exporters for Metrics.
 
-### Authrization and Key Distribution
+### Security / Authorization
 
-#### Key registration on Central Server
+#### Authorization based on the NATS subject
 
-All nodes will generate a private and a public key pair. The public key will be sent to the central server as the payload in the **REQHello** messages.
+Main authentication and authorization are done on the **subject level** with NATS. Each node have a unique public and private key pair, where the individual publics keys are either allowed or denied to subscribe/publish on a subject in an authorization file on the Nats-server.
+
+#### Authorization based on the message payload
+
+Some request types, like **REQCliCommand** also allow authorization of the message payload. The payload of the message can be checked against a list of allowed or denied commands configured in a main Access List on the central server.
+
+With each message created a signature will also be created with the private key of the node, and the signature is then attached to the message.
+NB: The keypair used for the signing of messages are a separate keypair used only for signing messages, and are not the same pair that is used for authentication with the NATS server.
+
+The nodes will have a copy of the allowed public signing keys from the central server, and when a message is received, the signature is checked against the allowed public keys. If the signature is valid, the message is allowed to be processed further, otherwise it is denied if signature checking is enabled.
+
+Steward can be used either with no authorization at all, with signature checks only, or with ACL and signature checks. The features can be enabled or disabled in the **config.yaml** file.
+
+##### Key registration on Central Server
+
+All nodes will generate a private and a public key pair only used for signing messages. For building a complete database of all the public keys in the system and to be able to distribute them to other nodes, each node will send it's public key to the central server as the payload in the **REQHello** messages. The received keys will be stored in the central server's database.
 
 For storing the keys on the central server two databases are involved.
 
-- A Database for all the keys that have not been acknowledge.
-- A Database for all the keys that have been acknowledged into the system with a hash of all the keys. This is also the data base that gets distributed out to the nodes when they request and update
+- A Database for all the keys that have not been acknowledged.
+- A Database for all the keys that have been acknowledged into the system with a hash of all the keys. This is also the database that gets distributed out to the nodes when they request and update
 
 1. When a new not already registered key is received on the central server it will be added to the **NO_ACK_DB** database, and a message will be sent to the operator to permit the key to be added to the system.
-1. When the operator permits the key, it will be added to the **Acknowledged** database, and the node will be removed from the Not-Acknowledged database.
-1. If the key is already in the acked database no changes will be made.
+2. When the operator permits the key, it will be added to the **Acknowledged** database, and the node will be removed from the Not-Acknowledged database.
+3. If the key is already in the acked database no changes will be made.
 
-#### Key distribution to nodes
+If new keys are allowed into or deleted from the system, one attempt will be done to push the updated key database to all current nodes heard from in the network. If the push fails, the nodes will get the update the next time they ask for it based on the key update interval set on each node.
+
+##### Key distribution to nodes
 
 1. Steward nodes will request key updates by sending a message to the central server with the **REQKeysRequestUpdate** method on a timed interval. The hash of the current keys on a node will be put as the payload of the message.
 2. On the Central server the received hash will be compared with the current hash on the central server. If the hashes are equal nothing will be done, and no reply message will be sent back to the end node.
-3. If the hashes are not equal a reply message of type **REQKeysDeliverUpdate** will be sent back to the end node with a copy of the acknowledged public keys database and a hash of those keys.
+3. If the hashes are not equal a reply message of type **REQKeysDeliverUpdate** will be sent back to the end node with a copy of the acknowledged public keys database and a hash of those new keys.
 4. The end node will then update it's local key database.
 
 The interval of the updates can be controlled with it's own config or flag **REQKeysRequestUpdateInterval**
 
-NB: The update process is initiated by the end nodes on a timed interval. No key updates are initiaded from the central server.
+##### Management of the keys on the central server
 
-#### Acl updates
+###### REQKeysAllow
 
-1. Steward nodes will request key updates by sending a message to the central server with the **REQAclRequestUpdate** method on a timed interval. The hash of the current Acl on a node will be put as the payload of the message.
+Will allow a key to be added to the system by moving the key from the **NO_ACK_DB** to the **ACK_DB**.
+
+###### REQKeysDelete
+
+Will remove the specified keys from the **ACK_DB**.
+
+##### Acl updates
+
+1. Steward nodes will request acl updates by sending a message to the central server with the **REQAclRequestUpdate** method on a timed interval. The hash of the current Acl on a node will be put as the payload of the message.
 2. On the Central server the received hash will be compared with the current hash on the central server. If the hashes are equal nothing will be done, and no reply message will be sent back to the end node.
-3. If the hashes are not equal a reply message of type **REQAclDeliverUpdate** will be sent back to the end node with a copy of the Acl's database for the node the request came from, and a hash of that Acl.
+3. If the hashes are not equal a reply message of type **REQAclDeliverUpdate** will be sent back to the end node with a copy of the Acl's database for the node the request came from. The update will also contain the new hash of the new Acl's.
 4. The end node will then replace it's local Acl database with the update.
 
 The interval of the updates can be controlled with it's own config or flag **REQAclRequestUpdateInterval**
 
-NB: The update process is initiated by the end nodes on a timed interval. No key updates are initiaded from the central server.
+NB: The update process is initiated by the end nodes on a timed interval. No ACL updates are initiaded from the central server.
 
-#### Management of the Acl on the central server
+##### Management of the Acl on the central server
 
 Several Request methods exists for handling the management of the active Acl's on the central server.
 
@@ -861,47 +895,47 @@ If the element specified is prefixed with **grp_** it will be treated as a group
 
 Groups or nodes do not have to exist to be used with an acl. The acl will be created with the elements specifed, and if a non existing group was specified you will have an Acl that is not yet functional, but it will become functional as soon as you add elements to the group's.
 
-##### REQAclAddCommand
+###### REQAclAddCommand
 
 Takes the methodArgs: ["host or group of hosts", "src or group of src","cmd or group of cmd"]
 
-##### REQAclDeleteCommand
+###### REQAclDeleteCommand
 
 Takes the methodArgs: ["host or group of hosts", "src or group of src","cmd or group of cmd"]
 
-##### REQAclDeleteSource
+###### REQAclDeleteSource
 
 Takes the methodArgs: ["host or group of hosts", "src or group of src"]
 
-##### REQAclGroupNodesAddNode
+###### REQAclGroupNodesAddNode
 
 Takes the methodArgs: ["nodegroup name", "node name"]
 
-##### REQAclGroupNodesDeleteNode
+###### REQAclGroupNodesDeleteNode
 
 Takes the methodArgs: ["nodegroup name", "node name"]
 
-##### REQAclGroupNodesDeleteGroup
+###### REQAclGroupNodesDeleteGroup
 
 Takes the methodArgs: ["nodegroup name"]
 
-##### REQAclGroupCommandsAddCommand
+###### REQAclGroupCommandsAddCommand
 
 Takes the methodArgs: ["commandgroup name", "command"]
 
-##### REQAclGroupCommandsDeleteCommand
+###### REQAclGroupCommandsDeleteCommand
 
 Takes the methodArgs: ["commandgroup name", "command"]
 
-##### REQAclGroupCommandsDeleteGroup
+###### REQAclGroupCommandsDeleteGroup
 
 Takes the methodArgs: ["commandgroup name"]
 
-##### REQAclExport
+###### REQAclExport
 
 Creates an export of the current Acl's database, and delivers it to the requesting node with the replyMethod specified.
 
-##### REQAclImport
+###### REQAclImport
 
 Imports the Acl given in JSON format in the first argument of the methodArgs.
 
@@ -919,95 +953,7 @@ The location of the config file are given via an env variable at startup (defaul
 
 The different fields and their type in the config file. The fields of the config file can also be set by providing flag values at startup. Use the `-help` flag to get all the options.
 
-```text
-    // RingBufferSize
-    RingBufferSize int
-    // The configuration folder on disk
-    ConfigFolder string
-    // The folder where the socket file should live
-    SocketFolder string
-    // TCP Listener for sending messages to the system
-    TCPListener string
-    // HTTP Listener for sending messages to the system
-    HTTPListener string
-    // The folder where the database should live
-    DatabaseFolder string
-    // some unique string to identify this Edge unit
-    NodeName string
-    // the address of the message broker
-    BrokerAddress string
-    // NatsConnOptTimeout the timeout for trying the connect to nats broker
-    NatsConnOptTimeout int
-    // nats connect retry
-    NatsConnectRetryInterval int
-    // NatsReconnectJitter in milliseconds
-    NatsReconnectJitter int
-    // NatsReconnectJitterTLS in seconds
-    NatsReconnectJitterTLS int
-    // The number of the profiling port
-    ProfilingPort string
-    // host and port for prometheus listener, e.g. localhost:2112
-    PromHostAndPort string
-    // set to true if this is the node that should receive the error log's from other nodes
-    DefaultMessageTimeout int
-    // Default value for how long can a request method max be allowed to run.
-    DefaultMethodTimeout int
-    // default amount of retries that will be done before a message is thrown away, and out of the system
-    DefaultMessageRetries int
-    // Publisher data folder
-    SubscribersDataFolder string
-    // central node to receive messages published from nodes
-    CentralNodeName string
-    // Path to the certificate of the root CA
-    RootCAPath string
-    // Full path to the NKEY's seed file
-    NkeySeedFile string
-    // The host and port to expose the data folder
-    ExposeDataFolder string
-    // Timeout for error messages
-    ErrorMessageTimeout int
-    // Retries for error messages.
-    ErrorMessageRetries int
-    // Compression
-    Compression string
-    // Serialization
-    Serialization string
-    // SetBlockProfileRate for block profiling
-    SetBlockProfileRate int 
-    // NOTE:
-    // Op commands will not be specified as a flag since they can't be turned off.  
-    // Make the current node send hello messages to central at given interval in seconds
-    StartPubREQHello int
-    // Start the central error logger.
-    // Takes a comma separated string of nodes to receive from or "*" for all nodes.
-    StartSubREQErrorLog bool
-    // Subscriber for hello messages
-    StartSubREQHello bool
-    // Subscriber for text logging
-    StartSubREQToFileAppend bool
-    // Subscriber for writing to file
-    StartSubREQToFile bool
-    // Subscriber for reading files to copy
-    StartSubREQCopyFileFrom bool
-    // Subscriber for writing copied files to disk
-    StartSubREQCopyFileTo bool
-    // Subscriber for Echo Request
-    StartSubREQPing bool
-    // Subscriber for Echo Reply
-    StartSubREQPong bool
-    // Subscriber for CLICommandRequest
-    StartSubREQCliCommand bool
-    // Subscriber for REQToConsole
-    StartSubREQToConsole bool
-    // Subscriber for REQHttpGet
-    StartSubREQHttpGet bool
-    // Subscriber for tailing log files
-    StartSubREQTailFile bool
-    // Subscriber for continously delivery of output from cli commands.
-    StartSubREQCliCommandCont bool
-    // Subscriber for relay messages.
-    StartSubREQRelay bool
-```
+Check [Appendix-A](#appendix-a) for a list of the flags/config options, and their usage.
 
 ### How to Run
 
@@ -1031,7 +977,7 @@ Start the nats server listening on local interfaces and port 4222.
 
 `./nats-server -D`
 
-##### Steward
+##### Build from source
 
 Steward is written in Go, so you need Go installed to compile it. You can get Go at <https://golang.org/dl/>.
 
@@ -1048,13 +994,29 @@ cd ./steward/cmd/steward
 go build -o steward
 ```
 
+##### Download release binary
+
+Release binaries for several architechures are available at <https://github.com/RaaLabs/steward/releases>
+
+##### Get it up and running
+
+**NB:** Remember to run the nats setup above before running the steward binary.
+
+Steward will create some directories for things like configuration file and other state files. By default it will create those files in the directory where you start Steward. So create individual directeries for each Steward instance you want to run below.
+
 Start up a  **central** server which will act as your command and control server.
 
-- `env CONFIG_FOLDER=./etc/ ./steward --nodeName="central" --centralNodeName="central"`
+```bash
+ mkdir central & cd central
+ env CONFIG_FOLDER=./etc/ <path-to-steward-binary-here> --nodeName="central" --centralNodeName="central"
+```
 
 Start up a node that will attach to the **central** node
 
-`env CONFIG_FOLDER=./etc/ ./steward --nodeName="ship1" --centralNodeName="central"` & `./steward --node="ship2"`
+```bash
+ mkdir ship1 & cd ship1
+ env CONFIG_FOLDER=./etc/ <path-to-steward-binary-here> --nodeName="ship1" --centralNodeName="central"
+```
 
 You can get all the options with `./steward --help`
 
@@ -1085,7 +1047,7 @@ env CONFIG_FOLDER=./etc/ ./steward \
  -defaultMessageTimeout=5 \
  -subscribersDataFolder="./data" \
  -centralNodeName="central" \
- -startSubREQErrorLog=true \
+ -IsCentralErrorLogger=true \
  -subscribersDataFolder="./var" \
  -brokerAddress="127.0.0.1:4222"
 ```
@@ -1181,82 +1143,7 @@ More example configurations for the nats-server are located in the [doc](https:/
 
 ### Message fields explanation
 
-```go
-// The node to send the message to.
-ToNode Node `json:"toNode" yaml:"toNode"`
-// ToNodes to specify several hosts to send message to in the
-// form of an slice/array.
-ToNodes []Node `json:"toNodes,omitempty" yaml:"toNodes,omitempty"`
-// The actual data in the message. This is typically where we
-// specify the cli commands to execute on a node, and this is
-// also the field where we put the returned data in a reply
-// message.
-Data []string `json:"data" yaml:"data"`
-// Method, what request type to use, like REQCliCommand, REQHttpGet..
-Method Method `json:"method" yaml:"method"`
-// Additional arguments that might be needed when executing the
-// method. Can be f.ex. an ip address if it is a tcp sender, or the
-// shell command to execute in a cli session.
-MethodArgs []string `json:"methodArgs" yaml:"methodArgs"`
-// ReplyMethod, is the method to use for the reply message.
-// By default the reply method will be set to log to file, but
-// you can override it setting your own here.
-ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
-// Additional arguments that might be needed when executing the reply
-// method. Can be f.ex. an ip address if it is a tcp sender, or the
-// shell command to execute in a cli session.
-ReplyMethodArgs []string `json:"replyMethodArgs" yaml:"replyMethodArgs"`
-// IsReply are used to tell that this is a reply message. By default
-// the system sends the output of a request method back to the node
-// the message originated from. If it is a reply method we want the
-// result of the reply message to be sent to the central server, so
-// we can use this value if set to swap the toNode, and fromNode
-// fields.
-IsReply bool `json:"isReply" yaml:"isReply"`
-// From what node the message originated
-FromNode Node
-// ACKTimeout for waiting for an ack message
-ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
-// Resend retries
-Retries int `json:"retries" yaml:"retries"`
-// The ACK timeout of the new message created via a request event.
-ReplyACKTimeout int `json:"replyACKTimeout" yaml:"replyACKTimeout"`
-// The retries of the new message created via a request event.
-ReplyRetries int `json:"replyRetries" yaml:"replyRetries"`
-// Timeout for long a process should be allowed to operate
-MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
-// Timeout for long a process should be allowed to operate
-ReplyMethodTimeout int `json:"replyMethodTimeout" yaml:"replyMethodTimeout"`
-// Directory is a string that can be used to create the
-//directory structure when saving the result of some method.
-// For example "syslog","metrics", or "metrics/mysensor"
-// The type is typically used in the handler of a method.
-Directory string `json:"directory" yaml:"directory"`
-// FileName is used to be able to set a wanted name
-// on a file being saved as the result of data being handled
-// by a method handler.
-FileName string `json:"fileName" yaml:"fileName"`
-// PreviousMessage are used for example if a reply message is
-// generated and we also need a copy of  the details of the the
-// initial request message.
-PreviousMessage *Message
-// The node to relay the message via.
-RelayViaNode Node `json:"relayViaNode" yaml:"relayViaNode"`
-// The node where the relayed message originated, and where we want
-// to send back the end result.
-RelayFromNode Node `json:"relayFromNode" yaml:"relayFromNode"`
-// The original value of the ToNode field of the original message.
-RelayToNode Node `json:"relayToNode" yaml:"relayToNode"`
-// The original method of the message.
-RelayOriginalMethod Method `json:"relayOriginalMethod" yaml:"relayOriginalMethod"`
-// The method to use when the reply of the relayed message came
-// back to where originated from.
-RelayReplyMethod Method `json:"relayReplyMethod" yaml:"relayReplyMethod"`
-// done is used to signal when a message is fully processed.
-// This is used for signaling back to the ringbuffer that we are
-// done with processing a message, and the message can be removed
-// from the ringbuffer and into the time series log.
-```
+Check [Appendix-B](#appendix-b) for message fields and their explanation.
 
 ### How to send a Message
 
@@ -1451,3 +1338,198 @@ For CliCommand message to a node named "ship1" of type Event and it wants an Ack
 ### Add Op option the remove messages from the queue on nodes
 
 If messages have been sent, and not picked up by a node it might make sense to have some method to clear messages on a node. This could either be done by message ID, and/or time duration.
+
+## Appendix-A
+
+```Go
+// RingBufferSize
+RingBufferSize int
+// The configuration folder on disk
+ConfigFolder string
+// The folder where the socket file should live
+SocketFolder string
+// TCP Listener for sending messages to the system
+TCPListener string
+// HTTP Listener for sending messages to the system
+HTTPListener string
+// The folder where the database should live
+DatabaseFolder string
+// some unique string to identify this Edge unit
+NodeName string
+// the address of the message broker
+BrokerAddress string
+// NatsConnOptTimeout the timeout for trying the connect to nats broker
+NatsConnOptTimeout int
+// nats connect retry
+NatsConnectRetryInterval int
+// NatsReconnectJitter in milliseconds
+NatsReconnectJitter int
+// NatsReconnectJitterTLS in seconds
+NatsReconnectJitterTLS int
+// REQKeysRequestUpdateInterval in seconds
+REQKeysRequestUpdateInterval int
+// REQAclRequestUpdateInterval in seconds
+REQAclRequestUpdateInterval int
+// The number of the profiling port
+ProfilingPort string
+// host and port for prometheus listener, e.g. localhost:2112
+PromHostAndPort string
+// set to true if this is the node that should receive the error log's from other nodes
+DefaultMessageTimeout int
+// Default value for how long can a request method max be allowed to run.
+DefaultMethodTimeout int
+// default amount of retries that will be done before a message is thrown away, and out of the system
+DefaultMessageRetries int
+// Publisher data folder
+SubscribersDataFolder string
+// central node to receive messages published from nodes
+CentralNodeName string
+// Path to the certificate of the root CA
+RootCAPath string
+// Full path to the NKEY's seed file
+NkeySeedFile string
+// NkeyPublicKey
+NkeyPublicKey string `toml:"-"`
+// The host and port to expose the data folder
+ExposeDataFolder string
+// Timeout for error messages
+ErrorMessageTimeout int
+// Retries for error messages.
+ErrorMessageRetries int
+// Compression
+Compression string
+// Serialization
+Serialization string
+// SetBlockProfileRate for block profiling
+SetBlockProfileRate int
+// EnableSocket for enabling the creation of a steward.sock file
+EnableSocket bool
+// EnableTUI will enable the Terminal User Interface
+EnableTUI bool
+// EnableSignatureCheck
+EnableSignatureCheck bool
+// EnableAclCheck
+EnableAclCheck bool
+// IsCentralAuth
+IsCentralAuth bool
+// EnableDebug will also enable printing all the messages received in the errorKernel
+// to STDERR.
+EnableDebug bool
+// Make the current node send hello messages to central at given interval in seconds
+StartPubREQHello int
+// Enable the updates of public keys
+EnableKeyUpdates bool
+// Enable the updates of acl's
+EnableAclUpdates bool
+// Start the central error logger.
+IsCentralErrorLogger bool
+// Subscriber for hello messages
+StartSubREQHello bool
+// Subscriber for text logging
+StartSubREQToFileAppend bool
+// Subscriber for writing to file
+StartSubREQToFile bool
+// Subscriber for writing to file without ACK
+StartSubREQToFileNACK bool
+// Subscriber for reading files to copy
+StartSubREQCopyFileFrom bool
+// Subscriber for writing copied files to disk
+StartSubREQCopyFileTo bool
+// Subscriber for Echo Request
+StartSubREQPing bool
+// Subscriber for Echo Reply
+StartSubREQPong bool
+// Subscriber for CLICommandRequest
+StartSubREQCliCommand bool
+// Subscriber for REQToConsole
+StartSubREQToConsole bool
+// Subscriber for REQHttpGet
+StartSubREQHttpGet bool
+// Subscriber for REQHttpGetScheduled
+StartSubREQHttpGetScheduled bool
+// Subscriber for tailing log files
+StartSubREQTailFile bool
+// Subscriber for continously delivery of output from cli commands.
+StartSubREQCliCommandCont bool
+// Subscriber for relay messages.
+StartSubREQRelay bool
+```
+
+## Appendix-B
+
+```go
+// The node to send the message to.
+ToNode Node `json:"toNode" yaml:"toNode"`
+// ToNodes to specify several hosts to send message to in the
+// form of an slice/array.
+ToNodes []Node `json:"toNodes,omitempty" yaml:"toNodes,omitempty"`
+// The actual data in the message. This is typically where we
+// specify the cli commands to execute on a node, and this is
+// also the field where we put the returned data in a reply
+// message.
+Data []string `json:"data" yaml:"data"`
+// Method, what request type to use, like REQCliCommand, REQHttpGet..
+Method Method `json:"method" yaml:"method"`
+// Additional arguments that might be needed when executing the
+// method. Can be f.ex. an ip address if it is a tcp sender, or the
+// shell command to execute in a cli session.
+MethodArgs []string `json:"methodArgs" yaml:"methodArgs"`
+// ReplyMethod, is the method to use for the reply message.
+// By default the reply method will be set to log to file, but
+// you can override it setting your own here.
+ReplyMethod Method `json:"replyMethod" yaml:"replyMethod"`
+// Additional arguments that might be needed when executing the reply
+// method. Can be f.ex. an ip address if it is a tcp sender, or the
+// shell command to execute in a cli session.
+ReplyMethodArgs []string `json:"replyMethodArgs" yaml:"replyMethodArgs"`
+// IsReply are used to tell that this is a reply message. By default
+// the system sends the output of a request method back to the node
+// the message originated from. If it is a reply method we want the
+// result of the reply message to be sent to the central server, so
+// we can use this value if set to swap the toNode, and fromNode
+// fields.
+IsReply bool `json:"isReply" yaml:"isReply"`
+// From what node the message originated
+FromNode Node
+// ACKTimeout for waiting for an ack message
+ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
+// Resend retries
+Retries int `json:"retries" yaml:"retries"`
+// The ACK timeout of the new message created via a request event.
+ReplyACKTimeout int `json:"replyACKTimeout" yaml:"replyACKTimeout"`
+// The retries of the new message created via a request event.
+ReplyRetries int `json:"replyRetries" yaml:"replyRetries"`
+// Timeout for long a process should be allowed to operate
+MethodTimeout int `json:"methodTimeout" yaml:"methodTimeout"`
+// Timeout for long a process should be allowed to operate
+ReplyMethodTimeout int `json:"replyMethodTimeout" yaml:"replyMethodTimeout"`
+// Directory is a string that can be used to create the
+//directory structure when saving the result of some method.
+// For example "syslog","metrics", or "metrics/mysensor"
+// The type is typically used in the handler of a method.
+Directory string `json:"directory" yaml:"directory"`
+// FileName is used to be able to set a wanted name
+// on a file being saved as the result of data being handled
+// by a method handler.
+FileName string `json:"fileName" yaml:"fileName"`
+// PreviousMessage are used for example if a reply message is
+// generated and we also need a copy of  the details of the the
+// initial request message.
+PreviousMessage *Message
+// The node to relay the message via.
+RelayViaNode Node `json:"relayViaNode" yaml:"relayViaNode"`
+// The node where the relayed message originated, and where we want
+// to send back the end result.
+RelayFromNode Node `json:"relayFromNode" yaml:"relayFromNode"`
+// The original value of the ToNode field of the original message.
+RelayToNode Node `json:"relayToNode" yaml:"relayToNode"`
+// The original method of the message.
+RelayOriginalMethod Method `json:"relayOriginalMethod" yaml:"relayOriginalMethod"`
+// The method to use when the reply of the relayed message came
+// back to where originated from.
+RelayReplyMethod Method `json:"relayReplyMethod" yaml:"relayReplyMethod"`
+// done is used to signal when a message is fully processed.
+// This is used for signaling back to the ringbuffer that we are
+// done with processing a message, and the message can be removed
+// from the ringbuffer and into the time series log.
+```
