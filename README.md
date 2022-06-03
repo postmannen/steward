@@ -94,8 +94,9 @@ As long as you can do something as an operator on in a shell on a system you can
     - [How to Run](#how-to-run)
       - [Run Steward in the simplest possible way for testing](#run-steward-in-the-simplest-possible-way-for-testing)
         - [Nats-server](#nats-server)
+        - [Install Steward](#install-steward)
         - [Build from source](#build-from-source)
-        - [Download release binary](#download-release-binary)
+          - [Download a release binary](#download-a-release-binary)
         - [Get it up and running](#get-it-up-and-running)
         - [Send messages with Steward](#send-messages-with-steward)
       - [Example for starting steward with some more options set](#example-for-starting-steward-with-some-more-options-set)
@@ -229,6 +230,8 @@ TODO: Make a diagram here...
 ```log
 Tue Sep 21 09:17:55 2021, info: toNode: ship2, fromNode: central, method: REQOpProcessList: max retries reached, check if node is up and running and if it got a subscriber for the given REQ type
 ```
+
+The error logs can be read on the central server in the directory `<steward-home>/data/errorLog`.
 
 ### Message handling and threads
 
@@ -977,6 +980,10 @@ Start the nats server listening on local interfaces and port 4222.
 
 `./nats-server -D`
 
+##### Install Steward
+
+You can either build Steward from source or download from release which is a compiled binary.
+
 ##### Build from source
 
 Steward is written in Go, so you need Go installed to compile it. You can get Go at <https://golang.org/dl/>.
@@ -994,7 +1001,7 @@ cd ./steward/cmd/steward
 go build -o steward
 ```
 
-##### Download release binary
+###### Download a release binary
 
 Release binaries for several architechures are available at <https://github.com/RaaLabs/steward/releases>
 
