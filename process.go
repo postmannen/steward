@@ -32,6 +32,9 @@ const (
 // process holds all the logic to handle a message type and it's
 // method, subscription/publishin messages for a subject, and more.
 type process struct {
+	// server
+	server *server
+	// messageID
 	messageID int
 	// the subject used for the specific process. One process
 	// can contain only one sender on a message bus, hence
@@ -45,12 +48,33 @@ type process struct {
 	processKind processKind
 	// methodsAvailable
 	methodsAvailable MethodsAvailable
-	// Helper or service function that can do some kind of work
-	// for the process.
-	// The idea is that this can hold for example the map of the
-	// the hello nodes to limit shared resources in the system as
-	// a whole for sharing a map from the *server level.
-	procFunc procFunc
+	// procFunc is a function that will be started when a worker process
+	// is started. If a procFunc is registered when creating a new process
+	// the procFunc will be started as a go routine when the process is started,
+	// and stopped when the process is stopped.
+	//
+	// A procFunc can be started both for publishing and subscriber processes.
+	//
+	// When used with a subscriber process the usecase is most likely to handle
+	// some kind of state needed for a request type. The handlers themselves
+	// can not hold state since they are only called once per message received,
+	// and exits when the message is handled leaving no state behind. With a procfunc
+	// we can have a process function running at all times tied to the process, and
+	// this function can be able to hold the state needed in a certain scenario.
+	//
+	// With a subscriber handler you generally take the message in the handler and
+	// pass it on to the procFunc by putting it on the procFuncCh<-, and the
+	// message can then be read from the procFuncCh inside the procFunc, and we
+	// can do some further work on it, for example update registry for metrics that
+	// is needed for that specific request type.
+	//
+	// With a publisher process you can attach a static function that will do some
+	// work to a request type, and publish the result.
+	//
+	// procFunc's can also be used to wrap in other types which we want to
+	// work with. An example can be handling of metrics which the message
+	// have no notion of, but a procFunc can have that wrapped in from when it was constructed.
+	procFunc func(ctx context.Context, procFuncCh chan Message) error
 	// The channel to send a messages to the procFunc go routine.
 	// This is typically used within the methodHandler for so we
 	// can pass messages between the procFunc and the handler.
@@ -75,68 +99,49 @@ type process struct {
 	// startup holds the startup functions for starting up publisher
 	// or subscriber processes
 	startup *startup
-
 	// Signatures
-	signatures *signatures
+	nodeAuth *nodeAuth
+	// centralAuth
+	centralAuth *centralAuth
+	// errorKernel
+	errorKernel *errorKernel
+	// metrics
+	metrics *metrics
 }
 
 // prepareNewProcess will set the the provided values and the default
 // values for a process.
-func newProcess(ctx context.Context, metrics *metrics, natsConn *nats.Conn, processes *processes, toRingbufferCh chan<- []subjectAndMessage, configuration *Configuration, subject Subject, processKind processKind, procFunc func() error, signatures *signatures) process {
+func newProcess(ctx context.Context, server *server, subject Subject, processKind processKind, procFunc func() error) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
-	processes.lastProcessID++
+	server.processes.lastProcessID++
 
 	ctx, cancel := context.WithCancel(ctx)
 
 	var method Method
 
 	proc := process{
+		server:           server,
 		messageID:        0,
 		subject:          subject,
-		node:             Node(configuration.NodeName),
-		processID:        processes.lastProcessID,
+		node:             Node(server.configuration.NodeName),
+		processID:        server.processes.lastProcessID,
 		processKind:      processKind,
 		methodsAvailable: method.GetMethodsAvailable(),
-		toRingbufferCh:   toRingbufferCh,
-		configuration:    configuration,
-		processes:        processes,
-		natsConn:         natsConn,
+		toRingbufferCh:   server.toRingBufferCh,
+		configuration:    server.configuration,
+		processes:        server.processes,
+		natsConn:         server.natsConn,
 		ctx:              ctx,
 		ctxCancel:        cancel,
-		startup:          newStartup(metrics, signatures),
-		signatures:       signatures,
+		startup:          newStartup(server),
+		nodeAuth:         server.nodeAuth,
+		centralAuth:      server.centralAuth,
+		errorKernel:      server.errorKernel,
+		metrics:          server.metrics,
 	}
 
 	return proc
 }
-
-// procFunc is a function that will be started when a worker process
-// is started. If a procFunc is registered when creating a new process
-// the procFunc will be started as a go routine when the process is started,
-// and stopped when the process is stopped.
-//
-// A procFunc can be started both for publishing and subscriber processes.
-//
-// When used with a subscriber process the usecase is most likely to handle
-// some kind of state needed for a request type. The handlers themselves
-// can not hold state since they are only called once per message received,
-// and exits when the message is handled leaving no state behind. With a procfunc
-// we can have a process function running at all times tied to the process, and
-// this function can be able to hold the state needed in a certain scenario.
-//
-// With a subscriber handler you generally take the message in the handler and
-// pass it on to the procFunc by putting it on the procFuncCh<-, and the
-// message can then be read from the procFuncCh inside the procFunc, and we
-// can do some further work on it, for example update registry for metrics that
-// is needed for that specific request type.
-//
-// With a publisher process you can attach a static function that will do some
-// work to a request type, and publish the result.
-//
-// procFunc's can also be used to wrap in other types which we want to
-// work with. An example can be handling of metrics which the message
-// have no notion of, but a procFunc can have that wrapped in from when it was constructed.
-type procFunc func(ctx context.Context, procFuncCh chan Message) error
 
 // The purpose of this function is to check if we should start a
 // publisher or subscriber process, where a process is a go routine
@@ -145,7 +150,7 @@ type procFunc func(ctx context.Context, procFuncCh chan Message) error
 //
 // It will give the process the next available ID, and also add the
 // process to the processes map in the server structure.
-func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
+func (p process) spawnWorker() {
 	// We use the full name of the subject to identify a unique
 	// process. We can do that since a process can only handle
 	// one message queue.
@@ -160,7 +165,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 	processName := processNameGet(p.subject.name(), p.processKind)
 
 	// Add prometheus metrics for the process.
-	p.processes.metrics.promProcessesAllRunning.With(prometheus.Labels{"processName": string(processName)})
+	p.metrics.promProcessesAllRunning.With(prometheus.Labels{"processName": string(processName)})
 
 	// Start a publisher worker, which will start a go routine (process)
 	// That will take care of all the messages for the subject it owns.
@@ -178,12 +183,12 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 				err := p.procFunc(p.ctx, p.procFuncCh)
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
-					p.processes.errorKernel.errSend(p, Message{}, er)
+					p.errorKernel.errSend(p, Message{}, er)
 				}
 			}()
 		}
 
-		go p.publishMessages(natsConn)
+		go p.publishMessages(p.natsConn)
 	}
 
 	// Start a subscriber worker, which will start a go routine (process)
@@ -201,7 +206,7 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 				err := p.procFunc(p.ctx, p.procFuncCh)
 				if err != nil {
 					er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
-					p.processes.errorKernel.errSend(p, Message{}, er)
+					p.errorKernel.errSend(p, Message{}, er)
 				}
 			}()
 		}
@@ -212,9 +217,9 @@ func (p process) spawnWorker(procs *processes, natsConn *nats.Conn) {
 	p.processName = pn
 
 	// Add information about the new process to the started processes map.
-	procs.active.mu.Lock()
-	procs.active.procNames[pn] = p
-	procs.active.mu.Unlock()
+	p.processes.active.mu.Lock()
+	p.processes.active.procNames[pn] = p
+	p.processes.active.mu.Unlock()
 }
 
 // messageDeliverNats will create the Nats message with headers and payload.
@@ -249,7 +254,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				log.Printf("%v\n", er)
 				return
 			}
-			p.processes.metrics.promNatsDeliveredTotal.Inc()
+			p.metrics.promNatsDeliveredTotal.Inc()
 			return
 		}
 
@@ -288,17 +293,17 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 			if err != nil {
 				er := fmt.Errorf("error: ack receive failed: subject=%v: %v", p.subject.name(), err)
 				// sendErrorLogMessage(p.toRingbufferCh, p.node, er)
-				p.processes.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 				if err == nats.ErrNoResponders {
-					fmt.Printf(" * DEBUG: Waiting, ACKTimeout: %v\n", message.ACKTimeout)
+					// fmt.Printf(" * DEBUG: Waiting, ACKTimeout: %v\n", message.ACKTimeout)
 					time.Sleep(time.Second * time.Duration(message.ACKTimeout))
 				}
 
 				// did not receive a reply, decide what to do..
 				retryAttempts++
 				er = fmt.Errorf("retry attempt:%v, retries: %v, ack timeout: %v, message.ID: %v", retryAttempts, message.Retries, message.ACKTimeout, message.ID)
-				p.processes.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 				switch {
 				//case message.Retries == 0:
@@ -311,23 +316,22 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 					// We do not want to send errorLogs for REQErrorLog type since
 					// it will just cause an endless loop.
 					if message.Method != REQErrorLog {
-						p.processes.errorKernel.infoSend(p, message, er)
+						p.errorKernel.infoSend(p, message, er)
 					}
 
 					subReply.Unsubscribe()
 
-					p.processes.metrics.promNatsMessagesFailedACKsTotal.Inc()
+					p.metrics.promNatsMessagesFailedACKsTotal.Inc()
 					return
 
 				default:
 					// none of the above matched, so we've not reached max retries yet
 					er := fmt.Errorf("max retries for message not reached, retrying sending of message with ID %v", message.ID)
-					p.processes.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+					p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
-					p.processes.metrics.promNatsMessagesMissedACKsTotal.Inc()
+					p.metrics.promNatsMessagesMissedACKsTotal.Inc()
 
 					subReply.Unsubscribe()
-
 					continue
 				}
 			}
@@ -336,7 +340,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 
 		subReply.Unsubscribe()
 
-		p.processes.metrics.promNatsDeliveredTotal.Inc()
+		p.metrics.promNatsDeliveredTotal.Inc()
 
 		return
 	}
@@ -364,7 +368,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 	// If debugging is enabled, print the source node name of the nats messages received.
 	if val, ok := msg.Header["fromNode"]; ok {
 		er := fmt.Errorf("info: nats message received from %v, with subject %v ", val, subject)
-		p.processes.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 	}
 
 	// If compression is used, decompress it to get the gob data. If
@@ -376,13 +380,13 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			zr, err := zstd.NewReader(nil)
 			if err != nil {
 				er := fmt.Errorf("error: zstd NewReader failed: %v", err)
-				p.processes.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er)
 				return
 			}
 			msgData, err = zr.DecodeAll(msg.Data, nil)
 			if err != nil {
 				er := fmt.Errorf("error: zstd decoding failed: %v", err)
-				p.processes.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er)
 				zr.Close()
 				return
 			}
@@ -394,14 +398,14 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			gr, err := gzip.NewReader(r)
 			if err != nil {
 				er := fmt.Errorf("error: gzip NewReader failed: %v", err)
-				p.processes.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er)
 				return
 			}
 
 			b, err := io.ReadAll(gr)
 			if err != nil {
 				er := fmt.Errorf("error: gzip ReadAll failed: %v", err)
-				p.processes.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er)
 				return
 			}
 
@@ -422,7 +426,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			err := cbor.Unmarshal(msgData, &message)
 			if err != nil {
 				er := fmt.Errorf("error: cbor decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-				p.processes.errorKernel.errSend(p, message, er)
+				p.errorKernel.errSend(p, message, er)
 				return
 			}
 		default: // Deaults to gob if no match was found.
@@ -432,7 +436,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			err := gobDec.Decode(&message)
 			if err != nil {
 				er := fmt.Errorf("error: gob decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-				p.processes.errorKernel.errSend(p, message, er)
+				p.errorKernel.errSend(p, message, er)
 				return
 			}
 		}
@@ -445,7 +449,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		err := gobDec.Decode(&message)
 		if err != nil {
 			er := fmt.Errorf("error: gob decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-			p.processes.errorKernel.errSend(p, message, er)
+			p.errorKernel.errSend(p, message, er)
 			return
 		}
 	}
@@ -468,7 +472,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		switch {
 		case msgCopy.PreviousMessage.RelayReplyMethod == "":
 			er := fmt.Errorf("error: subscriberHandler: no PreviousMessage.RelayReplyMethod found, defaulting to the reply method of previous message: %v ", msgCopy)
-			p.processes.errorKernel.errSend(p, message, er)
+			p.errorKernel.errSend(p, message, er)
 
 			msgCopy.Method = msgCopy.PreviousMessage.ReplyMethod
 
@@ -485,7 +489,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		sam, err := newSubjectAndMessage(msgCopy)
 		if err != nil {
 			er := fmt.Errorf("error: subscriberHandler: newSubjectAndMessage : %v, message copy: %v", err, msgCopy)
-			p.processes.errorKernel.errSend(p, message, er)
+			p.errorKernel.errSend(p, message, er)
 		}
 
 		p.toRingbufferCh <- []subjectAndMessage{sam}
@@ -513,47 +517,103 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		mh, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: no such method type: %v", p.subject.Event)
-			p.processes.errorKernel.errSend(p, message, er)
+			p.errorKernel.errSend(p, message, er)
 		}
 
-		out := []byte{}
-		var err error
+		//var err error
 
-		if p.signatures.verifySignature(message) {
-			// Call the method handler for the specified method.
-			out, err = mh.handler(p, message, thisNode)
-			if err != nil {
-				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-				p.processes.errorKernel.errSend(p, message, er)
-			}
-		}
+		out := p.callHandler(message, mh, thisNode)
 
-		// Send a confirmation message back to the publisher
+		// Send a confirmation message back to the publisher to ACK that the
+		// message was received by the subscriber. The reply should be sent
+		//no matter if the handler was executed successfully or not
 		natsConn.Publish(msg.Reply, out)
 
-	// Check for NACK type Event.
 	case p.subject.Event == EventNACK:
-		mf, ok := p.methodsAvailable.CheckIfExists(message.Method)
+		mh, ok := p.methodsAvailable.CheckIfExists(message.Method)
 		if !ok {
 			er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.Event)
-			p.processes.errorKernel.errSend(p, message, er)
+			p.errorKernel.errSend(p, message, er)
 		}
 
-		if p.signatures.verifySignature(message) {
-
-			_, err := mf.handler(p, message, thisNode)
-
-			if err != nil {
-				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-				p.processes.errorKernel.errSend(p, message, er)
-			}
-		}
+		// We do not send reply messages for EventNACL, so we can discard the output.
+		_ = p.callHandler(message, mh, thisNode)
 
 	default:
 		er := fmt.Errorf("info: did not find that specific type of event: %#v", p.subject.Event)
-		p.processes.errorKernel.infoSend(p, message, er)
+		p.errorKernel.infoSend(p, message, er)
 
 	}
+}
+
+// callHandler will call the handler for the Request type defined in the message.
+// If checking signatures and/or acl's are enabled the signatures they will be
+// verified, and if OK the handler is called.
+func (p process) callHandler(message Message, mh methodHandler, thisNode string) []byte {
+	out := []byte{}
+	var err error
+
+	switch p.verifySigOrAclFlag(message) {
+	case true:
+		log.Printf("info: subscriberHandler: doHandler=true: %v\n", true)
+		out, err = mh.handler(p, message, thisNode)
+		if err != nil {
+			er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
+			p.errorKernel.errSend(p, message, er)
+			log.Printf("%v\n", er)
+		}
+	default:
+		er := fmt.Errorf("error: subscriberHandler: doHandler=false, doing nothing")
+		p.errorKernel.errSend(p, message, er)
+		log.Printf("%v\n", er)
+	}
+
+	return out
+}
+
+// verifySigOrAclFlag will do signature and/or acl checking based on which of
+// those features are enabled, and then call the handler.
+// The handler will also be called if neither signature or acl checking is enabled
+// since it is up to the subscriber to decide if it want to use the auth features
+// or not.
+func (p process) verifySigOrAclFlag(message Message) bool {
+	doHandler := false
+
+	switch {
+
+	// If no checking enabled we should just allow the message.
+	case !p.nodeAuth.configuration.EnableSignatureCheck && !p.nodeAuth.configuration.EnableAclCheck:
+		log.Printf(" * DEBUG: verify acl/sig: no acl or signature checking at all is enabled, ALLOW the message, method=%v\n", message.Method)
+		doHandler = true
+
+	// If only sig check enabled, and sig OK, we should allow the message.
+	case p.nodeAuth.configuration.EnableSignatureCheck && !p.nodeAuth.configuration.EnableAclCheck:
+		sigOK := p.nodeAuth.verifySignature(message)
+
+		log.Printf(" * DEBUG: verify acl/sig: Only signature checking enabled, ALLOW the message if sigOK, sigOK=%v, method %v\n", sigOK, message.Method)
+
+		if sigOK {
+			doHandler = true
+		}
+
+	// If both sig and acl check enabled, and sig and acl OK, we should allow the message.
+	case p.nodeAuth.configuration.EnableSignatureCheck && p.nodeAuth.configuration.EnableAclCheck:
+		sigOK := p.nodeAuth.verifySignature(message)
+		aclOK := p.nodeAuth.verifyAcl(message)
+
+		log.Printf(" * DEBUG: verify acl/sig:both signature and acl checking enabled, allow the message if sigOK and aclOK, or method is not REQCliCommand, sigOK=%v, aclOK=%v, method=%v\n", sigOK, aclOK, message.Method)
+
+		if sigOK && aclOK {
+			doHandler = true
+		}
+
+		// none of the verification options matched, we should keep the default value
+		// of doHandler=false, so the handler is not done.
+	default:
+		log.Printf(" * DEBUG: verify acl/sig: None of the verify flags matched, not doing handler for message, method=%v\n", message.Method)
+	}
+
+	return doHandler
 }
 
 // SubscribeMessage will register the Nats callback function for the specified
@@ -561,7 +621,8 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 // on a node.
 func (p process) subscribeMessages() *nats.Subscription {
 	subject := string(p.subject.name())
-	natsSubscription, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
+	// natsSubscription, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
+	natsSubscription, err := p.natsConn.QueueSubscribe(subject, subject, func(msg *nats.Msg) {
 		//_, err := p.natsConn.Subscribe(subject, func(msg *nats.Msg) {
 
 		// Start up the subscriber handler.
@@ -624,7 +685,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 
 func (p process) addMethodArgSignature(m Message) []byte {
 	argsString := argsToString(m.MethodArgs)
-	sign := ed25519.Sign(p.signatures.SignPrivateKey, []byte(argsString))
+	sign := ed25519.Sign(p.nodeAuth.SignPrivateKey, []byte(argsString))
 
 	return sign
 }
@@ -646,7 +707,7 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 		b, err := cbor.Marshal(m)
 		if err != nil {
 			er := fmt.Errorf("error: messageDeliverNats: cbor encode message failed: %v", err)
-			p.processes.errorKernel.errSend(p, m, er)
+			p.errorKernel.errSend(p, m, er)
 			return
 		}
 
@@ -659,7 +720,7 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 		err := gobEnc.Encode(m)
 		if err != nil {
 			er := fmt.Errorf("error: messageDeliverNats: gob encode message failed: %v", err)
-			p.processes.errorKernel.errSend(p, m, er)
+			p.errorKernel.errSend(p, m, er)
 			return
 		}
 
@@ -715,7 +776,7 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 
 		// We only wan't to send the error message to errorCentral once.
 		once.Do(func() {
-			p.processes.errorKernel.errSend(p, m, er)
+			p.errorKernel.errSend(p, m, er)
 		})
 
 		// No compression, so we just assign the value of the serialized

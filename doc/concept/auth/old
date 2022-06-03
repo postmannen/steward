@@ -1,0 +1,257 @@
+package main
+
+import (
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
+	"log"
+	"strings"
+)
+
+// generateJSONForNode will generate a json encoded representation of the node specific
+// map values of authSchema, along with a hash of the data.
+func (a *authSchema) OLDgenerateJSONForNode(hostNodeOrGroup node) error {
+	fmt.Printf("--------------------ENTERING generateJSONForNode------------------------\n")
+
+	// First generate hash value of the current map[fromNodes]map[command]struct{}
+	// ---------------------------------------------------------------------------
+
+	// Create a sorted slice representation of the map, which will look the same
+	// at all times unless the map is changed. This is so we can create the same
+	// hash and don't have to worry about the order the data is represented in
+	// the map. With other words, we need a slice representation to guarantee the
+	// order, since with a map we can not guarantee the order.
+	fromNodesSlice := a.nodeMapToSlice(hostNodeOrGroup)
+	//fmt.Printf(" * generateJSONForNode:ACLMap for nodeName=%v: %+v\n", hostNodeOrGroup, a.schemaMain.ACLMap[hostNodeOrGroup])
+	//fmt.Printf(" * generateJSONForNode:fromNodesSlice: %+v\n", fromNodesSlice)
+
+	jsonFromNodesSlice, err := json.Marshal(fromNodesSlice)
+	if err != nil {
+		err := fmt.Errorf("error: authSchema, json for hash:  %v", err)
+		log.Printf("%v\n", err)
+		return err
+	}
+
+	hash := sha256.Sum256(jsonFromNodesSlice)
+
+	// Generate a JSON representation of the current map[fromNodes]map[command]struct{}
+	// that will be sent to nodes, and store this alongside the hash value.
+
+	// ------------------------------------------------------------------------------------------------------
+
+	// We need to convert the node field to a slice to handle if a group is specified,
+	// so we can update the generated map for each indivial host.
+	hostNodes := a.convertNodeToNodeSlice(hostNodeOrGroup)
+	mapOfFromNodeCommands := make(map[node]map[command]struct{})
+
+	// If nodeHost was a group we need loop for each hostnode element the ACL is for.
+	for _, n := range hostNodes {
+		//fmt.Printf("---------nodes iteration, n=%v, where func_nodeName=%v\n", n, hostNodeOrGroup)
+
+		//fmt.Printf(" *** DEBUG1: generateJSONForNode: func_variable_nodeName=%v, n=%v, ACLMap=%v\n", hostNodeOrGroup, n, a.schemaMain.ACLMap)
+
+		//REMOVED:mapOfFromNodeCommands := make(map[node]map[command]struct{})
+
+		//fmt.Printf(" *** DEBUG2:  generateJSONForNode: mapOfFromNodeCommands: %v\n\n", mapOfFromNodeCommands)
+		//fmt.Printf(" * generateJSONForNode: ACLMap for node=%v: %+v\n", hostNodeOrGroup, a.schemaMain.ACLMap[hostNodeOrGroup])
+
+		// TODO: If the node is a group node, we also need to get eventual single ACL for that node,
+		//		 and also the also the other way around.
+
+		// Get the fromNode and the commandMap
+		for fromNodeOrGroup, commandMap := range a.schemaMain.ACLMap[n] {
+			//fmt.Printf(" * fnOrig=%v, commandMapOrig=%v\n", fromNodeOrGroup, commandMap)
+
+			// Convert the fromnode into a slice, and expand if it is a group entry
+			fromNodeSlice := a.convertNodeToNodeSlice(fromNodeOrGroup)
+			//fmt.Printf(" * fnConvToSlice=%v\n", fromNodeSlice)
+
+			// Range the slice of expanded fromnodes
+			// For each of the exanded from nodes, we create a new entry in the new map.
+			for _, fromNodeSingle := range fromNodeSlice {
+				//fmt.Printf(" ** fnFromSlice=%v\n", fromNodeSingle)
+				mapOfFromNodeCommands[fromNodeSingle] = make(map[command]struct{})
+
+				// Get the command map entry for the current fromNode
+				for c, _ := range commandMap {
+
+					// Convert the command into a slice, and expand if it is a group entry
+					cmdConvToSlice := a.convertCommandToCommandSlice(c)
+					// fmt.Printf(" *** Before converting to slice, map contains: %v\n", cmdOrig)
+					// fmt.Printf(" *** cmdConvToSlice=%v\n", cmdConvToSlice)
+
+					// Get the actual command.
+					for _, cmdFromSlice := range cmdConvToSlice {
+						// fmt.Printf(" **** cmdFromSlice=%v\n", cmdFromSlice)
+						mapOfFromNodeCommands[fromNodeSingle][cmdFromSlice] = struct{}{}
+					}
+				}
+			}
+		}
+
+		// fmt.Printf(" ***** mapOfFromNodeCommands=%+v\n", mapOfFromNodeCommands)
+
+		// For all iterations, and both for single nodes and group expanded nodes we
+		// want to marshal the same data value as the generated data.
+		// jsonFromNodes, err := json.Marshal(a.schemaMain.NodeMap[nodeName])
+		jsonFromNodes, err := json.Marshal(mapOfFromNodeCommands)
+		if err != nil {
+			err := fmt.Errorf("error: authSchema, json for schemafromnodes: %v", err)
+			log.Printf("%v\n", err)
+			return err
+		}
+
+		// Save the data in the generated map using the unique n got'n from each iteration.
+		a.schemaGenerated.mu.Lock()
+		a.schemaGenerated.NodeMap[n] = NodeDataWithHash{
+			Data: jsonFromNodes,
+			Hash: hash,
+		}
+		a.schemaGenerated.mu.Unlock()
+
+		//fmt.Printf("\n * generateJSONForNode: hash %v, json:%+v\n", hash, string(jsonFromNodes))
+		fmt.Printf("\n * generateJSONForNode: hostNode=%v, json:%+v\n", n, string(jsonFromNodes))
+
+	}
+	return nil
+}
+
+// convertNodeToNodeSlice will convert the given argument into a slice representation.
+// If the argument is a group, then all the members of that group will be expanded into
+// the slice.
+// If the argument is not a group kind of value, then only a slice with that single
+// value is returned.
+func (a *authSchema) OLDconvertNodeToNodeSlice(n node) []node {
+	nodes := []node{}
+
+	// Check if we are given a nodeGroup variable, and if we are, get all the
+	// nodes for that group.
+	if strings.HasPrefix(string(n), "grp_nodes_") {
+		nodes = append(nodes, n)
+		for nd := range a.schemaMain.NodeGroupMap[nodeGroup(n)] {
+			nodes = append(nodes, nd)
+		}
+	} else {
+		// No group found meaning a single node was given as an argument, so we
+		// just put the single node given as the only value in the slice.
+		nodes = []node{n}
+	}
+
+	fmt.Printf(" * DEBUG: nodes contains, %v\n", nodes)
+
+	return nodes
+
+	//nodes := []node{}
+	//
+	//// Check if we are given a nodeGroup variable, and if we are, get all the
+	//// nodes for that group.
+	//if strings.HasPrefix(string(n), "grp_nodes_") {
+	//	for nd := range a.schemaMain.NodeGroupMap[nodeGroup(n)] {
+	//		nodes = append(nodes, nd)
+	//	}
+	//} else {
+	//	// No group found meaning a single node was given as an argument, so we
+	//	// just put the single node given as the only value in the slice.
+	//	nodes = []node{n}
+	//}
+	//
+	//return nodes
+}
+
+// NB: Last example before going for generateall instead
+//
+// generateJSONForNode will generate a json encoded representation of the node specific
+// map values of authSchema, along with a hash of the data.
+func (a *authSchema) generateJSONForHostOrGroup(hostNodeOrGroup node) error {
+	fmt.Printf("-----------------NEW COMMAND ADDED, running generateJSONForHostOrGroup-------------------\n")
+	fmt.Printf("ACLMap=%+v\n", a.schemaMain.ACLMap)
+	// Expand eventual groups
+	hostNodesAndGroups := a.convertGRPToHostnamesOnly(hostNodeOrGroup)
+
+	ACLsToConvert := make(map[node]map[node]map[command]struct{})
+	// We need to range the slice to get all the ACL's for a host or group of hosts.
+	for _, n := range hostNodesAndGroups {
+		if ACLsToConvert[n] == nil {
+			ACLsToConvert[n] = make(map[node]map[command]struct{})
+		}
+		fmt.Printf("\n * Current hostNodesAndGroups=%v, n=%v\n", hostNodesAndGroups, n)
+		fmt.Printf(" * Found ACL for node=%v, ACL=%v\n", n, a.schemaMain.ACLMap[n])
+
+		for fnOrFg, cmdMapForFnOrFg := range a.schemaMain.ACLMap[n] {
+
+			for cmd, vv := range cmdMapForFnOrFg {
+
+				// Expand eventual groups, so we use real fromNode nodenames in ACL for nodes.
+				nds := a.convertGRPToHostnamesOnly(fnOrFg)
+				for _, fn := range nds {
+					if ACLsToConvert[n][fn] == nil {
+						ACLsToConvert[n][fn] = make(map[command]struct{})
+					}
+					ACLsToConvert[n][fn][cmd] = vv
+					fmt.Printf(" * Adding to map: When n=%v, ACLsToConvert[nn]=%v\n", n, ACLsToConvert[n])
+				}
+			}
+		}
+
+		//fmt.Printf(" * DEBUG: ACLsToConvert=%v\n", ACLsToConvert)
+
+	}
+
+	if strings.HasPrefix(string(hostNodeOrGroup), "grp_nodes_") {
+		fmt.Printf("\n THIS RUN IT IS A GROUP: %v\n\n", hostNodeOrGroup)
+	}
+
+	fmt.Printf("\n * ACLsToConvert=%v\n", ACLsToConvert)
+	fmt.Printf(" * schemaGenerated = %v\n", a.schemaGenerated.NodeMap)
+
+	// We only want to store JSON in the map under real names, not group names.
+	nds := a.convertGRPToHostnamesOnly(hostNodeOrGroup)
+	for _, n := range nds {
+
+		b, err := json.Marshal(ACLsToConvert[n])
+		if err != nil {
+			log.Printf("error: marshaling: %v\n", err)
+			return err
+		}
+
+		a.schemaGenerated.mu.Lock()
+		a.schemaGenerated.NodeMap[n] = NodeDataWithHash{
+			Data: b,
+			Hash: [32]byte{},
+		}
+		a.schemaGenerated.mu.Unlock()
+	}
+
+	return nil
+}
+
+// convertNodeToNodeSlice will convert the given argument into a slice representation.
+// If the argument is a group, then all the members of that group will be expanded into
+// the slice.
+// If the argument is not a group kind of value, then only a slice with that single
+// value is returned.
+func (a *authSchema) convToNodeSliceKeepGroup(n node) []node {
+	nodes := []node{}
+
+	// Check if we are given a nodeGroup variable, and if we are, get all the
+	// nodes for that group.
+	if strings.HasPrefix(string(n), "grp_nodes_") {
+		nodes = append(nodes, n)
+		for nd := range a.schemaMain.NodeGroupMap[nodeGroup(n)] {
+			nodes = append(nodes, nd)
+		}
+	} else {
+		// No group found meaning a single node was given as an argument.
+		nodes = []node{n}
+
+		//// Check if the node is a part of other groups.
+		//for ng, v := range a.schemaMain.NodeGroupMap {
+		//	if _, ok := v[n]; ok {
+		//		nodes = append(nodes, node(ng))
+		//	}
+		//}
+
+	}
+
+	return nodes
+}

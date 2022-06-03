@@ -1,0 +1,1 @@
+{"grp_nodes_ships":{"admin":{"HEN":{},"grp_commands_test":{},"useradd -m kongen":{}},"grp_nodes_operators":{"grp_commands_commandset1":{}}},"ship0":{"admin":{}},"ship1":{"operator1":{"ls -lt":{}},"operator2":{"ls -l":{},"rm -rf":{}}},"ship101":{"admin":{"HORSE":{},"PIG":{}}},"ship2":{"admin":{"echo":{}}},"ship3":{}}

@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	copier "github.com/jinzhu/copier"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -251,6 +252,19 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 			// messages to be processed while waiting for the done signal, or if an
 			// error with an individual message occurs.
 			go func(v samDBValue) {
+				// Create a copy of the message that we can use to write to the
+				// perm store without causing a race since the REQ handler for the
+				// message might not yet be done when message is written to the
+				// perm store.
+				// We also need a copy to be able to remove the data from the message
+				// when writing it to the store, so we don't mess up to actual data
+				// that might be in use in the handler.
+
+				msgForPermStore := Message{}
+				copier.Copy(&msgForPermStore, v.Data.Message)
+				// Remove the content of the data field.
+				msgForPermStore.Data = nil
+
 				v.Data.Message.done = make(chan struct{})
 				delivredCh := make(chan struct{})
 
@@ -290,7 +304,84 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 				// it out of the K/V Store.
 				r.deleteKeyFromBucket(r.samValueBucket, strconv.Itoa(v.ID))
 
-				r.permStore <- fmt.Sprintf("%v : %+v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), v)
+				//m := v.Data.Message
+				//t := time.Now().Format("Mon Jan _2 15:04:05 2006")
+
+				//tmpout := os.Stdout
+
+				//_ = fmt.Sprintf("%v\n", t)
+				//_ = fmt.Sprintf("%v\n", m.ID)
+				//_ = fmt.Sprintf("%v\n", m.ToNode)
+				//_ = fmt.Sprintf("%v\n", m.ToNodes)
+				//_ = fmt.Sprintf("%v\n", m.Data)
+				//_ = fmt.Sprintf("%v\n", m.Method)
+				//_ = fmt.Sprintf("%v\n", m.MethodArgs)
+				//_ = fmt.Sprintf("%v\n", m.ArgSignature)
+				//_ = fmt.Sprintf("%v\n", m.ReplyMethod)
+				//_ = fmt.Sprintf("%v\n", m.ReplyMethodArgs)
+				//_ = fmt.Sprintf("%v\n", m.IsReply)
+				//_ = fmt.Sprintf("%v\n", m.FromNode)
+				//_ = fmt.Sprintf("%v\n", m.ACKTimeout)
+				//_ = fmt.Sprintf("%v\n", m.Retries)
+				//_ = fmt.Sprintf("%v\n", m.ReplyACKTimeout)
+				//_ = fmt.Sprintf("%v\n", m.ReplyRetries)
+				//_ = fmt.Sprintf("%v\n", m.MethodTimeout)
+				//_ = fmt.Sprintf("%v\n", m.ReplyMethodTimeout)
+				//_ = fmt.Sprintf("%v\n", m.Directory)
+				//_ = fmt.Sprintf("%v\n", m.FileName)
+				//_ = fmt.Sprintf("%v\n", m.PreviousMessage)
+				//_ = fmt.Sprintf("%v\n", m.RelayViaNode)
+				//_ = fmt.Sprintf("%v\n", m.RelayOriginalViaNode)
+				//_ = fmt.Sprintf("%v\n", m.RelayFromNode)
+				//_ = fmt.Sprintf("%v\n", m.RelayToNode)
+				//_ = fmt.Sprintf("%v\n", m.RelayOriginalMethod)
+				//_ = fmt.Sprintf("%v\n", m.RelayReplyMethod)
+				//_ = fmt.Sprintf("%v\n", m.done)
+
+				//str := fmt.Sprintln(
+				//	t,
+				//	m.ID,
+				//	m.ToNode,
+				//	m.ToNodes,
+				//	m.Data,
+				//	m.Method,
+				//	m.MethodArgs,
+				//	m.ArgSignature,
+				//	m.ReplyMethod,
+				//	m.ReplyMethodArgs,
+				//	m.IsReply,
+				//	m.FromNode,
+				//	m.ACKTimeout,
+				//	m.Retries,
+				//	m.ReplyACKTimeout,
+				//	m.ReplyRetries,
+				//	m.MethodTimeout,
+				//	m.ReplyMethodTimeout,
+				//	m.Directory,
+				//	m.FileName,
+				//	m.PreviousMessage,
+				//	m.RelayViaNode,
+				//	m.RelayOriginalViaNode,
+				//	m.RelayFromNode,
+				//	m.RelayToNode,
+				//	m.RelayOriginalMethod,
+				//	m.RelayReplyMethod,
+				//	m.done,
+				//)
+
+				//r.permStore <- fmt.Sprintf("%v\n", str)
+
+				// NB: Removed this one since it creates a data race with the storing of the hash value in
+				// the methodREQKeysDeliverUpdate. Sorted by splitting up the sprint below with the sprint
+				// above for now, but should investigate further what might be the case here, since the
+				// message have no reference to the proc and should in theory not create a race.
+				//
+				js, err := json.Marshal(msgForPermStore)
+				if err != nil {
+					er := fmt.Errorf("error:fillBuffer: json marshaling: %v", err)
+					r.errorKernel.errSend(r.processInitial, Message{}, er)
+				}
+				r.permStore <- time.Now().Format("Mon Jan _2 15:04:05 2006") + ", " + string(js) + "\n"
 
 			}(v)
 		case <-ctx.Done():

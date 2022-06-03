@@ -24,6 +24,8 @@ type errorKernel struct {
 
 	// errorCh is used to report errors from a process
 	errorCh chan errorEvent
+	// testCh is used within REQTest for receving data for tests.
+	testCh chan []byte
 
 	ctx     context.Context
 	cancel  context.CancelFunc
@@ -36,6 +38,7 @@ func newErrorKernel(ctx context.Context, m *metrics) *errorKernel {
 
 	return &errorKernel{
 		errorCh: make(chan errorEvent, 2),
+		testCh:  make(chan []byte),
 		ctx:     ctxC,
 		cancel:  cancel,
 		metrics: m,
@@ -229,7 +232,7 @@ type errorAction int
 
 const (
 	// errActionContinue is ment to be used when the a process
-	// can just continue without takig any special care.
+	// can just continue without taking any special care.
 	errActionContinue errorAction = iota
 	// TODO:
 	// errActionKill should log the error,

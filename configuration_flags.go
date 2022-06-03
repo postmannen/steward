@@ -41,6 +41,10 @@ type Configuration struct {
 	NatsReconnectJitter int
 	// NatsReconnectJitterTLS in seconds
 	NatsReconnectJitterTLS int
+	// REQKeysRequestUpdateInterval in seconds
+	REQKeysRequestUpdateInterval int
+	// REQAclRequestUpdateInterval in seconds
+	REQAclRequestUpdateInterval int
 	// The number of the profiling port
 	ProfilingPort string
 	// host and port for prometheus listener, e.g. localhost:2112
@@ -59,6 +63,8 @@ type Configuration struct {
 	RootCAPath string
 	// Full path to the NKEY's seed file
 	NkeySeedFile string
+	// NkeyPublicKey
+	NkeyPublicKey string `toml:"-"`
 	// The host and port to expose the data folder
 	ExposeDataFolder string
 	// Timeout for error messages
@@ -77,6 +83,8 @@ type Configuration struct {
 	EnableTUI bool
 	// EnableSignatureCheck
 	EnableSignatureCheck bool
+	// EnableAclCheck
+	EnableAclCheck bool
 	// IsCentralAuth
 	IsCentralAuth bool
 	// EnableDebug will also enable printing all the messages received in the errorKernel
@@ -85,9 +93,14 @@ type Configuration struct {
 
 	// Make the current node send hello messages to central at given interval in seconds
 	StartPubREQHello int
+	// Enable the updates of public keys
+	EnableKeyUpdates bool
+
+	// Enable the updates of acl's
+	EnableAclUpdates bool
+
 	// Start the central error logger.
-	// Takes a comma separated string of nodes to receive from or "*" for all nodes.
-	StartSubREQErrorLog bool
+	IsCentralErrorLogger bool
 	// Subscriber for hello messages
 	StartSubREQHello bool
 	// Subscriber for text logging
@@ -125,41 +138,46 @@ type Configuration struct {
 // configuration values from file, so we are able to detect
 // if a value were given or not when parsing.
 type ConfigurationFromFile struct {
-	ConfigFolder             *string
-	RingBufferSize           *int
-	SocketFolder             *string
-	TCPListener              *string
-	HTTPListener             *string
-	DatabaseFolder           *string
-	NodeName                 *string
-	BrokerAddress            *string
-	NatsConnOptTimeout       *int
-	NatsConnectRetryInterval *int
-	NatsReconnectJitter      *int
-	NatsReconnectJitterTLS   *int
-	ProfilingPort            *string
-	PromHostAndPort          *string
-	DefaultMessageTimeout    *int
-	DefaultMessageRetries    *int
-	DefaultMethodTimeout     *int
-	SubscribersDataFolder    *string
-	CentralNodeName          *string
-	RootCAPath               *string
-	NkeySeedFile             *string
-	ExposeDataFolder         *string
-	ErrorMessageTimeout      *int
-	ErrorMessageRetries      *int
-	Compression              *string
-	Serialization            *string
-	SetBlockProfileRate      *int
-	EnableSocket             *bool
-	EnableTUI                *bool
-	EnableSignatureCheck     *bool
-	IsCentralAuth            *bool
-	EnableDebug              *bool
+	ConfigFolder                 *string
+	RingBufferSize               *int
+	SocketFolder                 *string
+	TCPListener                  *string
+	HTTPListener                 *string
+	DatabaseFolder               *string
+	NodeName                     *string
+	BrokerAddress                *string
+	NatsConnOptTimeout           *int
+	NatsConnectRetryInterval     *int
+	NatsReconnectJitter          *int
+	NatsReconnectJitterTLS       *int
+	REQKeysRequestUpdateInterval *int
+	REQAclRequestUpdateInterval  *int
+	ProfilingPort                *string
+	PromHostAndPort              *string
+	DefaultMessageTimeout        *int
+	DefaultMessageRetries        *int
+	DefaultMethodTimeout         *int
+	SubscribersDataFolder        *string
+	CentralNodeName              *string
+	RootCAPath                   *string
+	NkeySeedFile                 *string
+	ExposeDataFolder             *string
+	ErrorMessageTimeout          *int
+	ErrorMessageRetries          *int
+	Compression                  *string
+	Serialization                *string
+	SetBlockProfileRate          *int
+	EnableSocket                 *bool
+	EnableTUI                    *bool
+	EnableSignatureCheck         *bool
+	EnableAclCheck               *bool
+	IsCentralAuth                *bool
+	EnableDebug                  *bool
 
 	StartPubREQHello            *int
-	StartSubREQErrorLog         *bool
+	EnableKeyUpdates            *bool
+	EnableAclUpdates            *bool
+	IsCentralErrorLogger        *bool
 	StartSubREQHello            *bool
 	StartSubREQToFileAppend     *bool
 	StartSubREQToFile           *bool
@@ -186,41 +204,46 @@ func NewConfiguration() *Configuration {
 // Get a Configuration struct with the default values set.
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
-		ConfigFolder:             "./etc/",
-		RingBufferSize:           1000,
-		SocketFolder:             "./tmp",
-		TCPListener:              "",
-		HTTPListener:             "",
-		DatabaseFolder:           "./var/lib",
-		NodeName:                 "",
-		BrokerAddress:            "127.0.0.1:4222",
-		NatsConnOptTimeout:       20,
-		NatsConnectRetryInterval: 10,
-		NatsReconnectJitter:      100,
-		NatsReconnectJitterTLS:   1,
-		ProfilingPort:            "",
-		PromHostAndPort:          "",
-		DefaultMessageTimeout:    10,
-		DefaultMessageRetries:    1,
-		DefaultMethodTimeout:     10,
-		SubscribersDataFolder:    "./data",
-		CentralNodeName:          "",
-		RootCAPath:               "",
-		NkeySeedFile:             "",
-		ExposeDataFolder:         "",
-		ErrorMessageTimeout:      60,
-		ErrorMessageRetries:      10,
-		Compression:              "",
-		Serialization:            "",
-		SetBlockProfileRate:      0,
-		EnableSocket:             true,
-		EnableTUI:                false,
-		EnableSignatureCheck:     false,
-		IsCentralAuth:            false,
-		EnableDebug:              false,
+		ConfigFolder:                 "./etc/",
+		RingBufferSize:               1000,
+		SocketFolder:                 "./tmp",
+		TCPListener:                  "",
+		HTTPListener:                 "",
+		DatabaseFolder:               "./var/lib",
+		NodeName:                     "",
+		BrokerAddress:                "127.0.0.1:4222",
+		NatsConnOptTimeout:           20,
+		NatsConnectRetryInterval:     10,
+		NatsReconnectJitter:          100,
+		NatsReconnectJitterTLS:       1,
+		REQKeysRequestUpdateInterval: 60,
+		REQAclRequestUpdateInterval:  60,
+		ProfilingPort:                "",
+		PromHostAndPort:              "",
+		DefaultMessageTimeout:        10,
+		DefaultMessageRetries:        1,
+		DefaultMethodTimeout:         10,
+		SubscribersDataFolder:        "./data",
+		CentralNodeName:              "",
+		RootCAPath:                   "",
+		NkeySeedFile:                 "",
+		ExposeDataFolder:             "",
+		ErrorMessageTimeout:          60,
+		ErrorMessageRetries:          10,
+		Compression:                  "",
+		Serialization:                "",
+		SetBlockProfileRate:          0,
+		EnableSocket:                 true,
+		EnableTUI:                    false,
+		EnableSignatureCheck:         false,
+		EnableAclCheck:               false,
+		IsCentralAuth:                false,
+		EnableDebug:                  false,
 
 		StartPubREQHello:            30,
-		StartSubREQErrorLog:         false,
+		EnableKeyUpdates:            true,
+		EnableAclUpdates:            true,
+		IsCentralErrorLogger:        false,
 		StartSubREQHello:            true,
 		StartSubREQToFileAppend:     true,
 		StartSubREQToFile:           true,
@@ -305,6 +328,16 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 		conf.NatsReconnectJitterTLS = cd.NatsReconnectJitterTLS
 	} else {
 		conf.NatsReconnectJitterTLS = *cf.NatsReconnectJitterTLS
+	}
+	if cf.REQKeysRequestUpdateInterval == nil {
+		conf.REQKeysRequestUpdateInterval = cd.REQKeysRequestUpdateInterval
+	} else {
+		conf.REQKeysRequestUpdateInterval = *cf.REQKeysRequestUpdateInterval
+	}
+	if cf.REQAclRequestUpdateInterval == nil {
+		conf.REQAclRequestUpdateInterval = cd.REQAclRequestUpdateInterval
+	} else {
+		conf.REQAclRequestUpdateInterval = *cf.REQAclRequestUpdateInterval
 	}
 	if cf.ProfilingPort == nil {
 		conf.ProfilingPort = cd.ProfilingPort
@@ -396,6 +429,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.EnableSignatureCheck = *cf.EnableSignatureCheck
 	}
+	if cf.EnableAclCheck == nil {
+		conf.EnableAclCheck = cd.EnableAclCheck
+	} else {
+		conf.EnableAclCheck = *cf.EnableAclCheck
+	}
 	if cf.IsCentralAuth == nil {
 		conf.IsCentralAuth = cd.IsCentralAuth
 	} else {
@@ -414,10 +452,22 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.StartPubREQHello = *cf.StartPubREQHello
 	}
-	if cf.StartSubREQErrorLog == nil {
-		conf.StartSubREQErrorLog = cd.StartSubREQErrorLog
+	if cf.EnableKeyUpdates == nil {
+		conf.EnableKeyUpdates = cd.EnableKeyUpdates
 	} else {
-		conf.StartSubREQErrorLog = *cf.StartSubREQErrorLog
+		conf.EnableKeyUpdates = *cf.EnableKeyUpdates
+	}
+
+	if cf.EnableAclUpdates == nil {
+		conf.EnableAclUpdates = cd.EnableAclUpdates
+	} else {
+		conf.EnableAclUpdates = *cf.EnableAclUpdates
+	}
+
+	if cf.IsCentralErrorLogger == nil {
+		conf.IsCentralErrorLogger = cd.IsCentralErrorLogger
+	} else {
+		conf.IsCentralErrorLogger = *cf.IsCentralErrorLogger
 	}
 	if cf.StartSubREQHello == nil {
 		conf.StartSubREQHello = cd.StartSubREQHello
@@ -538,6 +588,8 @@ func (c *Configuration) CheckFlags() error {
 	flag.IntVar(&c.NatsConnectRetryInterval, "natsConnectRetryInterval", fc.NatsConnectRetryInterval, "default nats retry connect interval in seconds.")
 	flag.IntVar(&c.NatsReconnectJitter, "natsReconnectJitter", fc.NatsReconnectJitter, "default nats ReconnectJitter interval in milliseconds.")
 	flag.IntVar(&c.NatsReconnectJitterTLS, "natsReconnectJitterTLS", fc.NatsReconnectJitterTLS, "default nats ReconnectJitterTLS interval in seconds.")
+	flag.IntVar(&c.REQKeysRequestUpdateInterval, "REQKeysRequestUpdateInterval", fc.REQKeysRequestUpdateInterval, "default interval in seconds for asking the central for public keys")
+	flag.IntVar(&c.REQAclRequestUpdateInterval, "REQAclRequestUpdateInterval", fc.REQAclRequestUpdateInterval, "default interval in seconds for asking the central for acl updates")
 	flag.StringVar(&c.ProfilingPort, "profilingPort", fc.ProfilingPort, "The number of the profiling port")
 	flag.StringVar(&c.PromHostAndPort, "promHostAndPort", fc.PromHostAndPort, "host and port for prometheus listener, e.g. localhost:2112")
 	flag.IntVar(&c.DefaultMessageTimeout, "defaultMessageTimeout", fc.DefaultMessageTimeout, "default message timeout in seconds. This can be overridden on the message level")
@@ -556,12 +608,19 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.EnableSocket, "enableSocket", fc.EnableSocket, "true/false, for enabling the creation of a steward.sock file")
 	flag.BoolVar(&c.EnableTUI, "enableTUI", fc.EnableTUI, "true/false for enabling the Terminal User Interface")
 	flag.BoolVar(&c.EnableSignatureCheck, "enableSignatureCheck", fc.EnableSignatureCheck, "true/false *TESTING* enable signature checking.")
+	flag.BoolVar(&c.EnableAclCheck, "enableAclCheck", fc.EnableAclCheck, "true/false *TESTING* enable Acl checking.")
 	flag.BoolVar(&c.IsCentralAuth, "isCentralAuth", fc.IsCentralAuth, "true/false, *TESTING* is this the central auth server")
 	flag.BoolVar(&c.EnableDebug, "enableDebug", fc.EnableDebug, "true/false, will enable debug logging so all messages sent to the errorKernel will also be printed to STDERR")
 
+	// Start of Request publishers/subscribers
+
 	flag.IntVar(&c.StartPubREQHello, "startPubREQHello", fc.StartPubREQHello, "Make the current node send hello messages to central at given interval in seconds")
 
-	flag.BoolVar(&c.StartSubREQErrorLog, "startSubREQErrorLog", fc.StartSubREQErrorLog, "true/false")
+	flag.BoolVar(&c.EnableKeyUpdates, "EnableKeyUpdates", fc.EnableKeyUpdates, "true/false")
+
+	flag.BoolVar(&c.EnableAclUpdates, "EnableAclUpdates", fc.EnableAclUpdates, "true/false")
+
+	flag.BoolVar(&c.IsCentralErrorLogger, "isCentralErrorLogger", fc.IsCentralErrorLogger, "true/false")
 	flag.BoolVar(&c.StartSubREQHello, "startSubREQHello", fc.StartSubREQHello, "true/false")
 	flag.BoolVar(&c.StartSubREQToFileAppend, "startSubREQToFileAppend", fc.StartSubREQToFileAppend, "true/false")
 	flag.BoolVar(&c.StartSubREQToFile, "startSubREQToFile", fc.StartSubREQToFile, "true/false")
