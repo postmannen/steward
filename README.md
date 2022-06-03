@@ -1009,9 +1009,9 @@ Release binaries for several architechures are available at <https://github.com/
 
 **NB:** Remember to run the nats setup above before running the steward binary.
 
-Steward will create some directories for things like configuration file and other state files. By default it will create those files in the directory where you start Steward. So create individual directeries for each Steward instance you want to run below.
+Steward will create some directories for things like configuration file and other state files. By default it will create those files in the directory where you start Steward. So create individual directories for each Steward instance you want to run below.
 
-Start up a  **central** server which will act as your command and control server.
+Start up a  **central** server which will act as your master server for things like logs and authorization.
 
 ```bash
  mkdir central & cd central
