@@ -117,8 +117,10 @@ type Subject struct {
 }
 
 // newSubject will return a new variable of the type subject, and insert
-// all the values given as arguments. It will also create the channel
+// all the values given as arguments. It will create the channel
 // to receive new messages on the specific subject.
+// The function will also verify that there is a methodHandler defined
+// for the Request type.
 func newSubject(method Method, node string) Subject {
 	// Get the Event type for the Method.
 	ma := method.GetMethodsAvailable()
@@ -131,6 +133,22 @@ func newSubject(method Method, node string) Subject {
 	return Subject{
 		ToNode:    node,
 		Event:     mh.getKind(),
+		Method:    method,
+		messageCh: make(chan Message),
+	}
+}
+
+// newSubjectNoVerifyHandler will return a new variable of the type subject, and insert
+// all the values given as arguments. It will create the channel
+// to receive new messages on the specific subject.
+// The function will not verify that there is a methodHandler defined
+// for the Request type.
+func newSubjectNoVerifyHandler(method Method, node string) Subject {
+	// Get the Event type for the Method.
+
+	return Subject{
+		ToNode:    node,
+		Event:     EventACK,
 		Method:    method,
 		messageCh: make(chan Message),
 	}

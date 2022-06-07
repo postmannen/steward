@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/hpcloud/tail"
 )
 
@@ -147,6 +148,60 @@ func (m methodREQCopyFileFrom) handler(proc process, message Message, node strin
 		// Get a context with the timeout specified in message.MethodTimeout.
 		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
 		defer cancel()
+
+		{
+			// Idea:
+			//
+			// Initialization, Source:
+			// - Use the original REQCopyFileFrom method to handle the initial request from the user.
+			// - Spawn a REQCopyFileFrom_uid subscriber to receive sync messages from destination.
+			// - Send the uid, and full-file hash to the destination in a REQCopyFileTo message.
+			//
+			// Initialization, Destination:
+			// - Spawn a REQCopyFileTo-uid from the uid we got from source.
+			// --------------------------------------------------------------------------------------
+			//
+			// All below happens in the From-uid and To-uid methods until the copying is done.
+			//
+			// - dst->src, dst sends a REQCopyFileFrom-uid message with status "ready" file receiving to src.
+			// - src receives the message and start reading the file:
+			// - src, creates hash of the complete file.
+			// - src, reads the file in chunks, and create a hash of each chunk.
+			//   - src->dst, send chunk when read.
+			//   - dst->src, wait for status "ready" indicating the chuck was transfered.
+			//   - Loop and read new chunc.
+			//   - src->dst, when last chunch is sent send status "last"
+			//   - src->dst, if failure send status "error", abort file copying and clean up on both src and dst.
+			//
+			// - dst, read and store each chunch to tmp folder and verify hash.
+			//   - dst->src, send status "ready" to src when chunch is stored.
+			//	 - loop and check for status "last", if last:
+			//     - build original file from chuncs.
+			//     - verify hash when file is built.
+			//     - dst->src, send status "done".
+			//
+			// dataStructure{
+			//	Data	[]bytes
+			//	Status	copyStatus
+			//  id		int
+			// }
+
+			// Create a new copy sync process to handle the actual file copying.
+			// We use the context already created based on the time out specified
+			// in the requestTimeout field of the message.
+
+			// Create a subject for one copy request
+			uid := uuid.New()
+			sm := fmt.Sprintf("copyFileFrom_%v", uid.String())
+			m := Method(sm)
+
+			sub := newSubjectNoVerifyHandler(m, node)
+
+			//
+			copySyncProc := newProcess(ctx, proc.server, sub, processKindSubscriber, nil)
+			// The process will be killed when the context expires.
+			go copySyncProc.spawnWorker()
+		}
 
 		outCh := make(chan []byte)
 		errCh := make(chan error)
