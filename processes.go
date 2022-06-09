@@ -141,6 +141,14 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQCopyFileTo(proc)
 	}
 
+	if proc.configuration.StartSubREQCopySrc {
+		proc.startup.subREQCopySrc(proc)
+	}
+
+	if proc.configuration.StartSubREQCopyDst {
+		proc.startup.subREQCopyDst(proc)
+	}
+
 	if proc.configuration.StartSubREQHello {
 		proc.startup.subREQHello(proc)
 	}
@@ -675,6 +683,22 @@ func (s startup) subREQCopyFileFrom(p process) {
 func (s startup) subREQCopyFileTo(p process) {
 	log.Printf("Starting copy file to subscriber: %#v\n", p.node)
 	sub := newSubject(REQCopyFileTo, string(p.node))
+	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
+
+	go proc.spawnWorker()
+}
+
+func (s startup) subREQCopySrc(p process) {
+	log.Printf("Starting copy src subscriber: %#v\n", p.node)
+	sub := newSubject(REQCopySrc, string(p.node))
+	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
+
+	go proc.spawnWorker()
+}
+
+func (s startup) subREQCopyDst(p process) {
+	log.Printf("Starting copy dst subscriber: %#v\n", p.node)
+	sub := newSubject(REQCopyDst, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 
 	go proc.spawnWorker()

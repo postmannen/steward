@@ -113,6 +113,10 @@ type Configuration struct {
 	StartSubREQCopyFileFrom bool
 	// Subscriber for writing copied files to disk
 	StartSubREQCopyFileTo bool
+	// Subscriber for reading files to copy
+	StartSubREQCopySrc bool
+	// Subscriber for writing copied files to disk
+	StartSubREQCopyDst bool
 	// Subscriber for Echo Request
 	StartSubREQPing bool
 	// Subscriber for Echo Reply
@@ -184,6 +188,8 @@ type ConfigurationFromFile struct {
 	StartSubREQToFileNACK       *bool
 	StartSubREQCopyFileFrom     *bool
 	StartSubREQCopyFileTo       *bool
+	StartSubREQCopySrc          *bool
+	StartSubREQCopyDst          *bool
 	StartSubREQPing             *bool
 	StartSubREQPong             *bool
 	StartSubREQCliCommand       *bool
@@ -250,6 +256,8 @@ func newConfigurationDefaults() Configuration {
 		StartSubREQToFileNACK:       true,
 		StartSubREQCopyFileFrom:     true,
 		StartSubREQCopyFileTo:       true,
+		StartSubREQCopySrc:          true,
+		StartSubREQCopyDst:          true,
 		StartSubREQPing:             true,
 		StartSubREQPong:             true,
 		StartSubREQCliCommand:       true,
@@ -499,6 +507,16 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.StartSubREQCopyFileTo = *cf.StartSubREQCopyFileTo
 	}
+	if cf.StartSubREQCopySrc == nil {
+		conf.StartSubREQCopySrc = cd.StartSubREQCopySrc
+	} else {
+		conf.StartSubREQCopySrc = *cf.StartSubREQCopySrc
+	}
+	if cf.StartSubREQCopyDst == nil {
+		conf.StartSubREQCopyDst = cd.StartSubREQCopyDst
+	} else {
+		conf.StartSubREQCopyDst = *cf.StartSubREQCopyDst
+	}
 	if cf.StartSubREQPing == nil {
 		conf.StartSubREQPing = cd.StartSubREQPing
 	} else {
@@ -627,6 +645,8 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.StartSubREQToFileNACK, "startSubREQToFileNACK", fc.StartSubREQToFileNACK, "true/false")
 	flag.BoolVar(&c.StartSubREQCopyFileFrom, "startSubREQCopyFileFrom", fc.StartSubREQCopyFileFrom, "true/false")
 	flag.BoolVar(&c.StartSubREQCopyFileTo, "startSubREQCopyFileTo", fc.StartSubREQCopyFileTo, "true/false")
+	flag.BoolVar(&c.StartSubREQCopySrc, "startSubREQCopySrc", fc.StartSubREQCopySrc, "true/false")
+	flag.BoolVar(&c.StartSubREQCopyDst, "startSubREQCopyDst", fc.StartSubREQCopyDst, "true/false")
 	flag.BoolVar(&c.StartSubREQPing, "startSubREQPing", fc.StartSubREQPing, "true/false")
 	flag.BoolVar(&c.StartSubREQPong, "startSubREQPong", fc.StartSubREQPong, "true/false")
 	flag.BoolVar(&c.StartSubREQCliCommand, "startSubREQCliCommand", fc.StartSubREQCliCommand, "true/false")

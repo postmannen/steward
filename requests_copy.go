@@ -81,8 +81,10 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 		DstFilePath := message.MethodArgs[2]
 
 		// Get a context with the timeout specified in message.MethodTimeout.
-		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
-		defer cancel()
+		// Since the subProc spawned will outlive this method here we do not
+		// want to cancel this method. We care about the methodTimeout, but
+		// we ignore the CancelFunc.
+		ctx, _ := getContextForMethodTimeout(proc.ctx, message)
 
 		// Create a subject for one copy request
 		uid := uuid.New()
