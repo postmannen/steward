@@ -3,6 +3,7 @@ package steward
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 )
@@ -112,6 +113,11 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 
 func copySrcProcFunc() func(context.Context, chan Message) error {
 	pf := func(ctx context.Context, procFuncCh chan Message) error {
+
+		select {
+		case <-ctx.Done():
+			log.Printf(" * copySrcProcFunc ended\n")
+		}
 
 		return nil
 	}

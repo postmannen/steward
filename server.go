@@ -145,8 +145,16 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 
 	}
 
+	//var nodeAuth *nodeAuth
+	//if configuration.EnableSignatureCheck {
 	nodeAuth := newNodeAuth(configuration, errorKernel)
 	// fmt.Printf(" * DEBUG: newServer: signatures contains: %+v\n", signatures)
+	//}
+
+	//var centralAuth *centralAuth
+	//if configuration.IsCentralAuth {
+	centralAuth := newCentralAuth(configuration, errorKernel)
+	//}
 
 	s := server{
 		ctx:            ctx,
@@ -162,7 +170,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		errorKernel:    errorKernel,
 		nodeAuth:       nodeAuth,
 		helloRegister:  newHelloRegister(),
-		centralAuth:    newCentralAuth(configuration, errorKernel),
+		centralAuth:    centralAuth,
 	}
 
 	s.processes = newProcesses(ctx, &s)
