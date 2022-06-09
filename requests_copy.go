@@ -77,9 +77,9 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 			return
 		}
 
-		// SrcFilePath := message.MethodArgs[0]
-		// DstNode := message.MethodArgs[1]
-		// DstFilePath := message.MethodArgs[2]
+		SrcFilePath := message.MethodArgs[0]
+		DstNode := message.MethodArgs[1]
+		DstFilePath := message.MethodArgs[2]
 
 		// Get a context with the timeout specified in message.MethodTimeout.
 		// Since the subProc spawned will outlive this method here we do not
@@ -102,9 +102,10 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 		// The process will be killed when the context expires.
 		go copySrcSubProc.spawnWorker()
 
-		//replyData := fmt.Sprintf("info: succesfully initiated copy: srcNode=%v, srcPath=%v, dstNode=%v, dstPath=%v, starting sub process=%v for the actual copying\n", node, SrcFilePath, DstNode, DstFilePath, subProcessName)
+		replyData := fmt.Sprintf("info: succesfully initiated copy process: procName=%v, srcNode=%v, srcPath=%v, dstNode=%v, dstPath=%v, starting sub process=%v for the actual copying\n", copySrcSubProc.processName, node, SrcFilePath, DstNode, DstFilePath, subProcessName)
 		//
-		//newReplyMessage(proc, message, []byte(replyData))
+
+		newReplyMessage(proc, message, []byte(replyData))
 
 	}()
 
