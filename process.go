@@ -140,6 +140,17 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 		metrics:          server.metrics,
 	}
 
+	// We use the full name of the subject to identify a unique
+	// process. We can do that since a process can only handle
+	// one message queue.
+
+	if proc.processKind == processKindPublisher {
+		proc.processName = processNameGet(proc.subject.name(), processKindPublisher)
+	}
+	if proc.processKind == processKindSubscriber {
+		proc.processName = processNameGet(proc.subject.name(), processKindSubscriber)
+	}
+
 	return proc
 }
 
@@ -151,21 +162,11 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 // It will give the process the next available ID, and also add the
 // process to the processes map in the server structure.
 func (p process) spawnWorker() {
-	// We use the full name of the subject to identify a unique
-	// process. We can do that since a process can only handle
-	// one message queue.
-	var pn processName
-	if p.processKind == processKindPublisher {
-		pn = processNameGet(p.subject.name(), processKindPublisher)
-	}
-	if p.processKind == processKindSubscriber {
-		pn = processNameGet(p.subject.name(), processKindSubscriber)
-	}
 
-	processName := processNameGet(p.subject.name(), p.processKind)
+	// processName := processNameGet(p.subject.name(), p.processKind)
 
 	// Add prometheus metrics for the process.
-	p.metrics.promProcessesAllRunning.With(prometheus.Labels{"processName": string(processName)})
+	p.metrics.promProcessesAllRunning.With(prometheus.Labels{"processName": string(p.processName)})
 
 	// Start a publisher worker, which will start a go routine (process)
 	// That will take care of all the messages for the subject it owns.
@@ -214,12 +215,12 @@ func (p process) spawnWorker() {
 		p.natsSubscription = p.subscribeMessages()
 	}
 
-	p.processName = pn
-
 	// Add information about the new process to the started processes map.
 	p.processes.active.mu.Lock()
-	p.processes.active.procNames[pn] = p
+	p.processes.active.procNames[p.processName] = p
 	p.processes.active.mu.Unlock()
+
+	log.Printf("Successfully started process: %v\n", p.processName)
 }
 
 // messageDeliverNats will create the Nats message with headers and payload.

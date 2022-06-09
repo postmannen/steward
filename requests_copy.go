@@ -77,9 +77,9 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 			return
 		}
 
-		SrcFilePath := message.MethodArgs[0]
-		DstNode := message.MethodArgs[1]
-		DstFilePath := message.MethodArgs[2]
+		// SrcFilePath := message.MethodArgs[0]
+		// DstNode := message.MethodArgs[1]
+		// DstFilePath := message.MethodArgs[2]
 
 		// Get a context with the timeout specified in message.MethodTimeout.
 		// Since the subProc spawned will outlive this method here we do not
@@ -98,12 +98,13 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 		copySrcSubProc := newProcess(ctx, proc.server, sub, processKindSubscriber, nil)
 		// Give the sub process a procFunc so we do the actual copying within a procFunc,
 		// and not directly within the handler.
-		copySrcSubProc.procFunc = copySrcProcFunc()
+		copySrcSubProc.procFunc = copySrcProcFunc(copySrcSubProc)
 		// The process will be killed when the context expires.
 		go copySrcSubProc.spawnWorker()
 
-		replyData := fmt.Sprintf("info: succesfully initiated copy: srcNode=%v, srcPath=%v, dstNode=%v, dstPath=%v, starting sub process=%v for the actual copying\n", node, SrcFilePath, DstNode, DstFilePath, subProcessName)
-		newReplyMessage(proc, message, []byte(replyData))
+		//replyData := fmt.Sprintf("info: succesfully initiated copy: srcNode=%v, srcPath=%v, dstNode=%v, dstPath=%v, starting sub process=%v for the actual copying\n", node, SrcFilePath, DstNode, DstFilePath, subProcessName)
+		//
+		//newReplyMessage(proc, message, []byte(replyData))
 
 	}()
 
@@ -111,12 +112,12 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 	return ackMsg, nil
 }
 
-func copySrcProcFunc() func(context.Context, chan Message) error {
+func copySrcProcFunc(proc process) func(context.Context, chan Message) error {
 	pf := func(ctx context.Context, procFuncCh chan Message) error {
 
 		select {
 		case <-ctx.Done():
-			log.Printf(" * copySrcProcFunc ended\n")
+			log.Printf(" * copySrcProcFunc ended: %v\n", proc.processName)
 		}
 
 		return nil
