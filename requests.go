@@ -96,6 +96,11 @@ const (
 	// Write the destination copied to some node.
 	REQCopyFileTo Method = "REQCopyFileTo"
 	// Send Hello I'm here message.
+	// Read the source file to be copied to some node.
+	REQCopySrc Method = "REQCopySrc"
+	// Write the destination copied to some node.
+	REQCopyDst Method = "REQCopyDst"
+	// Send Hello I'm here message.
 	REQHello Method = "REQHello"
 	// Error log methods to centralError node.
 	REQErrorLog Method = "REQErrorLog"
@@ -214,6 +219,12 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				event: EventACK,
 			},
 			REQCopyFileTo: methodREQCopyFileTo{
+				event: EventACK,
+			},
+			REQCopySrc: methodREQCopySrc{
+				event: EventACK,
+			},
+			REQCopyDst: methodREQCopyDst{
 				event: EventACK,
 			},
 			REQHello: methodREQHello{
