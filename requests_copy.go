@@ -142,7 +142,7 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 
 		proc.toRingbufferCh <- []subjectAndMessage{sam}
 
-		replyData := fmt.Sprintf("info: succesfully initiated copy process: procName=%v, srcNode=%v, srcPath=%v, dstNode=%v, dstPath=%v, starting sub process=%v for the actual copying\n", copySrcSubProc.processName, node, SrcFilePath, DstNode, DstFilePath, subProcessName)
+		replyData := fmt.Sprintf("info: succesfully initiated copy source process: procName=%v, srcNode=%v, srcPath=%v, dstNode=%v, dstPath=%v, starting sub process=%v for the actual copying\n", copySrcSubProc.processName, node, SrcFilePath, DstNode, DstFilePath, subProcessName)
 
 		newReplyMessage(proc, message, []byte(replyData))
 
@@ -156,20 +156,6 @@ type copyInitialData struct {
 	UUID    string
 	DstDir  string
 	DstFile string
-}
-
-func copySrcProcFunc(proc process) func(context.Context, chan Message) error {
-	pf := func(ctx context.Context, procFuncCh chan Message) error {
-
-		select {
-		case <-ctx.Done():
-			log.Printf(" * copySrcProcFunc ended: %v\n", proc.processName)
-		}
-
-		return nil
-	}
-
-	return pf
 }
 
 // ----
@@ -228,10 +214,29 @@ func (m methodREQCopyDst) handler(proc process, message Message, node string) ([
 		// The process will be killed when the context expires.
 		go copyDstSubProc.spawnWorker()
 
+		fp := filepath.Join(cia.DstDir, cia.DstFile)
+		replyData := fmt.Sprintf("info: succesfully initiated copy source process: procName=%v, srcNode=%v, dstPath=%v, starting sub process=%v for the actual copying\n", copyDstSubProc.processName, node, fp, subProcessName)
+
+		newReplyMessage(proc, message, []byte(replyData))
+
 	}()
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
+}
+
+func copySrcProcFunc(proc process) func(context.Context, chan Message) error {
+	pf := func(ctx context.Context, procFuncCh chan Message) error {
+
+		select {
+		case <-ctx.Done():
+			log.Printf(" * copySrcProcFunc ended: %v\n", proc.processName)
+		}
+
+		return nil
+	}
+
+	return pf
 }
 
 func copyDstProcFunc(proc process) func(context.Context, chan Message) error {
