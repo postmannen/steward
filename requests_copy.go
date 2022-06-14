@@ -98,9 +98,18 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 		dstFile := filepath.Base(DstFilePath)
 		m := Method(subProcessName)
 
+		// Also choosing to create the naming for the dst method here so
+		// we can have all the information in the cia from the beginning
+		// at both ends.
+		dstSubProcessName := fmt.Sprintf("REQSUBCopyDst.%v", uid.String())
+		dstM := Method(dstSubProcessName)
+
 		cia := copyInitialData{
 			UUID:        uid.String(),
+			SrcNode:     proc.node,
 			SrcMethod:   m,
+			DstNode:     Node(DstNode),
+			DstMethod:   dstM,
 			SrcFilePath: SrcFilePath,
 			DstDir:      dstDir,
 			DstFile:     dstFile,
@@ -209,10 +218,9 @@ func (m methodREQCopyDst) handler(proc process, message Message, node string) ([
 		ctx, _ := getContextForMethodTimeout(proc.ctx, message)
 
 		// Create a subject for one copy request
-		subProcessName = fmt.Sprintf("REQSUBCopyDst.%v", cia.UUID)
-
-		m := Method(subProcessName)
-		sub := newSubjectNoVerifyHandler(m, node)
+		// subProcessName = fmt.Sprintf("REQSUBCopyDst.%v", cia.UUID)
+		// m := Method(subProcessName)
+		sub := newSubjectNoVerifyHandler(cia.DstMethod, node)
 
 		// Create a new sub process that will do the actual file copying.
 		copyDstSubProc := newProcess(ctx, proc.server, sub, processKindSubscriber, nil)
@@ -288,6 +296,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData) func(context.Context,
 
 		// Do action based on copyStatus received.
 		for {
+			fmt.Printf("\n * DEBUG: copySrcSubProcFunc: cia contains: %+v\n\n", cia)
 			select {
 			case <-ctx.Done():
 				log.Printf(" * copySrcProcFunc ENDED: %v\n", proc.processName)
@@ -362,6 +371,8 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message) func
 			Data:        csaSerialized,
 		}
 
+		fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
+
 		sam, err := newSubjectAndMessage(msg)
 		if err != nil {
 			log.Fatalf("copyDstProcSubFunc: newSubjectAndMessage failed: %v\n", err)
@@ -370,6 +381,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message) func
 		proc.toRingbufferCh <- []subjectAndMessage{sam}
 
 		for {
+			fmt.Printf("\n * DEBUG: copyDstSubProcFunc: cia contains: %+v\n\n", cia)
 			select {
 			case <-ctx.Done():
 				log.Printf(" * copyDstProcFunc ended: %v\n", proc.processName)
