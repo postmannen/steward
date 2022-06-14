@@ -248,8 +248,14 @@ func copySrcSubHandler(cia copyInitialData) func(process, Message, string) ([]by
 				log.Fatalf("error: copySrcSubHandler: cbor unmarshal of csa failed: %v\n", err)
 			}
 
-			fmt.Printf("\n-----------------RECEIVED COPY READY MESSAGE IN copySrcSubHandler: %v------------------\n\n", csa.CopyStatus)
+			switch csa.CopyStatus {
+			case copyReady:
+				log.Printf(" * RECEIVED *  copyStatus=copyReady copySrcSubHandler: %v\n\n", csa.CopyStatus)
+			default:
+				log.Fatalf("error: copySrcSubHandler: not valid copyStatus, exiting: %v\n", csa.CopyStatus)
+			}
 
+			// TODO: Clean up eventual tmp folders here!
 			allDoneCh <- struct{}{}
 		}()
 
