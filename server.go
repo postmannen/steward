@@ -437,6 +437,8 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 			// Signal back to the ringbuffer that message have been picked up.
 			samDBVal.delivered()
 
+			// TODO HERE!: The message will be dropped here since the method for copy uid does not exist
+
 			sam := samDBVal.samDBValue.Data
 			// Check if the format of the message is correct.
 			if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {

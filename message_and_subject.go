@@ -124,7 +124,8 @@ type Subject struct {
 func newSubject(method Method, node string) Subject {
 	// Get the Event type for the Method.
 	ma := method.GetMethodsAvailable()
-	mh, ok := ma.Methodhandlers[method]
+	mh, ok := ma.CheckIfExists(method)
+	//mh, ok := ma.Methodhandlers[method]
 	if !ok {
 		log.Printf("error: no Event type specified for the method: %v\n", method)
 		os.Exit(1)
