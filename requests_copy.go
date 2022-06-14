@@ -91,7 +91,7 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 
 		// Create a subject for one copy request
 		uid := uuid.New()
-		subProcessName = fmt.Sprintf("REQSubCopySrc.%v", uid.String())
+		subProcessName = fmt.Sprintf("REQSUBCopySrc.%v", uid.String())
 
 		dstDir := filepath.Dir(DstFilePath)
 		dstFile := filepath.Base(DstFilePath)
@@ -206,7 +206,7 @@ func (m methodREQCopyDst) handler(proc process, message Message, node string) ([
 		ctx, _ := getContextForMethodTimeout(proc.ctx, message)
 
 		// Create a subject for one copy request
-		subProcessName = fmt.Sprintf("REQSubCopyDst.%v", cia.UUID)
+		subProcessName = fmt.Sprintf("REQSUBCopyDst.%v", cia.UUID)
 
 		m := Method(subProcessName)
 		sub := newSubjectNoVerifyHandler(m, node)
