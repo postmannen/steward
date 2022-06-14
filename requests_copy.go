@@ -322,6 +322,38 @@ func copySrcSubProcFunc(proc process, cia copyInitialData) func(context.Context,
 					// Create message and send data to dst
 					fmt.Printf("**** DATA READ: %v\n", b)
 
+					// TESTING HERE:
+					{
+						csa := copySubData{
+							CopyStatus: copyData,
+							CopyData:   b,
+						}
+
+						csaSerialized, err := cbor.Marshal(csa)
+						if err != nil {
+							log.Fatalf("error: copyDstSubProcFunc: cbor marshal of csa failed: %v\n", err)
+						}
+
+						// We want to send a message back to src that we are ready to start.
+						fmt.Printf("\n\n\n ************** DEBUG: copyDstHandler sub process sending copyReady to:%v\n ", message.FromNode)
+						msg := Message{
+							ToNode:      cia.DstNode,
+							FromNode:    cia.SrcNode,
+							Method:      cia.DstMethod,
+							ReplyMethod: REQNone,
+							Data:        csaSerialized,
+						}
+
+						fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
+
+						sam, err := newSubjectAndMessage(msg)
+						if err != nil {
+							log.Fatalf("copyDstProcSubFunc: newSubjectAndMessage failed: %v\n", err)
+						}
+
+						proc.toRingbufferCh <- []subjectAndMessage{sam}
+					}
+
 				default:
 					// TODO: Any error logic here ?
 					log.Fatalf("error: copySrcSubProcFunc: not valid copyStatus, exiting: %v\n", csa.CopyStatus)
