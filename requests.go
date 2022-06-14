@@ -351,7 +351,8 @@ func (m Method) GetReplyMethods() []Method {
 // as input argument.
 func (m Method) getHandler(method Method) methodHandler {
 	ma := m.GetMethodsAvailable()
-	mh := ma.Methodhandlers[method]
+	mh, _ := ma.CheckIfExists(method)
+	// mh := ma.Methodhandlers[method]
 
 	return mh
 }
