@@ -13,6 +13,18 @@ import (
 	"github.com/google/uuid"
 )
 
+type copyInitialData struct {
+	UUID           string
+	SrcMethod      Method
+	SrcNode        Node
+	DstMethod      Method
+	DstNode        Node
+	SrcFilePath    string
+	DstDir         string
+	DstFile        string
+	SplitChunkSize int
+}
+
 type methodREQCopySrc struct {
 	event Event
 }
@@ -77,13 +89,28 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 	go func() {
 		defer proc.processes.wg.Done()
 
+		// Set default split chunk size, will be replaced with value from
+		// methodArgs[3] if defined.
+		splitChunkSize := 2
+
+		// Verify and check the methodArgs
 		switch {
 		case len(message.MethodArgs) < 3:
 			er := fmt.Errorf("error: methodREQCopySrc: got <3 number methodArgs: want srcfilePath,dstNode,dstFilePath")
 			proc.errorKernel.errSend(proc, message, er)
-
 			return
+
+		case len(message.MethodArgs) > 3:
+			// Check if split chunk size was set, if not set default.
+			var err error
+			splitChunkSize, err = strconv.Atoi(message.MethodArgs[3])
+			if err != nil {
+				er := fmt.Errorf("error: methodREQCopySrc: ch")
+				proc.errorKernel.errSend(proc, message, er)
+			}
 		}
+
+		fmt.Printf("\n * DEBUG: IN THE BEGINNING: SPLITCHUNKSIZE: %v\n\n", splitChunkSize)
 
 		SrcFilePath := message.MethodArgs[0]
 		DstNode := message.MethodArgs[1]
@@ -110,14 +137,15 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 		dstM := Method(dstSubProcessName)
 
 		cia := copyInitialData{
-			UUID:        uid.String(),
-			SrcNode:     proc.node,
-			SrcMethod:   m,
-			DstNode:     Node(DstNode),
-			DstMethod:   dstM,
-			SrcFilePath: SrcFilePath,
-			DstDir:      dstDir,
-			DstFile:     dstFile,
+			UUID:           uid.String(),
+			SrcNode:        proc.node,
+			SrcMethod:      m,
+			DstNode:        Node(DstNode),
+			DstMethod:      dstM,
+			SrcFilePath:    SrcFilePath,
+			DstDir:         dstDir,
+			DstFile:        dstFile,
+			SplitChunkSize: splitChunkSize,
 		}
 
 		sub := newSubjectNoVerifyHandler(m, node)
@@ -171,17 +199,6 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
-}
-
-type copyInitialData struct {
-	UUID        string
-	SrcMethod   Method
-	SrcNode     Node
-	DstMethod   Method
-	DstNode     Node
-	SrcFilePath string
-	DstDir      string
-	DstFile     string
 }
 
 // ----
@@ -299,7 +316,6 @@ type copySubData struct {
 func copySrcSubProcFunc(proc process, cia copyInitialData) func(context.Context, chan Message) error {
 	pf := func(ctx context.Context, procFuncCh chan Message) error {
 
-		const readChuncSize = 2
 		var chunkNumber = 0
 
 		// Initiate the file copier.
@@ -333,7 +349,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData) func(context.Context,
 					status := copyData
 
 					log.Printf(" * RECEIVED in copySrcSubProcFunc *  copyStatus=copyReady: %v\n\n", csa.CopyStatus)
-					b := make([]byte, readChuncSize)
+					b := make([]byte, cia.SplitChunkSize)
 					_, err := fh.Read(b)
 					if err != nil && err != io.EOF {
 						log.Printf("error: copySrcSubHandler: failed to read chuck from file: %v\n", err)
@@ -391,7 +407,6 @@ func copySrcSubProcFunc(proc process, cia copyInitialData) func(context.Context,
 }
 
 func copyDstSubProcFunc(proc process, cia copyInitialData, message Message) func(context.Context, chan Message) error {
-	const readChuncSize = 2
 
 	pf := func(ctx context.Context, procFuncCh chan Message) error {
 		fmt.Printf("\n ******* WORKING IN copyDstSubProcFunc: %+v\n\n", cia)
@@ -512,14 +527,15 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message) func
 
 							if !info.IsDir() {
 								fmt.Println(path, info.Size())
-
+								fmt.Printf(" * DEBUG: splitChunkSize: %v\n", cia.SplitChunkSize)
 								fh, err := os.Open(path)
 								if err != nil {
 									return err
 								}
 								defer fh.Close()
 
-								b := make([]byte, readChuncSize)
+								b := make([]byte, cia.SplitChunkSize)
+
 								_, err = fh.Read(b)
 								if err != nil {
 									return err
