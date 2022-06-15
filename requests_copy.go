@@ -2,6 +2,7 @@ package steward
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"log"
@@ -311,6 +312,7 @@ type copySubData struct {
 	CopyStatus  copyStatus
 	CopyData    []byte
 	ChunkNumber int
+	Hash        [32]byte
 }
 
 func copySrcSubProcFunc(proc process, cia copyInitialData) func(context.Context, chan Message) error {
@@ -348,7 +350,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData) func(context.Context,
 					// We set the default status to copyData. If we get an io.EOF we change it to copyDone later.
 					status := copyData
 
-					log.Printf(" * RECEIVED in copySrcSubProcFunc *  copyStatus=copyReady: %v\n\n", csa.CopyStatus)
+					log.Printf(" * RECEIVED in copySrcSubProcFunc from dst *  copyStatus=copyReady: %v\n\n", csa.CopyStatus)
 					b := make([]byte, cia.SplitChunkSize)
 					_, err := fh.Read(b)
 					if err != nil && err != io.EOF {
@@ -357,6 +359,9 @@ func copySrcSubProcFunc(proc process, cia copyInitialData) func(context.Context,
 					if err == io.EOF {
 						status = copyDone
 					}
+
+					// Create a hash of the bytes
+					hash := sha256.Sum256(b)
 
 					chunkNumber++
 
@@ -367,6 +372,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData) func(context.Context,
 						CopyStatus:  status,
 						CopyData:    b,
 						ChunkNumber: chunkNumber,
+						Hash:        hash,
 					}
 
 					csaSerialized, err := cbor.Marshal(csa)
@@ -457,6 +463,14 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message) func
 				if err != nil {
 					log.Fatalf("error: copySrcSubHandler: cbor unmarshal of csa failed: %v\n", err)
 				}
+
+				// Check if the hash matches.
+				hash := sha256.Sum256(csa.CopyData)
+				if hash != csa.Hash {
+					log.Fatalf("error: hash of received message is not correct\n")
+				}
+
+				fmt.Printf(" * DEBUG: Hash was verified OK\n")
 
 				switch csa.CopyStatus {
 				case copyData:
