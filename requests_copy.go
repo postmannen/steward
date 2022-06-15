@@ -385,7 +385,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData) func(context.Context,
 					chunkNumber++
 
 					// Create message and send data to dst
-					fmt.Printf("**** DATA READ: %v\n", b)
+					// fmt.Printf("**** DATA READ: %v\n", b)
 
 					csa := copySubData{
 						CopyStatus:  status,
@@ -555,7 +555,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message) func
 				switch csa.CopyStatus {
 				case copyData:
 					// Write the data chunk to disk ?
-					fmt.Printf("\n * Received data: %s\n\n", csa.CopyData)
+					// fmt.Printf("\n * Received data: %s\n\n", csa.CopyData)
 
 					func() {
 						filePath := filepath.Join(tmpFolder, strconv.Itoa(csa.ChunkNumber)+"."+cia.UUID)
@@ -690,8 +690,12 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message) func
 							return
 						}
 
-						// All ok, remove the backup file
+						// All ok, remove the backup file, and tmp folder.
 						os.Remove(backupOriginalFileName)
+						err = os.RemoveAll(tmpFolder)
+						if err != nil {
+							log.Fatalf("error: copyDstSubProcFunc: remove temp dir failed: %v\n", err)
+						}
 
 						// fmt.Printf("main file contains: %v\n", mainFileData)
 					}()
