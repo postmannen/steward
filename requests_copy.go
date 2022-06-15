@@ -369,12 +369,20 @@ func copySrcSubProcFunc(proc process, cia copyInitialData) func(context.Context,
 
 					log.Printf(" * RECEIVED in copySrcSubProcFunc from dst *  copyStatus=copyReady: %v\n\n", csa.CopyStatus)
 					b := make([]byte, cia.SplitChunkSize)
-					_, err := fh.Read(b)
+					n, err := fh.Read(b)
 					if err != nil && err != io.EOF {
 						log.Printf("error: copySrcSubHandler: failed to read chuck from file: %v\n", err)
 					}
 					if err == io.EOF {
 						status = copyDone
+					}
+
+					// Testing here!
+					if n < cia.SplitChunkSize {
+						bb := make([]byte, n)
+						nr := copy(bb, b[:n])
+						b = bb
+						fmt.Printf(" ********************* DEBUG: copied %v elements, length of b=%v\n", nr, len(b))
 					}
 
 					lastReadChunk = b
@@ -662,9 +670,17 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message) func
 
 								b := make([]byte, cia.SplitChunkSize)
 
-								_, err = fh.Read(b)
+								n, err := fh.Read(b)
 								if err != nil {
 									return err
+								}
+
+								// Testing here!
+								if n < cia.SplitChunkSize {
+									bb := make([]byte, n)
+									nr := copy(bb, b[:n])
+									b = bb
+									fmt.Printf(" ********************* DEBUG: copied %v elements, length of b=%v\n", nr, len(b))
 								}
 
 								fmt.Printf(" * DEBUG: read: %v\n", b)
