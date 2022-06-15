@@ -683,7 +683,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message) func
 									fmt.Printf(" ********************* DEBUG: copied %v elements, length of b=%v\n", nr, len(b))
 								}
 
-								fmt.Printf(" * DEBUG: read: %v\n", b)
+								// fmt.Printf(" * DEBUG: read: %v\n", b)
 
 								_, err = mainfh.Write(b)
 								if err != nil {
