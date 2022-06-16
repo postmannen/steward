@@ -159,7 +159,7 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 		// Get the file permissions
 		fileInfo, err := os.Stat(SrcFilePath)
 		if err != nil {
-			// errCh <- fmt.Errorf("error: methodREQCopyFile: failed to open file: %v, %v", SrcFilePath, err)
+			// errCh <- fmt.Errorf("error: methodREQCopySrc: failed to open file: %v, %v", SrcFilePath, err)
 			log.Printf("error: copySrcSubProcFunc: failed to stat file: %v\n", err)
 			return
 		}
@@ -361,7 +361,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 
 		fh, err := os.Open(cia.SrcFilePath)
 		if err != nil {
-			// errCh <- fmt.Errorf("error: methodREQCopyFile: failed to open file: %v, %v", SrcFilePath, err)
+			// errCh <- fmt.Errorf("error: copySrcSubProcFunc: failed to open file: %v, %v", SrcFilePath, err)
 			log.Fatalf("error: copySrcSubProcFunc: failed to open file: %v\n", err)
 			return nil
 		}

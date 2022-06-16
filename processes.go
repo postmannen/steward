@@ -133,14 +133,6 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQToFileNACK(proc)
 	}
 
-	if proc.configuration.StartSubREQCopyFileFrom {
-		proc.startup.subREQCopyFileFrom(proc)
-	}
-
-	if proc.configuration.StartSubREQCopyFileTo {
-		proc.startup.subREQCopyFileTo(proc)
-	}
-
 	if proc.configuration.StartSubREQCopySrc {
 		proc.startup.subREQCopySrc(proc)
 	}
@@ -231,12 +223,6 @@ func (p *processes) Start(proc process) {
 	if proc.configuration.StartSubREQCliCommandCont {
 		proc.startup.subREQCliCommandCont(proc)
 	}
-
-	if proc.configuration.StartSubREQRelay {
-		proc.startup.subREQRelay(proc)
-	}
-
-	proc.startup.subREQRelayInitial(proc)
 
 	proc.startup.subREQPublicKey(proc)
 }
@@ -672,22 +658,6 @@ func (s startup) subREQToFileNACK(p process) {
 	go proc.spawnWorker()
 }
 
-func (s startup) subREQCopyFileFrom(p process) {
-	log.Printf("Starting copy file from subscriber: %#v\n", p.node)
-	sub := newSubject(REQCopyFileFrom, string(p.node))
-	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
-
-	go proc.spawnWorker()
-}
-
-func (s startup) subREQCopyFileTo(p process) {
-	log.Printf("Starting copy file to subscriber: %#v\n", p.node)
-	sub := newSubject(REQCopyFileTo, string(p.node))
-	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
-
-	go proc.spawnWorker()
-}
-
 func (s startup) subREQCopySrc(p process) {
 	log.Printf("Starting copy src subscriber: %#v\n", p.node)
 	sub := newSubject(REQCopySrc, string(p.node))
@@ -723,23 +693,6 @@ func (s startup) subREQTailFile(p process) {
 func (s startup) subREQCliCommandCont(p process) {
 	log.Printf("Starting cli command with continous delivery: %#v\n", p.node)
 	sub := newSubject(REQCliCommandCont, string(p.node))
-	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
-
-	go proc.spawnWorker()
-}
-
-func (s startup) subREQRelay(p process) {
-	nodeWithRelay := fmt.Sprintf("*.%v", p.node)
-	log.Printf("Starting Relay: %#v\n", nodeWithRelay)
-	sub := newSubject(REQRelay, string(nodeWithRelay))
-	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
-
-	go proc.spawnWorker()
-}
-
-func (s startup) subREQRelayInitial(p process) {
-	log.Printf("Starting Relay Initial: %#v\n", p.node)
-	sub := newSubject(REQRelayInitial, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 
 	go proc.spawnWorker()

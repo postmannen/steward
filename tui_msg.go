@@ -15,6 +15,4 @@ type tuiMessage struct {
 	ReplyMethodTimeout *int      `json:"replyMethodTimeout,omitempty" yaml:"replyMethodTimeout,omitempty"`
 	Directory          *string   `json:"directory,omitempty" yaml:"directory,omitempty"`
 	FileName           *string   `json:"fileName,omitempty" yaml:"fileName,omitempty"`
-	RelayViaNode       *Node     `json:"relayViaNode,omitempty" yaml:"relayViaNode,omitempty"`
-	RelayReplyMethod   *Method   `json:"relayReplyMethod,omitempty" yaml:"relayReplyMethod,omitempty"`
 }

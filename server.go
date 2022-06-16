@@ -461,31 +461,6 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 
 				m := sam.Message
 
-				// Check if it is a relay message
-				if m.RelayViaNode != "" && m.RelayViaNode != Node(s.nodeName) {
-
-					// Keep the original values.
-					m.RelayFromNode = m.FromNode
-					m.RelayToNode = m.ToNode
-					m.RelayOriginalViaNode = m.RelayViaNode
-					m.RelayOriginalMethod = m.Method
-
-					// Convert it to a relay initial message.
-					m.Method = REQRelayInitial
-					// Set the toNode of the message to this host, so we send
-					// it to ourselves again and pick it up with the subscriber
-					// for the REQReplyInitial handler method.
-					m.ToNode = Node(s.nodeName)
-
-					// We are now done with the initial checking for if the new
-					// message is a relay message, so we empty the viaNode field
-					// so we don't end in an endless loop here.
-					// The value is stored in RelayOriginalViaNode for later use.
-					m.RelayViaNode = ""
-
-					sam.Subject = newSubject(REQRelayInitial, string(s.nodeName))
-				}
-
 				subjName := sam.Subject.name()
 				pn := processNameGet(subjName, processKindPublisher)
 

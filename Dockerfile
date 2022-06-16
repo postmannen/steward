@@ -67,7 +67,6 @@ ENV START_SUB_REQ_HTTP_GET ""
 ENV START_SUB_REQ_HTTP_GET_SCHEDULED ""
 ENV START_SUB_REQ_TAIL_FILE ""
 ENV START_SUB_REQ_CLI_COMMAND_CONT ""
-ENV START_SUB_REQ_RELAY ""
 
 CMD ["ash","-c","env CONFIGFOLDER=./etc/ /app/steward\
     -ringBufferSize=$RING_BUFFER_SIZE\
@@ -107,8 +106,6 @@ CMD ["ash","-c","env CONFIGFOLDER=./etc/ /app/steward\
     -startSubREQToFileAppend=$START_SUB_REQ_TO_FILE_APPEND\
     -startSubREQToFile=$START_SUB_REQ_TO_FILE\
     -startSubREQToFileNACK=$START_SUB_REQ_TO_FILE_NACK\
-    -startSubREQCopyFileFrom=$START_SUB_REQ_COPY_FILE_FROM\
-    -startSubREQCopyFileTo=$START_SUB_REQ_COPY_FILE_TO\
     -startSubREQPing=$START_SUB_REQ_PING\
     -startSubREQPong=$START_SUB_REQ_PONG\
     -startSubREQCliCommand=$START_SUB_REQ_CLI_COMMAND\
@@ -117,5 +114,4 @@ CMD ["ash","-c","env CONFIGFOLDER=./etc/ /app/steward\
     -startSubREQHttpGetScheduled=$START_SUB_REQ_HTTP_GET_SCHEDULED\
     -startSubREQTailFile=$START_SUB_REQ_TAIL_FILE\
     -startSubREQCliCommandCont=$START_SUB_REQ_CLI_COMMAND_CONT\
-    -startSubREQRelay=$START_SUB_REQ_RELAY\
     "]

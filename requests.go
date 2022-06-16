@@ -99,11 +99,6 @@ const (
 	REQToFile Method = "REQToFile"
 	// REQToFileNACK same as REQToFile but NACK.
 	REQToFileNACK Method = "REQToFileNACK"
-	// Read the source file to be copied to some node.
-	REQCopyFileFrom Method = "REQCopyFileFrom"
-	// Write the destination copied to some node.
-	REQCopyFileTo Method = "REQCopyFileTo"
-	// Initial request for file copying.
 	// Initiated by the user.
 	REQCopySrc Method = "REQCopySrc"
 	// Initial request for file copying.
@@ -130,10 +125,6 @@ const (
 	REQHttpGetScheduled Method = "REQHttpGetScheduled"
 	// Tail file
 	REQTailFile Method = "REQTailFile"
-	// Write to steward socket
-	REQRelay Method = "REQRelay"
-	// The method handler for the first step in a relay chain.
-	REQRelayInitial Method = "REQRelayInitial"
 	// REQNone is used when there should be no reply.
 	REQNone Method = "REQNone"
 	// REQTest is used only for testing to be able to grab the output
@@ -228,12 +219,6 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 			REQToFileNACK: methodREQToFile{
 				event: EventNACK,
 			},
-			REQCopyFileFrom: methodREQCopyFileFrom{
-				event: EventACK,
-			},
-			REQCopyFileTo: methodREQCopyFileTo{
-				event: EventACK,
-			},
 			REQCopySrc: methodREQCopySrc{
 				event: EventACK,
 			},
@@ -265,12 +250,6 @@ func (m Method) GetMethodsAvailable() MethodsAvailable {
 				event: EventACK,
 			},
 			REQTailFile: methodREQTailFile{
-				event: EventACK,
-			},
-			REQRelay: methodREQRelay{
-				event: EventACK,
-			},
-			REQRelayInitial: methodREQRelayInitial{
 				event: EventACK,
 			},
 			REQPublicKey: methodREQPublicKey{

@@ -68,14 +68,8 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- []subjectAndMessage) error
 		}
 
 		sendErrorOrInfo := func(errEvent errorEvent) {
-			var er string
-			// Decide what extra information to add to the error message.
-			switch {
-			case errEvent.message.RelayFromNode != "":
-				er = fmt.Sprintf("%v, node: %v, relayFromNode: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), errEvent.process.node, errEvent.message.RelayFromNode, errEvent.err)
-			default:
-				er = fmt.Sprintf("%v, node: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), errEvent.process.node, errEvent.err)
-			}
+
+			er := fmt.Sprintf("%v, node: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), errEvent.process.node, errEvent.err)
 
 			sam := subjectAndMessage{
 				Subject: newSubject(REQErrorLog, "errorCentral"),

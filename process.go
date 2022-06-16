@@ -462,47 +462,6 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		}
 	}
 
-	// Send final reply for a relayed message back to the originating node.
-	//
-	// Check if the previous message was a relayed message, and if true
-	// make a copy of the current message where the to field is set to
-	// the value of the previous message's RelayFromNode field, so we
-	// also can send the a copy of the reply back to where it originated.
-	if message.PreviousMessage != nil && message.PreviousMessage.RelayOriginalViaNode != "" {
-
-		// make a copy of the message
-		msgCopy := message
-		msgCopy.ToNode = msgCopy.PreviousMessage.RelayFromNode
-
-		// We set the replyMethod of the initial message.
-		// If no RelayReplyMethod was found, we default to the reply
-		// method of the previous message.
-		switch {
-		case msgCopy.PreviousMessage.RelayReplyMethod == "":
-			er := fmt.Errorf("error: subscriberHandler: no PreviousMessage.RelayReplyMethod found, defaulting to the reply method of previous message: %v ", msgCopy)
-			p.errorKernel.errSend(p, message, er)
-
-			msgCopy.Method = msgCopy.PreviousMessage.ReplyMethod
-
-		case msgCopy.PreviousMessage.RelayReplyMethod != "":
-			msgCopy.Method = msgCopy.PreviousMessage.RelayReplyMethod
-		}
-
-		// Reset the previousMessage relay fields so the message don't loop.
-		message.PreviousMessage.RelayViaNode = ""
-		message.PreviousMessage.RelayOriginalViaNode = ""
-
-		// Create a SAM for the msg copy that will be sent back the where the
-		// relayed message originated from.
-		sam, err := newSubjectAndMessage(msgCopy)
-		if err != nil {
-			er := fmt.Errorf("error: subscriberHandler: newSubjectAndMessage : %v, message copy: %v", err, msgCopy)
-			p.errorKernel.errSend(p, message, er)
-		}
-
-		p.toRingbufferCh <- []subjectAndMessage{sam}
-	}
-
 	// Check if it is an ACK or NACK message, and do the appropriate action accordingly.
 	//
 	// With ACK messages Steward will keep the state of the message delivery, and try to

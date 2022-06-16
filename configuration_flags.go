@@ -110,10 +110,6 @@ type Configuration struct {
 	// Subscriber for writing to file without ACK
 	StartSubREQToFileNACK bool
 	// Subscriber for reading files to copy
-	StartSubREQCopyFileFrom bool
-	// Subscriber for writing copied files to disk
-	StartSubREQCopyFileTo bool
-	// Subscriber for reading files to copy
 	StartSubREQCopySrc bool
 	// Subscriber for writing copied files to disk
 	StartSubREQCopyDst bool
@@ -133,8 +129,6 @@ type Configuration struct {
 	StartSubREQTailFile bool
 	// Subscriber for continously delivery of output from cli commands.
 	StartSubREQCliCommandCont bool
-	// Subscriber for relay messages.
-	StartSubREQRelay bool
 }
 
 // ConfigurationFromFile should have the same structure as
@@ -186,8 +180,6 @@ type ConfigurationFromFile struct {
 	StartSubREQToFileAppend     *bool
 	StartSubREQToFile           *bool
 	StartSubREQToFileNACK       *bool
-	StartSubREQCopyFileFrom     *bool
-	StartSubREQCopyFileTo       *bool
 	StartSubREQCopySrc          *bool
 	StartSubREQCopyDst          *bool
 	StartSubREQPing             *bool
@@ -198,7 +190,6 @@ type ConfigurationFromFile struct {
 	StartSubREQHttpGetScheduled *bool
 	StartSubREQTailFile         *bool
 	StartSubREQCliCommandCont   *bool
-	StartSubREQRelay            *bool
 }
 
 // NewConfiguration will return a *Configuration.
@@ -254,8 +245,6 @@ func newConfigurationDefaults() Configuration {
 		StartSubREQToFileAppend:     true,
 		StartSubREQToFile:           true,
 		StartSubREQToFileNACK:       true,
-		StartSubREQCopyFileFrom:     true,
-		StartSubREQCopyFileTo:       true,
 		StartSubREQCopySrc:          true,
 		StartSubREQCopyDst:          true,
 		StartSubREQPing:             true,
@@ -266,7 +255,6 @@ func newConfigurationDefaults() Configuration {
 		StartSubREQHttpGetScheduled: true,
 		StartSubREQTailFile:         true,
 		StartSubREQCliCommandCont:   true,
-		StartSubREQRelay:            false,
 	}
 	return c
 }
@@ -497,16 +485,6 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.StartSubREQToFileNACK = *cf.StartSubREQToFileNACK
 	}
-	if cf.StartSubREQCopyFileFrom == nil {
-		conf.StartSubREQCopyFileFrom = cd.StartSubREQCopyFileFrom
-	} else {
-		conf.StartSubREQCopyFileFrom = *cf.StartSubREQCopyFileFrom
-	}
-	if cf.StartSubREQCopyFileTo == nil {
-		conf.StartSubREQCopyFileTo = cd.StartSubREQCopyFileTo
-	} else {
-		conf.StartSubREQCopyFileTo = *cf.StartSubREQCopyFileTo
-	}
 	if cf.StartSubREQCopySrc == nil {
 		conf.StartSubREQCopySrc = cd.StartSubREQCopySrc
 	} else {
@@ -556,11 +534,6 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 		conf.StartSubREQCliCommandCont = cd.StartSubREQCliCommandCont
 	} else {
 		conf.StartSubREQCliCommandCont = *cf.StartSubREQCliCommandCont
-	}
-	if cf.StartSubREQRelay == nil {
-		conf.StartSubREQRelay = cd.StartSubREQRelay
-	} else {
-		conf.StartSubREQRelay = *cf.StartSubREQRelay
 	}
 
 	return conf
@@ -643,8 +616,6 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.StartSubREQToFileAppend, "startSubREQToFileAppend", fc.StartSubREQToFileAppend, "true/false")
 	flag.BoolVar(&c.StartSubREQToFile, "startSubREQToFile", fc.StartSubREQToFile, "true/false")
 	flag.BoolVar(&c.StartSubREQToFileNACK, "startSubREQToFileNACK", fc.StartSubREQToFileNACK, "true/false")
-	flag.BoolVar(&c.StartSubREQCopyFileFrom, "startSubREQCopyFileFrom", fc.StartSubREQCopyFileFrom, "true/false")
-	flag.BoolVar(&c.StartSubREQCopyFileTo, "startSubREQCopyFileTo", fc.StartSubREQCopyFileTo, "true/false")
 	flag.BoolVar(&c.StartSubREQCopySrc, "startSubREQCopySrc", fc.StartSubREQCopySrc, "true/false")
 	flag.BoolVar(&c.StartSubREQCopyDst, "startSubREQCopyDst", fc.StartSubREQCopyDst, "true/false")
 	flag.BoolVar(&c.StartSubREQPing, "startSubREQPing", fc.StartSubREQPing, "true/false")
@@ -655,7 +626,6 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.StartSubREQHttpGetScheduled, "startSubREQHttpGetScheduled", fc.StartSubREQHttpGetScheduled, "true/false")
 	flag.BoolVar(&c.StartSubREQTailFile, "startSubREQTailFile", fc.StartSubREQTailFile, "true/false")
 	flag.BoolVar(&c.StartSubREQCliCommandCont, "startSubREQCliCommandCont", fc.StartSubREQCliCommandCont, "true/false")
-	flag.BoolVar(&c.StartSubREQRelay, "startSubREQRelay", fc.StartSubREQRelay, "true/false")
 
 	purgeBufferDB := flag.Bool("purgeBufferDB", false, "true/false, purge the incoming buffer db and all it's state")
 
