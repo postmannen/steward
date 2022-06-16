@@ -377,18 +377,10 @@ func copySrcSubProcFunc(proc process, cia copyInitialData) func(context.Context,
 						status = copyDone
 					}
 
-					// Testing here!
-					if n < cia.SplitChunkSize {
-						bb := make([]byte, n)
-						nr := copy(bb, b[:n])
-						b = bb
-						fmt.Printf(" ********************* DEBUG: copied %v elements, length of b=%v\n", nr, len(b))
-					}
-
-					lastReadChunk = b
+					lastReadChunk = b[:n]
 
 					// Create a hash of the bytes
-					hash := sha256.Sum256(b)
+					hash := sha256.Sum256(b[:n])
 
 					chunkNumber++
 
@@ -397,7 +389,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData) func(context.Context,
 
 					csa := copySubData{
 						CopyStatus:  status,
-						CopyData:    b,
+						CopyData:    b[:n],
 						ChunkNumber: chunkNumber,
 						Hash:        hash,
 					}
@@ -624,8 +616,6 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message) func
 						Data:        csaSer,
 					}
 
-					fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
-
 					sam, err := newSubjectAndMessage(msg)
 					if err != nil {
 						log.Fatalf("copyDstProcSubFunc: newSubjectAndMessage failed: %v\n", err)
@@ -634,10 +624,6 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message) func
 					proc.toRingbufferCh <- []subjectAndMessage{sam}
 
 				case copyDone:
-					fmt.Printf("\n\n\n ************** DEBUG: copyDone \n\n\n")
-
-					// var mainFileData []byte
-
 					func() {
 
 						// Open the main file that chunks files will be written into.
@@ -660,8 +646,6 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message) func
 							}
 
 							if !info.IsDir() {
-								fmt.Println(path, info.Size())
-								fmt.Printf(" * DEBUG: splitChunkSize: %v\n", cia.SplitChunkSize)
 								fh, err := os.Open(path)
 								if err != nil {
 									return err
@@ -675,28 +659,18 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message) func
 									return err
 								}
 
-								// Testing here!
-								if n < cia.SplitChunkSize {
-									bb := make([]byte, n)
-									nr := copy(bb, b[:n])
-									b = bb
-									fmt.Printf(" ********************* DEBUG: copied %v elements, length of b=%v\n", nr, len(b))
-								}
-
-								// fmt.Printf(" * DEBUG: read: %v\n", b)
-
-								_, err = mainfh.Write(b)
+								log.Printf("info: copy: writing content of split chunk file=%v into=%v, size=%v\n", path, filePath, info.Size())
+								_, err = mainfh.Write(b[:n])
 								if err != nil {
 									return err
 								}
 
-								// TODO: delete tmp files
 							}
 
 							return nil
 						})
 						if err != nil {
-							log.Printf("error: copyDstSubProcFunc: combining the file chunks back to original file failed: %v\n", err)
+							log.Printf("error: copyDstSubProcFunc: combining the split file chunks back to original file failed: %v\n", err)
 
 							// Delete the file we've been trying to write to.
 							os.Remove(filePath)
@@ -713,7 +687,8 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message) func
 							log.Fatalf("error: copyDstSubProcFunc: remove temp dir failed: %v\n", err)
 						}
 
-						// fmt.Printf("main file contains: %v\n", mainFileData)
+						log.Printf("info: copy: successfully wrote all split chunk files into file=%v\n", filePath)
+
 					}()
 				}
 			}
