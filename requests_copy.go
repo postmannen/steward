@@ -9,7 +9,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/fxamacker/cbor/v2"
@@ -662,6 +664,14 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						}
 						defer mainfh.Close()
 
+						type fInfo struct {
+							name string
+							dir  string
+							nr   int
+						}
+
+						files := []fInfo{}
+
 						// Walk the tmp transfer directory and combine all the chunks into one file.
 						err = filepath.Walk(tmpFolder, func(path string, info os.FileInfo, err error) error {
 							if err != nil {
@@ -669,7 +679,44 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 							}
 
 							if !info.IsDir() {
-								fh, err := os.Open(path)
+								fi := fInfo{}
+								fi.name = filepath.Base(path)
+								fi.dir = filepath.Dir(path)
+
+								sp := strings.Split(fi.name, ".")
+								nr, err := strconv.Atoi(sp[0])
+								if err != nil {
+									return err
+								}
+
+								fi.nr = nr
+
+								files = append(files, fi)
+								log.Printf("info: copy: appending path for chunk file=%v into=%v, size=%v\n", path, filePath, info.Size())
+
+							}
+
+							return nil
+						})
+
+						// Sort all the source nodes.
+						sort.SliceStable(files, func(i, j int) bool {
+							fmt.Printf("files[i].nr=%v < files[j].nr=%v\n", files[i].nr, files[j].nr)
+							return files[i].nr < files[j].nr
+						})
+
+						fmt.Printf(" * sorted slice: %v\n", files)
+
+						if err != nil {
+							log.Printf("error: copyDstSubProcFunc: creation of slice of chunk paths failed: %v\n", err)
+
+							return
+						}
+
+						err = func() error {
+							for _, fInfo := range files {
+								fp := filepath.Join(fInfo.dir, fInfo.name)
+								fh, err := os.Open(fp)
 								if err != nil {
 									return err
 								}
@@ -682,7 +729,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 									return err
 								}
 
-								log.Printf("info: copy: writing content of split chunk file=%v into=%v, size=%v\n", path, filePath, info.Size())
+								log.Printf("info: copy: writing content of split chunk file=%v into=%v\n", fp, filePath)
 								_, err = mainfh.Write(b[:n])
 								if err != nil {
 									return err
@@ -691,19 +738,13 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 							}
 
 							return nil
-						})
+						}()
+
 						if err != nil {
-							log.Printf("error: copyDstSubProcFunc: combining the split file chunks back to original file failed: %v\n", err)
-
-							// Delete the file we've been trying to write to.
-							os.Remove(filePath)
-							// Rename the old file back to it's original name.
-							os.Rename(backupOriginalFileName, filePath)
-
-							return
+							log.Printf("error: copyDstSubProcFunc: remove temp dir failed: %v\n", err)
 						}
 
-						// All ok, remove the backup file, and tmp folder.
+						// Remove the backup file, and tmp folder.
 						os.Remove(backupOriginalFileName)
 						err = os.RemoveAll(tmpFolder)
 						if err != nil {
