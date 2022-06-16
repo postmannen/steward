@@ -299,18 +299,24 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 			// or exit if max retries for the message reached.
 			_, err := subReply.NextMsg(time.Second * time.Duration(message.ACKTimeout))
 			if err != nil {
-				er := fmt.Errorf("error: ack receive failed: subject=%v: %v", p.subject.name(), err)
-				// sendErrorLogMessage(p.toRingbufferCh, p.node, er)
-				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 				if err == nats.ErrNoResponders {
 					// fmt.Printf(" * DEBUG: Waiting, ACKTimeout: %v\n", message.ACKTimeout)
-					time.Sleep(time.Second * time.Duration(message.ACKTimeout))
+					// time.Sleep(time.Second * time.Duration(message.ACKTimeout))
+					if message.RetryWait < 0 {
+						message.RetryWait = 0
+					}
+
+					er := fmt.Errorf("error: ack receive failed: waiting for %v seconds before retrying:   subject=%v: %v", message.RetryWait, p.subject.name(), err)
+					// sendErrorLogMessage(p.toRingbufferCh, p.node, er)
+					p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+
+					time.Sleep(time.Second * time.Duration(message.RetryWait))
 				}
 
 				// did not receive a reply, decide what to do..
 				retryAttempts++
-				er = fmt.Errorf("retry attempt:%v, retries: %v, ack timeout: %v, message.ID: %v", retryAttempts, message.Retries, message.ACKTimeout, message.ID)
+				er := fmt.Errorf("retry attempt:%v, retries: %v, ack timeout: %v, message.ID: %v", retryAttempts, message.Retries, message.ACKTimeout, message.ID)
 				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 				switch {

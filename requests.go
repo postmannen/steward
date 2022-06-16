@@ -461,6 +461,7 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 		MethodArgs:    message.ReplyMethodArgs,
 		MethodTimeout: message.ReplyMethodTimeout,
 		IsReply:       true,
+		RetryWait:     message.RetryWait,
 		ACKTimeout:    message.ReplyACKTimeout,
 		Retries:       message.ReplyRetries,
 		Directory:     message.Directory,

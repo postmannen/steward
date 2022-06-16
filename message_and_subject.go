@@ -49,6 +49,8 @@ type Message struct {
 	FromNode Node `json:"fromNode" yaml:"fromNode"`
 	// ACKTimeout for waiting for an ack message
 	ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
+	// RetryWait specified the time in seconds to wait between retries.
+	RetryWait int `json:"retryWait" yaml:"retryWait"`
 	// Resend retries
 	Retries int `json:"retries" yaml:"retries"`
 	// The ACK timeout of the new message created via a request event.
