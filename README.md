@@ -717,11 +717,11 @@ Copy a file from one node to another node.
 
 - toNode/toNodes, specifies what node to send the request to, and which also contains the src file to copy.
 - methodArgs, are split into several fields, where each field specifies:
-  1. SrcFullPath, specifies the full path including the name of the file to copy.
-  2. DstNode, the destination node to copy the file to.
-  3. DstFullPath, the full path including the name of the destination file. The filename can be different than the original name.
-  4. SplitChunkSize, the size of the chunks to split the file into for transfer.
-  5. MaxTotalCopyTime, specifies the maximum allowed time the complete copy should take. Make sure you set this long enough to allow the transfer to complete.
+  - 1. SrcFullPath, specifies the full path including the name of the file to copy.
+  - 2. DstNode, the destination node to copy the file to.
+  - 3. DstFullPath, the full path including the name of the destination file. The filename can be different than the original name.
+  - 4. SplitChunkSize, the size of the chunks to split the file into for transfer.
+  - 5. MaxTotalCopyTime, specifies the maximum allowed time the complete copy should take. Make sure you set this long enough to allow the transfer to complete.
 
 #### REQErrorLog
 
