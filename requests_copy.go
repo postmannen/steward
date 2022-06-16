@@ -111,25 +111,24 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 			return
 
 		case len(message.MethodArgs) > 3:
-			// Check if split chunk size was set, if not set default.
+			// Check if split chunk size was set, if not keep default.
 			var err error
 			splitChunkSize, err = strconv.Atoi(message.MethodArgs[3])
 			if err != nil {
 				er := fmt.Errorf("error: methodREQCopySrc: unble to convert splitChunkSize into int value: %v", err)
 				proc.errorKernel.errSend(proc, message, er)
 			}
+			fallthrough
 
 		case len(message.MethodArgs) > 4:
-			// Check if split chunk size was set, if not set default.
+			// Check if maxTotalCopyTime was set, if not keep default.
 			var err error
-			maxTotalCopyTime, err = strconv.Atoi(message.MethodArgs[3])
+			maxTotalCopyTime, err = strconv.Atoi(message.MethodArgs[4])
 			if err != nil {
 				er := fmt.Errorf("error: methodREQCopySrc: unble to convert maxTotalCopyTime into int value: %v", err)
 				proc.errorKernel.errSend(proc, message, er)
 			}
 		}
-
-		fmt.Printf("\n * DEBUG: IN THE BEGINNING: SPLITCHUNKSIZE: %v\n\n", splitChunkSize)
 
 		SrcFilePath := message.MethodArgs[0]
 		DstNode := message.MethodArgs[1]
@@ -422,7 +421,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 					}
 
 					// We want to send a message back to src that we are ready to start.
-					fmt.Printf("\n\n\n ************** DEBUG: copyDstHandler sub process sending copyReady to:%v\n ", message.FromNode)
+					// fmt.Printf("\n\n\n ************** DEBUG: copyDstHandler sub process sending copyReady to:%v\n ", message.FromNode)
 					msg := Message{
 						ToNode:      cia.DstNode,
 						FromNode:    cia.SrcNode,
@@ -431,7 +430,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 						Data:        csaSerialized,
 					}
 
-					fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
+					// fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
 
 					sam, err := newSubjectAndMessage(msg)
 					if err != nil {
@@ -463,7 +462,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 					chunkNumber++
 
 					// Create message and send data to dst
-					fmt.Printf("**** DATA READ: %v\n", b)
+					// fmt.Printf("**** DATA READ: %v\n", b)
 
 					csa := copySubData{
 						CopyStatus:  status,
@@ -478,7 +477,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 					}
 
 					// We want to send a message back to src that we are ready to start.
-					fmt.Printf("\n\n\n ************** DEBUG: copyDstHandler sub process sending copyReady to:%v\n ", message.FromNode)
+					// fmt.Printf("\n\n\n ************** DEBUG: copyDstHandler sub process sending copyReady to:%v\n ", message.FromNode)
 					msg := Message{
 						ToNode:      cia.DstNode,
 						FromNode:    cia.SrcNode,
@@ -487,7 +486,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 						Data:        csaSerialized,
 					}
 
-					fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
+					// fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
 
 					sam, err := newSubjectAndMessage(msg)
 					if err != nil {
@@ -575,7 +574,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 					csa.CopyStatus = copyResendLast
 				}
 
-				fmt.Printf(" * DEBUG: Hash was verified OK\n")
+				// fmt.Printf(" * DEBUG: Hash was verified OK\n")
 
 				switch csa.CopyStatus {
 				case copyData:
@@ -606,7 +605,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						log.Fatalf("error: copyDstSubProcFunc: cbor marshal of csa failed: %v\n", err)
 					}
 
-					fmt.Printf("\n\n\n ************** DEBUG: copyDstHandler sub process sending copyReady to:%v\n ", message.FromNode)
+					// fmt.Printf("\n\n\n ************** DEBUG: copyDstHandler sub process sending copyReady to:%v\n ", message.FromNode)
 					msg := Message{
 						ToNode:      cia.SrcNode,
 						FromNode:    cia.DstNode,
@@ -615,7 +614,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						Data:        csaSer,
 					}
 
-					fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
+					// fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
 
 					sam, err := newSubjectAndMessage(msg)
 					if err != nil {
@@ -765,7 +764,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 							}
 
 							// We want to send a message back to src that we are ready to start.
-							fmt.Printf("\n\n\n ************** DEBUG: copyDstHandler sub process sending copyReady to:%v\n ", message.FromNode)
+							// fmt.Printf("\n\n\n ************** DEBUG: copyDstHandler sub process sending copyReady to:%v\n ", message.FromNode)
 							msg := Message{
 								ToNode:      cia.SrcNode,
 								FromNode:    cia.DstNode,
@@ -774,7 +773,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 								Data:        csaSerialized,
 							}
 
-							fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
+							// fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
 
 							sam, err := newSubjectAndMessage(msg)
 							if err != nil {
