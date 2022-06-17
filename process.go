@@ -841,16 +841,6 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 		return
 	}
 
-	// NB: vvvvvvvvvvvvvvvvvvvvv-THIS DOES NOT WORK FOR CANCELING THE PUBLISHER-vvvvvvvvv
-	//if m.IsSubPublishedMsg {
-	//	p.ctxCancel()
-	//	go func() {
-	//		p.processes.active.mu.Lock()
-	//		delete(p.processes.active.procNames, p.processName)
-	//		p.processes.active.mu.Unlock()
-	//	}()
-	//}
-
 	// Increment the counter for the next message to be sent.
 	p.messageID++
 

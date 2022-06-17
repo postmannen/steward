@@ -341,46 +341,9 @@ func (s *server) Stop() {
 
 }
 
-// sendInfoMessage will put the error message directly on the channel that is
-// read by the nats publishing functions.
-//
-// DEPRECATED:
-// func sendInfoLogMessage(conf *Configuration, metrics *metrics, ringBufferBulkInCh chan<- []subjectAndMessage, FromNode Node, theError error) {
-// 	// NB: Adding log statement here for more visuality during development.
-// 	log.Printf("%v\n", theError)
-// 	sam := createErrorMsgContent(conf, FromNode, theError)
-// 	ringBufferBulkInCh <- []subjectAndMessage{sam}
-//
-// 	metrics.promInfoMessagesSentTotal.Inc()
-// }
-
-// DEPRECATED
-// // createErrorMsgContent will prepare a subject and message with the content
-// // of the error
-// func createErrorMsgContent(conf *Configuration, FromNode Node, theError error) subjectAndMessage {
-// 	// Add time stamp
-// 	er := fmt.Sprintf("%v, node: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), FromNode, theError.Error())
-//
-// 	sam := subjectAndMessage{
-// 		Subject: newSubject(REQErrorLog, "errorCentral"),
-// 		Message: Message{
-// 			Directory:  "errorLog",
-// 			ToNode:     "errorCentral",
-// 			FromNode:   FromNode,
-// 			FileName:   "error.log",
-// 			Data:       []byte(er),
-// 			Method:     REQErrorLog,
-// 			ACKTimeout: conf.ErrorMessageTimeout,
-// 			Retries:    conf.ErrorMessageRetries,
-// 		},
-// 	}
-//
-// 	return sam
-// }
-
-// Contains the sam value as it is used in the state DB, and also a
-// delivered function to be called when this message is picked up, so
-// we can control if messages gets stale at some point.
+// samDBValueAndDelivered Contains the sam value as it is used in the
+// state DB, and also a delivered function to be called when this message
+// is picked up, so we can control if messages gets stale at some point.
 type samDBValueAndDelivered struct {
 	samDBValue samDBValue
 	delivered  func()
@@ -492,7 +455,8 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 					}
 
 					proc.spawnWorker()
-					// log.Printf("info: processNewMessages: new process started, subject: %v, processID: %v\n", subjName, proc.processID)
+					er := fmt.Errorf("info: processNewMessages: new process started, subject: %v, processID: %v", subjName, proc.processID)
+					s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
 
 					// Now when the process is spawned we continue,
 					// and send the message to that new process.
