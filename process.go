@@ -34,6 +34,8 @@ const (
 // process holds all the logic to handle a message type and it's
 // method, subscription/publishin messages for a subject, and more.
 type process struct {
+	// isSubProcess is used to indentify subprocesses spawned by other processes.
+	isSubProcess bool
 	// server
 	server *server
 	// messageID
@@ -687,12 +689,30 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 	// fails in the loop we should throw an error and use `continue`
 	// to jump back here to the beginning of the loop and continue
 	// with the next message.
+
+	// Adding a timer that will be used for when to remove the sub process
+	// publisher. The timer is reset each time a message is published with
+	// the process, so the sub process publisher will not be removed until
+	// it have not received any messages for the given amount of time.
+	ticker := time.NewTicker(time.Second * time.Duration(p.configuration.KeepPublishersAliveFor))
+
 	for {
 
 		// Wait and read the next message on the message channel, or
 		// exit this function if Cancel are received via ctx.
 		select {
+		case <-ticker.C:
+			// We only want to remove subprocesses
+			if p.isSubProcess {
+				p.ctxCancel()
+
+				p.processes.active.mu.Lock()
+				delete(p.processes.active.procNames, p.processName)
+				p.processes.active.mu.Unlock()
+			}
+
 		case m := <-p.subject.messageCh:
+			ticker.Reset(time.Second * time.Duration(p.configuration.KeepPublishersAliveFor))
 			// Sign the methodArgs, and add the signature to the message.
 			m.ArgSignature = p.addMethodArgSignature(m)
 			// fmt.Printf(" * DEBUG: add signature, fromNode: %v, method: %v,  len of signature: %v\n", m.FromNode, m.Method, len(m.ArgSignature))
@@ -820,6 +840,16 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 	case <-p.ctx.Done():
 		return
 	}
+
+	// NB: vvvvvvvvvvvvvvvvvvvvv-THIS DOES NOT WORK FOR CANCELING THE PUBLISHER-vvvvvvvvv
+	//if m.IsSubPublishedMsg {
+	//	p.ctxCancel()
+	//	go func() {
+	//		p.processes.active.mu.Lock()
+	//		delete(p.processes.active.procNames, p.processName)
+	//		p.processes.active.mu.Unlock()
+	//	}()
+	//}
 
 	// Increment the counter for the next message to be sent.
 	p.messageID++

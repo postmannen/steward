@@ -51,6 +51,8 @@ type Message struct {
 	ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
 	// RetryWait specified the time in seconds to wait between retries.
 	RetryWait int `json:"retryWait" yaml:"retryWait"`
+	// IsSubPublishedMsg enables timeout of publishing process, and is used together with process.isSubProcess to be able to terminate the sub processes publishers.
+	IsSubPublishedMsg bool `json:"isSubPublishedMsg" yaml:"isSubPublishedMsg"`
 	// Resend retries
 	Retries int `json:"retries" yaml:"retries"`
 	// The ACK timeout of the new message created via a request event.

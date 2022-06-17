@@ -483,7 +483,13 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 					// log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 					sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
-					proc := newProcess(s.ctx, s, sub, processKindPublisher, nil)
+					var proc process
+					switch {
+					case m.IsSubPublishedMsg:
+						proc = newSubProcess(s.ctx, s, sub, processKindPublisher, nil)
+					default:
+						proc = newProcess(s.ctx, s, sub, processKindPublisher, nil)
+					}
 
 					proc.spawnWorker()
 					// log.Printf("info: processNewMessages: new process started, subject: %v, processID: %v\n", subjName, proc.processID)

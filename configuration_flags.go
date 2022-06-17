@@ -90,6 +90,8 @@ type Configuration struct {
 	// EnableDebug will also enable printing all the messages received in the errorKernel
 	// to STDERR.
 	EnableDebug bool
+	// KeepPublishersAliveFor number of seconds
+	KeepPublishersAliveFor int
 
 	// Make the current node send hello messages to central at given interval in seconds
 	StartPubREQHello int
@@ -171,6 +173,7 @@ type ConfigurationFromFile struct {
 	EnableAclCheck               *bool
 	IsCentralAuth                *bool
 	EnableDebug                  *bool
+	KeepPublishersAliveFor       *int
 
 	StartPubREQHello            *int
 	EnableKeyUpdates            *bool
@@ -236,6 +239,7 @@ func newConfigurationDefaults() Configuration {
 		EnableAclCheck:               false,
 		IsCentralAuth:                false,
 		EnableDebug:                  false,
+		KeepPublishersAliveFor:       10,
 
 		StartPubREQHello:            30,
 		EnableKeyUpdates:            true,
@@ -440,6 +444,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.EnableDebug = *cf.EnableDebug
 	}
+	if cf.KeepPublishersAliveFor == nil {
+		conf.KeepPublishersAliveFor = cd.KeepPublishersAliveFor
+	} else {
+		conf.KeepPublishersAliveFor = *cf.KeepPublishersAliveFor
+	}
 
 	// --- Start pub/sub
 
@@ -602,6 +611,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.EnableAclCheck, "enableAclCheck", fc.EnableAclCheck, "true/false *TESTING* enable Acl checking.")
 	flag.BoolVar(&c.IsCentralAuth, "isCentralAuth", fc.IsCentralAuth, "true/false, *TESTING* is this the central auth server")
 	flag.BoolVar(&c.EnableDebug, "enableDebug", fc.EnableDebug, "true/false, will enable debug logging so all messages sent to the errorKernel will also be printed to STDERR")
+	flag.IntVar(&c.KeepPublishersAliveFor, "keepPublishersAliveFor", fc.KeepPublishersAliveFor, "The amount of time we allow a publisher to stay alive without receiving any messages to publish")
 
 	// Start of Request publishers/subscribers
 

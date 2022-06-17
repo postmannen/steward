@@ -183,7 +183,8 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 		sub := newSubjectNoVerifyHandler(m, node)
 
 		// Create a new sub process that will do the actual file copying.
-		copySrcSubProc := newProcess(ctx, proc.server, sub, processKindSubscriber, nil)
+
+		copySrcSubProc := newSubProcess(ctx, proc.server, sub, processKindSubscriber, nil)
 
 		// Give the sub process a procFunc so we do the actual copying within a procFunc,
 		// and not directly within the handler.
@@ -233,6 +234,14 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 	return ackMsg, nil
 }
 
+// newSubProcess is a wrapper around newProcess which sets the isSubProcess value to true.
+func newSubProcess(ctx context.Context, server *server, subject Subject, processKind processKind, procFunc func() error) process {
+	p := newProcess(ctx, server, subject, processKind, procFunc)
+	p.isSubProcess = true
+
+	return p
+}
+
 // ----
 
 type methodREQCopyDst struct {
@@ -275,7 +284,7 @@ func (m methodREQCopyDst) handler(proc process, message Message, node string) ([
 		sub := newSubjectNoVerifyHandler(cia.DstMethod, node)
 
 		// Create a new sub process that will do the actual file copying.
-		copyDstSubProc := newProcess(ctx, proc.server, sub, processKindSubscriber, nil)
+		copyDstSubProc := newSubProcess(ctx, proc.server, sub, processKindSubscriber, nil)
 
 		// Give the sub process a procFunc so we do the actual copying within a procFunc,
 		// and not directly within the handler.
@@ -423,11 +432,12 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 					// We want to send a message back to src that we are ready to start.
 					// fmt.Printf("\n\n\n ************** DEBUG: copyDstHandler sub process sending copyReady to:%v\n ", message.FromNode)
 					msg := Message{
-						ToNode:      cia.DstNode,
-						FromNode:    cia.SrcNode,
-						Method:      cia.DstMethod,
-						ReplyMethod: REQNone,
-						Data:        csaSerialized,
+						ToNode:            cia.DstNode,
+						FromNode:          cia.SrcNode,
+						Method:            cia.DstMethod,
+						ReplyMethod:       REQNone,
+						Data:              csaSerialized,
+						IsSubPublishedMsg: true,
 					}
 
 					// fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
@@ -479,11 +489,12 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 					// We want to send a message back to src that we are ready to start.
 					// fmt.Printf("\n\n\n ************** DEBUG: copyDstHandler sub process sending copyReady to:%v\n ", message.FromNode)
 					msg := Message{
-						ToNode:      cia.DstNode,
-						FromNode:    cia.SrcNode,
-						Method:      cia.DstMethod,
-						ReplyMethod: REQNone,
-						Data:        csaSerialized,
+						ToNode:            cia.DstNode,
+						FromNode:          cia.SrcNode,
+						Method:            cia.DstMethod,
+						ReplyMethod:       REQNone,
+						Data:              csaSerialized,
+						IsSubPublishedMsg: true,
 					}
 
 					// fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
@@ -531,11 +542,12 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 		{
 			fmt.Printf("\n\n\n ************** DEBUG: copyDstHandler sub process sending copyReady to:%v\n ", message.FromNode)
 			msg := Message{
-				ToNode:      cia.SrcNode,
-				FromNode:    cia.DstNode,
-				Method:      cia.SrcMethod,
-				ReplyMethod: REQNone,
-				Data:        csaSerialized,
+				ToNode:            cia.SrcNode,
+				FromNode:          cia.DstNode,
+				Method:            cia.SrcMethod,
+				ReplyMethod:       REQNone,
+				Data:              csaSerialized,
+				IsSubPublishedMsg: true,
 			}
 
 			fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
@@ -607,11 +619,12 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 
 					// fmt.Printf("\n\n\n ************** DEBUG: copyDstHandler sub process sending copyReady to:%v\n ", message.FromNode)
 					msg := Message{
-						ToNode:      cia.SrcNode,
-						FromNode:    cia.DstNode,
-						Method:      cia.SrcMethod,
-						ReplyMethod: REQNone,
-						Data:        csaSer,
+						ToNode:            cia.SrcNode,
+						FromNode:          cia.DstNode,
+						Method:            cia.SrcMethod,
+						ReplyMethod:       REQNone,
+						Data:              csaSer,
+						IsSubPublishedMsg: true,
 					}
 
 					// fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
@@ -633,11 +646,12 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 					}
 
 					msg := Message{
-						ToNode:      cia.SrcNode,
-						FromNode:    cia.DstNode,
-						Method:      cia.SrcMethod,
-						ReplyMethod: REQNone,
-						Data:        csaSer,
+						ToNode:            cia.SrcNode,
+						FromNode:          cia.DstNode,
+						Method:            cia.SrcMethod,
+						ReplyMethod:       REQNone,
+						Data:              csaSer,
+						IsSubPublishedMsg: true,
 					}
 
 					sam, err := newSubjectAndMessage(msg)
@@ -766,11 +780,12 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 							// We want to send a message back to src that we are ready to start.
 							// fmt.Printf("\n\n\n ************** DEBUG: copyDstHandler sub process sending copyReady to:%v\n ", message.FromNode)
 							msg := Message{
-								ToNode:      cia.SrcNode,
-								FromNode:    cia.DstNode,
-								Method:      cia.SrcMethod,
-								ReplyMethod: REQNone,
-								Data:        csaSerialized,
+								ToNode:            cia.SrcNode,
+								FromNode:          cia.DstNode,
+								Method:            cia.SrcMethod,
+								ReplyMethod:       REQNone,
+								Data:              csaSerialized,
+								IsSubPublishedMsg: true,
 							}
 
 							// fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
