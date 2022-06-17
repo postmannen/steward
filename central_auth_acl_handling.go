@@ -13,7 +13,6 @@ import (
 	"sync"
 
 	"github.com/fxamacker/cbor/v2"
-	"github.com/go-playground/validator/v10"
 )
 
 // // centralAuth
@@ -37,7 +36,6 @@ type accessLists struct {
 	schemaMain *schemaMain
 	// Holds the generated based on the editable structures for ACL handling.
 	schemaGenerated *schemaGenerated
-	validator       *validator.Validate
 	errorKernel     *errorKernel
 	configuration   *Configuration
 	pki             *pki
@@ -47,7 +45,6 @@ func newAccessLists(pki *pki, errorKernel *errorKernel, configuration *Configura
 	a := accessLists{
 		schemaMain:      newSchemaMain(configuration),
 		schemaGenerated: newSchemaGenerated(),
-		validator:       validator.New(),
 		errorKernel:     errorKernel,
 		configuration:   configuration,
 		pki:             pki,
@@ -448,9 +445,14 @@ func (a *accessLists) nodeMapToSlice(host Node) sourceNode {
 // groupNodesAddNode adds a node to a group. If the group does
 // not exist it will be created.
 func (c *centralAuth) groupNodesAddNode(ng nodeGroup, n Node) {
-	err := c.accessLists.validator.Var(ng, "startswith=grp_nodes_")
-	if err != nil {
-		log.Printf("error: group name do not start with grp_nodes_: %v\n", err)
+	//err := c.accessLists.validator.Var(ng, "startswith=grp_nodes_")
+	//if err != nil {
+	//	log.Printf("error: group name do not start with grp_nodes_: %v\n", err)
+	//	return
+	//}
+
+	if !strings.HasPrefix(string(ng), "grp_nodes_") {
+		log.Printf("error: group name do not start with grp_nodes_\n")
 		return
 	}
 
@@ -464,7 +466,7 @@ func (c *centralAuth) groupNodesAddNode(ng nodeGroup, n Node) {
 
 	// fmt.Printf(" * groupNodesAddNode: After adding to group node looks like: %+v\n", a.schemaMain.NodeGroupMap)
 
-	err = c.generateACLsForAllNodes()
+	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: groupNodesAddNode: %v", err)
 		log.Printf("%v\n", er)
@@ -519,9 +521,14 @@ func (c *centralAuth) groupNodesDeleteGroup(ng nodeGroup) {
 // groupCommandsAddCommand adds a command to a group. If the group does
 // not exist it will be created.
 func (c *centralAuth) groupCommandsAddCommand(cg commandGroup, cmd command) {
-	err := c.accessLists.validator.Var(cg, "startswith=grp_commands_")
-	if err != nil {
-		log.Printf("error: group name do not start with grp_commands_ : %v\n", err)
+	// err := c.accessLists.validator.Var(cg, "startswith=grp_commands_")
+	// if err != nil {
+	// 	log.Printf("error: group name do not start with grp_commands_ : %v\n", err)
+	// 	return
+	// }
+
+	if !strings.HasPrefix(string(cg), "grp_commands_") {
+		log.Printf("error: group name do not start with grp_commands_\n")
 		return
 	}
 
@@ -535,7 +542,7 @@ func (c *centralAuth) groupCommandsAddCommand(cg commandGroup, cmd command) {
 
 	//fmt.Printf(" * groupCommandsAddCommand: After adding command=%v to command group=%v map looks like: %+v\n", c, cg, a.schemaMain.CommandGroupMap)
 
-	err = c.generateACLsForAllNodes()
+	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: groupCommandsAddCommand: %v", err)
 		log.Printf("%v\n", er)
