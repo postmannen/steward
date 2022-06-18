@@ -381,7 +381,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 			fmt.Printf("\n * DEBUG: copySrcSubProcFunc: cia contains: %+v\n\n", cia)
 			select {
 			case <-ctx.Done():
-				log.Printf(" * copySrcProcFunc ENDED: %v\n", proc.processName)
+				log.Printf(" info: canceling copySrcProcFunc : %v\n", proc.processName)
 				return nil
 
 			// Pick up the message recived by the copySrcSubHandler.
@@ -396,71 +396,79 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 
 				switch csa.CopyStatus {
 				case copyReady:
-					// We set the default status to copyData. If we get an io.EOF we change it to copyDone later.
-					status := copyData
+					err := func() error {
+						// We set the default status to copyData. If we get an io.EOF we change it to copyDone later.
+						status := copyData
 
-					log.Printf(" * RECEIVED in copySrcSubProcFunc from dst *  copyStatus=copyReady: %v\n\n", csa.CopyStatus)
-					b := make([]byte, cia.SplitChunkSize)
-					n, err := fh.Read(b)
-					if err != nil && err != io.EOF {
-						er := fmt.Errorf("error: copySrcSubHandler: failed to read chunk from file: %v", err)
-						proc.errorKernel.errSend(proc, message, er)
-						return er
-					}
-					if err == io.EOF {
-						status = copySrcDone
-					}
+						log.Printf(" * RECEIVED in copySrcSubProcFunc from dst *  copyStatus=copyReady: %v\n\n", csa.CopyStatus)
+						b := make([]byte, cia.SplitChunkSize)
+						n, err := fh.Read(b)
+						if err != nil && err != io.EOF {
+							er := fmt.Errorf("error: copySrcSubHandler: failed to read chunk from file: %v", err)
+							proc.errorKernel.errSend(proc, message, er)
+							return er
+						}
+						if err == io.EOF {
+							status = copySrcDone
+						}
 
-					lastReadChunk = b[:n]
+						lastReadChunk = b[:n]
 
-					// Create a hash of the bytes
-					hash := sha256.Sum256(b[:n])
+						// Create a hash of the bytes
+						hash := sha256.Sum256(b[:n])
 
-					chunkNumber++
+						chunkNumber++
 
-					// Create message and send data to dst
-					// fmt.Printf("**** DATA READ: %v\n", b)
+						// Create message and send data to dst
+						// fmt.Printf("**** DATA READ: %v\n", b)
 
-					csa := copySubData{
-						CopyStatus:  status,
-						CopyData:    b[:n],
-						ChunkNumber: chunkNumber,
-						Hash:        hash,
-					}
+						csa := copySubData{
+							CopyStatus:  status,
+							CopyData:    b[:n],
+							ChunkNumber: chunkNumber,
+							Hash:        hash,
+						}
 
-					csaSerialized, err := cbor.Marshal(csa)
+						csaSerialized, err := cbor.Marshal(csa)
+						if err != nil {
+							er := fmt.Errorf("error: copyDstSubProcFunc: cbor marshal of csa failed: %v", err)
+							proc.errorKernel.errSend(proc, message, er)
+							return er
+						}
+
+						// We want to send a message back to src that we are ready to start.
+						// fmt.Printf("\n\n\n ************** DEBUG: copyDstHandler sub process sending copyReady to:%v\n ", message.FromNode)
+						msg := Message{
+							ToNode:            cia.DstNode,
+							FromNode:          cia.SrcNode,
+							Method:            cia.DstMethod,
+							ReplyMethod:       REQNone,
+							Data:              csaSerialized,
+							IsSubPublishedMsg: true,
+						}
+
+						// fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
+
+						sam, err := newSubjectAndMessage(msg)
+						if err != nil {
+							er := fmt.Errorf("copyDstProcSubFunc: newSubjectAndMessage failed: %v", err)
+							proc.errorKernel.errSend(proc, message, er)
+							return er
+						}
+
+						proc.toRingbufferCh <- []subjectAndMessage{sam}
+
+						resendRetries = 0
+
+						// Testing with contect canceling here.
+						// proc.ctxCancel()
+
+						return nil
+					}()
+
 					if err != nil {
-						er := fmt.Errorf("error: copyDstSubProcFunc: cbor marshal of csa failed: %v", err)
-						proc.errorKernel.errSend(proc, message, er)
-						return er
+						return err
 					}
-
-					// We want to send a message back to src that we are ready to start.
-					// fmt.Printf("\n\n\n ************** DEBUG: copyDstHandler sub process sending copyReady to:%v\n ", message.FromNode)
-					msg := Message{
-						ToNode:            cia.DstNode,
-						FromNode:          cia.SrcNode,
-						Method:            cia.DstMethod,
-						ReplyMethod:       REQNone,
-						Data:              csaSerialized,
-						IsSubPublishedMsg: true,
-					}
-
-					// fmt.Printf("\n ***** DEBUG: copyDstSubProcFunc: cia.SrcMethod: %v\n\n ", cia.SrcMethod)
-
-					sam, err := newSubjectAndMessage(msg)
-					if err != nil {
-						er := fmt.Errorf("copyDstProcSubFunc: newSubjectAndMessage failed: %v", err)
-						proc.errorKernel.errSend(proc, message, er)
-						return er
-					}
-
-					proc.toRingbufferCh <- []subjectAndMessage{sam}
-
-					resendRetries = 0
-
-					// Testing with contect canceling here.
-					// proc.ctxCancel()
 
 				case copyResendLast:
 					if resendRetries > message.Retries {
