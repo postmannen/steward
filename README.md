@@ -309,6 +309,7 @@ Steward supports both the use of flags with values set at startup, and the use o
 - replyMethodTimeout : `int`
 - directory : `string`
 - fileName : `string`
+- schedule : [int type value for interval in seconds, int type value for total run time in seconds]
 
 ### Nats messaging timeouts
 
@@ -554,6 +555,7 @@ Scrape web url, and get the html sent back in a reply message. Uses the methodTi
 
 #### REQHttpGetScheduled
 
+**REQ Method are DEPRECATED**
 Schedule scraping of a web web url, and get the html sent back in a reply message. Uses the methodTimeout for how long it will wait for the http get method to return result.
 
 The **methodArgs** also takes 3 arguments:
