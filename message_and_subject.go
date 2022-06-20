@@ -84,6 +84,14 @@ type Message struct {
 	// done with processing a message, and the message can be removed
 	// from the ringbuffer and into the time series log.
 	done chan struct{}
+
+	// ctx for the specifix message. Used for for example canceling
+	// scheduled messages.
+	// NB: Commented out this field for specific message context
+	// to be used within handlers, since it will override the structure
+	// we have today. Keeping the code for a bit incase it makes sense
+	// to implement later.
+	//ctx context.Context
 }
 
 // --- Subject
