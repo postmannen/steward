@@ -38,6 +38,7 @@ func (s *server) readStartupFolder() {
 	}
 
 	for _, filePath := range filePaths {
+		fmt.Printf("DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG: %v\n", filePath)
 
 		// Read the content of each file.
 		readBytes, err := func(filePath string) ([]byte, error) {
@@ -107,12 +108,16 @@ func (s *server) readStartupFolder() {
 				continue
 			}
 
-			_, err = mh.handler(p, sams[i].Message, s.nodeName)
-			if err != nil {
-				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-				p.errorKernel.errSend(p, sams[i].Message, er)
-				continue
-			}
+			p.handler = mh.handler
+
+			//_, err = mh.handler(p, sams[i].Message, s.nodeName)
+			//if err != nil {
+			//	er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
+			//	p.errorKernel.errSend(p, sams[i].Message, er)
+			//	continue
+			//}
+
+			executeHandler(p, sams[i].Message, s.nodeName)
 		}
 
 	}
