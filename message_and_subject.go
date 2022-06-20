@@ -76,6 +76,8 @@ type Message struct {
 	// generated and we also need a copy of  the details of the the
 	// initial request message.
 	PreviousMessage *Message
+	// Schedule
+	Schedule []int `json:"schedule" yaml:"schedule"`
 
 	// done is used to signal when a message is fully processed.
 	// This is used for signaling back to the ringbuffer that we are
