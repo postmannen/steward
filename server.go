@@ -107,6 +107,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		// Setting MaxReconnects to -1 which equals unlimited.
 		conn, err = nats.Connect(configuration.BrokerAddress,
 			opt,
+			//nats.FlusherTimeout(time.Second*10),
 			nats.MaxReconnects(-1),
 			nats.ReconnectJitter(time.Duration(configuration.NatsReconnectJitter)*time.Millisecond, time.Duration(configuration.NatsReconnectJitterTLS)*time.Second),
 			nats.Timeout(time.Second*time.Duration(configuration.NatsConnOptTimeout)),

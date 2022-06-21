@@ -272,8 +272,16 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 			}
 			p.metrics.promNatsDeliveredTotal.Inc()
 
-			// The reaming logic is for handling ACK messages, so we return here
+			//err = natsConn.Flush()
+			//if err != nil {
+			//	er := fmt.Errorf("error: nats publish flush failed: %v", err)
+			//	log.Printf("%v\n", er)
+			//	return
+			//}
+
+			// The remaining logic is for handling ACK messages, so we return here
 			// since it was a NACK message, and all or now done.
+
 			return
 		}
 
