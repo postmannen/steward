@@ -17,6 +17,9 @@ import (
 // an if check should be added to the checkConfigValues function
 // to set default values when reading from config file.
 type Configuration struct {
+	// RingBufferPermStore enable or disable the persisting of
+	// messages being processed to local db.
+	RingBufferPersistStore bool
 	// RingBufferSize
 	RingBufferSize int
 	// The configuration folder on disk
@@ -139,6 +142,7 @@ type Configuration struct {
 // if a value were given or not when parsing.
 type ConfigurationFromFile struct {
 	ConfigFolder                 *string
+	RingBufferPersistStore       *bool
 	RingBufferSize               *int
 	SocketFolder                 *string
 	TCPListener                  *string
@@ -205,6 +209,7 @@ func NewConfiguration() *Configuration {
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
 		ConfigFolder:                 "./etc/",
+		RingBufferPersistStore:       true,
 		RingBufferSize:               1000,
 		SocketFolder:                 "./tmp",
 		TCPListener:                  "",
@@ -273,6 +278,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 		conf.RingBufferSize = cd.RingBufferSize
 	} else {
 		conf.RingBufferSize = *cf.RingBufferSize
+	}
+	if cf.RingBufferPersistStore == nil {
+		conf.RingBufferPersistStore = cd.RingBufferPersistStore
+	} else {
+		conf.RingBufferPersistStore = *cf.RingBufferPersistStore
 	}
 	if cf.ConfigFolder == nil {
 		conf.ConfigFolder = cd.ConfigFolder
@@ -577,6 +587,7 @@ func (c *Configuration) CheckFlags() error {
 	*c = fc
 
 	//flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "Defaults to ./usr/local/steward/etc/. *NB* This flag is not used, if your config file are located somwhere else than default set the location in an env variable named CONFIGFOLDER")
+	flag.BoolVar(&c.RingBufferPersistStore, "ringBufferPersistStore", fc.RingBufferPersistStore, "true/false for enabling the persisting of ringbuffer to disk")
 	flag.IntVar(&c.RingBufferSize, "ringBufferSize", fc.RingBufferSize, "size of the ringbuffer")
 	flag.StringVar(&c.SocketFolder, "socketFolder", fc.SocketFolder, "folder who contains the socket file. Defaults to ./tmp/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.TCPListener, "tcpListener", fc.TCPListener, "start up a TCP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")

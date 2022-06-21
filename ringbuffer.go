@@ -61,6 +61,9 @@ type ringBuffer struct {
 // newringBuffer returns a push/pop storage for values.
 func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configuration, size int, dbFileName string, nodeName Node, ringBufferBulkInCh chan []subjectAndMessage, samValueBucket string, indexValueBucket string, errorKernel *errorKernel, processInitial process) *ringBuffer {
 
+	fmt.Printf(" * DEBUG: configuration: %+v\n", configuration)
+	r := ringBuffer{}
+
 	// Check if socket folder exists, if not create it
 	if _, err := os.Stat(configuration.DatabaseFolder); os.IsNotExist(err) {
 		err := os.MkdirAll(configuration.DatabaseFolder, 0700)
@@ -73,25 +76,29 @@ func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configu
 	DatabaseFilepath := filepath.Join(configuration.DatabaseFolder, dbFileName)
 
 	// ---
-
-	db, err := bolt.Open(DatabaseFilepath, 0600, nil)
-	if err != nil {
-		log.Printf("error: failed to open db: %v\n", err)
-		os.Exit(1)
+	var db *bolt.DB
+	fmt.Printf(" * DEBUG: configuration: %+v\n", configuration)
+	if configuration.RingBufferPersistStore {
+		var err error
+		db, err = bolt.Open(DatabaseFilepath, 0600, nil)
+		if err != nil {
+			log.Printf("error: failed to open db: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
-	return &ringBuffer{
-		bufData:            make(chan samDBValue, size),
-		db:                 db,
-		samValueBucket:     samValueBucket,
-		indexValueBucket:   indexValueBucket,
-		permStore:          make(chan string),
-		nodeName:           nodeName,
-		ringBufferBulkInCh: ringBufferBulkInCh,
-		metrics:            metrics,
-		configuration:      configuration,
-		processInitial:     processInitial,
-	}
+	r.bufData = make(chan samDBValue, size)
+	r.db = db
+	r.samValueBucket = samValueBucket
+	r.indexValueBucket = indexValueBucket
+	r.permStore = make(chan string)
+	r.nodeName = nodeName
+	r.ringBufferBulkInCh = ringBufferBulkInCh
+	r.metrics = metrics
+	r.configuration = configuration
+	r.processInitial = processInitial
+
+	return &r
 }
 
 // start will process incomming messages through the inCh,
@@ -102,7 +109,10 @@ func (r *ringBuffer) start(ctx context.Context, inCh chan subjectAndMessage, out
 	// Starting both writing and reading in separate go routines so we
 	// can write and read concurrently.
 
-	r.totalMessagesIndex = r.getIndexValue()
+	r.totalMessagesIndex = 0
+	if r.configuration.RingBufferPersistStore {
+		r.totalMessagesIndex = r.getIndexValue()
+	}
 
 	// Fill the buffer when new data arrives into the system
 	go r.fillBuffer(ctx, inCh)
@@ -119,7 +129,9 @@ func (r *ringBuffer) start(ctx context.Context, inCh chan subjectAndMessage, out
 		for {
 			select {
 			case <-ticker.C:
-				r.dbUpdateMetrics(r.samValueBucket)
+				if r.configuration.RingBufferPersistStore {
+					r.dbUpdateMetrics(r.samValueBucket)
+				}
 			case <-ctx.Done():
 				return
 			}
@@ -136,18 +148,20 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 	// This is needed when the program have been restarted, and we need to check
 	// if there where previously unhandled messages that need to be handled first.
 
-	func() {
-		s, err := r.dumpBucket(r.samValueBucket)
-		if err != nil {
-			er := fmt.Errorf("info: fillBuffer: retreival of values from k/v store failed, probaly empty database, and no previous entries in db to process: %v", err)
-			log.Printf("%v\n", er)
-			return
-		}
+	if r.configuration.RingBufferPersistStore {
+		func() {
+			s, err := r.dumpBucket(r.samValueBucket)
+			if err != nil {
+				er := fmt.Errorf("info: fillBuffer: retreival of values from k/v store failed, probaly empty database, and no previous entries in db to process: %v", err)
+				log.Printf("%v\n", er)
+				return
+			}
 
-		for _, v := range s {
-			r.bufData <- v
-		}
-	}()
+			for _, v := range s {
+				r.bufData <- v
+			}
+		}()
+	}
 
 	// Prepare the map structure to know what values are allowed
 	// for the events
@@ -199,18 +213,19 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 				Data: v,
 			}
 
-			js, err := json.Marshal(samV)
-			if err != nil {
-				er := fmt.Errorf("error:fillBuffer: json marshaling: %v", err)
-				r.errorKernel.errSend(r.processInitial, Message{}, er)
-			}
+			if r.configuration.RingBufferPersistStore {
+				js, err := json.Marshal(samV)
+				if err != nil {
+					er := fmt.Errorf("error:fillBuffer: json marshaling: %v", err)
+					r.errorKernel.errSend(r.processInitial, Message{}, er)
+				}
 
-			// Store the incomming message in key/value store
-			err = r.dbUpdate(r.db, r.samValueBucket, strconv.Itoa(dbID), js)
-			if err != nil {
-				er := fmt.Errorf("error: dbUpdate samValue failed: %v", err)
-				r.errorKernel.errSend(r.processInitial, Message{}, er)
-
+				// Store the incomming message in key/value store
+				err = r.dbUpdate(r.db, r.samValueBucket, strconv.Itoa(dbID), js)
+				if err != nil {
+					er := fmt.Errorf("error: dbUpdate samValue failed: %v", err)
+					r.errorKernel.errSend(r.processInitial, Message{}, er)
+				}
 			}
 
 			// Put the message on the inmemory buffer.
@@ -219,7 +234,9 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 			// Increment index, and store the new value to the database.
 			r.mu.Lock()
 			r.totalMessagesIndex++
-			r.dbUpdate(r.db, r.indexValueBucket, "index", []byte(strconv.Itoa(r.totalMessagesIndex)))
+			if r.configuration.RingBufferPersistStore {
+				r.dbUpdate(r.db, r.indexValueBucket, "index", []byte(strconv.Itoa(r.totalMessagesIndex)))
+			}
 			r.mu.Unlock()
 		case <-ctx.Done():
 			// When done close the buffer channel
@@ -302,7 +319,9 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 
 				// Since we are now done with the specific message we can delete
 				// it out of the K/V Store.
-				r.deleteKeyFromBucket(r.samValueBucket, strconv.Itoa(v.ID))
+				if r.configuration.RingBufferPersistStore {
+					r.deleteKeyFromBucket(r.samValueBucket, strconv.Itoa(v.ID))
+				}
 
 				js, err := json.Marshal(msgForPermStore)
 				if err != nil {
