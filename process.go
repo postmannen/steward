@@ -307,7 +307,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
 				log.Printf("%v, waiting %ds before retrying\n", er, subscribeSyncTimer)
 
-				time.Sleep(time.Second * subscribeSyncTimer)
+				//time.Sleep(time.Second * subscribeSyncTimer)
 				// subReply.Unsubscribe()
 
 				retryAttempts++
