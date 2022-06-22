@@ -37,7 +37,7 @@ func TestMain(m *testing.M) {
 		tstTempDir = os.TempDir()
 	}
 
-	// TODO: Forcing this for now.
+	// NB: Forcing this for now.
 	tstTempDir = "tmp"
 
 	tstNats = newNatsServerForTesting(42222)

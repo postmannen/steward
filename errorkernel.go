@@ -199,9 +199,9 @@ const (
 	// errActionContinue is ment to be used when the a process
 	// can just continue without taking any special care.
 	errActionContinue errorAction = iota
-	// TODO:
+	// TODO NOT IMPLEMENTED YET:
 	// errActionKill should log the error,
-	// stop the current worker process, and spawn a new.
+	// and f.ex. stop the current work, and restart from start?
 	// errActionKill errorAction = iota
 )
 

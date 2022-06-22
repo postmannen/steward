@@ -300,7 +300,7 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 				case <-delivredCh:
 					// OK.
 				case <-time.After(time.Second * 5):
-					// TODO: Check out if more logic should be made here if messages are stuck etc.
+					// TODO: Check if more logic should be made here if messages are stuck etc.
 					// Testing with a timeout here to figure out if messages are stuck
 					// waiting for done signal.
 					log.Printf("Error: *** message %v seems to be stuck, did not receive delivered signal from reading process\n", v.ID)

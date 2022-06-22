@@ -452,7 +452,6 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 
 	// Create a new message for the reply, and put it on the
 	// ringbuffer to be published.
-	// TODO: Check that we still got all the fields present that are needed here.
 	newMsg := Message{
 		ToNode: message.FromNode,
 		// The ToNodes field is not needed since it is only a concept that exists when messages
