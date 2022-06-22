@@ -53,16 +53,6 @@ func (m methodREQAclRequestUpdate) handler(proc process, message Message, node s
 				proc.centralAuth.accessLists.schemaGenerated.mu.Lock()
 				defer proc.centralAuth.accessLists.schemaGenerated.mu.Unlock()
 
-				// DEBUGGING:
-				//{
-				//	proc.centralAuth.accessLists.schemaMain.mu.Lock()
-				//	fmt.Printf("\n --- DEBUGGING: subscriber methodREQAclRequestUpdate: schemaGenerated contains: %v\n\n", proc.centralAuth.accessLists.schemaGenerated)
-				//	fmt.Printf("\n --- DEBUGGING: subscriber methodREQAclRequestUpdate: schemaMain contains: %v\n\n", proc.centralAuth.accessLists.schemaMain)
-				//	proc.centralAuth.accessLists.schemaMain.mu.Unlock()
-				//
-				//	// TODO: PROBLEM: The existing generated acl's are not loaded when starting, or not stored at all.
-				//}
-
 				log.Printf(" ---- subscriber methodREQAclRequestUpdate: got acl hash from NODE=%v, HASH data =%v\n", message.FromNode, message.Data)
 
 				// Check if the received hash is the same as the one currently active,
@@ -878,9 +868,6 @@ func (m methodREQAclExport) handler(proc process, message Message, node string) 
 }
 
 // ---
-
-// TODO: IMPORTANT: We also need to add importing and exporting of the groups to the
-//  import and export methods.
 
 type methodREQAclImport struct {
 	event Event

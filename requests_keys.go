@@ -88,8 +88,6 @@ func (m methodREQKeysRequestUpdate) handler(proc process, message Message, node 
 			// structure is the same as the other handlers.
 			select {
 			case <-ctx.Done():
-			// TODO: Should we receive a hash of he current keys from the node here
-			// to verify if we need to update or not ?
 			case outCh <- []byte{}:
 			}
 		}()
@@ -164,7 +162,6 @@ func (m methodREQKeysDeliverUpdate) handler(proc process, message Message, node 
 			// structure is the same as the other handlers.
 			select {
 			case <-ctx.Done():
-			// TODO: Should we receive a hash of he current keys from the node here ?
 			case outCh <- []byte{}:
 			}
 		}()
@@ -222,8 +219,6 @@ func (m methodREQKeysDeliverUpdate) handler(proc process, message Message, node 
 }
 
 // ----
-
-// TODO: We should also add a request method methodREQPublicKeysRevoke
 
 type methodREQKeysAllow struct {
 	event Event
@@ -293,10 +288,6 @@ func (m methodREQKeysAllow) handler(proc process, message Message, node string) 
 			// representing the current keys in the allowed map.
 			proc.centralAuth.updateHash(proc, message)
 
-			// TODO: FAILS: The push keys updates when change fails with that the
-			// subscriber gets stuck. Need to look more into this later.
-			// Disabling for now since the node will update at the timed interval.
-			//
 			// If new keys were allowed into the main map, we should send out one
 			// single update to all the registered nodes to inform of an update.
 			// NB: If a node is not reachable at the time the update is sent it is

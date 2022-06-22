@@ -641,7 +641,7 @@ An example could be that you send a `REQCliCommand` message to some node, and yo
 
 This is a method that can be used to get the data of the message printed to console where Steward is running.
 
-Default is to print to **stdout**, but printing to **stderr** can be done by setting the value of **methodArgs** to `"methodArgs": ["stderr"]`. 
+Default is to print to **stdout**, but printing to **stderr** can be done by setting the value of **methodArgs** to `"methodArgs": ["stderr"]`.
 
 If used as a **replyMethod** set the **replyMethodArgs** `"replyMethodArgs": ["stderr"],`.
 
@@ -1415,6 +1415,12 @@ StartSubREQCliCommandCont bool
 ToNode Node `json:"toNode" yaml:"toNode"`
 // ToNodes to specify several hosts to send message to in the
 // form of an slice/array.
+// The ToNodes field is only a concept that exists when messages
+// are injected f.ex. on a socket, and there they are directly 
+//converted into separate node messages for each node, and from
+// there the ToNodes field is not used any more within the system.
+// With other words, a message that exists within Steward is always
+// for just for a single node.
 ToNodes []Node `json:"toNodes,omitempty" yaml:"toNodes,omitempty"`
 // The actual data in the message. This is typically where we
 // specify the cli commands to execute on a node, and this is

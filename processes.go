@@ -338,7 +338,7 @@ func (s startup) pubREQKeysRequestUpdate(p process) {
 		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.REQKeysRequestUpdateInterval))
 		for {
 
-			// TODO: We could send with the hash of the currently stored keys,
+			// Send a message with the hash of the currently stored keys,
 			// so we would know on the subscriber at central if it should send
 			// and update with new keys back.
 
@@ -394,8 +394,8 @@ func (s startup) pubREQAclRequestUpdate(p process) {
 		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.REQAclRequestUpdateInterval))
 		for {
 
-			// TODO: We could send with the hash of the currently stored hash,
-			// so we would know on the subscriber at central if it should send
+			// Send a message with the hash of the currently stored acl's,
+			// so we would know for the subscriber at central if it should send
 			// and update with new keys back.
 
 			proc.nodeAuth.nodeAcl.mu.Lock()

@@ -190,35 +190,6 @@ func (e *errorKernel) logConsoleOnlyIfDebug(err error, c *Configuration) {
 	}
 }
 
-// // TODO: Needs more work.
-// //
-// // errWithAction
-// //
-// // Will prepare an errorEvent to send to the errorKernel that
-// // contains a channel of type errorAction.
-// // The errorActionCh are returned from the function and are used
-// // to create a channel between where this function is called and
-// // the go routine started in the errorKernel. From where the
-// // function was called we can read the channel for a response
-// // given from the errorKernel, and then decide what to do based
-// // on the errorAction value.
-// func (e *errorKernel) errWithAction(proc process, msg Message, err error) chan errorAction {
-// 	// Create the channel where to receive what action to do.
-// 	errActionCh := make(chan errorAction)
-//
-// 	ev := errorEvent{
-// 		err:           err,
-// 		errorType:     errTypeWithAction,
-// 		process:       proc,
-// 		message:       msg,
-// 		errorActionCh: errActionCh,
-// 	}
-//
-// 	e.errorCh <- ev
-//
-// 	return errActionCh
-// }
-
 // errorAction is used to tell the process who sent the error
 // what it shall do. The process who sends the error will
 // have to block and wait for the response on the errorActionCh.
