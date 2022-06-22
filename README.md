@@ -665,6 +665,8 @@ If used as a **replyMethod** set the **replyMethodArgs** `"replyMethodArgs": ["s
 
 Append the output of the reply message to a log file specified with the `directory` and `fileName` fields.
 
+If the value of the **directory** field is not prefixed with `./` or `/` the directory structure file will be created within the **steward data folder** specified in the config file.
+
 ```json
 [
     {
@@ -681,6 +683,8 @@ Append the output of the reply message to a log file specified with the `directo
 #### REQToFile
 
 Write the output of the reply message to a file specified with the `directory` and `fileName` fields, where the writing will write over any existing content of that file.
+
+If the value of the **directory** field is not prefixed with `./` or `/` the directory structure file will be created within the **steward data folder** specified in the config file.
 
 ```json
 [

@@ -488,20 +488,37 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 // to create.
 func selectFileNaming(message Message, proc process) (string, string) {
 	var fileName string
-	var folderTree string
+	// As default we set the folder tree to what is specified in the
+	// message.Directory field. If we don't want that in the checks
+	// done later we then replace the value with what we want.
+	folderTree := message.Directory
+
+	checkPrefix := func(s string) bool {
+		if strings.HasPrefix(s, "./") || strings.HasPrefix(s, "/") {
+			return true
+		}
+
+		return false
+	}
 
 	switch {
 	case message.PreviousMessage == nil:
 		// If this was a direct request there are no previous message to take
 		// information from, so we use the one that are in the current mesage.
 		fileName = message.FileName
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.ToNode))
+		if !checkPrefix(message.Directory) {
+			folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.Directory, string(message.ToNode))
+		}
 	case message.PreviousMessage.ToNode != "":
 		fileName = message.PreviousMessage.FileName
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode))
+		if !checkPrefix(message.PreviousMessage.Directory) {
+			folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.PreviousMessage.ToNode))
+		}
 	case message.PreviousMessage.ToNode == "":
 		fileName = message.PreviousMessage.FileName
-		folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.FromNode))
+		if !checkPrefix(message.PreviousMessage.Directory) {
+			folderTree = filepath.Join(proc.configuration.SubscribersDataFolder, message.PreviousMessage.Directory, string(message.FromNode))
+		}
 	}
 
 	return fileName, folderTree
