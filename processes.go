@@ -343,7 +343,8 @@ func (s startup) pubREQKeysRequestUpdate(p process) {
 			// and update with new keys back.
 
 			proc.nodeAuth.publicKeys.mu.Lock()
-			fmt.Printf(" ----> publisher REQKeysRequestUpdate: sending our current hash: %v\n", []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]))
+			er := fmt.Errorf(" ----> publisher REQKeysRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]))
+			p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 			m := Message{
 				FileName:    "publickeysget.log",
@@ -398,7 +399,8 @@ func (s startup) pubREQAclRequestUpdate(p process) {
 			// and update with new keys back.
 
 			proc.nodeAuth.nodeAcl.mu.Lock()
-			fmt.Printf(" ----> publisher REQAclRequestUpdate: sending our current hash: %v\n", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
+			er := fmt.Errorf(" ----> publisher REQAclRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
+			p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 			m := Message{
 				FileName:    "aclRequestUpdate.log",

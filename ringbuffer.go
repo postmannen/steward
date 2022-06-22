@@ -61,7 +61,6 @@ type ringBuffer struct {
 // newringBuffer returns a push/pop storage for values.
 func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configuration, size int, dbFileName string, nodeName Node, ringBufferBulkInCh chan []subjectAndMessage, samValueBucket string, indexValueBucket string, errorKernel *errorKernel, processInitial process) *ringBuffer {
 
-	fmt.Printf(" * DEBUG: configuration: %+v\n", configuration)
 	r := ringBuffer{}
 
 	// Check if socket folder exists, if not create it
@@ -77,7 +76,6 @@ func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configu
 
 	// ---
 	var db *bolt.DB
-	fmt.Printf(" * DEBUG: configuration: %+v\n", configuration)
 	if configuration.RingBufferPersistStore {
 		var err error
 		db, err = bolt.Open(DatabaseFilepath, 0600, nil)
