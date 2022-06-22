@@ -17,6 +17,9 @@ import (
 // an if check should be added to the checkConfigValues function
 // to set default values when reading from config file.
 type Configuration struct {
+	// RingBufferPermStore enable or disable the persisting of
+	// messages being processed to local db.
+	RingBufferPersistStore bool
 	// RingBufferSize
 	RingBufferSize int
 	// The configuration folder on disk
@@ -90,6 +93,12 @@ type Configuration struct {
 	// EnableDebug will also enable printing all the messages received in the errorKernel
 	// to STDERR.
 	EnableDebug bool
+	// KeepPublishersAliveFor number of seconds.
+	// Timer that will be used for when to remove the sub process
+	// publisher. The timer is reset each time a message is published with
+	// the process, so the sub process publisher will not be removed until
+	// it have not received any messages for the given amount of time.
+	KeepPublishersAliveFor int
 
 	// Make the current node send hello messages to central at given interval in seconds
 	StartPubREQHello int
@@ -110,9 +119,9 @@ type Configuration struct {
 	// Subscriber for writing to file without ACK
 	StartSubREQToFileNACK bool
 	// Subscriber for reading files to copy
-	StartSubREQCopyFileFrom bool
+	StartSubREQCopySrc bool
 	// Subscriber for writing copied files to disk
-	StartSubREQCopyFileTo bool
+	StartSubREQCopyDst bool
 	// Subscriber for Echo Request
 	StartSubREQPing bool
 	// Subscriber for Echo Reply
@@ -129,8 +138,6 @@ type Configuration struct {
 	StartSubREQTailFile bool
 	// Subscriber for continously delivery of output from cli commands.
 	StartSubREQCliCommandCont bool
-	// Subscriber for relay messages.
-	StartSubREQRelay bool
 }
 
 // ConfigurationFromFile should have the same structure as
@@ -139,6 +146,7 @@ type Configuration struct {
 // if a value were given or not when parsing.
 type ConfigurationFromFile struct {
 	ConfigFolder                 *string
+	RingBufferPersistStore       *bool
 	RingBufferSize               *int
 	SocketFolder                 *string
 	TCPListener                  *string
@@ -173,6 +181,7 @@ type ConfigurationFromFile struct {
 	EnableAclCheck               *bool
 	IsCentralAuth                *bool
 	EnableDebug                  *bool
+	KeepPublishersAliveFor       *int
 
 	StartPubREQHello            *int
 	EnableKeyUpdates            *bool
@@ -182,8 +191,8 @@ type ConfigurationFromFile struct {
 	StartSubREQToFileAppend     *bool
 	StartSubREQToFile           *bool
 	StartSubREQToFileNACK       *bool
-	StartSubREQCopyFileFrom     *bool
-	StartSubREQCopyFileTo       *bool
+	StartSubREQCopySrc          *bool
+	StartSubREQCopyDst          *bool
 	StartSubREQPing             *bool
 	StartSubREQPong             *bool
 	StartSubREQCliCommand       *bool
@@ -192,7 +201,6 @@ type ConfigurationFromFile struct {
 	StartSubREQHttpGetScheduled *bool
 	StartSubREQTailFile         *bool
 	StartSubREQCliCommandCont   *bool
-	StartSubREQRelay            *bool
 }
 
 // NewConfiguration will return a *Configuration.
@@ -205,6 +213,7 @@ func NewConfiguration() *Configuration {
 func newConfigurationDefaults() Configuration {
 	c := Configuration{
 		ConfigFolder:                 "./etc/",
+		RingBufferPersistStore:       true,
 		RingBufferSize:               1000,
 		SocketFolder:                 "./tmp",
 		TCPListener:                  "",
@@ -239,6 +248,7 @@ func newConfigurationDefaults() Configuration {
 		EnableAclCheck:               false,
 		IsCentralAuth:                false,
 		EnableDebug:                  false,
+		KeepPublishersAliveFor:       10,
 
 		StartPubREQHello:            30,
 		EnableKeyUpdates:            true,
@@ -248,8 +258,8 @@ func newConfigurationDefaults() Configuration {
 		StartSubREQToFileAppend:     true,
 		StartSubREQToFile:           true,
 		StartSubREQToFileNACK:       true,
-		StartSubREQCopyFileFrom:     true,
-		StartSubREQCopyFileTo:       true,
+		StartSubREQCopySrc:          true,
+		StartSubREQCopyDst:          true,
 		StartSubREQPing:             true,
 		StartSubREQPong:             true,
 		StartSubREQCliCommand:       true,
@@ -258,7 +268,6 @@ func newConfigurationDefaults() Configuration {
 		StartSubREQHttpGetScheduled: true,
 		StartSubREQTailFile:         true,
 		StartSubREQCliCommandCont:   true,
-		StartSubREQRelay:            false,
 	}
 	return c
 }
@@ -273,6 +282,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 		conf.RingBufferSize = cd.RingBufferSize
 	} else {
 		conf.RingBufferSize = *cf.RingBufferSize
+	}
+	if cf.RingBufferPersistStore == nil {
+		conf.RingBufferPersistStore = cd.RingBufferPersistStore
+	} else {
+		conf.RingBufferPersistStore = *cf.RingBufferPersistStore
 	}
 	if cf.ConfigFolder == nil {
 		conf.ConfigFolder = cd.ConfigFolder
@@ -444,6 +458,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.EnableDebug = *cf.EnableDebug
 	}
+	if cf.KeepPublishersAliveFor == nil {
+		conf.KeepPublishersAliveFor = cd.KeepPublishersAliveFor
+	} else {
+		conf.KeepPublishersAliveFor = *cf.KeepPublishersAliveFor
+	}
 
 	// --- Start pub/sub
 
@@ -489,15 +508,15 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.StartSubREQToFileNACK = *cf.StartSubREQToFileNACK
 	}
-	if cf.StartSubREQCopyFileFrom == nil {
-		conf.StartSubREQCopyFileFrom = cd.StartSubREQCopyFileFrom
+	if cf.StartSubREQCopySrc == nil {
+		conf.StartSubREQCopySrc = cd.StartSubREQCopySrc
 	} else {
-		conf.StartSubREQCopyFileFrom = *cf.StartSubREQCopyFileFrom
+		conf.StartSubREQCopySrc = *cf.StartSubREQCopySrc
 	}
-	if cf.StartSubREQCopyFileTo == nil {
-		conf.StartSubREQCopyFileTo = cd.StartSubREQCopyFileTo
+	if cf.StartSubREQCopyDst == nil {
+		conf.StartSubREQCopyDst = cd.StartSubREQCopyDst
 	} else {
-		conf.StartSubREQCopyFileTo = *cf.StartSubREQCopyFileTo
+		conf.StartSubREQCopyDst = *cf.StartSubREQCopyDst
 	}
 	if cf.StartSubREQPing == nil {
 		conf.StartSubREQPing = cd.StartSubREQPing
@@ -539,11 +558,6 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.StartSubREQCliCommandCont = *cf.StartSubREQCliCommandCont
 	}
-	if cf.StartSubREQRelay == nil {
-		conf.StartSubREQRelay = cd.StartSubREQRelay
-	} else {
-		conf.StartSubREQRelay = *cf.StartSubREQRelay
-	}
 
 	return conf
 }
@@ -577,6 +591,7 @@ func (c *Configuration) CheckFlags() error {
 	*c = fc
 
 	//flag.StringVar(&c.ConfigFolder, "configFolder", fc.ConfigFolder, "Defaults to ./usr/local/steward/etc/. *NB* This flag is not used, if your config file are located somwhere else than default set the location in an env variable named CONFIGFOLDER")
+	flag.BoolVar(&c.RingBufferPersistStore, "ringBufferPersistStore", fc.RingBufferPersistStore, "true/false for enabling the persisting of ringbuffer to disk")
 	flag.IntVar(&c.RingBufferSize, "ringBufferSize", fc.RingBufferSize, "size of the ringbuffer")
 	flag.StringVar(&c.SocketFolder, "socketFolder", fc.SocketFolder, "folder who contains the socket file. Defaults to ./tmp/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.TCPListener, "tcpListener", fc.TCPListener, "start up a TCP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")
@@ -611,6 +626,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.EnableAclCheck, "enableAclCheck", fc.EnableAclCheck, "true/false *TESTING* enable Acl checking.")
 	flag.BoolVar(&c.IsCentralAuth, "isCentralAuth", fc.IsCentralAuth, "true/false, *TESTING* is this the central auth server")
 	flag.BoolVar(&c.EnableDebug, "enableDebug", fc.EnableDebug, "true/false, will enable debug logging so all messages sent to the errorKernel will also be printed to STDERR")
+	flag.IntVar(&c.KeepPublishersAliveFor, "keepPublishersAliveFor", fc.KeepPublishersAliveFor, "The amount of time we allow a publisher to stay alive without receiving any messages to publish")
 
 	// Start of Request publishers/subscribers
 
@@ -625,8 +641,8 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.StartSubREQToFileAppend, "startSubREQToFileAppend", fc.StartSubREQToFileAppend, "true/false")
 	flag.BoolVar(&c.StartSubREQToFile, "startSubREQToFile", fc.StartSubREQToFile, "true/false")
 	flag.BoolVar(&c.StartSubREQToFileNACK, "startSubREQToFileNACK", fc.StartSubREQToFileNACK, "true/false")
-	flag.BoolVar(&c.StartSubREQCopyFileFrom, "startSubREQCopyFileFrom", fc.StartSubREQCopyFileFrom, "true/false")
-	flag.BoolVar(&c.StartSubREQCopyFileTo, "startSubREQCopyFileTo", fc.StartSubREQCopyFileTo, "true/false")
+	flag.BoolVar(&c.StartSubREQCopySrc, "startSubREQCopySrc", fc.StartSubREQCopySrc, "true/false")
+	flag.BoolVar(&c.StartSubREQCopyDst, "startSubREQCopyDst", fc.StartSubREQCopyDst, "true/false")
 	flag.BoolVar(&c.StartSubREQPing, "startSubREQPing", fc.StartSubREQPing, "true/false")
 	flag.BoolVar(&c.StartSubREQPong, "startSubREQPong", fc.StartSubREQPong, "true/false")
 	flag.BoolVar(&c.StartSubREQCliCommand, "startSubREQCliCommand", fc.StartSubREQCliCommand, "true/false")
@@ -635,7 +651,6 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.StartSubREQHttpGetScheduled, "startSubREQHttpGetScheduled", fc.StartSubREQHttpGetScheduled, "true/false")
 	flag.BoolVar(&c.StartSubREQTailFile, "startSubREQTailFile", fc.StartSubREQTailFile, "true/false")
 	flag.BoolVar(&c.StartSubREQCliCommandCont, "startSubREQCliCommandCont", fc.StartSubREQCliCommandCont, "true/false")
-	flag.BoolVar(&c.StartSubREQRelay, "startSubREQRelay", fc.StartSubREQRelay, "true/false")
 
 	purgeBufferDB := flag.Bool("purgeBufferDB", false, "true/false, purge the incoming buffer db and all it's state")
 

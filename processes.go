@@ -12,6 +12,8 @@ import (
 
 // processes holds all the information about running processes
 type processes struct {
+	// mutex for processes
+	mu sync.Mutex
 	// The main context for subscriber processes.
 	ctx context.Context
 	// cancel func to send cancel signal to the subscriber processes context.
@@ -133,12 +135,12 @@ func (p *processes) Start(proc process) {
 		proc.startup.subREQToFileNACK(proc)
 	}
 
-	if proc.configuration.StartSubREQCopyFileFrom {
-		proc.startup.subREQCopyFileFrom(proc)
+	if proc.configuration.StartSubREQCopySrc {
+		proc.startup.subREQCopySrc(proc)
 	}
 
-	if proc.configuration.StartSubREQCopyFileTo {
-		proc.startup.subREQCopyFileTo(proc)
+	if proc.configuration.StartSubREQCopyDst {
+		proc.startup.subREQCopyDst(proc)
 	}
 
 	if proc.configuration.StartSubREQHello {
@@ -223,12 +225,6 @@ func (p *processes) Start(proc process) {
 	if proc.configuration.StartSubREQCliCommandCont {
 		proc.startup.subREQCliCommandCont(proc)
 	}
-
-	if proc.configuration.StartSubREQRelay {
-		proc.startup.subREQRelay(proc)
-	}
-
-	proc.startup.subREQRelayInitial(proc)
 
 	proc.startup.subREQPublicKey(proc)
 }
@@ -342,12 +338,13 @@ func (s startup) pubREQKeysRequestUpdate(p process) {
 		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.REQKeysRequestUpdateInterval))
 		for {
 
-			// TODO: We could send with the hash of the currently stored keys,
+			// Send a message with the hash of the currently stored keys,
 			// so we would know on the subscriber at central if it should send
 			// and update with new keys back.
 
 			proc.nodeAuth.publicKeys.mu.Lock()
-			fmt.Printf(" ----> publisher REQKeysRequestUpdate: sending our current hash: %v\n", []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]))
+			er := fmt.Errorf(" ----> publisher REQKeysRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]))
+			p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 			m := Message{
 				FileName:    "publickeysget.log",
@@ -397,12 +394,13 @@ func (s startup) pubREQAclRequestUpdate(p process) {
 		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.REQAclRequestUpdateInterval))
 		for {
 
-			// TODO: We could send with the hash of the currently stored hash,
-			// so we would know on the subscriber at central if it should send
+			// Send a message with the hash of the currently stored acl's,
+			// so we would know for the subscriber at central if it should send
 			// and update with new keys back.
 
 			proc.nodeAuth.nodeAcl.mu.Lock()
-			fmt.Printf(" ----> publisher REQAclRequestUpdate: sending our current hash: %v\n", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
+			er := fmt.Errorf(" ----> publisher REQAclRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
+			p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 			m := Message{
 				FileName:    "aclRequestUpdate.log",
@@ -664,17 +662,17 @@ func (s startup) subREQToFileNACK(p process) {
 	go proc.spawnWorker()
 }
 
-func (s startup) subREQCopyFileFrom(p process) {
-	log.Printf("Starting copy file from subscriber: %#v\n", p.node)
-	sub := newSubject(REQCopyFileFrom, string(p.node))
+func (s startup) subREQCopySrc(p process) {
+	log.Printf("Starting copy src subscriber: %#v\n", p.node)
+	sub := newSubject(REQCopySrc, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 
 	go proc.spawnWorker()
 }
 
-func (s startup) subREQCopyFileTo(p process) {
-	log.Printf("Starting copy file to subscriber: %#v\n", p.node)
-	sub := newSubject(REQCopyFileTo, string(p.node))
+func (s startup) subREQCopyDst(p process) {
+	log.Printf("Starting copy dst subscriber: %#v\n", p.node)
+	sub := newSubject(REQCopyDst, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 
 	go proc.spawnWorker()
@@ -699,23 +697,6 @@ func (s startup) subREQTailFile(p process) {
 func (s startup) subREQCliCommandCont(p process) {
 	log.Printf("Starting cli command with continous delivery: %#v\n", p.node)
 	sub := newSubject(REQCliCommandCont, string(p.node))
-	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
-
-	go proc.spawnWorker()
-}
-
-func (s startup) subREQRelay(p process) {
-	nodeWithRelay := fmt.Sprintf("*.%v", p.node)
-	log.Printf("Starting Relay: %#v\n", nodeWithRelay)
-	sub := newSubject(REQRelay, string(nodeWithRelay))
-	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
-
-	go proc.spawnWorker()
-}
-
-func (s startup) subREQRelayInitial(p process) {
-	log.Printf("Starting Relay Initial: %#v\n", p.node)
-	sub := newSubject(REQRelayInitial, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 
 	go proc.spawnWorker()

@@ -46,6 +46,8 @@ type server struct {
 	// In general the ringbuffer will read this
 	// channel, unfold each slice, and put single messages on the buffer.
 	toRingBufferCh chan []subjectAndMessage
+	// directSAMSCh
+	directSAMSCh chan []subjectAndMessage
 	// errorKernel is doing all the error handling like what to do if
 	// an error occurs.
 	errorKernel *errorKernel
@@ -105,6 +107,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		// Setting MaxReconnects to -1 which equals unlimited.
 		conn, err = nats.Connect(configuration.BrokerAddress,
 			opt,
+			//nats.FlusherTimeout(time.Second*10),
 			nats.MaxReconnects(-1),
 			nats.ReconnectJitter(time.Duration(configuration.NatsReconnectJitter)*time.Millisecond, time.Duration(configuration.NatsReconnectJitterTLS)*time.Second),
 			nats.Timeout(time.Second*time.Duration(configuration.NatsConnOptTimeout)),
@@ -145,8 +148,16 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 
 	}
 
+	//var nodeAuth *nodeAuth
+	//if configuration.EnableSignatureCheck {
 	nodeAuth := newNodeAuth(configuration, errorKernel)
 	// fmt.Printf(" * DEBUG: newServer: signatures contains: %+v\n", signatures)
+	//}
+
+	//var centralAuth *centralAuth
+	//if configuration.IsCentralAuth {
+	centralAuth := newCentralAuth(configuration, errorKernel)
+	//}
 
 	s := server{
 		ctx:            ctx,
@@ -156,13 +167,14 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		natsConn:       conn,
 		StewardSocket:  stewardSocket,
 		toRingBufferCh: make(chan []subjectAndMessage),
+		directSAMSCh:   make(chan []subjectAndMessage),
 		metrics:        metrics,
 		version:        version,
 		tui:            tuiClient,
 		errorKernel:    errorKernel,
 		nodeAuth:       nodeAuth,
 		helloRegister:  newHelloRegister(),
-		centralAuth:    newCentralAuth(configuration, errorKernel),
+		centralAuth:    centralAuth,
 	}
 
 	s.processes = newProcesses(ctx, &s)
@@ -301,9 +313,53 @@ func (s *server) Start() {
 	// so we can cancel this context last, and not use the server.
 	s.routeMessagesToProcess("./incomingBuffer.db")
 
+	// Start reading the channel for injecting direct messages that should
+	// not be sent via the message broker.
+	s.directSAMSChRead()
+
 	// Check and enable read the messages specified in the startup folder.
 	s.readStartupFolder()
 
+}
+
+// directSAMSChRead for injecting messages directly in to the local system
+// without sending them via the message broker.
+func (s *server) directSAMSChRead() {
+	go func() {
+		select {
+		case <-s.ctx.Done():
+			log.Printf("info: stopped the directSAMSCh reader\n\n")
+			return
+		case sams := <-s.directSAMSCh:
+			// Range over all the sams, find the process, check if the method exists, and
+			// handle the message by starting the correct method handler.
+			for i := range sams {
+				processName := processNameGet(sams[i].Subject.name(), processKindSubscriber)
+
+				s.processes.active.mu.Lock()
+				p := s.processes.active.procNames[processName]
+				s.processes.active.mu.Unlock()
+
+				mh, ok := p.methodsAvailable.CheckIfExists(sams[i].Message.Method)
+				if !ok {
+					er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.Event)
+					p.errorKernel.errSend(p, sams[i].Message, er)
+					continue
+				}
+
+				p.handler = mh.handler
+
+				//_, err = mh.handler(p, sams[i].Message, s.nodeName)
+				//if err != nil {
+				//	er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
+				//	p.errorKernel.errSend(p, sams[i].Message, er)
+				//	continue
+				//}
+
+				executeHandler(p, sams[i].Message, s.nodeName)
+			}
+		}
+	}()
 }
 
 // Will stop all processes started during startup.
@@ -333,46 +389,9 @@ func (s *server) Stop() {
 
 }
 
-// sendInfoMessage will put the error message directly on the channel that is
-// read by the nats publishing functions.
-//
-// DEPRECATED:
-// func sendInfoLogMessage(conf *Configuration, metrics *metrics, ringBufferBulkInCh chan<- []subjectAndMessage, FromNode Node, theError error) {
-// 	// NB: Adding log statement here for more visuality during development.
-// 	log.Printf("%v\n", theError)
-// 	sam := createErrorMsgContent(conf, FromNode, theError)
-// 	ringBufferBulkInCh <- []subjectAndMessage{sam}
-//
-// 	metrics.promInfoMessagesSentTotal.Inc()
-// }
-
-// DEPRECATED
-// // createErrorMsgContent will prepare a subject and message with the content
-// // of the error
-// func createErrorMsgContent(conf *Configuration, FromNode Node, theError error) subjectAndMessage {
-// 	// Add time stamp
-// 	er := fmt.Sprintf("%v, node: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), FromNode, theError.Error())
-//
-// 	sam := subjectAndMessage{
-// 		Subject: newSubject(REQErrorLog, "errorCentral"),
-// 		Message: Message{
-// 			Directory:  "errorLog",
-// 			ToNode:     "errorCentral",
-// 			FromNode:   FromNode,
-// 			FileName:   "error.log",
-// 			Data:       []byte(er),
-// 			Method:     REQErrorLog,
-// 			ACKTimeout: conf.ErrorMessageTimeout,
-// 			Retries:    conf.ErrorMessageRetries,
-// 		},
-// 	}
-//
-// 	return sam
-// }
-
-// Contains the sam value as it is used in the state DB, and also a
-// delivered function to be called when this message is picked up, so
-// we can control if messages gets stale at some point.
+// samDBValueAndDelivered Contains the sam value as it is used in the
+// state DB, and also a delivered function to be called when this message
+// is picked up, so we can control if messages gets stale at some point.
 type samDBValueAndDelivered struct {
 	samDBValue samDBValue
 	delivered  func()
@@ -451,31 +470,6 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 
 				m := sam.Message
 
-				// Check if it is a relay message
-				if m.RelayViaNode != "" && m.RelayViaNode != Node(s.nodeName) {
-
-					// Keep the original values.
-					m.RelayFromNode = m.FromNode
-					m.RelayToNode = m.ToNode
-					m.RelayOriginalViaNode = m.RelayViaNode
-					m.RelayOriginalMethod = m.Method
-
-					// Convert it to a relay initial message.
-					m.Method = REQRelayInitial
-					// Set the toNode of the message to this host, so we send
-					// it to ourselves again and pick it up with the subscriber
-					// for the REQReplyInitial handler method.
-					m.ToNode = Node(s.nodeName)
-
-					// We are now done with the initial checking for if the new
-					// message is a relay message, so we empty the viaNode field
-					// so we don't end in an endless loop here.
-					// The value is stored in RelayOriginalViaNode for later use.
-					m.RelayViaNode = ""
-
-					sam.Subject = newSubject(REQRelayInitial, string(s.nodeName))
-				}
-
 				subjName := sam.Subject.name()
 				pn := processNameGet(subjName, processKindPublisher)
 
@@ -498,10 +492,17 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 					// log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
 
 					sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
-					proc := newProcess(s.ctx, s, sub, processKindPublisher, nil)
+					var proc process
+					switch {
+					case m.IsSubPublishedMsg:
+						proc = newSubProcess(s.ctx, s, sub, processKindPublisher, nil)
+					default:
+						proc = newProcess(s.ctx, s, sub, processKindPublisher, nil)
+					}
 
 					proc.spawnWorker()
-					// log.Printf("info: processNewMessages: new process started, subject: %v, processID: %v\n", subjName, proc.processID)
+					er := fmt.Errorf("info: processNewMessages: new process started, subject: %v, processID: %v", subjName, proc.processID)
+					s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
 
 					// Now when the process is spawned we continue,
 					// and send the message to that new process.

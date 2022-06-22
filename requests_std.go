@@ -2,6 +2,7 @@ package steward
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -233,150 +234,6 @@ func (m methodREQPong) handler(proc process, message Message, node string) ([]by
 
 // ---
 
-type methodREQRelayInitial struct {
-	event Event
-}
-
-func (m methodREQRelayInitial) getKind() Event {
-	return m.event
-}
-
-// Handler to relay messages via a host.
-func (m methodREQRelayInitial) handler(proc process, message Message, node string) ([]byte, error) {
-	proc.processes.wg.Add(1)
-	go func() {
-		defer proc.processes.wg.Done()
-
-		// Get a context with the timeout specified in message.MethodTimeout.
-		ctx, cancel := getContextForMethodTimeout(proc.ctx, message)
-		defer cancel()
-
-		outCh := make(chan []byte)
-		errCh := make(chan error)
-		nothingCh := make(chan struct{}, 1)
-
-		var out []byte
-
-		// If the actual Method for the message is REQCopyFileFrom we need to
-		// do the actual file reading here so we can fill the data field of the
-		// message with the content of the file before relaying it.
-		switch {
-		case message.RelayOriginalMethod == REQCopyFileFrom:
-			switch {
-			case len(message.MethodArgs) < 3:
-				er := fmt.Errorf("error: methodREQRelayInitial: got <3 number methodArgs: want srcfilePath,dstNode,dstFilePath")
-				proc.errorKernel.errSend(proc, message, er)
-
-				return
-			}
-
-			SrcFilePath := message.MethodArgs[0]
-			//DstFilePath := message.MethodArgs[2]
-
-			// Read the file, and put the result on the out channel to be sent when done reading.
-			proc.processes.wg.Add(1)
-			go copyFileFrom(ctx, &proc.processes.wg, SrcFilePath, errCh, outCh)
-
-			// Since we now have read the source file we don't need the REQCopyFileFrom
-			// request method anymore, so we change the original method of the message
-			// so it will write the data after the relaying.
-			//dstDir := filepath.Dir(DstFilePath)
-			//dstFile := filepath.Base(DstFilePath)
-			message.RelayOriginalMethod = REQCopyFileTo
-			//message.FileName = dstFile
-			//message.Directory = dstDir
-		default:
-			// No request type that need special handling if relayed, so we should signal that
-			// there is nothing to do for the select below.
-			// We need to do this signaling in it's own go routine here, so we don't block here
-			// since the select below  is in the same function.
-			go func() {
-				nothingCh <- struct{}{}
-			}()
-		}
-
-		select {
-		case <-ctx.Done():
-			er := fmt.Errorf("error: methodREQRelayInitial: CopyFromFile: got <-ctx.Done(): %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er)
-
-			return
-		case er := <-errCh:
-			proc.errorKernel.errSend(proc, message, er)
-
-			return
-		case <-nothingCh:
-			// Do nothing.
-		case out = <-outCh:
-
-		}
-
-		// relay the message to the actual host here by prefixing the the RelayToNode
-		// to the subject.
-		relayTo := fmt.Sprintf("%v.%v", message.RelayToNode, message.RelayOriginalViaNode)
-		// message.ToNode = message.RelayOriginalViaNode
-		message.ToNode = Node(relayTo)
-		message.FromNode = Node(node)
-		message.Method = REQRelay
-		message.Data = out
-
-		sam, err := newSubjectAndMessage(message)
-		if err != nil {
-			er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
-			proc.errorKernel.errSend(proc, message, er)
-		}
-
-		proc.toRingbufferCh <- []subjectAndMessage{sam}
-	}()
-
-	// Send back an ACK message.
-	ackMsg := []byte("confirmed REQRelay from: " + node + ": " + fmt.Sprint(message.ID))
-	return ackMsg, nil
-}
-
-// ----
-
-type methodREQRelay struct {
-	event Event
-}
-
-func (m methodREQRelay) getKind() Event {
-	return m.event
-}
-
-// Handler to relay messages via a host.
-func (m methodREQRelay) handler(proc process, message Message, node string) ([]byte, error) {
-	// relay the message here to the actual host here.
-
-	proc.processes.wg.Add(1)
-	go func() {
-		defer proc.processes.wg.Done()
-
-		message.ToNode = message.RelayToNode
-		message.FromNode = Node(node)
-		message.Method = message.RelayOriginalMethod
-
-		sam, err := newSubjectAndMessage(message)
-		if err != nil {
-			er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
-			proc.errorKernel.errSend(proc, message, er)
-
-			return
-		}
-
-		select {
-		case proc.toRingbufferCh <- []subjectAndMessage{sam}:
-		case <-proc.ctx.Done():
-		}
-	}()
-
-	// Send back an ACK message.
-	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
-	return ackMsg, nil
-}
-
-// ---
-
 type methodREQToConsole struct {
 	event Event
 }
@@ -397,6 +254,10 @@ func (m methodREQToConsole) handler(proc process, message Message, node string) 
 			er := fmt.Errorf("error: no tui client started")
 			proc.errorKernel.errSend(proc, message, er)
 		}
+	case len(message.MethodArgs) > 0 && message.MethodArgs[0] == "stderr":
+		log.Printf("* DEBUG: MethodArgs: got stderr \n")
+		fmt.Fprintf(os.Stderr, "%v", string(message.Data))
+		fmt.Println()
 	default:
 		fmt.Fprintf(os.Stdout, "%v", string(message.Data))
 		fmt.Println()

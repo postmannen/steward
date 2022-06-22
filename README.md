@@ -30,13 +30,6 @@ As long as you can do something as an operator on in a shell on a system you can
     - [Error messages from nodes](#error-messages-from-nodes)
     - [Message handling and threads](#message-handling-and-threads)
     - [Timeouts and retries for requests](#timeouts-and-retries-for-requests)
-      - [REQRelay](#reqrelay)
-        - [Relay Step 1](#relay-step-1)
-        - [Relay Step 2](#relay-step-2)
-        - [Relay Step 3](#relay-step-3)
-        - [Relay Step 4](#relay-step-4)
-        - [Relay Step 5](#relay-step-5)
-        - [Relay Step 6](#relay-step-6)
     - [Flags and configuration file](#flags-and-configuration-file)
     - [Schema for the messages to send into Steward via the API's](#schema-for-the-messages-to-send-into-steward-via-the-apis)
     - [Nats messaging timeouts](#nats-messaging-timeouts)
@@ -57,7 +50,7 @@ As long as you can do something as an operator on in a shell on a system you can
       - [REQHttpGet](#reqhttpget)
       - [REQHttpGetScheduled](#reqhttpgetscheduled)
       - [REQHello](#reqhello)
-      - [REQCopyFileFrom](#reqcopyfilefrom)
+      - [REQCopySrc](#reqcopysrc)
       - [REQErrorLog](#reqerrorlog)
     - [Request Methods used for reply messages](#request-methods-used-for-reply-messages)
       - [REQNone](#reqnone)
@@ -285,75 +278,6 @@ In the above example, the values set meaning:
 
 If no timeout are specified in a message the defaults specified in the **etc/config.yaml** are used.
 
-#### REQRelay
-
-Instead of injecting the new Requests on the central server, you can relay messages via another node as long as the nats-server authorization conf permits it. This is what REQRelay is for.
-
-This functionality can be thought of as attaching a terminal to a Steward instance. Instead of injecting messages directly on for example the central Steward instance you can use another Steward instance and relay messages via the central instance.
-
-Example configuration of relay authorization for nats-server can be found in the [doc folder](doc/).
-
-Example:
-
-```json
-[
-    {
-        "directory":"/var/tail-logs/",
-        "fileName": "my-wifi.log",
-        "toNode": "node1",
-        "relayViaNode": "central",
-        "relayReplyMethod": "REQToConsole",
-        "methodArgs": ["bash","-c","tail -f /var/log/wifi.log"],
-        "method":"REQCliCommandCont",
-        "replyMethod":"REQToFileAppend",
-        "ACKTimeout":5,
-        "retries":3,
-        "replyACKTimeout":5,
-        "replyRetries":3,
-        "methodTimeout": 10
-    }
-]
-```
-
-```text
-                    1                           2                           3       
-             ┌─────────────┐             ┌─────────────┐             ┌─────────────┐
-------------▷│             │------------▷│             │------------▷│             │
-             │   node1     │             │   central   │             │ node2       │
-◁------------│             │◁------------│             │◁------------│             │
-             └─────────────┘             └─────────────┘             └─────────────┘
-                    6                           5                           4       
-```
-
-Steps Explained:
-
-##### Relay Step 1
-
-- The **relayViaNode** field of the message is checked, and If set the message will be encapsulated within a **REQRelayInitial** message where the original message field values are kept, and put back on the message queue on **node1**.
-- The new **REQRelayInitial** message will again be picked up on **node1** and handled by the **REQRelayInitial handler**.
-- The **REQRelayInitial handler** will set the message method to **REQRelay**, and forward the message to the node value in the **relayViaNode** field.
-
-##### Relay Step 2
-
-- On **central** the **REQRelay method handler** will recreate the **original** message, and forward it to **node2**.
-
-##### Relay Step 3
-
-- **Node2** receives the request, and executes the **original** method with the arguments specified.
-
-##### Relay Step 4
-
-- The result is sent back to **central** in the form of a normal reply message.
-
-##### Relay Step 5
-
-- When the **reply** message is received on central a copy of the **reply** message will be created , and forwarded to **node1** where it originated.
-- The the **original reply method** `"replyMethod":"REQToFileAppend"` is handled on central.
-
-##### Relay Step 6
-
-- On **node1** the **relayReplyMethod** is checked for how to handle the message. In this case it is printed to the consoles STDOUT.
-
 ### Flags and configuration file
 
 Steward supports both the use of flags with values set at startup, and the use of a config file.
@@ -386,8 +310,7 @@ Steward supports both the use of flags with values set at startup, and the use o
 - replyMethodTimeout : `int`
 - directory : `string`
 - fileName : `string`
-- RelayViaNode: `string`
-- RelayReplyMethod: `string`
+- schedule : [int type value for interval in seconds, int type value for total run time in seconds]
 
 ### Nats messaging timeouts
 
@@ -633,6 +556,7 @@ Scrape web url, and get the html sent back in a reply message. Uses the methodTi
 
 #### REQHttpGetScheduled
 
+**REQ Method are DEPRECATED**
 Schedule scraping of a web web url, and get the html sent back in a reply message. Uses the methodTimeout for how long it will wait for the http get method to return result.
 
 The **methodArgs** also takes 3 arguments:
@@ -674,15 +598,9 @@ All nodes have the flag option to start sending Hello message to the central ser
 ]
 ```
 
-#### REQCopyFileFrom
+#### REQCopySrc
 
 Copy a file from one node to another node.
-
-- Source node to copy from is specified in the toNode/toNodes field
-- The file to copy and the destination node is specified in the **methodArgs** field:
-  1. The first field is the full path of the source file.
-  2. The second field is the destination node for where to copy the file to.
-  3. The third field is the full path for where to write the copied file.
 
 ```json
 [
@@ -690,12 +608,21 @@ Copy a file from one node to another node.
         "directory": "copy",
         "fileName": "copy.log",
         "toNodes": ["central"],
-        "method":"REQCopyFileFrom",
-        "methodArgs": ["./tmp2.txt","ship2","/tmp/tmp2.txt"],
-        "replyMethod":"REQToFileAppend"
+        "method":"REQCopySrc",
+        "methodArgs": ["./testbinary","ship1","./testbinary-copied","500000","20"],
+        "methodTimeout": 10,
+        "replyMethod":"REQToConsole"
     }
 ]
 ```
+
+- toNode/toNodes, specifies what node to send the request to, and which also contains the src file to copy.
+- methodArgs, are split into several fields, where each field specifies:
+  - 1. SrcFullPath, specifies the full path including the name of the file to copy.
+  - 2. DstNode, the destination node to copy the file to.
+  - 3. DstFullPath, the full path including the name of the destination file. The filename can be different than the original name.
+  - 4. SplitChunkSize, the size of the chunks to split the file into for transfer.
+  - 5. MaxTotalCopyTime, specifies the maximum allowed time the complete copy should take. Make sure you set this long enough to allow the transfer to complete.
 
 #### REQErrorLog
 
@@ -713,7 +640,11 @@ An example could be that you send a `REQCliCommand` message to some node, and yo
 
 #### REQToConsole
 
-This is a pure replyMethod that can be used to get the data of the reply message printed to stdout where Steward is running.
+This is a method that can be used to get the data of the message printed to console where Steward is running.
+
+Default is to print to **stdout**, but printing to **stderr** can be done by setting the value of **methodArgs** to `"methodArgs": ["stderr"]`.
+
+If used as a **replyMethod** set the **replyMethodArgs** `"replyMethodArgs": ["stderr"],`.
 
 ```json
 [
@@ -735,6 +666,8 @@ This is a pure replyMethod that can be used to get the data of the reply message
 
 Append the output of the reply message to a log file specified with the `directory` and `fileName` fields.
 
+If the value of the **directory** field is not prefixed with `./` or `/` the directory structure file will be created within the **steward data folder** specified in the config file.
+
 ```json
 [
     {
@@ -751,6 +684,8 @@ Append the output of the reply message to a log file specified with the `directo
 #### REQToFile
 
 Write the output of the reply message to a file specified with the `directory` and `fileName` fields, where the writing will write over any existing content of that file.
+
+If the value of the **directory** field is not prefixed with `./` or `/` the directory structure file will be created within the **steward data folder** specified in the config file.
 
 ```json
 [
@@ -1350,6 +1285,9 @@ If messages have been sent, and not picked up by a node it might make sense to h
 ## Appendix-A
 
 ```Go
+// RingBufferPermStore enable or disable the persisting of
+// messages being processed to local db.
+RingBufferPersistStore bool
 // RingBufferSize
 RingBufferSize int
 // The configuration folder on disk
@@ -1423,12 +1361,21 @@ IsCentralAuth bool
 // EnableDebug will also enable printing all the messages received in the errorKernel
 // to STDERR.
 EnableDebug bool
+// KeepPublishersAliveFor number of seconds.
+// Timer that will be used for when to remove the sub process
+// publisher. The timer is reset each time a message is published with
+// the process, so the sub process publisher will not be removed until
+// it have not received any messages for the given amount of time.
+KeepPublishersAliveFor int
+
 // Make the current node send hello messages to central at given interval in seconds
 StartPubREQHello int
 // Enable the updates of public keys
 EnableKeyUpdates bool
+
 // Enable the updates of acl's
 EnableAclUpdates bool
+
 // Start the central error logger.
 IsCentralErrorLogger bool
 // Subscriber for hello messages
@@ -1440,9 +1387,9 @@ StartSubREQToFile bool
 // Subscriber for writing to file without ACK
 StartSubREQToFileNACK bool
 // Subscriber for reading files to copy
-StartSubREQCopyFileFrom bool
+StartSubREQCopySrc bool
 // Subscriber for writing copied files to disk
-StartSubREQCopyFileTo bool
+StartSubREQCopyDst bool
 // Subscriber for Echo Request
 StartSubREQPing bool
 // Subscriber for Echo Reply
@@ -1459,8 +1406,7 @@ StartSubREQHttpGetScheduled bool
 StartSubREQTailFile bool
 // Subscriber for continously delivery of output from cli commands.
 StartSubREQCliCommandCont bool
-// Subscriber for relay messages.
-StartSubREQRelay bool
+
 ```
 
 ## Appendix-B
@@ -1470,6 +1416,12 @@ StartSubREQRelay bool
 ToNode Node `json:"toNode" yaml:"toNode"`
 // ToNodes to specify several hosts to send message to in the
 // form of an slice/array.
+// The ToNodes field is only a concept that exists when messages
+// are injected f.ex. on a socket, and there they are directly 
+//converted into separate node messages for each node, and from
+// there the ToNodes field is not used any more within the system.
+// With other words, a message that exists within Steward is always
+// for just for a single node.
 ToNodes []Node `json:"toNodes,omitempty" yaml:"toNodes,omitempty"`
 // The actual data in the message. This is typically where we
 // specify the cli commands to execute on a node, and this is
@@ -1524,20 +1476,4 @@ FileName string `json:"fileName" yaml:"fileName"`
 // generated and we also need a copy of  the details of the the
 // initial request message.
 PreviousMessage *Message
-// The node to relay the message via.
-RelayViaNode Node `json:"relayViaNode" yaml:"relayViaNode"`
-// The node where the relayed message originated, and where we want
-// to send back the end result.
-RelayFromNode Node `json:"relayFromNode" yaml:"relayFromNode"`
-// The original value of the ToNode field of the original message.
-RelayToNode Node `json:"relayToNode" yaml:"relayToNode"`
-// The original method of the message.
-RelayOriginalMethod Method `json:"relayOriginalMethod" yaml:"relayOriginalMethod"`
-// The method to use when the reply of the relayed message came
-// back to where originated from.
-RelayReplyMethod Method `json:"relayReplyMethod" yaml:"relayReplyMethod"`
-// done is used to signal when a message is fully processed.
-// This is used for signaling back to the ringbuffer that we are
-// done with processing a message, and the message can be removed
-// from the ringbuffer and into the time series log.
 ```

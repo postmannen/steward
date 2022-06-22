@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -77,7 +76,7 @@ func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 	db, err := bolt.Open(databaseFilepath, 0600, nil)
 	if err != nil {
 		log.Printf("error: failed to open db: %v\n", err)
-		os.Exit(1)
+		return &p
 	}
 
 	p.db = db

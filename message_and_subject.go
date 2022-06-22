@@ -14,6 +14,12 @@ type Message struct {
 	ToNode Node `json:"toNode" yaml:"toNode"`
 	// ToNodes to specify several hosts to send message to in the
 	// form of an slice/array.
+	// The ToNodes field is only a concept that exists when messages
+	// are injected f.ex. on a socket, and there they are directly
+	//converted into separate node messages for each node, and from
+	// there the ToNodes field is not used any more within the system.
+	// With other words, a message that exists within Steward is always
+	// for just for a single node.
 	ToNodes []Node `json:"toNodes,omitempty" yaml:"toNodes,omitempty"`
 	// The Unique ID of the message
 	ID int `json:"id" yaml:"id"`
@@ -49,6 +55,10 @@ type Message struct {
 	FromNode Node `json:"fromNode" yaml:"fromNode"`
 	// ACKTimeout for waiting for an ack message
 	ACKTimeout int `json:"ACKTimeout" yaml:"ACKTimeout"`
+	// RetryWait specified the time in seconds to wait between retries.
+	RetryWait int `json:"retryWait" yaml:"retryWait"`
+	// IsSubPublishedMsg enables timeout of publishing process, and is used together with process.isSubProcess to be able to terminate the sub processes publishers.
+	IsSubPublishedMsg bool `json:"isSubPublishedMsg" yaml:"isSubPublishedMsg"`
 	// Resend retries
 	Retries int `json:"retries" yaml:"retries"`
 	// The ACK timeout of the new message created via a request event.
@@ -72,27 +82,22 @@ type Message struct {
 	// generated and we also need a copy of  the details of the the
 	// initial request message.
 	PreviousMessage *Message
-
-	// The node to relay the message via.
-	RelayViaNode Node `json:"relayViaNode" yaml:"relayViaNode"`
-	// The original value of the RelayViaNode.
-	RelayOriginalViaNode Node `json:"relayOriginalViaNode" yaml:"relayOriginalViaNode"`
-	// The node where the relayed message originated, and where we want
-	// to send back the end result.
-	RelayFromNode Node `json:"relayFromNode" yaml:"relayFromNode"`
-	// The original value of the ToNode field of the original message.
-	RelayToNode Node `json:"relayToNode" yaml:"relayToNode"`
-	// The original method of the message.
-	RelayOriginalMethod Method `json:"relayOriginalMethod" yaml:"relayOriginalMethod"`
-	// The method to use when the reply of the relayed message came
-	// back to where originated from.
-	RelayReplyMethod Method `json:"relayReplyMethod" yaml:"relayReplyMethod"`
+	// Schedule
+	Schedule []int `json:"schedule" yaml:"schedule"`
 
 	// done is used to signal when a message is fully processed.
 	// This is used for signaling back to the ringbuffer that we are
 	// done with processing a message, and the message can be removed
 	// from the ringbuffer and into the time series log.
 	done chan struct{}
+
+	// ctx for the specifix message. Used for for example canceling
+	// scheduled messages.
+	// NB: Commented out this field for specific message context
+	// to be used within handlers, since it will override the structure
+	// we have today. Keeping the code for a bit incase it makes sense
+	// to implement later.
+	//ctx context.Context
 }
 
 // --- Subject
@@ -117,12 +122,15 @@ type Subject struct {
 }
 
 // newSubject will return a new variable of the type subject, and insert
-// all the values given as arguments. It will also create the channel
+// all the values given as arguments. It will create the channel
 // to receive new messages on the specific subject.
+// The function will also verify that there is a methodHandler defined
+// for the Request type.
 func newSubject(method Method, node string) Subject {
 	// Get the Event type for the Method.
 	ma := method.GetMethodsAvailable()
-	mh, ok := ma.Methodhandlers[method]
+	mh, ok := ma.CheckIfExists(method)
+	//mh, ok := ma.Methodhandlers[method]
 	if !ok {
 		log.Printf("error: no Event type specified for the method: %v\n", method)
 		os.Exit(1)
@@ -131,6 +139,22 @@ func newSubject(method Method, node string) Subject {
 	return Subject{
 		ToNode:    node,
 		Event:     mh.getKind(),
+		Method:    method,
+		messageCh: make(chan Message),
+	}
+}
+
+// newSubjectNoVerifyHandler will return a new variable of the type subject, and insert
+// all the values given as arguments. It will create the channel
+// to receive new messages on the specific subject.
+// The function will not verify that there is a methodHandler defined
+// for the Request type.
+func newSubjectNoVerifyHandler(method Method, node string) Subject {
+	// Get the Event type for the Method.
+
+	return Subject{
+		ToNode:    node,
+		Event:     EventACK,
 		Method:    method,
 		messageCh: make(chan Message),
 	}

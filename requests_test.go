@@ -37,7 +37,7 @@ func TestMain(m *testing.M) {
 		tstTempDir = os.TempDir()
 	}
 
-	// TODO: Forcing this for now.
+	// NB: Forcing this for now.
 	tstTempDir = "tmp"
 
 	tstNats = newNatsServerForTesting(42222)
@@ -336,6 +336,7 @@ func TestRequest(t *testing.T) {
 	checkREQTailFileTest(tstSrv, tstConf, t, tstTempDir)
 	checkMetricValuesTest(tstSrv, tstConf, t, tstTempDir)
 	checkErrorKernelMalformedJSONtest(tstSrv, tstConf, t, tstTempDir)
+	checkREQCopySrc(tstSrv, tstConf, t, tstTempDir)
 }
 
 // Check the tailing of files type.
@@ -386,16 +387,14 @@ func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing
 
 	writeToSocketTest(conf, s, t)
 
-	// time.Sleep(time.Second * 5)
-
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "tail-files", "central", "fileName.result")
 
 	// Wait n times for result file to be created.
-	n := 5
+	n := 50
 	for i := 0; i <= n; i++ {
 		_, err := os.Stat(resultFile)
 		if os.IsNotExist(err) {
-			time.Sleep(time.Millisecond * 1000)
+			time.Sleep(time.Millisecond * 100)
 			continue
 		}
 
@@ -413,6 +412,64 @@ func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing
 	}
 
 	t.Logf(" \U0001f600 [SUCCESS]	: checkREQTailFileTest\n")
+	return nil
+}
+
+// Check the file copier.
+func checkREQCopySrc(stewardServer *server, conf *Configuration, t *testing.T, tmpDir string) error {
+	testFiles := 5
+
+	for i := 1; i <= testFiles; i++ {
+
+		// Create a file with some content.
+		srcFileName := fmt.Sprintf("copysrc%v.file", i)
+		srcfp := filepath.Join(tmpDir, srcFileName)
+		fh, err := os.OpenFile(srcfp, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
+		if err != nil {
+			t.Fatalf(" \U0001F631  [FAILED]	: checkREQCopySrc: unable to open temporary file: %v", err)
+		}
+		defer fh.Close()
+
+		// Write content to the file.
+
+		_, err = fh.Write([]byte("some file content\n"))
+		if err != nil {
+			t.Fatalf(" \U0001F631  [FAILED]	: checkREQCopySrc: writing to temporary file: %v\n", err)
+		}
+
+		dstFileName := fmt.Sprintf("copydst%v.file", i)
+		dstfp := filepath.Join(tmpDir, dstFileName)
+
+		s := `[
+					{
+						"toNode": "central",
+						"method":"REQCopySrc",
+						"methodArgs": ["` + srcfp + `","central","` + dstfp + `","20","10"],
+						"ACKTimeout":5,
+						"retries":3,
+						"methodTimeout": 10
+					}
+				]`
+
+		writeToSocketTest(conf, s, t)
+
+		// Wait n times for result file to be created.
+		n := 50
+		for i := 0; i <= n; i++ {
+			_, err := os.Stat(dstfp)
+			if os.IsNotExist(err) {
+				time.Sleep(time.Millisecond * 100)
+				continue
+			}
+
+			if os.IsNotExist(err) && i >= n {
+				t.Fatalf(" \U0001F631  [FAILED]	: checkREQCopySrc:  no result file created for request within the given time")
+			}
+		}
+
+		t.Logf(" \U0001f600 [SUCCESS]	: src=%v, dst=%v", srcfp, dstfp)
+	}
+
 	return nil
 }
 
@@ -467,11 +524,11 @@ func checkErrorKernelMalformedJSONtest(stewardServer *server, conf *Configuratio
 	resultFile := filepath.Join(conf.SubscribersDataFolder, "errorLog", "errorCentral", "error.log")
 
 	// Wait n times for error file to be created.
-	n := 5
+	n := 50
 	for i := 0; i <= n; i++ {
 		_, err := os.Stat(resultFile)
 		if os.IsNotExist(err) {
-			time.Sleep(time.Millisecond * 1000)
+			time.Sleep(time.Millisecond * 100)
 			continue
 		}
 
@@ -549,12 +606,12 @@ func checkFileUpdated(fileRealPath string, fileUpdated chan bool) {
 // Check if a file contains the given string.
 func findStringInFileTest(want string, fileName string, conf *Configuration, t *testing.T) (bool, error) {
 	// Wait n seconds for the results file to be created
-	n := 5
+	n := 50
 
 	for i := 0; i <= n; i++ {
 		_, err := os.Stat(fileName)
 		if os.IsNotExist(err) {
-			time.Sleep(time.Millisecond * 500)
+			time.Sleep(time.Millisecond * 100)
 			continue
 		}
 

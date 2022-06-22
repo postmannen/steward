@@ -338,37 +338,7 @@ func drawMessageInputFields(p slideMessageEdit, m tuiMessage) {
 			}
 
 			p.inputForm.AddInputField(fieldName, value, fieldWidth, nil, nil)
-		case "RelayViaNode":
-			// Get nodes from file.
-			values, err := getNodeNames("nodeslist.cfg")
-			if err != nil {
-				log.Printf("error: unable to open file: %v\n", err)
-				os.Exit(1)
-			}
 
-			if m.RelayViaNode != nil && *m.RelayViaNode != "" {
-				tmp := []string{string(*m.RelayViaNode)}
-				tmp = append(tmp, values...)
-				values = tmp
-			}
-
-			p.inputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
-			//c.msgForm.AddDropDown(mRefVal.Type().Field(i).Name, values, 0, nil).SetItemPadding(1)
-		case "RelayReplyMethod":
-			var v Method
-			rm := v.GetReplyMethods()
-			values := []string{}
-			for _, k := range rm {
-				values = append(values, string(k))
-			}
-
-			if m.RelayReplyMethod != nil && *m.RelayReplyMethod != "" {
-				tmp := []string{string(*m.RelayReplyMethod)}
-				tmp = append(tmp, values...)
-				values = tmp
-			}
-
-			p.inputForm.AddDropDown(fieldName, values, 0, nil).SetItemPadding(1)
 		default:
 			// Add a no definition fields to the form if a a field within the
 			// struct were missing an action above, so we can easily detect
@@ -583,12 +553,6 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 					m.Directory = &value
 				case "FileName":
 					m.FileName = &value
-				case "RelayViaNode":
-					v := Node(value)
-					m.RelayViaNode = &v
-				case "RelayReplyMethod":
-					v := Method(value)
-					m.RelayReplyMethod = &v
 
 				default:
 					fmt.Fprintf(p.logForm, "%v : error: did not find case definition for how to handle the \"%v\" within the switch statement\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), label)

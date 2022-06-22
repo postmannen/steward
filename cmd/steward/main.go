@@ -11,6 +11,7 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/RaaLabs/steward"
+	"github.com/pkg/profile"
 )
 
 // Use ldflags to set version
@@ -20,9 +21,9 @@ import (
 var version string
 
 func main() {
-	// defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
-	// defer profile.Start(profile.TraceProfile, profile.ProfilePath(".")).Stop()
-	// defer profile.Start(profile.MemProfile, profile.MemProfileRate(1)).Stop()
+	//defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
+	//defer profile.Start(profile.TraceProfile, profile.ProfilePath(".")).Stop()
+	defer profile.Start(profile.MemProfile, profile.MemProfileRate(1)).Stop()
 
 	c := steward.NewConfiguration()
 	err := c.CheckFlags()

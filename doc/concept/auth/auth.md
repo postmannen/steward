@@ -73,10 +73,6 @@ On the CentralAuth we need a service to verify that updating the currently store
 
 Public Keys should only be pushed to nodes that will receive message from source node of the public key.
 
-#### Service for key rotation
-
-TODO
-
 ### Auth handling and storage
 
 #### Request for operators to add authorizations for nodes
@@ -118,5 +114,3 @@ Public Keys vs nodes should be implemented as a map, map `node -> publicKey`, an
 Flag to turn on/off signature verification for all request types.
 
 ### Verification of MethodArgs Signature against ACL
-
-TODO
