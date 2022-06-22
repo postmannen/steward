@@ -416,7 +416,9 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 							status = copySrcDone
 						}
 
-						lastReadChunk = b[:n]
+						lastReadChunk = make([]byte, len(b[:n]))
+						copy(lastReadChunk, b[:n])
+						//lastReadChunk = b[:n]
 
 						// Create a hash of the bytes.
 						hash := sha256.Sum256(b[:n])

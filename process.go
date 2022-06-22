@@ -124,7 +124,10 @@ type process struct {
 // values for a process.
 func newProcess(ctx context.Context, server *server, subject Subject, processKind processKind, procFunc func() error) process {
 	// create the initial configuration for a sessions communicating with 1 host process.
+	server.processes.mu.Lock()
 	server.processes.lastProcessID++
+	pid := server.processes.lastProcessID
+	server.processes.mu.Unlock()
 
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -135,7 +138,7 @@ func newProcess(ctx context.Context, server *server, subject Subject, processKin
 		messageID:        0,
 		subject:          subject,
 		node:             Node(server.configuration.NodeName),
-		processID:        server.processes.lastProcessID,
+		processID:        pid,
 		processKind:      processKind,
 		methodsAvailable: method.GetMethodsAvailable(),
 		toRingbufferCh:   server.toRingBufferCh,

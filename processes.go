@@ -12,6 +12,8 @@ import (
 
 // processes holds all the information about running processes
 type processes struct {
+	// mutex for processes
+	mu sync.Mutex
 	// The main context for subscriber processes.
 	ctx context.Context
 	// cancel func to send cancel signal to the subscriber processes context.
