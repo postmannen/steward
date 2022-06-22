@@ -93,7 +93,11 @@ type Configuration struct {
 	// EnableDebug will also enable printing all the messages received in the errorKernel
 	// to STDERR.
 	EnableDebug bool
-	// KeepPublishersAliveFor number of seconds
+	// KeepPublishersAliveFor number of seconds.
+	// Timer that will be used for when to remove the sub process
+	// publisher. The timer is reset each time a message is published with
+	// the process, so the sub process publisher will not be removed until
+	// it have not received any messages for the given amount of time.
 	KeepPublishersAliveFor int
 
 	// Make the current node send hello messages to central at given interval in seconds

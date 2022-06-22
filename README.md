@@ -1276,6 +1276,9 @@ If messages have been sent, and not picked up by a node it might make sense to h
 ## Appendix-A
 
 ```Go
+// RingBufferPermStore enable or disable the persisting of
+// messages being processed to local db.
+RingBufferPersistStore bool
 // RingBufferSize
 RingBufferSize int
 // The configuration folder on disk
@@ -1349,12 +1352,21 @@ IsCentralAuth bool
 // EnableDebug will also enable printing all the messages received in the errorKernel
 // to STDERR.
 EnableDebug bool
+// KeepPublishersAliveFor number of seconds.
+// Timer that will be used for when to remove the sub process
+// publisher. The timer is reset each time a message is published with
+// the process, so the sub process publisher will not be removed until
+// it have not received any messages for the given amount of time.
+KeepPublishersAliveFor int
+
 // Make the current node send hello messages to central at given interval in seconds
 StartPubREQHello int
 // Enable the updates of public keys
 EnableKeyUpdates bool
+
 // Enable the updates of acl's
 EnableAclUpdates bool
+
 // Start the central error logger.
 IsCentralErrorLogger bool
 // Subscriber for hello messages
@@ -1365,6 +1377,10 @@ StartSubREQToFileAppend bool
 StartSubREQToFile bool
 // Subscriber for writing to file without ACK
 StartSubREQToFileNACK bool
+// Subscriber for reading files to copy
+StartSubREQCopySrc bool
+// Subscriber for writing copied files to disk
+StartSubREQCopyDst bool
 // Subscriber for Echo Request
 StartSubREQPing bool
 // Subscriber for Echo Reply
@@ -1381,6 +1397,7 @@ StartSubREQHttpGetScheduled bool
 StartSubREQTailFile bool
 // Subscriber for continously delivery of output from cli commands.
 StartSubREQCliCommandCont bool
+
 ```
 
 ## Appendix-B
