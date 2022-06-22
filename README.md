@@ -639,7 +639,11 @@ An example could be that you send a `REQCliCommand` message to some node, and yo
 
 #### REQToConsole
 
-This is a pure replyMethod that can be used to get the data of the reply message printed to stdout where Steward is running.
+This is a method that can be used to get the data of the message printed to console where Steward is running.
+
+Default is to print to **stdout**, but printing to **stderr** can be done by setting the value of **methodArgs** to `"methodArgs": ["stderr"]`. 
+
+If used as a **replyMethod** set the **replyMethodArgs** `"replyMethodArgs": ["stderr"],`.
 
 ```json
 [

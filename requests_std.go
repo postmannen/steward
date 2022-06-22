@@ -2,6 +2,7 @@ package steward
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -253,6 +254,10 @@ func (m methodREQToConsole) handler(proc process, message Message, node string) 
 			er := fmt.Errorf("error: no tui client started")
 			proc.errorKernel.errSend(proc, message, er)
 		}
+	case len(message.MethodArgs) > 0 && message.MethodArgs[0] == "stderr":
+		log.Printf("* DEBUG: MethodArgs: got stderr \n")
+		fmt.Fprintf(os.Stderr, "%v", string(message.Data))
+		fmt.Println()
 	default:
 		fmt.Fprintf(os.Stdout, "%v", string(message.Data))
 		fmt.Println()
