@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/fxamacker/cbor/v2 v2.3.1
+	github.com/fxamacker/cbor/v2 v2.4.0
 	github.com/gdamore/tcell/v2 v2.4.1-0.20210905002822-f057f0a857a1
 	github.com/go-playground/validator/v10 v10.10.1
 	github.com/google/uuid v1.3.0
@@ -12,7 +12,7 @@ require (
 	github.com/jinzhu/copier v0.3.5
 	github.com/klauspost/compress v1.15.6
 	github.com/nats-io/nats-server/v2 v2.8.4
-	github.com/nats-io/nats.go v1.15.0
+	github.com/nats-io/nats.go v1.16.0
 	github.com/pelletier/go-toml v1.8.1
 	github.com/pkg/profile v1.6.0
 	github.com/prometheus/client_golang v1.12.2
