@@ -17,7 +17,7 @@ require (
 	github.com/pkg/profile v1.6.0
 	github.com/prometheus/client_golang v1.12.2
 	github.com/rivo/tview v0.0.0-20220106183741-90d72bc664f5
-	go.etcd.io/bbolt v1.3.5
+	go.etcd.io/bbolt v1.3.6
 	gopkg.in/yaml.v3 v3.0.1
 )
 
