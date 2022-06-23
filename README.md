@@ -39,6 +39,7 @@ As long as you can do something as an operator on in a shell on a system you can
       - [How to send the reply to another node](#how-to-send-the-reply-to-another-node)
       - [method timeout](#method-timeout)
         - [Example](#example)
+      - [Schedule a Method in a message to be run several times](#schedule-a-method-in-a-message-to-be-run-several-times)
     - [Request Methods](#request-methods)
       - [REQOpProcessList](#reqopprocesslist)
       - [REQOpProcessStart](#reqopprocessstart)
@@ -416,6 +417,40 @@ This message is put in the `./startup` folder on **node1**.</br>
 We send the message to ourself, hence specifying ourself in the `toNode` field.</br>
 We specify the reply messages with the result to be sent to the console on **central** in the `fromNode` field.</br>
 In the example we start a TCP listener on port 8888, and we want the method to run for as long as Steward is running. So we set the **methodTimeout** to `-1`.</br>
+
+#### Schedule a Method in a message to be run several times
+
+Methods with their MethodArgs can be scheduled to be run any number of times. Meaning you can send the message once, and the method will be re-called at the interval specified with the **schedule** field. A max run time for the schedule must also be specified.
+
+`schedule : [int type value for interval in seconds, int type value for total run time in seconds]`
+
+**schedule** can also be used with messages specified in the **startup folder**.
+
+Example below will be run each 2nd seconds, with a total run of 5 seconds:
+
+```json
+[
+    {
+        "toNodes": ["central"],
+        "method": "REQCliCommand",
+        "methodArgs": [
+            "bash",
+            "-c",
+            "hostname && curl -v http://edgeos.raalabs.tech"
+        ],
+        "replyMethod": "REQToConsole",
+        "ACKTimeout": 5,
+        "retries": 3,
+        "replyACKTimeout": 5,
+        "replyRetries": 5,
+        "methodTimeout": 5,
+        "replyMethodTimeout": 120,
+        "directory": "debug",
+        "fileName": "test.txt",
+        "schedule": [2,5]
+    }
+]
+```
 
 ### Request Methods
 
