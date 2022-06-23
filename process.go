@@ -227,6 +227,25 @@ func (p process) spawnWorker() {
 		}
 
 		p.natsSubscription = p.subscribeMessages()
+
+		// We also need to be able to remove all the information about this process
+		// when the process context is canceled.
+		go func() {
+			<-p.ctx.Done()
+			err := p.natsSubscription.Unsubscribe()
+			if err != nil {
+				er := fmt.Errorf("error: spawnWorker: got <-ctx.Done, but unable to unsubscribe natsSubscription failed: %v", err)
+				p.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+			}
+
+			p.processes.active.mu.Lock()
+			delete(p.processes.active.procNames, p.processName)
+			p.processes.active.mu.Unlock()
+
+			log.Printf("Successfully stopped process: %v\n", p.processName)
+
+		}()
 	}
 
 	// Add information about the new process to the started processes map.
