@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	toml "github.com/pelletier/go-toml"
+	toml "github.com/pelletier/go-toml/v2"
 )
 
 // Configuration are the structure that holds all the different
@@ -17,127 +17,126 @@ import (
 // an if check should be added to the checkConfigValues function
 // to set default values when reading from config file.
 type Configuration struct {
-	// RingBufferPermStore enable or disable the persisting of
+	// RingBufferPersistStore, enable or disable the persisting of
 	// messages being processed to local db.
-	RingBufferPersistStore bool
+	RingBufferPersistStore bool `comment:"RingBufferPersistStore, enable or disable the persisting of messages being processed to local db"`
 	// RingBufferSize
-	RingBufferSize int
-	// The configuration folder on disk
-	ConfigFolder string
+	RingBufferSize int `comment:"RingBufferSize"`
+	// ConfigFolder, the location for the configuration folder on disk
+	ConfigFolder string `comment:"ConfigFolder, the location for the configuration folder on disk"`
 	// The folder where the socket file should live
-	SocketFolder string
-	// TCP Listener for sending messages to the system
-	TCPListener string
-	// HTTP Listener for sending messages to the system
-	HTTPListener string
+	SocketFolder string `comment:"The folder where the socket file should live"`
+	// TCP Listener for sending messages to the system, <host>:<port>
+	TCPListener string `comment:"TCP Listener for sending messages to the system, <host>:<port>"`
+	// HTTP Listener for sending messages to the system, <host>:<port>
+	HTTPListener string `comment:"HTTP Listener for sending messages to the system, <host>:<port>"`
 	// The folder where the database should live
-	DatabaseFolder string
-	// some unique string to identify this Edge unit
-	NodeName string
-	// the address of the message broker
-	BrokerAddress string
+	DatabaseFolder string `comment:"The folder where the database should live"`
+	// Unique string to identify this Edge unit
+	NodeName string `comment:"Unique string to identify this Edge unit"`
+	// The address of the message broker, <address>:<port>
+	BrokerAddress string `comment:"The address of the message broker, <address>:<port>"`
 	// NatsConnOptTimeout the timeout for trying the connect to nats broker
-	NatsConnOptTimeout int
-	// nats connect retry
-	NatsConnectRetryInterval int
+	NatsConnOptTimeout int `comment:"NatsConnOptTimeout the timeout for trying the connect to nats broker"`
+	// Nats connect retry interval in seconds
+	NatsConnectRetryInterval int `comment:"Nats connect retry interval in seconds"`
 	// NatsReconnectJitter in milliseconds
-	NatsReconnectJitter int
+	NatsReconnectJitter int `comment:"NatsReconnectJitter in milliseconds"`
 	// NatsReconnectJitterTLS in seconds
-	NatsReconnectJitterTLS int
+	NatsReconnectJitterTLS int `comment:"NatsReconnectJitterTLS in seconds"`
 	// REQKeysRequestUpdateInterval in seconds
-	REQKeysRequestUpdateInterval int
+	REQKeysRequestUpdateInterval int `comment:"REQKeysRequestUpdateInterval in seconds"`
 	// REQAclRequestUpdateInterval in seconds
-	REQAclRequestUpdateInterval int
+	REQAclRequestUpdateInterval int `comment:"REQAclRequestUpdateInterval in seconds"`
 	// The number of the profiling port
-	ProfilingPort string
-	// host and port for prometheus listener, e.g. localhost:2112
-	PromHostAndPort string
-	// set to true if this is the node that should receive the error log's from other nodes
-	DefaultMessageTimeout int
-	// Default value for how long can a request method max be allowed to run.
-	DefaultMethodTimeout int
-	// default amount of retries that will be done before a message is thrown away, and out of the system
-	DefaultMessageRetries int
-	// Publisher data folder
-	SubscribersDataFolder string
-	// central node to receive messages published from nodes
-	CentralNodeName string
-	// Path to the certificate of the root CA
-	RootCAPath string
+	ProfilingPort string `comment:"The number of the profiling port"`
+	// Host and port for prometheus listener, e.g. localhost:2112
+	PromHostAndPort string `comment:"Host and port for prometheus listener, e.g. localhost:2112"`
+	// Set to true if this is the node that should receive the error log's from other nodes
+	DefaultMessageTimeout int `comment:"Set to true if this is the node that should receive the error log's from other nodes"`
+	// Default value for how long can a request method max be allowed to run in seconds
+	DefaultMethodTimeout int `comment:"Default value for how long can a request method max be allowed to run in seconds"`
+	// Default amount of retries that will be done before a message is thrown away, and out of the system
+	DefaultMessageRetries int `comment:"Default amount of retries that will be done before a message is thrown away, and out of the system"`
+	// The path to the data folder
+	SubscribersDataFolder string `comment:"The path to the data folder"`
+	// Name of central node to receive logs, errors, key/acl handling
+	CentralNodeName string `comment:"Name of central node to receive logs, errors, key/acl handling"`
+	// The full path to the certificate of the root CA
+	RootCAPath string `comment:"The full path to the certificate of the root CA"`
 	// Full path to the NKEY's seed file
-	NkeySeedFile string
-	// NkeyPublicKey
+	NkeySeedFile string `comment:"Full path to the NKEY's seed file"`
+	// The full path to the NKEY user file
 	NkeyPublicKey string `toml:"-"`
-	// The host and port to expose the data folder
-	ExposeDataFolder string
-	// Timeout for error messages
-	ErrorMessageTimeout int
-	// Retries for error messages.
-	ErrorMessageRetries int
-	// Compression
-	Compression string
-	// Serialization
-	Serialization string
+	// The host and port to expose the data folder, <host>:<port>
+	ExposeDataFolder string `comment:"The host and port to expose the data folder, <host>:<port>"`
+	// Timeout in seconds for error messages
+	ErrorMessageTimeout int `comment:"Timeout in seconds for error messages"`
+	// Retries for error messages
+	ErrorMessageRetries int `comment:"Retries for error messages"`
+	// Compression z for zstd or g for gzip
+	Compression string `comment:"Compression z for zstd or g for gzip"`
+	// Serialization, supports cbor or gob,default is gob. Enable cbor by setting the string value cbor
+	Serialization string `comment:"Serialization, supports cbor or gob,default is gob. Enable cbor by setting the string value cbor"`
 	// SetBlockProfileRate for block profiling
-	SetBlockProfileRate int
+	SetBlockProfileRate int `comment:"SetBlockProfileRate for block profiling"`
 	// EnableSocket for enabling the creation of a steward.sock file
-	EnableSocket bool
+	EnableSocket bool `comment:"EnableSocket for enabling the creation of a steward.sock file"`
 	// EnableTUI will enable the Terminal User Interface
-	EnableTUI bool
-	// EnableSignatureCheck
-	EnableSignatureCheck bool
-	// EnableAclCheck
-	EnableAclCheck bool
-	// IsCentralAuth
-	IsCentralAuth bool
-	// EnableDebug will also enable printing all the messages received in the errorKernel
-	// to STDERR.
-	EnableDebug bool
-	// KeepPublishersAliveFor number of seconds.
+	EnableTUI bool `comment:"EnableTUI will enable the Terminal User Interface"`
+	// EnableSignatureCheck to enable signature checking
+	EnableSignatureCheck bool `comment:"EnableSignatureCheck to enable signature checking"`
+	// EnableAclCheck to enable ACL checking
+	EnableAclCheck bool `comment:"EnableAclCheck to enable ACL checking"`
+	// IsCentralAuth, enable to make this instance take the role as the central auth server
+	IsCentralAuth bool `comment:"IsCentralAuth, enable to make this instance take the role as the central auth server"`
+	// EnableDebug will also enable printing all the messages received in the errorKernel to STDERR.
+	EnableDebug bool `comment:"EnableDebug will also enable printing all the messages received in the errorKernel to STDERR."`
+	// KeepPublishersAliveFor number of seconds
 	// Timer that will be used for when to remove the sub process
 	// publisher. The timer is reset each time a message is published with
 	// the process, so the sub process publisher will not be removed until
 	// it have not received any messages for the given amount of time.
-	KeepPublishersAliveFor int
+	KeepPublishersAliveFor int `comment:"KeepPublishersAliveFor number of seconds Timer that will be used for when to remove the sub process publisher. The timer is reset each time a message is published with the process, so the sub process publisher will not be removed until it have not received any messages for the given amount of time."`
 
-	// Make the current node send hello messages to central at given interval in seconds
-	StartPubREQHello int
+	// StartPubREQHello, sets the interval in seconds for how often we send hello messages to central server
+	StartPubREQHello int `comment:"StartPubREQHello, sets the interval in seconds for how often we send hello messages to central server"`
 	// Enable the updates of public keys
-	EnableKeyUpdates bool
+	EnableKeyUpdates bool `comment:"Enable the updates of public keys"`
 
 	// Enable the updates of acl's
-	EnableAclUpdates bool
+	EnableAclUpdates bool `comment:"Enable the updates of acl's"`
 
 	// Start the central error logger.
-	IsCentralErrorLogger bool
-	// Subscriber for hello messages
-	StartSubREQHello bool
-	// Subscriber for text logging
-	StartSubREQToFileAppend bool
-	// Subscriber for writing to file
-	StartSubREQToFile bool
-	// Subscriber for writing to file without ACK
-	StartSubREQToFileNACK bool
-	// Subscriber for reading files to copy
-	StartSubREQCopySrc bool
-	// Subscriber for writing copied files to disk
-	StartSubREQCopyDst bool
-	// Subscriber for Echo Request
-	StartSubREQPing bool
-	// Subscriber for Echo Reply
-	StartSubREQPong bool
-	// Subscriber for CLICommandRequest
-	StartSubREQCliCommand bool
-	// Subscriber for REQToConsole
-	StartSubREQToConsole bool
-	// Subscriber for REQHttpGet
-	StartSubREQHttpGet bool
-	// Subscriber for REQHttpGetScheduled
-	StartSubREQHttpGetScheduled bool
-	// Subscriber for tailing log files
-	StartSubREQTailFile bool
-	// Subscriber for continously delivery of output from cli commands.
-	StartSubREQCliCommandCont bool
+	IsCentralErrorLogger bool `comment:"Start the central error logger."`
+	// Start subscriber for hello messages
+	StartSubREQHello bool `comment:"Start subscriber for hello messages"`
+	// Start subscriber for text logging
+	StartSubREQToFileAppend bool `comment:"Start subscriber for text logging"`
+	// Start subscriber for writing to file
+	StartSubREQToFile bool `comment:"Start subscriber for writing to file"`
+	// Start subscriber for writing to file without ACK
+	StartSubREQToFileNACK bool `comment:"Start subscriber for writing to file without ACK"`
+	// Start subscriber for reading files to copy
+	StartSubREQCopySrc bool `comment:"Start subscriber for reading files to copy"`
+	// Start subscriber for writing copied files to disk
+	StartSubREQCopyDst bool `comment:"Start subscriber for writing copied files to disk"`
+	// Start subscriber for Echo Request
+	StartSubREQPing bool `comment:"Start subscriber for Echo Request"`
+	// Start subscriber for Echo Reply
+	StartSubREQPong bool `comment:"Start subscriber for Echo Reply"`
+	// Start subscriber for CLICommandRequest
+	StartSubREQCliCommand bool `comment:"Start subscriber for CLICommandRequest"`
+	// Start subscriber for REQToConsole
+	StartSubREQToConsole bool `comment:"Start subscriber for REQToConsole"`
+	// Start subscriber for REQHttpGet
+	StartSubREQHttpGet bool `comment:"Start subscriber for REQHttpGet"`
+	// Start subscriber for REQHttpGetScheduled
+	StartSubREQHttpGetScheduled bool `comment:"Start subscriber for REQHttpGetScheduled"`
+	// Start subscriber for tailing log files
+	StartSubREQTailFile bool `comment:"Start subscriber for tailing log files"`
+	// Start subscriber for continously delivery of output from cli commands.
+	StartSubREQCliCommandCont bool `comment:"Start subscriber for continously delivery of output from cli commands."`
 }
 
 // ConfigurationFromFile should have the same structure as
