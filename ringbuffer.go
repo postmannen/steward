@@ -344,19 +344,53 @@ func (r *ringBuffer) dumpBucket(bucket string) ([]samDBValue, error) {
 	err := r.db.View(func(tx *bolt.Tx) error {
 		bu := tx.Bucket([]byte(bucket))
 		if bu == nil {
-			return fmt.Errorf("error: dumpBucket: tx.bucket returned nil")
+			return fmt.Errorf("error: ringBuffer.dumpBucket: tx.bucket returned nil")
 		}
 
-		// For each element found in the DB, unmarshal, and put on slice.
-		bu.ForEach(func(k, v []byte) error {
-			var vv samDBValue
-			err := json.Unmarshal(v, &vv)
-			if err != nil {
-				log.Printf("error: dumpBucket json.Umarshal failed: %v\n", err)
+		type kv struct {
+			key   []byte
+			value []byte
+		}
+
+		dbkvs := []kv{}
+
+		// Get all the items from the db.
+		err := bu.ForEach(func(k, v []byte) error {
+			va := kv{
+				key:   k,
+				value: v,
 			}
-			samDBValues = append(samDBValues, vv)
+			dbkvs = append(dbkvs, va)
+
 			return nil
 		})
+
+		if err != nil {
+			// Todo: what to return here ?
+			log.Fatalf("error: ringBuffer: ranging db failed: %v", err)
+		}
+
+		// Range all the values we got from the db, unmarshal each value.
+		// If the unmarshaling is ok we put it on the samDBValues slice,
+		// if it fails the value is not of correct format so we we delete
+		// it from the db, and loop to work on the next value.
+		for _, dbkv := range dbkvs {
+			var sdbv samDBValue
+			err := json.Unmarshal(dbkv.value, &sdbv)
+			if err != nil {
+				// If we're unable to unmarshal the value it value of wrong format,
+				// so we log it, and delete the value from the bucker.
+				log.Printf("error: ringBuffer.dumpBucket json.Umarshal failed: %v\n", err)
+				r.deleteKeyFromBucket(r.samValueBucket, string(dbkv.key))
+
+				continue
+			}
+
+			samDBValues = append(samDBValues, sdbv)
+		}
+
+		// TODO:
+		// BoltDB do not automatically shring in filesize. We should delete the db, and create a new one to shrink the size.
 
 		// Sort the order of the slice items based on ID, since they where retreived from a map.
 		sort.SliceStable(samDBValues, func(i, j int) bool {
@@ -364,7 +398,7 @@ func (r *ringBuffer) dumpBucket(bucket string) ([]samDBValue, error) {
 		})
 
 		for _, v := range samDBValues {
-			log.Printf("info: k/v store, kvID: %v, message.ID: %v, subject: %v, len(data): %v\n", v.ID, v.Data.ID, v.Data.Subject, len(v.Data.Data))
+			log.Printf("info: ringBuffer.dumpBucket: k/v store, kvID: %v, message.ID: %v, subject: %v, len(data): %v\n", v.ID, v.Data.ID, v.Data.Subject, len(v.Data.Data))
 		}
 
 		return nil
