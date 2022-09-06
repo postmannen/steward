@@ -67,18 +67,18 @@ func (m methodREQCopySrc) getKind() Event {
 //
 // - dst, read and store each chunch to tmp folder and verify hash.
 //   - dst->src, send status "ready" to src when chunch is stored.
-//	 - loop and check for status "last", if last:
-//     - build original file from chuncs.
-//     - verify hash when file is built.
-//     - dst->src, send status "done".
+//   - loop and check for status "last", if last:
+//   - build original file from chuncs.
+//   - verify hash when file is built.
+//   - dst->src, send status "done".
 //
 // - We should also be be able to resend a chunk, or restart the copying from where we left of if it seems to hang.
 //
-// dataStructure{
-//	Data	[]bytes
-//	Status	copyStatus
-//  id		int
-// }
+//	dataStructure{
+//		Data	[]bytes
+//		Status	copyStatus
+//	 id		int
+//	}
 //
 // Create a new copy sync process to handle the actual file copying.
 // We use the context already created based on the time out specified
@@ -88,6 +88,21 @@ func (m methodREQCopySrc) getKind() Event {
 // Handle writing to a file. Will truncate any existing data if the file did already
 // exist.
 func (m methodREQCopySrc) handler(proc process, message Message, node string) ([]byte, error) {
+
+	// If the toNode field is not the same as nodeName of the receiving node
+	// we should forward the message to that specified toNode. This will allow
+	// us to initiate a file copy from another node to this node.
+	if message.ToNode != proc.node {
+		sam, err := newSubjectAndMessage(message)
+		if err != nil {
+			er := fmt.Errorf("error: newSubjectAndMessage failed: %v, message=%v", err, message)
+			proc.errorKernel.errSend(proc, message, er)
+		}
+
+		proc.toRingbufferCh <- []subjectAndMessage{sam}
+
+		return nil, fmt.Errorf("info: the copy message was forwarded to %v message, %v", message.ToNode, message)
+	}
 
 	var subProcessName string
 
@@ -217,7 +232,7 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 
 		sam, err := newSubjectAndMessage(msg)
 		if err != nil {
-			er := fmt.Errorf("error: methodREQCopySrc failed to cbor Marshal data: %v, message=%v", err, message)
+			er := fmt.Errorf("error: newSubjectAndMessage failed: %v, message=%v", err, message)
 			proc.errorKernel.errSend(proc, message, er)
 			cancel()
 		}

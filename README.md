@@ -658,6 +658,8 @@ Copy a file from one node to another node.
   - 4. SplitChunkSize, the size of the chunks to split the file into for transfer.
   - 5. MaxTotalCopyTime, specifies the maximum allowed time the complete copy should take. Make sure you set this long enough to allow the transfer to complete.
 
+To copy from a remote node to the local node, you specify the remote nodeName in the toNode field, and the message will be forwarded to the remote node. The copying request will then be picked up by the remote node's **REQCopySrc** handler, and the copy session will then be handled from the remote node.
+
 #### REQErrorLog
 
 Method for receiving error logs for Central error logger.
