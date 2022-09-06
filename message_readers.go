@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -146,7 +145,7 @@ func (s *server) getFilePaths(dirName string) ([]string, error) {
 		}
 	}
 
-	fInfo, err := ioutil.ReadDir(dirPath)
+	fInfo, err := os.ReadDir(dirPath)
 	if err != nil {
 		er := fmt.Errorf("error: failed to get filenames in startup folder: %v", err)
 		return nil, er

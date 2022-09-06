@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -805,7 +804,7 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 // the messages folder.
 func (t *tui) getMessageNames(outputForm *tview.TextView) []string {
 	// Create messages dropdown field.
-	fInfo, err := ioutil.ReadDir("messages")
+	fInfo, err := os.ReadDir("messages")
 	if err != nil {
 		fmt.Fprintf(outputForm, "error: failed to read files from messages dir\n")
 	}
