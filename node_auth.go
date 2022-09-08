@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -16,7 +15,7 @@ import (
 
 // nodeAuth is the structure that holds both keys and acl's
 // that the running steward node shall use for authorization.
-//It holds a mutex to use when interacting with the map.
+// It holds a mutex to use when interacting with the map.
 type nodeAuth struct {
 	// ACL that defines where a node is allowed to recieve from.
 	nodeAcl *nodeAcl
@@ -361,7 +360,7 @@ func (n *nodeAuth) readKeyFile(keyFile string) (ed2519key []byte, b64Key []byte,
 	}
 	defer fh.Close()
 
-	b, err := ioutil.ReadAll(fh)
+	b, err := io.ReadAll(fh)
 	if err != nil {
 		er := fmt.Errorf("error: failed to read key file: %v", err)
 		return nil, nil, er
