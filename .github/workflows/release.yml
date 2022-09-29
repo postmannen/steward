@@ -34,6 +34,13 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: '>=1.18.0'
+    - name: Login to GHCR
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: raalabs-cicd
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v3
       with:
