@@ -22,6 +22,7 @@ changelog:
       - '^test:'
 dockers:
   - use: buildx
+    dockerfile: Dockerfile_release
     goos: linux
     goarch: amd64
     image_templates:
