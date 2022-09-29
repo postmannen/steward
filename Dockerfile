@@ -1,21 +1,11 @@
-# build stage
-FROM golang:1.17.7-alpine AS build-env
-RUN apk --no-cache add build-base git gcc
-
-RUN mkdir -p /build
-COPY ./ /build/
-
-WORKDIR /build/cmd/steward/
-RUN go version
-RUN go build -o steward
-
+# assumes goreleaser has already built the binaries
 # final stage
 FROM alpine
 
 RUN apk update && apk add curl && apk add nmap
 
 WORKDIR /app
-COPY --from=build-env /build/cmd/steward/steward /app/
+COPY steward /app/
 
 ENV RING_BUFFER_PERSIST_STORE "1"
 ENV RING_BUFFER_SIZE "1000"
