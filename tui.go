@@ -2,9 +2,7 @@ package steward
 
 import (
 	"bufio"
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -15,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -444,9 +444,9 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 
 		var msgs []tuiMessage
 
-		err = json.Unmarshal(fileContent, &msgs)
+		err = yaml.Unmarshal(fileContent, &msgs)
 		if err != nil {
-			fmt.Fprintf(p.logForm, "error: json unmarshal of file content failed: %v\n", err)
+			fmt.Fprintf(p.logForm, "error: yaml unmarshal of file content failed: %v\n", err)
 			return
 		}
 
@@ -561,23 +561,26 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 			msgs := []tuiMessage{}
 			msgs = append(msgs, m)
 
-			// msgsIndented, err := json.MarshalIndent(msgs, "", "    ")
-			buf := new(bytes.Buffer)
-			enc := json.NewEncoder(buf)
-			enc.SetEscapeHTML(false)
-			enc.SetIndent("", "    ")
-			err := enc.Encode(msgs)
-			if err != nil {
-				fmt.Fprintf(p.logForm, "%v : error: jsonIndent failed: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
-			}
+			// // msgsIndented, err := json.MarshalIndent(msgs, "", "    ")
+			// buf := new(bytes.Buffer)
+			// enc := json.NewEncoder(buf)
+			// enc.SetEscapeHTML(false)
+			// enc.SetIndent("", "    ")
+			// err := enc.Encode(msgs)
+			// if err != nil {
+			// 	fmt.Fprintf(p.logForm, "%v : error: jsonIndent failed: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
+			// }
 
-			msgsIndented := buf.Bytes()
+			bs, err := yaml.Marshal(msgs)
+			if err != nil {
+				fmt.Fprintf(p.logForm, "%v : error: yaml marshal failed: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
+			}
 
 			// Copy the message to a variable outside this scope so we can use
 			// the content for example if we want to save the message to file.
-			lastGeneratedMessage = msgsIndented
+			lastGeneratedMessage = bs
 
-			_, err = p.outputForm.Write(msgsIndented)
+			_, err = p.outputForm.Write(bs)
 			if err != nil {
 				fmt.Fprintf(p.logForm, "%v : error: write to fh failed: %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), err)
 			}
@@ -755,9 +758,9 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 		}
 
 		var msgs []Message
-		err = json.Unmarshal(fileContent, &msgs)
+		err = yaml.Unmarshal(fileContent, &msgs)
 		if err != nil {
-			fmt.Fprintf(p.outputForm, "error: json unmarshal of file content failed: %v\n", err)
+			fmt.Fprintf(p.outputForm, "error: yaml unmarshal of file content failed: %v\n", err)
 			return
 		}
 
