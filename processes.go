@@ -720,7 +720,8 @@ func (p *processes) printProcessesMap() {
 		p.active.mu.Lock()
 
 		for pName, proc := range p.active.procNames {
-			log.Printf("* proc - pub/sub: %v, procName in map: %v , id: %v, subject: %v\n", proc.processKind, pName, proc.processID, proc.subject.name())
+			er := fmt.Errorf("info: proc - pub/sub: %v, procName in map: %v , id: %v, subject: %v", proc.processKind, pName, proc.processID, proc.subject.name())
+			proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 		}
 
 		p.metrics.promProcessesTotal.Set(float64(len(p.active.procNames)))

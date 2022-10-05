@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/fxamacker/cbor/v2"
 )
@@ -53,19 +52,23 @@ func (m methodREQAclRequestUpdate) handler(proc process, message Message, node s
 				proc.centralAuth.accessLists.schemaGenerated.mu.Lock()
 				defer proc.centralAuth.accessLists.schemaGenerated.mu.Unlock()
 
-				log.Printf(" ---- subscriber methodREQAclRequestUpdate: got acl hash from NODE=%v, HASH data =%v\n", message.FromNode, message.Data)
+				er := fmt.Errorf("info: subscriber methodREQAclRequestUpdate: got acl hash from NODE=%v, HASH data =%v", message.FromNode, message.Data)
+				proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 
 				// Check if the received hash is the same as the one currently active,
 				// If it is the same we exit the handler immediately.
 				hash32 := proc.centralAuth.accessLists.schemaGenerated.GeneratedACLsMap[message.FromNode].Hash
 				hash := hash32[:]
-				log.Printf("---- subscriber methodREQAclRequestUpdate:  the central acl hash=%v\n", hash32)
+				er = fmt.Errorf("info: subscriber methodREQAclRequestUpdate:  the central acl hash=%v", hash32)
+				proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 				if bytes.Equal(hash, message.Data) {
-					log.Printf("---- subscriber methodREQAclRequestUpdate:  NODE AND CENTRAL HAVE EQUAL ACL HASH, NOTHING TO DO, EXITING HANDLER\n")
+					er := fmt.Errorf("info: subscriber methodREQAclRequestUpdate:  NODE AND CENTRAL HAVE EQUAL ACL HASH, NOTHING TO DO, EXITING HANDLER")
+					proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 					return
 				}
 
-				log.Printf("---- subscriber methodREQAclRequestUpdate: NODE AND CENTRAL HAD NOT EQUAL ACL, PREPARING TO SEND NEW VERSION OF Acl\n")
+				er = fmt.Errorf("info: subscriber methodREQAclRequestUpdate: NODE AND CENTRAL HAD NOT EQUAL ACL, PREPARING TO SEND NEW VERSION OF Acl")
+				proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 
 				// Generate JSON for Message.Data
 
@@ -79,10 +82,10 @@ func (m methodREQAclRequestUpdate) handler(proc process, message Message, node s
 				if err != nil {
 					er := fmt.Errorf("error: REQAclRequestUpdate : json marshal failed: %v, message: %v", err, message)
 					proc.errorKernel.errSend(proc, message, er)
-					log.Fatalf("%v\n", er)
 				}
 
-				fmt.Printf(" ----> subscriber methodREQAclRequestUpdate: SENDING ACL'S TO NODE=%v, serializedAndHash=%+v\n", message.FromNode, hdh)
+				er = fmt.Errorf("----> subscriber methodREQAclRequestUpdate: SENDING ACL'S TO NODE=%v, serializedAndHash=%+v", message.FromNode, hdh)
+				proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 
 				newReplyMessage(proc, message, js)
 			}()
@@ -143,7 +146,6 @@ func (m methodREQAclDeliverUpdate) handler(proc process, message Message, node s
 			if err != nil {
 				er := fmt.Errorf("error: subscriber REQAclDeliverUpdate : json unmarshal failed: %v, message: %v", err, message)
 				proc.errorKernel.errSend(proc, message, er)
-				log.Fatalf("\n * DEBUG: ER: %v\n", er)
 			}
 
 			mapOfFromNodeCommands := make(map[Node]map[command]struct{})
@@ -153,8 +155,6 @@ func (m methodREQAclDeliverUpdate) handler(proc process, message Message, node s
 				if err != nil {
 					er := fmt.Errorf("error: subscriber REQAclDeliverUpdate : cbor unmarshal failed: %v, message: %v", err, message)
 					proc.errorKernel.errSend(proc, message, er)
-					log.Fatalf("\n * DEBUG: ER: %v\n", er)
-
 				}
 			}
 

@@ -253,7 +253,8 @@ func (p process) spawnWorker() {
 	p.processes.active.procNames[p.processName] = p
 	p.processes.active.mu.Unlock()
 
-	log.Printf("Successfully started process: %v\n", p.processName)
+	er := fmt.Errorf("Successfully started process: %v\n", p.processName)
+	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 }
 
 var (
