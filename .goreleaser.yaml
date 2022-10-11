@@ -34,3 +34,13 @@ dockers:
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
+brews:
+  -
+    name: steward
+    homepage: "https://github.com/RaaLabs/steward"
+    # The GitHub repository to push the forula to
+    tap:
+      owner: raalabs
+      name: homebrew-raalabs
+      branch: main
+      token: {{ secrets.RAALABS_BREW_TAP_TOKEN_STEWARD }}
