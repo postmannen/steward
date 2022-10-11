@@ -38,7 +38,7 @@ brews:
   -
     name: steward
     homepage: "https://github.com/RaaLabs/steward"
-    # The GitHub repository to push the forula to
+    # The GitHub repository to push the forumla to
     tap:
       owner: raalabs
       name: homebrew-raalabs
