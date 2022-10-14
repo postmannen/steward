@@ -787,7 +787,7 @@ func (t *tui) console(app *tview.Application) tview.Primitive {
 			select {
 			case messageData := <-t.toConsoleCh:
 				for _, v := range messageData {
-					fmt.Fprintf(p.outputForm, "%v", v)
+					fmt.Fprintf(p.outputForm, "%v", string(v))
 				}
 			case <-t.ctx.Done():
 				log.Printf("info: stopped tui toConsole worker\n")
