@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -29,6 +30,7 @@ type copyInitialData struct {
 	SplitChunkSize   int
 	MaxTotalCopyTime int
 	FileMode         fs.FileMode
+	FolderPermission uint64
 }
 
 type methodREQCopySrc struct {
@@ -116,15 +118,21 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 		// Set default max total copy time, will be replaced with value from
 		// methodArgs[4] if defined.
 		maxTotalCopyTime := message.MethodTimeout
+		// Default permission of destination folder if we need to create it.
+		// The value will be replaced
+		folderPermission := uint64(0755)
 
+		er := fmt.Errorf("info: before switch: FolderPermission defined in message for socket: %04o", folderPermission)
+		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 		// Verify and check the methodArgs
-		switch {
-		case len(message.MethodArgs) < 3:
+
+		if len(message.MethodArgs) < 3 {
 			er := fmt.Errorf("error: methodREQCopySrc: got <3 number methodArgs: want srcfilePath,dstNode,dstFilePath")
 			proc.errorKernel.errSend(proc, message, er)
 			return
+		}
 
-		case len(message.MethodArgs) > 3:
+		if len(message.MethodArgs) > 3 {
 			// Check if split chunk size was set, if not keep default.
 			var err error
 			splitChunkSize, err = strconv.Atoi(message.MethodArgs[3])
@@ -132,14 +140,31 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 				er := fmt.Errorf("error: methodREQCopySrc: unble to convert splitChunkSize into int value: %v", err)
 				proc.errorKernel.errSend(proc, message, er)
 			}
-			fallthrough
+		}
 
-		case len(message.MethodArgs) > 4:
+		if len(message.MethodArgs) > 4 {
 			// Check if maxTotalCopyTime was set, if not keep default.
 			var err error
 			maxTotalCopyTime, err = strconv.Atoi(message.MethodArgs[4])
 			if err != nil {
 				er := fmt.Errorf("error: methodREQCopySrc: unble to convert maxTotalCopyTime into int value: %v", err)
+				proc.errorKernel.errSend(proc, message, er)
+			}
+		}
+
+		if len(message.MethodArgs) > 5 && message.MethodArgs[5] != "" {
+			fmt.Printf("\n\n\n Lenght was more than 5 for arguments\n\n")
+			// Check if file permissions were set, if not use default.
+			var err error
+			folderPermission, err = strconv.ParseUint(message.MethodArgs[5], 8, 32)
+			if err != nil {
+				log.Printf("%v\n", err)
+			}
+
+			er := fmt.Errorf("info: FolderPermission defined in message for socket: %v, converted = %v", message.MethodArgs[5], folderPermission)
+			proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+			if err != nil {
+				er := fmt.Errorf("error: methodREQCopySrc: unable to convert folderPermission into int value: %v", err)
 				proc.errorKernel.errSend(proc, message, er)
 			}
 		}
@@ -193,6 +218,7 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 			SplitChunkSize:   splitChunkSize,
 			MaxTotalCopyTime: maxTotalCopyTime,
 			FileMode:         fileMode,
+			FolderPermission: folderPermission,
 		}
 
 		sub := newSubjectNoVerifyHandler(m, node)
@@ -214,7 +240,7 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 		// Send a message over the the node where the destination file will be written,
 		// to also start up a sub process on the destination node.
 
-		// Marshal the data payload to send the the dst.
+		// Marshal the data payload to send to the dst.
 		cb, err := cbor.Marshal(cia)
 		if err != nil {
 			er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
@@ -597,7 +623,12 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 
 		// Open a tmp folder for where to write the received chunks
 		tmpFolder := filepath.Join(proc.configuration.SocketFolder, cia.DstFile+"-"+cia.UUID)
-		os.Mkdir(tmpFolder, 0700)
+		err = os.Mkdir(tmpFolder, 0700)
+		if err != nil {
+			er := fmt.Errorf("copyDstProcSubFunc: create tmp folder for copying failed: %v", err)
+			proc.errorKernel.errSend(proc, message, er)
+			return er
+		}
 
 		for {
 			select {
@@ -630,14 +661,14 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						filePath := filepath.Join(tmpFolder, strconv.Itoa(csa.ChunkNumber)+"."+cia.UUID)
 						fh, err := os.OpenFile(filePath, os.O_TRUNC|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
 						if err != nil {
-							er := fmt.Errorf("error: copyDstSubProcFunc: open file failed: %v", err)
+							er := fmt.Errorf("error: copyDstSubProcFunc: open destination chunk file for writing failed: %v", err)
 							return er
 						}
 						defer fh.Close()
 
 						_, err = fh.Write(csa.CopyData)
 						if err != nil {
-							er := fmt.Errorf("error: copyDstSubProcFunc: open file failed: %v", err)
+							er := fmt.Errorf("error: copyDstSubProcFunc: writing to chunk file failed: %v", err)
 							return er
 						}
 
@@ -714,13 +745,27 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						// Open the main file that chunks files will be written into.
 						filePath := filepath.Join(cia.DstDir, cia.DstFile)
 
+						// HERE:
+						er := fmt.Errorf("info: Before creating folder: cia.FolderPermission: %04o", cia.FolderPermission)
+						proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+
+						if _, err := os.Stat(cia.DstDir); os.IsNotExist(err) {
+							// TODO: Add option to set permission here ???
+							err := os.MkdirAll(cia.DstDir, fs.FileMode(cia.FolderPermission))
+							if err != nil {
+								return fmt.Errorf("error: failed to create destination directory for file copying %v: %v", cia.DstDir, err)
+							}
+							er := fmt.Errorf("info: Created folder: with cia.FolderPermission: %04o", cia.FolderPermission)
+							proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+						}
+
 						// Rename the file so we got a backup.
 						backupOriginalFileName := filePath + ".bck"
 						os.Rename(filePath, backupOriginalFileName)
 
 						mainfh, err := os.OpenFile(filePath, os.O_TRUNC|os.O_RDWR|os.O_CREATE|os.O_SYNC, cia.FileMode)
 						if err != nil {
-							er := fmt.Errorf("error: copyDstSubProcFunc: open file failed: %v", err)
+							er := fmt.Errorf("error: copyDstSubProcFunc: open final destination file failed: %v", err)
 							proc.errorKernel.errSend(proc, message, er)
 							return er
 						}
@@ -811,7 +856,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 							return er
 						}
 
-						er := fmt.Errorf("info: copy: successfully wrote all split chunk files into file=%v", filePath)
+						er = fmt.Errorf("info: copy: successfully wrote all split chunk files into file=%v", filePath)
 						proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 
 						// Signal back to src that we are done, so it can cancel the process.

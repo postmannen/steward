@@ -1,0 +1,282 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: steward
+  name: steward
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: steward
+  template:
+    metadata:
+      labels:
+        app: steward
+    spec:
+      volumes:
+        - name: seed
+          secret:
+            secretName: nk-seed
+            #defaultMode: 0400
+        - name: steward-tmp
+          emptyDir: {}
+        - name: message1-configmap-volume
+          configMap:
+            name: message1-map
+        - name: message2-configmap-volume
+          configMap:
+            name: message2-map
+
+      containers:
+        - image: localhost:5000/steward:0.3.1
+          resources:
+            limits:
+              memory: 128Mi
+              cpu: 250m
+          #command: ["/bin/sh","-c","sleep 600"]
+          name: steward
+          volumeMounts:
+            - name: seed
+              mountPath: /etc/nkeys
+            - name: steward-tmp
+              mountPath: /app/tmp/
+          ports:
+            - containerPort: 8090
+              name: steward
+          env:
+            - name: RING_BUFFER_PERSIST_STORE
+              value: "1"
+            - name: RING_BUFFER_SIZE
+              value: "1000"
+            - name: CONFIG_FOLDER
+              value: "./etc"
+            - name: SOCKET_FOLDER
+              value: "./tmp"
+            - name: TCP_LISTENER
+              value: ""
+            - name: HTTP_LISTENER
+              value: "localhost:8091"
+            - name: DATABASE_FOLDER
+              value: "./var/lib"
+            - name: NODE_NAME
+              value: "central"
+            - name: BROKER_ADDRESS
+              value: "10.0.0.250:4223"
+            - name: NATS_CONN_OPT_TIMEOUT
+              value: "20"
+            - name: NATS_CONNECT_RETRY_INTERVAL
+              value: "10"
+            - name: NATS_RECONNECT_JITTER
+              value: "100"
+            - name: NATS_RECONNECT_JITTER_TLS
+              value: "1"
+            - name: REQ_KEYS_REQUEST_UPDATE_INTERVAL
+              value: "60"
+            - name: REQ_ACL_REQUEST_UPDATE_INTERVAL
+              value: "60"
+            - name: PROFILING_PORT
+              value: ""
+            - name: PROM_HOST_AND_PORT
+              value: "127.0.0.1:2111"
+            - name: DEFAULT_MESSAGE_TIMEOUT
+              value: "10"
+            - name: DEFAULT_MESSAGE_RETRIES
+              value: "3"
+            - name: DEFAULT_METHOD_TIMEOUT
+              value: "10"
+            - name: SUBSCRIBERS_DATA_FOLDER
+              value: "./var"
+            - name: CENTRAL_NODE_NAME
+              value: "central"
+            - name: ROOT_CA_PATH
+              value: ""
+            - name: NKEY_SEED_FILE
+              value: ""
+            - name: EXPOSE_DATA_FOLDER
+              value: "127.0.0.1:8090"
+            - name: ERROR_MESSAGE_RETRIES
+              value: "3"
+            - name: ERROR_MESSAGE_TIMEOUT
+              value: "10"
+            - name: COMPRESSION
+              value: ""
+            - name: SERIALIZATION
+              value: ""
+            - name: SET_BLOCK_PROFILE_RATE
+              value: "0"
+            - name: ENABLE_SOCKET
+              value: "1"
+            - name: ENABLE_TUI
+              value: "0"
+            - name: ENABLE_SIGNATURE_CHECK
+              value: "0"
+            - name: ENABLE_ACL_CHECK
+              value: "0"
+            - name: IS_CENTRAL_AUTH
+              value: "0"
+            - name: ENABLE_DEBUG
+              value: "0"
+            - name: KEEP_PUBLISHERS_ALIVE_FOR
+              value: "10"
+            - name: START_PUB_REQ_HELLO
+              value: "60"
+            - name: ENABLE_KEY_UPDATES
+              value: "1"
+            - name: ENABLE_ACL_UPDATES
+              value: "1"
+            - name: IS_CENTRAL_ERROR_LOGGER
+              value: "1"
+            - name: START_SUB_REQ_HELLO
+              value: "true"
+            - name: START_SUB_REQ_TO_FILE_APPEND
+              value: "true"
+            - name: START_SUB_REQ_TO_FILE
+              value: "true"
+            - name: START_SUB_REQ_TO_FILE_NACK
+              value: "true"
+            - name: START_SUB_REQ_COPY_SRC
+              value: "true"
+            - name: START_SUB_REQ_COPY_DST
+              value: "true"
+            - name: START_SUB_REQ_PING
+              value: "true"
+            - name: START_SUB_REQ_PONG
+              value: "true"
+            - name: START_SUB_REQ_CLI_COMMAND
+              value: "true"
+            - name: START_SUB_REQ_TO_CONSOLE
+              value: "true"
+            - name: START_SUB_REQ_HTTP_GET
+              value: "true"
+            - name: START_SUB_REQ_HTTP_GET_SCHEDULED
+              value: "true"
+            - name: START_SUB_REQ_TAIL_FILE
+              value: "true"
+            - name: START_SUB_REQ_CLI_COMMAND_CONT
+              value: "true"
+
+        - image: localhost:5000/stewardwriter:0.1.1
+          env:
+            - name: MESSAGE_FULL_PATH
+              value: "/app/message.yaml"
+            - name: SOCKET_FULL_PATH
+              value: "/app/tmp/steward.sock"
+            - name: INTERVAL
+              value: "10"
+          name: stewardwriter1
+          #command: [ "/bin/sh", "-c", "sleep 1800" ]
+          resources:
+            limits:
+              memory: 128Mi
+              cpu: 250m
+          volumeMounts:
+            - name: steward-tmp
+              mountPath: /app/tmp/
+            - name: message1-configmap-volume
+              mountPath: /app/message.yaml
+              subPath: message.yaml
+
+        - image: localhost:5000/stewardwriter:0.1.1
+          env:
+            - name: MESSAGE_FULL_PATH
+              value: "/app/message.yaml"
+            - name: SOCKET_FULL_PATH
+              value: "/app/tmp/steward.sock"
+            - name: INTERVAL
+              value: "10"
+          name: stewardwriter2
+          #command: [ "/bin/sh", "-c", "sleep 1800" ]
+          resources:
+            limits:
+              memory: 128Mi
+              cpu: 250m
+          volumeMounts:
+            - name: steward-tmp
+              mountPath: /app/tmp/
+            - name: message2-configmap-volume
+              mountPath: /app/message.yaml
+              subPath: message.yaml
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: message1-map
+data:
+  message.yaml: |
+    [
+      {
+          "toNodes": ["central"],
+          "method": "REQHttpGet",
+          "methodArgs": [
+              "http://edgeos.raalabs.tech"
+          ],
+          "replyMethod": "REQToFile",
+          "ACKTimeout": 5,
+          "retries": 3,
+          "replyACKTimeout": 5,
+          "replyRetries": 5,
+          "methodTimeout": 5,
+          "replyMethodTimeout": 120,
+          "directory": "service1",
+          "fileName": "test-raalabs.tech.txt"
+      }
+    ]
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: message2-map
+data:
+  message.yaml: |
+    [
+      {
+          "toNodes": ["central"],
+          "method": "REQHttpGet",
+          "methodArgs": [
+              "https://ifconfig.me/"
+          ],
+          "replyMethod": "REQToFile",
+          "ACKTimeout": 5,
+          "retries": 3,
+          "replyACKTimeout": 5,
+          "replyRetries": 5,
+          "methodTimeout": 5,
+          "replyMethodTimeout": 120,
+          "directory": "service2",
+          "fileName": "ifconfig.me.txt"
+      }
+    ]
+
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: nk-seed
+type: Opaque
+data:
+  # Generate and encode the server private key: `nk -gen user -pubout`
+  seed.txt: <put seed value here>
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: steward
+  annotations:
+    metallb.universe.tf/allow-shared-ip: steward
+  labels:
+    app: steward
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 10.0.0.249
+  ports:
+    - name: steward
+      protocol: TCP
+      port: 8090
+      targetPort: 8090
+  selector:
+    app: steward

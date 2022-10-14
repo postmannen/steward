@@ -119,7 +119,8 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	c.pki.nodesAcked.mu.Unlock()
 
 	if ok && bytes.Equal(existingKey, msg.Data) {
-		fmt.Printf(" \n * public key value for REGISTERED node %v is the same, doing nothing\n\n", msg.FromNode)
+		er := fmt.Errorf("info: public key value for REGISTERED node %v is the same, doing nothing", msg.FromNode)
+		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 		return
 	}
 
@@ -155,10 +156,13 @@ func (c *centralAuth) deletePublicKeys(proc process, msg Message, nodes []string
 		}
 	}()
 
-	c.pki.dbDeletePublicKeys(c.pki.bucketNamePublicKeys, nodes)
+	err := c.pki.dbDeletePublicKeys(c.pki.bucketNamePublicKeys, nodes)
+	if err != nil {
+		proc.errorKernel.errSend(proc, msg, err)
+	}
 
 	er := fmt.Errorf("info: detected new public key for node: %v. This key will need to be authorized by operator to be allowed into the system", msg.FromNode)
-	fmt.Printf(" * %v\n", er)
+	proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 	c.pki.errorKernel.infoSend(proc, msg, er)
 }
 
@@ -188,7 +192,7 @@ func (c *centralAuth) deletePublicKeys(proc process, msg Message, nodes []string
 // 	return value, err
 // }
 
-//dbUpdatePublicKey will update the public key for a node in the db.
+// dbUpdatePublicKey will update the public key for a node in the db.
 func (p *pki) dbUpdatePublicKey(node string, value []byte) error {
 	err := p.db.Update(func(tx *bolt.Tx) error {
 		//Create a bucket
@@ -218,7 +222,9 @@ func (p *pki) dbDeletePublicKeys(bucket string, nodes []string) error {
 		for _, n := range nodes {
 			err := bu.Delete([]byte(n))
 			if err != nil {
-				log.Printf("error: delete key in bucket %v failed: %v\n", bucket, err)
+				er := fmt.Errorf("error: delete key in bucket %v failed: %v", bucket, err)
+				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+				return er
 			}
 		}
 
@@ -228,7 +234,7 @@ func (p *pki) dbDeletePublicKeys(bucket string, nodes []string) error {
 	return err
 }
 
-//dbUpdateHash will update the public key for a node in the db.
+// dbUpdateHash will update the public key for a node in the db.
 func (p *pki) dbUpdateHash(hash []byte) error {
 	err := p.db.Update(func(tx *bolt.Tx) error {
 		//Create a bucket

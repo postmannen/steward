@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 )
 
 // ---
@@ -102,17 +101,21 @@ func (m methodREQKeysRequestUpdate) handler(proc process, message Message, node 
 				proc.centralAuth.pki.nodesAcked.mu.Lock()
 				defer proc.centralAuth.pki.nodesAcked.mu.Unlock()
 
-				fmt.Printf(" <---- methodREQKeysRequestUpdate: received hash from NODE=%v, HASH=%v\n", message.FromNode, message.Data)
+				er := fmt.Errorf(" <---- methodREQKeysRequestUpdate: received hash from NODE=%v, HASH=%v", message.FromNode, message.Data)
+				proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 
 				// Check if the received hash is the same as the one currently active,
 				if bytes.Equal(proc.centralAuth.pki.nodesAcked.keysAndHash.Hash[:], message.Data) {
-					fmt.Printf("\n --- methodREQKeysRequestUpdate:  NODE AND CENTRAL HAVE EQUAL KEYS, NOTHING TO DO, EXITING HANDLER\n\n")
+					er := fmt.Errorf("info: methodREQKeysRequestUpdate:  NODE AND CENTRAL HAVE EQUAL KEYS, NOTHING TO DO, EXITING HANDLER")
+					proc.errorKernel.infoSend(proc, message, er)
 					return
 				}
 
-				fmt.Printf("\n ------------methodREQKeysRequestUpdate: NODE AND CENTRAL HAD NOT EQUAL KEYS, PREPARING TO SEND NEW VERSION OF KEYS\n\n")
+				er = fmt.Errorf("info: methodREQKeysRequestUpdate: NODE AND CENTRAL HAD NOT EQUAL KEYS, PREPARING TO SEND NEW VERSION OF KEYS")
+				proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 
-				fmt.Printf(" *     methodREQKeysRequestUpdate: marshalling new keys and hash to send: map=%v, hash=%v\n\n", proc.centralAuth.pki.nodesAcked.keysAndHash.Keys, proc.centralAuth.pki.nodesAcked.keysAndHash.Hash)
+				er = fmt.Errorf("info: methodREQKeysRequestUpdate: marshalling new keys and hash to send: map=%v, hash=%v", proc.centralAuth.pki.nodesAcked.keysAndHash.Keys, proc.centralAuth.pki.nodesAcked.keysAndHash.Hash)
+				proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 
 				b, err := json.Marshal(proc.centralAuth.pki.nodesAcked.keysAndHash)
 
@@ -120,7 +123,8 @@ func (m methodREQKeysRequestUpdate) handler(proc process, message Message, node 
 					er := fmt.Errorf("error: methodREQKeysRequestUpdate, failed to marshal keys map: %v", err)
 					proc.errorKernel.errSend(proc, message, er)
 				}
-				fmt.Printf("\n ----> methodREQKeysRequestUpdate: SENDING KEYS TO NODE=%v\n", message.FromNode)
+				er = fmt.Errorf("----> methodREQKeysRequestUpdate: SENDING KEYS TO NODE=%v", message.FromNode)
+				proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 				newReplyMessage(proc, message, b)
 			}()
 		}
@@ -181,7 +185,8 @@ func (m methodREQKeysDeliverUpdate) handler(proc process, message Message, node 
 				proc.errorKernel.errSend(proc, message, er)
 			}
 
-			fmt.Printf("\n <---- REQKeysDeliverUpdate: after unmarshal, nodeAuth keysAndhash contains: %+v\n\n", keysAndHash)
+			er := fmt.Errorf("<---- REQKeysDeliverUpdate: after unmarshal, nodeAuth keysAndhash contains: %+v", keysAndHash)
+			proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 
 			// If the received map was empty we also want to delete all the locally stored keys,
 			// else we copy the marshaled keysAndHash we received from central into our map.
@@ -316,8 +321,9 @@ func (m methodREQKeysAllow) handler(proc process, message Message, node string) 
 // nodesAcked map since it will contain the nodes that were deleted so we are
 // also able to send an update to them as well.
 func pushKeys(proc process, message Message, nodes []Node) error {
-	fmt.Printf(" \n\n\n ************** beginning of pushKeys, nodes=%v\n", nodes)
+	er := fmt.Errorf("info: beginning of pushKeys, nodes=%v", nodes)
 	var knh []byte
+	proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 
 	err := func() error {
 		proc.centralAuth.pki.nodesAcked.mu.Lock()
@@ -343,7 +349,8 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 
 	// For all nodes that is not ack'ed we try to send an update once.
 	for n := range proc.centralAuth.pki.nodeNotAckedPublicKeys.KeyMap {
-		fmt.Printf("\n\n\n ************** DEBUG: node to send REQKeysDeliverUpdate to:%v\n ", n)
+		er := fmt.Errorf("info: node to send REQKeysDeliverUpdate to:%v ", n)
+		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 		msg := Message{
 			ToNode:      n,
 			Method:      REQKeysDeliverUpdate,
@@ -359,7 +366,8 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 
 		proc.toRingbufferCh <- []subjectAndMessage{sam}
 
-		fmt.Printf("\n ----> methodREQKeysAllow: SENDING KEYS TO NODE=%v\n", message.FromNode)
+		er = fmt.Errorf("----> methodREQKeysAllow: SENDING KEYS TO NODE=%v", message.FromNode)
+		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 	}
 
 	// Create the data payload of the current allowed keys.
@@ -386,7 +394,8 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 
 	// For all nodes that is ack'ed we try to send an update once.
 	for n := range nodeMap {
-		fmt.Printf("\n\n\n ************** DEBUG: node to send REQKeysDeliverUpdate to:%v\n ", n)
+		er := fmt.Errorf("info: node to send REQKeysDeliverUpdate to:%v ", n)
+		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 		msg := Message{
 			ToNode:      n,
 			Method:      REQKeysDeliverUpdate,
@@ -403,7 +412,8 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 
 		proc.toRingbufferCh <- []subjectAndMessage{sam}
 
-		log.Printf("\n ----> methodREQKeysAllow: sending keys update to node=%v\n", message.FromNode)
+		er = fmt.Errorf("----> methodREQKeysAllow: sending keys update to node=%v", message.FromNode)
+		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 	}
 
 	return nil
@@ -449,12 +459,14 @@ func (m methodREQKeysDelete) handler(proc process, message Message, node string)
 			//  of doing it for each node delete.
 
 			proc.centralAuth.deletePublicKeys(proc, message, message.MethodArgs)
-			log.Printf(" * DEBUG Deleted public keys: %v\n", message.MethodArgs)
+			er := fmt.Errorf("info: Deleted public keys: %v", message.MethodArgs)
+			proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 
 			// All new elements are now added, and we can create a new hash
 			// representing the current keys in the allowed map.
 			proc.centralAuth.updateHash(proc, message)
-			log.Printf(" * DEBUG updated hash for public keys\n")
+			er = fmt.Errorf(" * DEBUG updated hash for public keys")
+			proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 
 			var nodes []Node
 
