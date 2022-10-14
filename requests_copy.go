@@ -153,7 +153,6 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 		}
 
 		if len(message.MethodArgs) > 5 && message.MethodArgs[5] != "" {
-			fmt.Printf("\n\n\n Lenght was more than 5 for arguments\n\n")
 			// Check if file permissions were set, if not use default.
 			var err error
 			folderPermission, err = strconv.ParseUint(message.MethodArgs[5], 8, 32)
@@ -265,7 +264,7 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 
 		proc.toRingbufferCh <- []subjectAndMessage{sam}
 
-		replyData := fmt.Sprintf("info: succesfully initiated copy source process: procName=%v, srcNode=%v, srcPath=%v, dstNode=%v, dstPath=%v, starting sub process=%v for the actual copying\n", copySrcSubProc.processName, node, SrcFilePath, DstNode, DstFilePath, subProcessName)
+		replyData := fmt.Sprintf("info: succesfully initiated copy source process: procName=%v, srcNode=%v, srcPath=%v, dstNode=%v, dstPath=%v, starting sub process=%v for the actual copying", copySrcSubProc.processName, node, SrcFilePath, DstNode, DstFilePath, subProcessName)
 
 		newReplyMessage(proc, message, []byte(replyData))
 
@@ -338,7 +337,7 @@ func (m methodREQCopyDst) handler(proc process, message Message, node string) ([
 		go copyDstSubProc.spawnWorker()
 
 		fp := filepath.Join(cia.DstDir, cia.DstFile)
-		replyData := fmt.Sprintf("info: succesfully initiated copy source process: procName=%v, srcNode=%v, dstPath=%v, starting sub process=%v for the actual copying\n", copyDstSubProc.processName, node, fp, subProcessName)
+		replyData := fmt.Sprintf("info: succesfully initiated copy source process: procName=%v, srcNode=%v, dstPath=%v, starting sub process=%v for the actual copying", copyDstSubProc.processName, node, fp, subProcessName)
 
 		newReplyMessage(proc, message, []byte(replyData))
 
