@@ -332,7 +332,7 @@ func (s *server) directSAMSChRead() {
 				log.Printf("info: stopped the directSAMSCh reader\n\n")
 				return
 			case sams := <-s.directSAMSCh:
-				fmt.Printf(" * DEBUG: directSAMSChRead: <- sams = %v\n", sams)
+				// fmt.Printf(" * DEBUG: directSAMSChRead: <- sams = %v\n", sams)
 				// Range over all the sams, find the process, check if the method exists, and
 				// handle the message by starting the correct method handler.
 				for i := range sams {
