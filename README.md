@@ -19,6 +19,7 @@ As long as you can do something as an operator on in a shell on a system you can
   - [What is it ?](#what-is-it-)
   - [Disclaimer](#disclaimer)
   - [Overview](#overview)
+    - [Example of message flow](#example-of-message-flow)
   - [Inspiration](#inspiration)
   - [Why](#why)
   - [Publishing and Subscribing processes](#publishing-and-subscribing-processes)
@@ -162,6 +163,10 @@ Steward uses **NATS** as message passing architecture for the commands back and 
 A node can be a server running any host operating system, a container living in the cloud somewhere, a Rapsberry Pi, or something else that needs to be controlled that have an operating system installed.
 
 Steward can be compiled to run on all major architectures like **x86**, **amd64**,**arm64**, **ppc64** and more, with for example operating systems like **Linux**, **OSX**, **Windows**.
+
+### Example of message flow
+
+![message flow](doc/message-flow.svg)
 
 ## Inspiration
 
