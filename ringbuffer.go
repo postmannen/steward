@@ -390,7 +390,7 @@ func (r *ringBuffer) dumpBucket(bucket string) ([]samDBValue, error) {
 		}
 
 		// TODO:
-		// BoltDB do not automatically shring in filesize. We should delete the db, and create a new one to shrink the size.
+		// BoltDB do not automatically shrink in filesize. We should delete the db, and create a new one to shrink the size.
 
 		// Sort the order of the slice items based on ID, since they where retreived from a map.
 		sort.SliceStable(samDBValues, func(i, j int) bool {
@@ -506,7 +506,7 @@ func (r *ringBuffer) dbView(db *bolt.DB, bucket string, key string) ([]byte, err
 
 }
 
-//dbUpdate will update the specified bucket with a key and value.
+// dbUpdate will update the specified bucket with a key and value.
 func (r *ringBuffer) dbUpdate(db *bolt.DB, bucket string, key string, value []byte) error {
 	err := db.Update(func(tx *bolt.Tx) error {
 		//Create a bucket
