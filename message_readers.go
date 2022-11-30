@@ -78,9 +78,15 @@ func (s *server) readStartupFolder() {
 
 		// Check if fromNode field is specified, and remove the message if blank.
 		for i := range sams {
-			if sams[i].Message.FromNode == "" {
+			switch {
+			case sams[i].Message.FromNode == "":
 				sams = append(sams[:i], sams[i+1:]...)
-				er := fmt.Errorf(" error: missing fromNode field in startup message, discaring message")
+				er := fmt.Errorf(" error: missing value in fromNode field in startup message, discarding message")
+				s.errorKernel.errSend(s.processInitial, Message{}, er)
+
+			case sams[i].Message.ToNode == "" && len(sams[i].Message.ToNodes) == 0:
+				sams = append(sams[:i], sams[i+1:]...)
+				er := fmt.Errorf(" error: missing value in both toNode and toNodes fields in startup message, discarding message")
 				s.errorKernel.errSend(s.processInitial, Message{}, er)
 			}
 
