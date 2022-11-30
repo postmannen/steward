@@ -180,7 +180,9 @@ func (p process) spawnWorker() {
 	// processName := processNameGet(p.subject.name(), p.processKind)
 
 	// Add prometheus metrics for the process.
-	p.metrics.promProcessesAllRunning.With(prometheus.Labels{"processName": string(p.processName)})
+	if !p.isSubProcess {
+		p.metrics.promProcessesAllRunning.With(prometheus.Labels{"processName": string(p.processName)})
+	}
 
 	// Start a publisher worker, which will start a go routine (process)
 	// That will take care of all the messages for the subject it owns.
