@@ -503,7 +503,11 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 							ReplyMethod:       REQNone,
 							Data:              csaSerialized,
 							IsSubPublishedMsg: true,
+							ACKTimeout:        initialMessage.ACKTimeout,
+							Retries:           initialMessage.Retries,
 						}
+
+						fmt.Printf(" * DEBUG: ACKTimeout:%v, Retries: %v\n", initialMessage.ACKTimeout, initialMessage.Retries)
 
 						sam, err := newSubjectAndMessage(msg)
 						if err != nil {
@@ -569,6 +573,8 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 						ReplyMethod:       REQNone,
 						Data:              csaSerialized,
 						IsSubPublishedMsg: true,
+						ACKTimeout:        initialMessage.ACKTimeout,
+						Retries:           initialMessage.Retries,
 					}
 
 					sam, err := newSubjectAndMessage(msg)
@@ -628,6 +634,8 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 				ReplyMethod:       REQNone,
 				Data:              csaSerialized,
 				IsSubPublishedMsg: true,
+				ACKTimeout:        message.ACKTimeout,
+				Retries:           message.Retries,
 			}
 
 			sam, err := newSubjectAndMessage(msg)
@@ -718,6 +726,8 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						ReplyMethod:       REQNone,
 						Data:              csaSer,
 						IsSubPublishedMsg: true,
+						ACKTimeout:        message.ACKTimeout,
+						Retries:           message.Retries,
 					}
 
 					sam, err := newSubjectAndMessage(msg)
@@ -747,6 +757,8 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						ReplyMethod:       REQNone,
 						Data:              csaSer,
 						IsSubPublishedMsg: true,
+						ACKTimeout:        message.ACKTimeout,
+						Retries:           message.Retries,
 					}
 
 					sam, err := newSubjectAndMessage(msg)
@@ -899,6 +911,8 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 								ReplyMethod:       REQNone,
 								Data:              csaSerialized,
 								IsSubPublishedMsg: true,
+								ACKTimeout:        message.ACKTimeout,
+								Retries:           message.Retries,
 							}
 
 							sam, err := newSubjectAndMessage(msg)
