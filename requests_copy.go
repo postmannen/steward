@@ -657,6 +657,14 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 			return er
 		}
 
+		defer func() {
+			err = os.RemoveAll(tmpFolder)
+			if err != nil {
+				er := fmt.Errorf("error: copyDstSubProcFunc: remove temp dir failed: %v", err)
+				proc.errorKernel.errSend(proc, message, er)
+			}
+		}()
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -878,13 +886,11 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 							proc.errorKernel.errSend(proc, message, er)
 						}
 
-						// Remove the backup file, and tmp folder.
-						os.Remove(backupOriginalFileName)
-						err = os.RemoveAll(tmpFolder)
+						// Remove the backup file.
+						err = os.Remove(backupOriginalFileName)
 						if err != nil {
-							er := fmt.Errorf("error: copyDstSubProcFunc: remove temp dir failed: %v", err)
+							er := fmt.Errorf("error: copyDstSubProcFunc: remove of backup of original file failed: %v", err)
 							proc.errorKernel.errSend(proc, message, er)
-							return er
 						}
 
 						er = fmt.Errorf("info: copy: successfully wrote all split chunk files into file=%v", filePath)
