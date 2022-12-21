@@ -286,6 +286,9 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 			Header: natsMsgHeader,
 		}
 
+		er := fmt.Errorf("info: preparing to send nats message with subject %v ", msg.Subject)
+		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+
 		// If it is a NACK message we just deliver the message and return
 		// here so we don't create a ACK message and then stop waiting for it.
 		if p.subject.Event == EventNACK {
@@ -296,6 +299,9 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				return
 			}
 			p.metrics.promNatsDeliveredTotal.Inc()
+
+			er := fmt.Errorf("info: sent nats message with subject %v ", msg.Subject)
+			p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 			//err = natsConn.Flush()
 			//if err != nil {
@@ -429,6 +435,9 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 
 		// Message were delivered successfully.
 		p.metrics.promNatsDeliveredTotal.Inc()
+
+		er = fmt.Errorf("info: sent nats message with subject %v ", msg.Subject)
+		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 		return
 	}
