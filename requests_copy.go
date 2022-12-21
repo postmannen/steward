@@ -380,7 +380,7 @@ func copySrcSubHandler(cia copyInitialData) func(process, Message, string) ([]by
 			er := fmt.Errorf(" * copySrcHandler ended: %v", proc.processName)
 			proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 		case proc.procFuncCh <- message:
-			er := fmt.Errorf(" * copySrcHandler passing message over to procFunc: %v", proc.processName)
+			er := fmt.Errorf("copySrcHandler: passing message over to procFunc: %v", proc.processName)
 			proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 		}
 
@@ -398,7 +398,7 @@ func copyDstSubHandler(cia copyInitialData) func(process, Message, string) ([]by
 			er := fmt.Errorf(" * copyDstHandler ended: %v", proc.processName)
 			proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 		case proc.procFuncCh <- message:
-			er := fmt.Errorf(" * copySrcHandler passing message over to procFunc: %v", proc.processName)
+			er := fmt.Errorf("copyDstHandler: passing message over to procFunc: %v", proc.processName)
 			proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 		}
 
