@@ -252,6 +252,10 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 		//msg.Method = REQToFile
 		msg.Method = REQCopyDst
 		msg.Data = cb
+		msg.ACKTimeout = message.ACKTimeout
+		msg.Retries = message.Retries
+		msg.ReplyACKTimeout = message.ReplyACKTimeout
+		msg.ReplyRetries = message.ReplyRetries
 		// msg.Directory = dstDir
 		// msg.FileName = dstFile
 
@@ -380,7 +384,7 @@ func copySrcSubHandler(cia copyInitialData) func(process, Message, string) ([]by
 			er := fmt.Errorf(" * copySrcHandler ended: %v", proc.processName)
 			proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 		case proc.procFuncCh <- message:
-			er := fmt.Errorf(" * copySrcHandler passing message over to procFunc: %v", proc.processName)
+			er := fmt.Errorf("copySrcHandler: passing message over to procFunc: %v", proc.processName)
 			proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 		}
 
@@ -398,7 +402,7 @@ func copyDstSubHandler(cia copyInitialData) func(process, Message, string) ([]by
 			er := fmt.Errorf(" * copyDstHandler ended: %v", proc.processName)
 			proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 		case proc.procFuncCh <- message:
-			er := fmt.Errorf(" * copySrcHandler passing message over to procFunc: %v", proc.processName)
+			er := fmt.Errorf("copyDstHandler: passing message over to procFunc: %v", proc.processName)
 			proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 		}
 
@@ -527,6 +531,8 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 							IsSubPublishedMsg: true,
 							ACKTimeout:        initialMessage.ACKTimeout,
 							Retries:           initialMessage.Retries,
+							ReplyACKTimeout:   initialMessage.ReplyACKTimeout,
+							ReplyRetries:      initialMessage.ReplyRetries,
 						}
 
 						fmt.Printf(" * DEBUG: ACKTimeout:%v, Retries: %v\n", initialMessage.ACKTimeout, initialMessage.Retries)
@@ -597,6 +603,8 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 						IsSubPublishedMsg: true,
 						ACKTimeout:        initialMessage.ACKTimeout,
 						Retries:           initialMessage.Retries,
+						ReplyACKTimeout:   initialMessage.ReplyACKTimeout,
+						ReplyRetries:      initialMessage.ReplyRetries,
 					}
 
 					sam, err := newSubjectAndMessage(msg)
@@ -658,6 +666,8 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 				IsSubPublishedMsg: true,
 				ACKTimeout:        message.ACKTimeout,
 				Retries:           message.Retries,
+				ReplyACKTimeout:   message.ReplyACKTimeout,
+				ReplyRetries:      message.ReplyRetries,
 			}
 
 			sam, err := newSubjectAndMessage(msg)
@@ -758,6 +768,8 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						IsSubPublishedMsg: true,
 						ACKTimeout:        message.ACKTimeout,
 						Retries:           message.Retries,
+						ReplyACKTimeout:   message.ReplyACKTimeout,
+						ReplyRetries:      message.ReplyRetries,
 					}
 
 					sam, err := newSubjectAndMessage(msg)
@@ -789,6 +801,8 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 						IsSubPublishedMsg: true,
 						ACKTimeout:        message.ACKTimeout,
 						Retries:           message.Retries,
+						ReplyACKTimeout:   message.ReplyACKTimeout,
+						ReplyRetries:      message.ReplyRetries,
 					}
 
 					sam, err := newSubjectAndMessage(msg)
@@ -941,6 +955,8 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 								IsSubPublishedMsg: true,
 								ACKTimeout:        message.ACKTimeout,
 								Retries:           message.Retries,
+								ReplyACKTimeout:   message.ReplyACKTimeout,
+								ReplyRetries:      message.ReplyRetries,
 							}
 
 							sam, err := newSubjectAndMessage(msg)

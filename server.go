@@ -128,6 +128,15 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 	var stewardSocket net.Listener
 	var err error
 
+	// Check if tmp folder for socket exists, if not create it
+	if _, err := os.Stat(configuration.SocketFolder); os.IsNotExist(err) {
+		err := os.MkdirAll(configuration.SocketFolder, 0700)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("error: failed to create socket folder directory %v: %v", configuration.SocketFolder, err)
+		}
+	}
+
 	// Open the steward socket file, and start the listener if enabled.
 	if configuration.EnableSocket {
 		stewardSocket, err = createSocket(configuration.SocketFolder, "steward.sock")
@@ -211,13 +220,6 @@ func newHelloRegister() *helloRegister {
 // create socket will create a socket file, and return the net.Listener to
 // communicate with that socket.
 func createSocket(socketFolder string, socketFileName string) (net.Listener, error) {
-	// Check if socket folder exists, if not create it
-	if _, err := os.Stat(socketFolder); os.IsNotExist(err) {
-		err := os.MkdirAll(socketFolder, 0700)
-		if err != nil {
-			return nil, fmt.Errorf("error: failed to create socket folder directory %v: %v", socketFolder, err)
-		}
-	}
 
 	// Just as an extra check we eventually delete any existing Steward socket files if found.
 	socketFilepath := filepath.Join(socketFolder, socketFileName)
