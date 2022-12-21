@@ -106,12 +106,13 @@ func (m methodREQKeysRequestUpdate) handler(proc process, message Message, node 
 
 				// Check if the received hash is the same as the one currently active,
 				if bytes.Equal(proc.centralAuth.pki.nodesAcked.keysAndHash.Hash[:], message.Data) {
-					er := fmt.Errorf("info: methodREQKeysRequestUpdate:  NODE AND CENTRAL HAVE EQUAL KEYS, NOTHING TO DO, EXITING HANDLER")
-					proc.errorKernel.infoSend(proc, message, er)
+					er := fmt.Errorf("info: methodREQKeysRequestUpdate:  node %v and central have equal keys, nothing to do, exiting key update handler", message.FromNode)
+					// proc.errorKernel.infoSend(proc, message, er)
+					proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 					return
 				}
 
-				er = fmt.Errorf("info: methodREQKeysRequestUpdate: NODE AND CENTRAL HAD NOT EQUAL KEYS, PREPARING TO SEND NEW VERSION OF KEYS")
+				er = fmt.Errorf("info: methodREQKeysRequestUpdate: node %v and central had not equal keys, preparing to send new version of keys", message.FromNode)
 				proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 
 				er = fmt.Errorf("info: methodREQKeysRequestUpdate: marshalling new keys and hash to send: map=%v, hash=%v", proc.centralAuth.pki.nodesAcked.keysAndHash.Keys, proc.centralAuth.pki.nodesAcked.keysAndHash.Hash)
