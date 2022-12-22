@@ -130,7 +130,6 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	// so we check if the values are the same as the one we already got before we continue
 	// with registering and logging for the the new key.
 	if ok && bytes.Equal(existingNotAckedKey, msg.Data) {
-		fmt.Printf(" * \nkey value for NOT-REGISTERED node %v is the same, doing nothing\n\n", msg.FromNode)
 		c.pki.nodeNotAckedPublicKeys.mu.Unlock()
 		return
 	}
