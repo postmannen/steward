@@ -681,6 +681,8 @@ func executeHandler(p process, message Message, thisNode string) {
 		// Create two tickers to use for the scheduling.
 		intervalTicker := time.NewTicker(time.Second * time.Duration(interval))
 		totalTimeTicker := time.NewTicker(time.Second * time.Duration(totalTime))
+		defer intervalTicker.Stop()
+		defer totalTimeTicker.Stop()
 
 		// NB: Commented out this assignement of a specific message context
 		// to be used within handlers, since it will override the structure
@@ -827,6 +829,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 	// the process, so the sub process publisher will not be removed until
 	// it have not received any messages for the given amount of time.
 	ticker := time.NewTicker(time.Second * time.Duration(p.configuration.KeepPublishersAliveFor))
+	defer ticker.Stop()
 
 	for {
 

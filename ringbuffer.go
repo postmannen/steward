@@ -123,6 +123,7 @@ func (r *ringBuffer) start(ctx context.Context, inCh chan subjectAndMessage, out
 
 	go func() {
 		ticker := time.NewTicker(time.Second * 5)
+		defer ticker.Stop()
 
 		for {
 			select {
