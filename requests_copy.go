@@ -327,9 +327,6 @@ func (m methodREQCopyDst) handler(proc process, message Message, node string) ([
 		// Create a subject for one copy request
 		sub := newSubjectNoVerifyHandler(cia.DstMethod, node)
 
-		// Create a new sub process that will do the actual file copying.
-		copyDstSubProc := newSubProcess(ctx, proc.server, sub, processKindSubscriber, nil)
-
 		// Check if we already got a sub process registered and started with
 		// the processName. If true, return here and don't start up another
 		// process for that file.
@@ -343,14 +340,25 @@ func (m methodREQCopyDst) handler(proc process, message Message, node string) ([
 		// previous message is then fully up and running, so we just discard
 		// that second message in those cases.
 
+		pn := processNameGet(sub.name(), processKindSubscriber)
+		// fmt.Printf("\n\n *** DEBUG: processNameGet: %v\n\n", pn)
+
 		proc.processes.active.mu.Lock()
-		_, ok := proc.processes.active.procNames[copyDstSubProc.processName]
+		_, ok := proc.processes.active.procNames[pn]
 		proc.processes.active.mu.Unlock()
 
 		if ok {
-			log.Printf(" * * * DEBUG: subprocesses already existed, will not start another subscriber for %v\n", copyDstSubProc.processName)
+			log.Printf(" * * * DEBUG: subprocesses already existed, will not start another subscriber for %v\n", pn)
+
+			// HERE!!!
+			// If the process name already existed we return here before any
+			// new information is registered in the process map and we avoid
+			// having to clean that up later.
 			return
 		}
+
+		// Create a new sub process that will do the actual file copying.
+		copyDstSubProc := newSubProcess(ctx, proc.server, sub, processKindSubscriber, nil)
 
 		// Give the sub process a procFunc so we do the actual copying within a procFunc,
 		// and not directly within the handler.
