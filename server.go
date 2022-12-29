@@ -443,70 +443,72 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 
 	go func() {
 		for samDBVal := range ringBufferOutCh {
-			// Signal back to the ringbuffer that message have been picked up.
-			samDBVal.delivered()
+			go func(samDBVal samDBValueAndDelivered) {
+				// Signal back to the ringbuffer that message have been picked up.
+				samDBVal.delivered()
 
-			sam := samDBVal.samDBValue.Data
-			// Check if the format of the message is correct.
-			if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
-				er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
-				s.errorKernel.errSend(s.processInitial, sam.Message, er)
-				continue
-			}
-			if !eventAvailable.CheckIfExists(sam.Subject.Event, sam.Subject) {
-				er := fmt.Errorf("error: routeMessagesToProcess: the event type do not exist, message dropped: %v", sam.Message.Method)
-				s.errorKernel.errSend(s.processInitial, sam.Message, er)
-
-				continue
-			}
-
-			for {
-				// Looping here so we are able to redo the sending
-				// of the last message if a process for the specified subject
-				// is not present. The process will then be created, and
-				// the code will loop back here.
-
-				m := sam.Message
-
-				subjName := sam.Subject.name()
-				pn := processNameGet(subjName, processKindPublisher)
-
-				// Check if there is a map of type map[int]process registered
-				// for the processName, and if it exists then return it.
-				s.processes.active.mu.Lock()
-				proc, ok := s.processes.active.procNames[pn]
-				s.processes.active.mu.Unlock()
-
-				// If found a map above, range it, and are there already a process
-				// for that subject, put the message on that processes incomming
-				// message channel.
-				if ok {
-					// We have found the process to route the message to, deliver it.
-					proc.subject.messageCh <- m
-
-					break
-				} else {
-					// If a publisher process do not exist for the given subject, create it.
-					// log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
-
-					sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
-					var proc process
-					switch {
-					case m.IsSubPublishedMsg:
-						proc = newSubProcess(s.ctx, s, sub, processKindPublisher, nil)
-					default:
-						proc = newProcess(s.ctx, s, sub, processKindPublisher, nil)
-					}
-
-					proc.spawnWorker()
-					er := fmt.Errorf("info: processNewMessages: new process started, subject: %v, processID: %v", subjName, proc.processID)
-					s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
-
-					// Now when the process is spawned we continue,
-					// and send the message to that new process.
-					continue
+				sam := samDBVal.samDBValue.Data
+				// Check if the format of the message is correct.
+				if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
+					er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
+					s.errorKernel.errSend(s.processInitial, sam.Message, er)
+					return
 				}
-			}
+				if !eventAvailable.CheckIfExists(sam.Subject.Event, sam.Subject) {
+					er := fmt.Errorf("error: routeMessagesToProcess: the event type do not exist, message dropped: %v", sam.Message.Method)
+					s.errorKernel.errSend(s.processInitial, sam.Message, er)
+
+					return
+				}
+
+				for {
+					// Looping here so we are able to redo the sending
+					// of the last message if a process for the specified subject
+					// is not present. The process will then be created, and
+					// the code will loop back here.
+
+					m := sam.Message
+
+					subjName := sam.Subject.name()
+					pn := processNameGet(subjName, processKindPublisher)
+
+					// Check if there is a map of type map[int]process registered
+					// for the processName, and if it exists then return it.
+					s.processes.active.mu.Lock()
+					proc, ok := s.processes.active.procNames[pn]
+					s.processes.active.mu.Unlock()
+
+					// If found a map above, range it, and are there already a process
+					// for that subject, put the message on that processes incomming
+					// message channel.
+					if ok {
+						// We have found the process to route the message to, deliver it.
+						proc.subject.messageCh <- m
+
+						break
+					} else {
+						// If a publisher process do not exist for the given subject, create it.
+						// log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
+
+						sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
+						var proc process
+						switch {
+						case m.IsSubPublishedMsg:
+							proc = newSubProcess(s.ctx, s, sub, processKindPublisher, nil)
+						default:
+							proc = newProcess(s.ctx, s, sub, processKindPublisher, nil)
+						}
+
+						proc.spawnWorker()
+						er := fmt.Errorf("info: processNewMessages: new process started, subject: %v, processID: %v", subjName, proc.processID)
+						s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+
+						// Now when the process is spawned we continue,
+						// and send the message to that new process.
+						continue
+					}
+				}
+			}(samDBVal)
 		}
 	}()
 }
