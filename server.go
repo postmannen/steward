@@ -447,7 +447,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 				// Signal back to the ringbuffer that message have been picked up.
 				samDBVal.delivered()
 
-				sam := samDBVal.samDBValue.Data
+				sam := samDBVal.samDBValue.SAM
 				// Check if the format of the message is correct.
 				if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
 					er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
