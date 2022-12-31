@@ -256,6 +256,7 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 		select {
 		case v := <-r.bufData:
 			r.metrics.promInMemoryBufferMessagesCurrent.Set(float64(len(r.bufData)))
+			v.Data.ID = v.ID
 
 			// Create a done channel per message. A process started by the
 			// spawnProcess function will handle incomming messages sequentaly.
