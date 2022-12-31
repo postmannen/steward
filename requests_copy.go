@@ -543,8 +543,6 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 							ReplyRetries:      initialMessage.ReplyRetries,
 						}
 
-						fmt.Printf(" * DEBUG: ACKTimeout:%v, Retries: %v\n", initialMessage.ACKTimeout, initialMessage.Retries)
-
 						sam, err := newSubjectAndMessage(msg)
 						if err != nil {
 							er := fmt.Errorf("copySrcProcSubFunc: newSubjectAndMessage failed: %v", err)
