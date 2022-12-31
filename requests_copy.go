@@ -932,7 +932,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 
 						// Remove the backup file.
 						err = os.Remove(backupOriginalFileName)
-						if err != nil {
+						if err != nil && !os.IsNotExist(err) {
 							er := fmt.Errorf("error: copyDstSubProcFunc: remove of backup of original file failed: %v", err)
 							proc.errorKernel.errSend(proc, message, er)
 						}
