@@ -322,13 +322,13 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 				// we don't get stuck go routines here.
 				//
 				// TODO: Figure out why what the reason for not receceving the done signals might be.
-				select {
-				case <-v.SAM.done:
-				case <-ticker.C:
-					log.Printf("----------------------------------------------\n")
-					log.Printf("Error: ringBuffer message id: %v, subject: %v seems to be stuck, did not receive done signal from publishAMessage process, exited on ticker\n", v.SAM.ID, v.SAM.Subject)
-					log.Printf("----------------------------------------------\n")
-				}
+				// select {
+				// case <-v.SAM.done:
+				// case <-ticker.C:
+				// 	log.Printf("----------------------------------------------\n")
+				// 	log.Printf("Error: ringBuffer message id: %v, subject: %v seems to be stuck, did not receive done signal from publishAMessage process, exited on ticker\n", v.SAM.ID, v.SAM.Subject)
+				// 	log.Printf("----------------------------------------------\n")
+				// }
 				// log.Printf("info: processBufferMessages: done with message, deleting key from bucket, %v\n", v.ID)
 				r.metrics.promMessagesProcessedIDLast.Set(float64(v.ID))
 

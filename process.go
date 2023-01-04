@@ -976,13 +976,13 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 	// sending of the message.
 	p.messageDeliverNats(natsMsgPayloadCompressed, natsMsgHeader, natsConn, m)
 
-	select {
-	case m.done <- struct{}{}:
-		// Signaling back to the ringbuffer that we are done with the
-		// current message, and it can remove it from the ringbuffer.
-	case <-p.ctx.Done():
-		return
-	}
+	// select {
+	// case m.done <- struct{}{}:
+	// 	// Signaling back to the ringbuffer that we are done with the
+	// 	// current message, and it can remove it from the ringbuffer.
+	// case <-p.ctx.Done():
+	// 	return
+	// }
 
 	// Increment the counter for the next message to be sent.
 	p.messageID++

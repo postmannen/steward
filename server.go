@@ -461,18 +461,11 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 					return
 				}
 
-				// Looping here so we are able to redo the sending
-				// of the last message if a process for the specified subject
-				// is not present. The process will then be created, and
-				// the code will loop back here.
-
 				m := sam.Message
 
 				subjName := sam.Subject.name()
 				pn := processNameGet(subjName, processKindPublisher)
 
-				// Check if there is a map of type map[int]process registered
-				// for the processName, and if it exists then return it.
 				sendOK := func() bool {
 					var ctxCanceled bool
 

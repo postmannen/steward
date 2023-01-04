@@ -434,9 +434,10 @@ func newSubjectAndMessage(m Message) (subjectAndMessage, error) {
 	}
 
 	sub := Subject{
-		ToNode: string(m.ToNode),
-		Event:  tmpH.getKind(),
-		Method: m.Method,
+		ToNode:    string(m.ToNode),
+		Event:     tmpH.getKind(),
+		Method:    m.Method,
+		messageCh: make(chan Message),
 	}
 
 	sam := subjectAndMessage{
