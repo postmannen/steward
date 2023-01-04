@@ -305,9 +305,6 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				}
 				p.metrics.promNatsDeliveredTotal.Inc()
 
-				er := fmt.Errorf("info: sent nats message with subject %v, id: %v", msg.Subject, message.ID)
-				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
-
 				//err = natsConn.Flush()
 				//if err != nil {
 				//	er := fmt.Errorf("error: nats publish flush failed: %v", err)
