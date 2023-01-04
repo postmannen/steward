@@ -23,6 +23,9 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 	inf := fmt.Errorf("<--- CLICommandREQUEST received from: %v, containing: %v", message.FromNode, message.MethodArgs)
 	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
 
+	msgForErrors := message
+	msgForErrors.FileName = msgForErrors.FileName + ".error"
+
 	// Execute the CLI command in it's own go routine, so we are able
 	// to return immediately with an ack reply that the messag was
 	// received, and we create a new message to send back to the calling
@@ -37,6 +40,7 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodREQCliCommand: got <1 number methodArgs")
 			proc.errorKernel.errSend(proc, message, er)
+			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 
 			return
 		case len(message.MethodArgs) >= 0:
@@ -87,6 +91,7 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 			if err != nil {
 				er := fmt.Errorf("error: methodREQCliCommand: cmd.Run failed : %v, methodArgs: %v, error_output: %v", err, message.MethodArgs, stderr.String())
 				proc.errorKernel.errSend(proc, message, er)
+				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
 
 			select {
@@ -101,6 +106,7 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 			cancel()
 			er := fmt.Errorf("error: methodREQCliCommand: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er)
+			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 		case out := <-outCh:
 			cancel()
 
@@ -142,6 +148,9 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 	inf := fmt.Errorf("<--- CLInCommandCont REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
 	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
 
+	msgForErrors := message
+	msgForErrors.FileName = msgForErrors.FileName + ".error"
+
 	// Execute the CLI command in it's own go routine, so we are able
 	// to return immediately with an ack reply that the message was
 	// received, and we create a new message to send back to the calling
@@ -160,6 +169,7 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodREQCliCommand: got <1 number methodArgs")
 			proc.errorKernel.errSend(proc, message, er)
+			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 
 			return
 		case len(message.MethodArgs) >= 0:
@@ -188,17 +198,20 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 			if err != nil {
 				er := fmt.Errorf("error: methodREQCliCommandCont: cmd.StdoutPipe failed : %v, methodArgs: %v", err, message.MethodArgs)
 				proc.errorKernel.errSend(proc, message, er)
+				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
 
 			ErrorReader, err := cmd.StderrPipe()
 			if err != nil {
 				er := fmt.Errorf("error: methodREQCliCommandCont: cmd.StderrPipe failed : %v, methodArgs: %v", err, message.MethodArgs)
 				proc.errorKernel.errSend(proc, message, er)
+				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
 
 			if err := cmd.Start(); err != nil {
 				er := fmt.Errorf("error: methodREQCliCommandCont: cmd.Start failed : %v, methodArgs: %v", err, message.MethodArgs)
 				proc.errorKernel.errSend(proc, message, er)
+				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
 
 			go func() {
@@ -240,6 +253,7 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 				cancel()
 				er := fmt.Errorf("info: methodREQCliCommandCont: method timeout reached, canceling: methodArgs: %v", message.MethodArgs)
 				proc.errorKernel.infoSend(proc, message, er)
+				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 				return
 			case out := <-outCh:
 				// fmt.Printf(" * out: %v\n", string(out))
