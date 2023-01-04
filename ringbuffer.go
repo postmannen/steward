@@ -175,10 +175,10 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 	// the go routine who reads the socket.
 	for {
 		select {
-		case v := <-inCh:
+		case sam := <-inCh:
 			// Check if the event exists.
-			if !eventAvailable.CheckIfExists(v.Event, v.Subject) {
-				er := fmt.Errorf("error: fillBuffer: the event type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v, where given: event=%v, with subject=%v", eventAvailableValues, v.Event, v.Subject)
+			if !eventAvailable.CheckIfExists(sam.Event, sam.Subject) {
+				er := fmt.Errorf("error: fillBuffer: the event type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v, where given: event=%v, with subject=%v", eventAvailableValues, sam.Event, sam.Subject)
 				r.errorKernel.errSend(r.processInitial, Message{}, er)
 
 				// if it was not a valid value, we jump back up, and
@@ -188,14 +188,14 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 
 			// Check if default message values for timers are set, and if
 			// not then set default message values.
-			if v.Message.ACKTimeout < 1 {
-				v.Message.ACKTimeout = r.configuration.DefaultMessageTimeout
+			if sam.Message.ACKTimeout < 1 {
+				sam.Message.ACKTimeout = r.configuration.DefaultMessageTimeout
 			}
-			if v.Message.Retries < 1 {
-				v.Message.Retries = r.configuration.DefaultMessageRetries
+			if sam.Message.Retries < 1 {
+				sam.Message.Retries = r.configuration.DefaultMessageRetries
 			}
-			if v.Message.MethodTimeout < 1 && v.Message.MethodTimeout != -1 {
-				v.Message.MethodTimeout = r.configuration.DefaultMethodTimeout
+			if sam.Message.MethodTimeout < 1 && sam.Message.MethodTimeout != -1 {
+				sam.Message.MethodTimeout = r.configuration.DefaultMethodTimeout
 			}
 
 			// --- Store the incomming message in the k/v store ---
@@ -209,7 +209,7 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 			// Create a structure for JSON marshaling.
 			samV := samDBValue{
 				ID:  dbID,
-				SAM: v,
+				SAM: sam,
 			}
 
 			if r.configuration.RingBufferPersistStore {
