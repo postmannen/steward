@@ -435,9 +435,6 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 	// send if there are a specific subject for it, and if no subject
 	// exist throw an error.
 
-	var event Event
-	eventAvailable := event.CheckEventAvailable()
-
 	var method Method
 	methodsAvailable := method.GetMethodsAvailable()
 
@@ -452,12 +449,6 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 				if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
 					er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
 					s.errorKernel.errSend(s.processInitial, sam.Message, er)
-					return
-				}
-				if !eventAvailable.CheckIfExists(sam.Subject.Event, sam.Subject) {
-					er := fmt.Errorf("error: routeMessagesToProcess: the event type do not exist, message dropped: %v", sam.Message.Method)
-					s.errorKernel.errSend(s.processInitial, sam.Message, er)
-
 					return
 				}
 

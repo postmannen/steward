@@ -300,7 +300,7 @@ func (s startup) pubREQHello(p process) {
 				FromNode:   Node(p.node),
 				Data:       []byte(d),
 				Method:     REQHello,
-				ACKTimeout: 10,
+				ACKTimeout: proc.configuration.DefaultMessageTimeout,
 				Retries:    1,
 			}
 

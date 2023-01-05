@@ -71,18 +71,20 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- []subjectAndMessage) error
 
 			er := fmt.Sprintf("%v, node: %v, %v\n", time.Now().Format("Mon Jan _2 15:04:05 2006"), errEvent.process.node, errEvent.err)
 
+			m := Message{
+				Directory:  "errorLog",
+				ToNode:     "errorCentral",
+				FromNode:   errEvent.process.node,
+				FileName:   "error.log",
+				Data:       []byte(er),
+				Method:     REQErrorLog,
+				ACKTimeout: errEvent.process.configuration.ErrorMessageTimeout,
+				Retries:    errEvent.process.configuration.ErrorMessageRetries,
+			}
+
 			sam := subjectAndMessage{
 				Subject: newSubject(REQErrorLog, "errorCentral"),
-				Message: Message{
-					Directory:  "errorLog",
-					ToNode:     "errorCentral",
-					FromNode:   errEvent.process.node,
-					FileName:   "error.log",
-					Data:       []byte(er),
-					Method:     REQErrorLog,
-					ACKTimeout: errEvent.process.configuration.ErrorMessageTimeout,
-					Retries:    errEvent.process.configuration.ErrorMessageRetries,
-				},
+				Message: m,
 			}
 
 			// Put the message on the channel to the ringbuffer.

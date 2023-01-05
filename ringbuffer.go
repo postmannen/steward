@@ -162,35 +162,22 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 		}()
 	}
 
-	// Prepare the map structure to know what values are allowed
-	// for the events
-	var event Event
-	eventAvailable := event.CheckEventAvailable()
-	eventAvailableValues := []Event{}
-	for v := range eventAvailable.topics {
-		eventAvailableValues = append(eventAvailableValues, v)
-	}
-
 	// Check for incomming messages. These are typically comming from
 	// the go routine who reads the socket.
 	for {
 		select {
 		case sam := <-inCh:
-			// Check if the event exists.
-			if !eventAvailable.CheckIfExists(sam.Event, sam.Subject) {
-				er := fmt.Errorf("error: fillBuffer: the event type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v, where given: event=%v, with subject=%v", eventAvailableValues, sam.Event, sam.Subject)
-				r.errorKernel.errSend(r.processInitial, Message{}, er)
-
-				// if it was not a valid value, we jump back up, and
-				// continue the range iteration.
-				continue
-			}
 
 			// Check if default message values for timers are set, and if
 			// not then set default message values.
 			if sam.Message.ACKTimeout < 1 {
-				sam.Message.ACKTimeout = r.configuration.DefaultMessageTimeout
+				sam.Subject.Event = EventNACK
 			}
+			if sam.Message.ACKTimeout >= 1 {
+				sam.Subject.Event = EventNACK
+			}
+
+			// TODO: Make so 0 is an usable option for retries.
 			if sam.Message.Retries < 1 {
 				sam.Message.Retries = r.configuration.DefaultMessageRetries
 			}
@@ -258,11 +245,11 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 			r.metrics.promInMemoryBufferMessagesCurrent.Set(float64(len(r.bufData)))
 			samDBv.SAM.ID = samDBv.ID
 
-			// Create a done channel per message. A process started by the
-			// spawnProcess function will handle incomming messages sequentaly.
-			// So in the spawnProcess function we put a struct{} value when a
-			// message is processed on the "done" channel and an ack is received
-			// for a message, and we wait here for the "done" to be received.
+			// // Create a done channel per message. A process started by the
+			// // spawnProcess function will handle incomming messages sequentaly.
+			// // So in the spawnProcess function we put a struct{} value when a
+			// // message is processed on the "done" channel and an ack is received
+			// // for a message, and we wait here for the "done" to be received.
 
 			// We start the actual processing of an individual message here within
 			// it's own go routine. Reason is that we don't want to block other
@@ -294,8 +281,8 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 					},
 				}
 
-				ticker := time.NewTicker(time.Duration(v.SAM.ACKTimeout) * time.Duration(v.SAM.Retries) * 2 * time.Second)
-				defer ticker.Stop()
+				// ticker := time.NewTicker(time.Duration(v.SAM.ACKTimeout) * time.Duration(v.SAM.Retries) * 2 * time.Second)
+				// defer ticker.Stop()
 
 				outCh <- sd
 				// Just to confirm here that the message was picked up, to know if the

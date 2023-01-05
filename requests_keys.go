@@ -356,6 +356,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 			ToNode:      n,
 			Method:      REQKeysDeliverUpdate,
 			ReplyMethod: REQNone,
+			ACKTimeout:  0,
 		}
 
 		sam, err := newSubjectAndMessage(msg)
@@ -402,6 +403,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 			Method:      REQKeysDeliverUpdate,
 			Data:        b,
 			ReplyMethod: REQNone,
+			ACKTimeout:  0,
 		}
 
 		sam, err := newSubjectAndMessage(msg)

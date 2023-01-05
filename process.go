@@ -295,7 +295,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 		switch {
 		// If it is a NACK message we just deliver the message and return
 		// here so we don't create a ACK message and then stop waiting for it.
-		case p.subject.Event == EventNACK:
+		case message.ACKTimeout < 1:
 			err = func() error {
 				err := natsConn.PublishMsg(msg)
 				if err != nil {
@@ -318,7 +318,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				return nil
 			}()
 
-		case p.subject.Event == EventACK:
+		case message.ACKTimeout >= 1:
 			// The function below will return nil if the message should not be retried.
 			//
 			// All other errors happening will return ErrACKSubscribeRetry which will lead
@@ -559,7 +559,8 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 	switch {
 
 	// Check for ACK type Event.
-	case p.subject.Event == EventACK:
+	case message.ACKTimeout >= 1:
+		fmt.Println("-------------------- subscriberHandler ACK-----------------------")
 		// When spawning sub processes we can directly assign handlers to the process upon
 		// creation. We here check if a handler is already assigned, and if it is nil, we
 		// lookup and find the correct handler to use if available.
@@ -579,10 +580,11 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 
 		// Send a confirmation message back to the publisher to ACK that the
 		// message was received by the subscriber. The reply should be sent
-		//no matter if the handler was executed successfully or not
+		// no matter if the handler was executed successfully or not
 		natsConn.Publish(msg.Reply, []byte{})
 
-	case p.subject.Event == EventNACK:
+	case message.ACKTimeout < 1:
+		fmt.Println("-------------------- subscriberHandler NACK-----------------------")
 		// When spawning sub processes we can directly assign handlers to the process upon
 		// creation. We here check if a handler is already assigned, and if it is nil, we
 		// lookup and find the correct handler to use if available.
