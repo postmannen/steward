@@ -560,7 +560,8 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 
 	// Check for ACK type Event.
 	case message.ACKTimeout >= 1:
-		fmt.Println("-------------------- subscriberHandler ACK-----------------------")
+		er := fmt.Errorf("subscriberHandler: received ACK message: %v, from: %v, id:%v", message.Method, message.FromNode, message.ID)
+		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 		// When spawning sub processes we can directly assign handlers to the process upon
 		// creation. We here check if a handler is already assigned, and if it is nil, we
 		// lookup and find the correct handler to use if available.
@@ -584,7 +585,8 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		natsConn.Publish(msg.Reply, []byte{})
 
 	case message.ACKTimeout < 1:
-		fmt.Println("-------------------- subscriberHandler NACK-----------------------")
+		er := fmt.Errorf("subscriberHandler: received NACK message: %v, from: %v, id:%v", message.Method, message.FromNode, message.ID)
+		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 		// When spawning sub processes we can directly assign handlers to the process upon
 		// creation. We here check if a handler is already assigned, and if it is nil, we
 		// lookup and find the correct handler to use if available.
