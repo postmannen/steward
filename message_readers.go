@@ -37,11 +37,11 @@ func (s *server) readStartupFolder() {
 	}
 
 	for _, fp := range filePaths {
-		fmt.Printf("info: ranging filepaths, current filePath contains: %v\n", fp)
+		log.Printf("info: ranging filepaths, current filePath contains: %v\n", fp)
 	}
 
 	for _, filePath := range filePaths {
-		fmt.Printf("info: reading and working on file from startup folder %v\n", filePath)
+		log.Printf("info: reading and working on file from startup folder %v\n", filePath)
 
 		// Read the content of each file.
 		readBytes, err := func(filePath string) ([]byte, error) {
