@@ -536,7 +536,8 @@ func (r *ringBuffer) dbUpdate(db *bolt.DB, bucket string, key string, value []by
 // To store a message in the store, send what to store on the
 // ringbuffer.permStore channel.
 func (r *ringBuffer) startPermanentStore(ctx context.Context) {
-	const storeFile string = "store.log"
+
+	storeFile := filepath.Join(r.configuration.DatabaseFolder, "store.log")
 	f, err := os.OpenFile(storeFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		log.Printf("error: startPermanentStore: failed to open file: %v\n", err)
