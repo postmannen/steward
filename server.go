@@ -435,78 +435,103 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 	// send if there are a specific subject for it, and if no subject
 	// exist throw an error.
 
-	var event Event
-	eventAvailable := event.CheckEventAvailable()
-
 	var method Method
 	methodsAvailable := method.GetMethodsAvailable()
 
 	go func() {
 		for samDBVal := range ringBufferOutCh {
-			// Signal back to the ringbuffer that message have been picked up.
-			samDBVal.delivered()
+			go func(samDBVal samDBValueAndDelivered) {
+				// Signal back to the ringbuffer that message have been picked up.
+				samDBVal.delivered()
 
-			sam := samDBVal.samDBValue.Data
-			// Check if the format of the message is correct.
-			if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
-				er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
-				s.errorKernel.errSend(s.processInitial, sam.Message, er)
-				continue
-			}
-			if !eventAvailable.CheckIfExists(sam.Subject.Event, sam.Subject) {
-				er := fmt.Errorf("error: routeMessagesToProcess: the event type do not exist, message dropped: %v", sam.Message.Method)
-				s.errorKernel.errSend(s.processInitial, sam.Message, er)
-
-				continue
-			}
-
-			for {
-				// Looping here so we are able to redo the sending
-				// of the last message if a process for the specified subject
-				// is not present. The process will then be created, and
-				// the code will loop back here.
+				sam := samDBVal.samDBValue.SAM
+				// Check if the format of the message is correct.
+				if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
+					er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
+					s.errorKernel.errSend(s.processInitial, sam.Message, er)
+					return
+				}
 
 				m := sam.Message
 
 				subjName := sam.Subject.name()
 				pn := processNameGet(subjName, processKindPublisher)
 
-				// Check if there is a map of type map[int]process registered
-				// for the processName, and if it exists then return it.
-				s.processes.active.mu.Lock()
-				proc, ok := s.processes.active.procNames[pn]
-				s.processes.active.mu.Unlock()
+				sendOK := func() bool {
+					var ctxCanceled bool
 
-				// If found a map above, range it, and are there already a process
-				// for that subject, put the message on that processes incomming
-				// message channel.
-				if ok {
-					// We have found the process to route the message to, deliver it.
-					proc.subject.messageCh <- m
+					s.processes.active.mu.Lock()
+					defer s.processes.active.mu.Unlock()
 
-					break
-				} else {
-					// If a publisher process do not exist for the given subject, create it.
-					// log.Printf("info: processNewMessages: did not find that specific subject, starting new process for subject: %v\n", subjName)
-
-					sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
-					var proc process
-					switch {
-					case m.IsSubPublishedMsg:
-						proc = newSubProcess(s.ctx, s, sub, processKindPublisher, nil)
-					default:
-						proc = newProcess(s.ctx, s, sub, processKindPublisher, nil)
+					// Check if the process exist, if it do not exist return false so a
+					// new publisher process will be created.
+					proc, ok := s.processes.active.procNames[pn]
+					if !ok {
+						return false
 					}
 
-					proc.spawnWorker()
-					er := fmt.Errorf("info: processNewMessages: new process started, subject: %v, processID: %v", subjName, proc.processID)
-					s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+					if proc.ctx.Err() != nil {
+						ctxCanceled = true
+					}
+					if ok && ctxCanceled {
+						er := fmt.Errorf(" ** routeMessagesToProcess: context is already ended for process %v, will not try to reuse existing publisher, deleting it, and creating a new publisher !!! ", proc.processName)
+						s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+						delete(proc.processes.active.procNames, proc.processName)
+						return false
+					}
 
-					// Now when the process is spawned we continue,
-					// and send the message to that new process.
-					continue
+					// If found in map above, and go routine for publishing is running,
+					// put the message on that processes incomming message channel.
+					if ok && !ctxCanceled {
+						select {
+						case proc.subject.messageCh <- m:
+							er := fmt.Errorf(" ** routeMessagesToProcess: passed message: %v to existing process: %v", m.ID, proc.processName)
+							s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+						case <-proc.ctx.Done():
+							er := fmt.Errorf(" ** routeMessagesToProcess: got ctx.done for process %v", proc.processName)
+							s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+						}
+
+						return true
+					}
+
+					// The process was not found, so we return false here so a new publisher
+					// process will be created later.
+					return false
+				}()
+
+				if sendOK {
+					return
 				}
-			}
+
+				er := fmt.Errorf("info: processNewMessages: did not find publisher process for subject %v, starting new", subjName)
+				s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+
+				sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
+				var proc process
+				switch {
+				case m.IsSubPublishedMsg:
+					proc = newSubProcess(s.ctx, s, sub, processKindPublisher, nil)
+				default:
+					proc = newProcess(s.ctx, s, sub, processKindPublisher, nil)
+				}
+
+				proc.spawnWorker()
+				er = fmt.Errorf("info: processNewMessages: new process started, subject: %v, processID: %v", subjName, proc.processID)
+				s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+
+				// Now when the process is spawned we continue,
+				// and send the message to that new process.
+				select {
+				case proc.subject.messageCh <- m:
+					er := fmt.Errorf(" ** routeMessagesToProcess: passed message: %v to the new process: %v", m.ID, proc.processName)
+					s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+				case <-proc.ctx.Done():
+					er := fmt.Errorf(" ** routeMessagesToProcess: got ctx.done for process %v", proc.processName)
+					s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+				}
+
+			}(samDBVal)
 		}
 	}()
 }

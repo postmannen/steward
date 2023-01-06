@@ -130,7 +130,6 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	// so we check if the values are the same as the one we already got before we continue
 	// with registering and logging for the the new key.
 	if ok && bytes.Equal(existingNotAckedKey, msg.Data) {
-		fmt.Printf(" * \nkey value for NOT-REGISTERED node %v is the same, doing nothing\n\n", msg.FromNode)
 		c.pki.nodeNotAckedPublicKeys.mu.Unlock()
 		return
 	}
@@ -139,8 +138,8 @@ func (c *centralAuth) addPublicKey(proc process, msg Message) {
 	c.pki.nodeNotAckedPublicKeys.mu.Unlock()
 
 	er := fmt.Errorf("info: detected new public key for node: %v. This key will need to be authorized by operator to be allowed into the system", msg.FromNode)
-	fmt.Printf(" * %v\n", er)
 	c.pki.errorKernel.infoSend(proc, msg, er)
+	c.pki.errorKernel.logConsoleOnlyIfDebug(er, c.pki.configuration)
 }
 
 // deletePublicKeys to the db if the node do not exist, or if it is a new value.

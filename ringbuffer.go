@@ -28,8 +28,8 @@ import (
 // struct type is used when storing and retreiving from
 // db.
 type samDBValue struct {
-	ID   int
-	Data subjectAndMessage
+	ID  int
+	SAM subjectAndMessage
 }
 
 // ringBuffer holds the data of the buffer,
@@ -123,6 +123,7 @@ func (r *ringBuffer) start(ctx context.Context, inCh chan subjectAndMessage, out
 
 	go func() {
 		ticker := time.NewTicker(time.Second * 5)
+		defer ticker.Stop()
 
 		for {
 			select {
@@ -161,40 +162,27 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 		}()
 	}
 
-	// Prepare the map structure to know what values are allowed
-	// for the events
-	var event Event
-	eventAvailable := event.CheckEventAvailable()
-	eventAvailableValues := []Event{}
-	for v := range eventAvailable.topics {
-		eventAvailableValues = append(eventAvailableValues, v)
-	}
-
 	// Check for incomming messages. These are typically comming from
 	// the go routine who reads the socket.
 	for {
 		select {
-		case v := <-inCh:
-			// Check if the event exists.
-			if !eventAvailable.CheckIfExists(v.Event, v.Subject) {
-				er := fmt.Errorf("error: fillBuffer: the event type do not exist, so this message will not be put on the buffer to be processed. Check the syntax used in the json file for the message. Allowed values are : %v, where given: event=%v, with subject=%v", eventAvailableValues, v.Event, v.Subject)
-				r.errorKernel.errSend(r.processInitial, Message{}, er)
-
-				// if it was not a valid value, we jump back up, and
-				// continue the range iteration.
-				continue
-			}
+		case sam := <-inCh:
 
 			// Check if default message values for timers are set, and if
 			// not then set default message values.
-			if v.Message.ACKTimeout < 1 {
-				v.Message.ACKTimeout = r.configuration.DefaultMessageTimeout
+			if sam.Message.ACKTimeout < 1 {
+				sam.Subject.Event = EventNACK
 			}
-			if v.Message.Retries < 1 {
-				v.Message.Retries = r.configuration.DefaultMessageRetries
+			if sam.Message.ACKTimeout >= 1 {
+				sam.Subject.Event = EventNACK
 			}
-			if v.Message.MethodTimeout < 1 && v.Message.MethodTimeout != -1 {
-				v.Message.MethodTimeout = r.configuration.DefaultMethodTimeout
+
+			// TODO: Make so 0 is an usable option for retries.
+			if sam.Message.Retries < 1 {
+				sam.Message.Retries = r.configuration.DefaultMessageRetries
+			}
+			if sam.Message.MethodTimeout < 1 && sam.Message.MethodTimeout != -1 {
+				sam.Message.MethodTimeout = r.configuration.DefaultMethodTimeout
 			}
 
 			// --- Store the incomming message in the k/v store ---
@@ -207,8 +195,8 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 
 			// Create a structure for JSON marshaling.
 			samV := samDBValue{
-				ID:   dbID,
-				Data: v,
+				ID:  dbID,
+				SAM: sam,
 			}
 
 			if r.configuration.RingBufferPersistStore {
@@ -253,14 +241,15 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 	// Range over the buffer of messages to pass on to processes.
 	for {
 		select {
-		case v := <-r.bufData:
+		case samDBv := <-r.bufData:
 			r.metrics.promInMemoryBufferMessagesCurrent.Set(float64(len(r.bufData)))
+			samDBv.SAM.ID = samDBv.ID
 
-			// Create a done channel per message. A process started by the
-			// spawnProcess function will handle incomming messages sequentaly.
-			// So in the spawnProcess function we put a struct{} value when a
-			// message is processed on the "done" channel and an ack is received
-			// for a message, and we wait here for the "done" to be received.
+			// // Create a done channel per message. A process started by the
+			// // spawnProcess function will handle incomming messages sequentaly.
+			// // So in the spawnProcess function we put a struct{} value when a
+			// // message is processed on the "done" channel and an ack is received
+			// // for a message, and we wait here for the "done" to be received.
 
 			// We start the actual processing of an individual message here within
 			// it's own go routine. Reason is that we don't want to block other
@@ -276,11 +265,11 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 				// that might be in use in the handler.
 
 				msgForPermStore := Message{}
-				copier.Copy(&msgForPermStore, v.Data.Message)
+				copier.Copy(&msgForPermStore, v.SAM.Message)
 				// Remove the content of the data field.
 				msgForPermStore.Data = nil
 
-				v.Data.Message.done = make(chan struct{})
+				v.SAM.Message.done = make(chan struct{})
 				delivredCh := make(chan struct{})
 
 				// Prepare the structure with the data, and a function that can
@@ -291,6 +280,9 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 						delivredCh <- struct{}{}
 					},
 				}
+
+				// ticker := time.NewTicker(time.Duration(v.SAM.ACKTimeout) * time.Duration(v.SAM.Retries) * 2 * time.Second)
+				// defer ticker.Stop()
 
 				outCh <- sd
 				// Just to confirm here that the message was picked up, to know if the
@@ -303,7 +295,7 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 					// TODO: Check if more logic should be made here if messages are stuck etc.
 					// Testing with a timeout here to figure out if messages are stuck
 					// waiting for done signal.
-					log.Printf("Error: *** message %v seems to be stuck, did not receive delivered signal from reading process\n", v.ID)
+					log.Printf("Error: ringBuffer: message %v seems to be stuck, did not receive delivered signal from reading process\n", v.ID)
 
 					r.metrics.promRingbufferStalledMessagesTotal.Inc()
 				}
@@ -311,7 +303,19 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 				// message will be able to signal back here that the message have
 				// been processed, and that we then can delete it out of the K/V Store.
 
-				<-v.Data.done
+				// The publisAMessage method should send a done back here, but in some situations
+				// it seems that that do not happen. Implementing a ticker that is twice the total
+				// amount of time a message should be allowed to be using for getting published so
+				// we don't get stuck go routines here.
+				//
+				// TODO: Figure out why what the reason for not receceving the done signals might be.
+				// select {
+				// case <-v.SAM.done:
+				// case <-ticker.C:
+				// 	log.Printf("----------------------------------------------\n")
+				// 	log.Printf("Error: ringBuffer message id: %v, subject: %v seems to be stuck, did not receive done signal from publishAMessage process, exited on ticker\n", v.SAM.ID, v.SAM.Subject)
+				// 	log.Printf("----------------------------------------------\n")
+				// }
 				// log.Printf("info: processBufferMessages: done with message, deleting key from bucket, %v\n", v.ID)
 				r.metrics.promMessagesProcessedIDLast.Set(float64(v.ID))
 
@@ -328,7 +332,7 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 				}
 				r.permStore <- time.Now().Format("Mon Jan _2 15:04:05 2006") + ", " + string(js) + "\n"
 
-			}(v)
+			}(samDBv)
 		case <-ctx.Done():
 			//close(outCh)
 			return
@@ -397,8 +401,8 @@ func (r *ringBuffer) dumpBucket(bucket string) ([]samDBValue, error) {
 			return samDBValues[i].ID > samDBValues[j].ID
 		})
 
-		for _, v := range samDBValues {
-			log.Printf("info: ringBuffer.dumpBucket: k/v store, kvID: %v, message.ID: %v, subject: %v, len(data): %v\n", v.ID, v.Data.ID, v.Data.Subject, len(v.Data.Data))
+		for _, samDBv := range samDBValues {
+			log.Printf("info: ringBuffer.dumpBucket: k/v store, kvID: %v, message.ID: %v, subject: %v, len(data): %v\n", samDBv.ID, samDBv.SAM.ID, samDBv.SAM.Subject, len(samDBv.SAM.Data))
 		}
 
 		return nil

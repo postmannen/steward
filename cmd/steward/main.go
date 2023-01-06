@@ -21,9 +21,10 @@ import (
 var version string
 
 func main() {
+	defer profile.Start(profile.BlockProfile).Stop()
 	//defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
 	//defer profile.Start(profile.TraceProfile, profile.ProfilePath(".")).Stop()
-	defer profile.Start(profile.MemProfile, profile.MemProfileRate(1)).Stop()
+	//defer profile.Start(profile.MemProfile, profile.MemProfileRate(1)).Stop()
 
 	c := steward.NewConfiguration()
 	err := c.CheckFlags()

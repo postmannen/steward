@@ -270,8 +270,9 @@ var (
 func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.Header, natsConn *nats.Conn, message Message) {
 	retryAttempts := 0
 
-	const publishTimer time.Duration = 5
-	const subscribeSyncTimer time.Duration = 5
+	if message.RetryWait <= 0 {
+		message.RetryWait = 0
+	}
 
 	// The for loop will run until the message is delivered successfully,
 	// or that retries are reached.
@@ -286,117 +287,47 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 			Header: natsMsgHeader,
 		}
 
-		er := fmt.Errorf("info: preparing to send nats message with subject %v ", msg.Subject)
+		er := fmt.Errorf("info: preparing to send nats message with subject %v, id: %v", msg.Subject, message.ID)
 		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
+		var err error
+
+		switch {
 		// If it is a NACK message we just deliver the message and return
 		// here so we don't create a ACK message and then stop waiting for it.
-		if p.subject.Event == EventNACK {
-			err := natsConn.PublishMsg(msg)
-			if err != nil {
-				er := fmt.Errorf("error: nats publish of hello failed: %v", err)
-				log.Printf("%v\n", er)
-				return
-			}
-			p.metrics.promNatsDeliveredTotal.Inc()
-
-			er := fmt.Errorf("info: sent nats message with subject %v ", msg.Subject)
-			p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
-
-			//err = natsConn.Flush()
-			//if err != nil {
-			//	er := fmt.Errorf("error: nats publish flush failed: %v", err)
-			//	log.Printf("%v\n", er)
-			//	return
-			//}
-
-			// The remaining logic is for handling ACK messages, so we return here
-			// since it was a NACK message, and all or now done.
-
-			return
-		}
-
-		err := func() error {
-			// The SubscribeSync used in the subscriber, will get messages that
-			// are sent after it started subscribing.
-			//
-			// Create a subscriber for the ACK reply message.
-			subReply, err := natsConn.SubscribeSync(msg.Reply)
-
-			defer func() {
-				err := subReply.Unsubscribe()
+		case message.ACKTimeout < 1:
+			err = func() error {
+				err := natsConn.PublishMsg(msg)
 				if err != nil {
-					log.Printf("error: nats SubscribeSync: failed when unsubscribing for ACK: %v\n", err)
+					er := fmt.Errorf("error: nats publish for message with subject failed: %v", err)
+					log.Printf("%v\n", er)
+					return ErrACKSubscribeRetry
 				}
+				p.metrics.promNatsDeliveredTotal.Inc()
+
+				//err = natsConn.Flush()
+				//if err != nil {
+				//	er := fmt.Errorf("error: nats publish flush failed: %v", err)
+				//	log.Printf("%v\n", er)
+				//	return
+				//}
+
+				// The remaining logic is for handling ACK messages, so we return here
+				// since it was a NACK message, and all or now done.
+
+				return nil
 			}()
 
-			if err != nil {
-				er := fmt.Errorf("error: nats SubscribeSync failed: failed to create reply message for subject: %v, error: %v", msg.Reply, err)
-				// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
-				log.Printf("%v, waiting %ds before retrying\n", er, subscribeSyncTimer)
-
-				//time.Sleep(time.Second * subscribeSyncTimer)
-				// subReply.Unsubscribe()
-
-				retryAttempts++
-				return ErrACKSubscribeRetry
-			}
-
-			// Publish message
-			err = natsConn.PublishMsg(msg)
-			if err != nil {
-				er := fmt.Errorf("error: nats publish failed: %v", err)
-				// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
-				log.Printf("%v, waiting %ds before retrying\n", er, publishTimer)
-				time.Sleep(time.Second * publishTimer)
-
-				return ErrACKSubscribeRetry
-			}
-
-			// Wait up until ACKTimeout specified for a reply,
-			// continue and resend if no reply received,
-			// or exit if max retries for the message reached.
+		case message.ACKTimeout >= 1:
+			// The function below will return nil if the message should not be retried.
 			//
-			// The nats.Msg returned is discarded with '_' since
-			// we don't use it.
-			_, err = subReply.NextMsg(time.Second * time.Duration(message.ACKTimeout))
-			if err != nil {
-				if message.RetryWait < 0 {
-					message.RetryWait = 0
-				}
+			// All other errors happening will return ErrACKSubscribeRetry which will lead
+			// to a 'continue' for the for loop when checking the error directly after this
+			// function is called
+			err = func() error {
+				defer func() { retryAttempts++ }()
 
-				switch {
-				case err == nats.ErrNoResponders || err == nats.ErrTimeout:
-					er := fmt.Errorf("error: ack receive failed: waiting for %v seconds before retrying:   subject=%v: %v", message.RetryWait, p.subject.name(), err)
-					p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
-
-					time.Sleep(time.Second * time.Duration(message.RetryWait))
-
-					// Continue with the rest of the code to check number of retries etc..
-
-				case err == nats.ErrBadSubscription || err == nats.ErrConnectionClosed:
-					er := fmt.Errorf("error: ack receive failed: conneciton closed or bad subscription, will not retry message:   subject=%v: %v", p.subject.name(), err)
-					p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
-
-					return er
-
-				default:
-					er := fmt.Errorf("error: ack receive failed: the error was not defined, check if nats client have been updated with new error values, and update steward to handle the new error type:   subject=%v: %v", p.subject.name(), err)
-					p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
-
-					return er
-				}
-
-				// did not receive a reply, decide if we should try to retry sending.
-				retryAttempts++
-				er := fmt.Errorf("retry attempt:%v, retries: %v, ack timeout: %v, message.ID: %v", retryAttempts, message.Retries, message.ACKTimeout, message.ID)
-				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
-
-				switch {
-				//case message.Retries == 0:
-				//	// 0 indicates unlimited retries
-				//	continue
-				case retryAttempts >= message.Retries:
+				if retryAttempts > message.Retries {
 					// max retries reached
 					er := fmt.Errorf("info: toNode: %v, fromNode: %v, subject: %v, methodArgs: %v: max retries reached, check if node is up and running and if it got a subscriber started for the given REQ type", message.ToNode, message.FromNode, msg.Subject, message.MethodArgs)
 
@@ -407,21 +338,81 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 					}
 
 					p.metrics.promNatsMessagesFailedACKsTotal.Inc()
-					return er
+					return nil
+				}
 
-				default:
-					// none of the above matched, so we've not reached max retries yet
-					er := fmt.Errorf("max retries for message not reached, retrying sending of message with ID %v", message.ID)
-					p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+				er := fmt.Errorf("send attempt:%v, max retries: %v, ack timeout: %v, message.ID: %v, method: %v, toNode: %v", retryAttempts, message.Retries, message.ACKTimeout, message.ID, message.Method, message.ToNode)
+				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
-					p.metrics.promNatsMessagesMissedACKsTotal.Inc()
+				// The SubscribeSync used in the subscriber, will get messages that
+				// are sent after it started subscribing.
+				//
+				// Create a subscriber for the ACK reply message.
+				subReply, err := natsConn.SubscribeSync(msg.Reply)
+				defer func() {
+					err := subReply.Unsubscribe()
+					if err != nil {
+						log.Printf("error: nats SubscribeSync: failed when unsubscribing for ACK: %v\n", err)
+					}
+				}()
+				if err != nil {
+					er := fmt.Errorf("error: nats SubscribeSync failed: failed to create reply message for subject: %v, error: %v", msg.Reply, err)
+					// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
+					log.Printf("%v, waiting equal to RetryWait %ds before retrying\n", er, message.RetryWait)
+
+					time.Sleep(time.Second * time.Duration(message.RetryWait))
 
 					return ErrACKSubscribeRetry
 				}
-			}
 
-			return nil
-		}()
+				// Publish message
+				err = natsConn.PublishMsg(msg)
+				if err != nil {
+					er := fmt.Errorf("error: nats publish failed: %v", err)
+					// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
+					log.Printf("%v, waiting equal to RetryWait of %ds before retrying\n", er, message.RetryWait)
+					time.Sleep(time.Second * time.Duration(message.RetryWait))
+
+					return ErrACKSubscribeRetry
+				}
+
+				// Wait up until ACKTimeout specified for a reply,
+				// continue and resend if no reply received,
+				// or exit if max retries for the message reached.
+				//
+				// The nats.Msg returned is discarded with '_' since
+				// we don't use it.
+				_, err = subReply.NextMsg(time.Second * time.Duration(message.ACKTimeout))
+				if err != nil {
+
+					switch {
+					case err == nats.ErrNoResponders || err == nats.ErrTimeout:
+						er := fmt.Errorf("error: ack receive failed: waiting for %v seconds before retrying:   subject=%v: %v", message.RetryWait, p.subject.name(), err)
+						p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+
+						time.Sleep(time.Second * time.Duration(message.RetryWait))
+						p.metrics.promNatsMessagesMissedACKsTotal.Inc()
+
+						return ErrACKSubscribeRetry
+
+					case err == nats.ErrBadSubscription || err == nats.ErrConnectionClosed:
+						er := fmt.Errorf("error: ack receive failed: conneciton closed or bad subscription, will not retry message:   subject=%v: %v", p.subject.name(), err)
+						p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+
+						return er
+
+					default:
+						er := fmt.Errorf("error: ack receive failed: the error was not defined, check if nats client have been updated with new error values, and update steward to handle the new error type:   subject=%v: %v", p.subject.name(), err)
+						p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+
+						return er
+					}
+
+				}
+
+				return nil
+			}()
+		}
 
 		if err == ErrACKSubscribeRetry {
 			continue
@@ -436,7 +427,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 		// Message were delivered successfully.
 		p.metrics.promNatsDeliveredTotal.Inc()
 
-		er = fmt.Errorf("info: sent nats message with subject %v ", msg.Subject)
+		er = fmt.Errorf("info: sent nats message with subject %v, id: %v", msg.Subject, message.ID)
 		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 		return
@@ -568,7 +559,9 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 	switch {
 
 	// Check for ACK type Event.
-	case p.subject.Event == EventACK:
+	case message.ACKTimeout >= 1:
+		er := fmt.Errorf("subscriberHandler: received ACK message: %v, from: %v, id:%v", message.Method, message.FromNode, message.ID)
+		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 		// When spawning sub processes we can directly assign handlers to the process upon
 		// creation. We here check if a handler is already assigned, and if it is nil, we
 		// lookup and find the correct handler to use if available.
@@ -588,10 +581,12 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 
 		// Send a confirmation message back to the publisher to ACK that the
 		// message was received by the subscriber. The reply should be sent
-		//no matter if the handler was executed successfully or not
+		// no matter if the handler was executed successfully or not
 		natsConn.Publish(msg.Reply, []byte{})
 
-	case p.subject.Event == EventNACK:
+	case message.ACKTimeout < 1:
+		er := fmt.Errorf("subscriberHandler: received NACK message: %v, from: %v, id:%v", message.Method, message.FromNode, message.ID)
+		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 		// When spawning sub processes we can directly assign handlers to the process upon
 		// creation. We here check if a handler is already assigned, and if it is nil, we
 		// lookup and find the correct handler to use if available.
@@ -661,9 +656,11 @@ func executeHandler(p process, message Message, thisNode string) {
 		runAsScheduled = true
 	}
 
-	// Either ACL were verified OK, or ACL/Signature check was not enabled, so we call the handler.
-	er := fmt.Errorf("info: subscriberHandler: Either ACL were verified OK, or ACL/Signature check was not enabled, so we call the handler: %v", true)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	if p.configuration.EnableAclCheck {
+		// Either ACL were verified OK, or ACL/Signature check was not enabled, so we call the handler.
+		er := fmt.Errorf("info: subscriberHandler: Either ACL were verified OK, or ACL/Signature check was not enabled, so we call the handler: %v", true)
+		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	}
 
 	switch {
 	case !runAsScheduled:
@@ -681,6 +678,8 @@ func executeHandler(p process, message Message, thisNode string) {
 		// Create two tickers to use for the scheduling.
 		intervalTicker := time.NewTicker(time.Second * time.Duration(interval))
 		totalTimeTicker := time.NewTicker(time.Second * time.Duration(totalTime))
+		defer intervalTicker.Stop()
+		defer totalTimeTicker.Stop()
 
 		// NB: Commented out this assignement of a specific message context
 		// to be used within handlers, since it will override the structure
@@ -827,6 +826,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 	// the process, so the sub process publisher will not be removed until
 	// it have not received any messages for the given amount of time.
 	ticker := time.NewTicker(time.Second * time.Duration(p.configuration.KeepPublishersAliveFor))
+	defer ticker.Stop()
 
 	for {
 
@@ -836,11 +836,16 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		case <-ticker.C:
 			// We only want to remove subprocesses
 			if p.isSubProcess {
-				p.ctxCancel()
-
 				p.processes.active.mu.Lock()
+				p.ctxCancel()
 				delete(p.processes.active.procNames, p.processName)
 				p.processes.active.mu.Unlock()
+
+				er := fmt.Errorf("info: canceled publisher: %v", p.processName)
+				//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
+				log.Printf("%v\n", er)
+
+				return
 			}
 
 		case m := <-p.subject.messageCh:
@@ -883,7 +888,7 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 		b, err := cbor.Marshal(m)
 		if err != nil {
 			er := fmt.Errorf("error: messageDeliverNats: cbor encode message failed: %v", err)
-			p.errorKernel.errSend(p, m, er)
+			log.Printf("%v\n", er)
 			return
 		}
 
@@ -896,7 +901,7 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 		err := gobEnc.Encode(m)
 		if err != nil {
 			er := fmt.Errorf("error: messageDeliverNats: gob encode message failed: %v", err)
-			p.errorKernel.errSend(p, m, er)
+			log.Printf("%v\n", er)
 			return
 		}
 
@@ -907,7 +912,11 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 	// Get the process name so we can look up the process in the
 	// processes map, and increment the message counter.
 	pn := processNameGet(p.subject.name(), processKindPublisher)
-	m.ID = p.messageID
+
+	// NB: REMOVED: It doesn't really make sense to get the message id
+	// from the process. Implemented so this is picked up from the id
+	// used in the ringbuffer.
+	// m.ID = p.messageID
 
 	// The compressed value of the nats message payload. The content
 	// can either be compressed or in it's original form depening on
@@ -955,7 +964,7 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 
 		// We only wan't to send the error message to errorCentral once.
 		once.Do(func() {
-			p.errorKernel.errSend(p, m, er)
+			log.Printf("%v\n", er)
 		})
 
 		// No compression, so we just assign the value of the serialized
@@ -968,13 +977,13 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 	// sending of the message.
 	p.messageDeliverNats(natsMsgPayloadCompressed, natsMsgHeader, natsConn, m)
 
-	select {
-	case m.done <- struct{}{}:
-		// Signaling back to the ringbuffer that we are done with the
-		// current message, and it can remove it from the ringbuffer.
-	case <-p.ctx.Done():
-		return
-	}
+	// select {
+	// case m.done <- struct{}{}:
+	// 	// Signaling back to the ringbuffer that we are done with the
+	// 	// current message, and it can remove it from the ringbuffer.
+	// case <-p.ctx.Done():
+	// 	return
+	// }
 
 	// Increment the counter for the next message to be sent.
 	p.messageID++

@@ -22,6 +22,9 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 	inf := fmt.Errorf("<--- REQHttpGet received from: %v, containing: %v", message.FromNode, message.Data)
 	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
 
+	msgForErrors := message
+	msgForErrors.FileName = msgForErrors.FileName + ".error"
+
 	proc.processes.wg.Add(1)
 	go func() {
 		defer proc.processes.wg.Done()
@@ -30,6 +33,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodREQHttpGet: got <1 number methodArgs")
 			proc.errorKernel.errSend(proc, message, er)
+			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 
 			return
 		}
@@ -47,6 +51,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 		if err != nil {
 			er := fmt.Errorf("error: methodREQHttpGet: NewRequest failed: %v, bailing out: %v", err, message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er)
+			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			cancel()
 			return
 		}
@@ -61,6 +66,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 			if err != nil {
 				er := fmt.Errorf("error: methodREQHttpGet: client.Do failed: %v, bailing out: %v", err, message.MethodArgs)
 				proc.errorKernel.errSend(proc, message, er)
+				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 				return
 			}
 			defer resp.Body.Close()
@@ -69,6 +75,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 				cancel()
 				er := fmt.Errorf("error: methodREQHttpGet: not 200, were %#v, bailing out: %v", resp.StatusCode, message)
 				proc.errorKernel.errSend(proc, message, er)
+				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 				return
 			}
 
@@ -76,6 +83,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 			if err != nil {
 				er := fmt.Errorf("error: methodREQHttpGet: io.ReadAll failed : %v, methodArgs: %v", err, message.MethodArgs)
 				proc.errorKernel.errSend(proc, message, er)
+				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
 
 			out := body
@@ -92,6 +100,7 @@ func (m methodREQHttpGet) handler(proc process, message Message, node string) ([
 			cancel()
 			er := fmt.Errorf("error: methodREQHttpGet: method timed out: %v", message.MethodArgs)
 			proc.errorKernel.errSend(proc, message, er)
+			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 		case out := <-outCh:
 			cancel()
 

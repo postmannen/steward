@@ -15,17 +15,6 @@ package steward
 // ACK or NACK it is.
 type Event string
 
-func (c Event) CheckEventAvailable() EventAvailable {
-	ma := EventAvailable{
-		topics: map[Event]struct{}{
-			EventACK:  {},
-			EventNACK: {},
-		},
-	}
-
-	return ma
-}
-
 const (
 	// EventACK, wait for the return of an ACK message.
 	// The sender will wait for an ACK reply message
@@ -37,21 +26,3 @@ const (
 	// Same as above, but No ACK.
 	EventNACK Event = "EventNACK"
 )
-
-// EventAvailable are used for checking if the
-// events are defined.
-type EventAvailable struct {
-	topics map[Event]struct{}
-}
-
-// Check if an event exists.
-func (e EventAvailable) CheckIfExists(event Event, subject Subject) bool {
-	_, ok := e.topics[event]
-	if ok {
-		// log.Printf("info: EventAvailable.CheckIfExists: event found: %v, for %v\n", c, subject.name())
-		return true
-	} else {
-		// log.Printf("error: EventAvailable.CheckIfExists: event not found: %v, for %v\n", c, subject.name())
-		return false
-	}
-}

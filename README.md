@@ -250,6 +250,10 @@ The error logs can be read on the central server in the directory `<steward-home
 
 - Message types of both **ACK** and **NACK**, so we can decide if we want or don't want an Acknowledge if a message was delivered succesfully.
 Example: We probably want an **ACK** when sending some **REQCLICommand** to be executed, but we don't care for an acknowledge **NACK** when we send an **REQHello** event.
+If a message are **ACK** or **NACK** type are defined by the value of the **ACKTimeout** for each individual message:
+
+  1. **ACKTimeout** set to 0 will make the message become a **NACK** message.
+  1. **ACKTimeout** set to >=1 will make the message become an **ACK** message.
 
 ### Timeouts and retries for requests
 

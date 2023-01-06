@@ -286,6 +286,7 @@ func (s startup) pubREQHello(p process) {
 	// Define the procFunc to be used for the process.
 	proc.procFunc = func(ctx context.Context, procFuncCh chan Message) error {
 		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.StartPubREQHello))
+		defer ticker.Stop()
 		for {
 
 			// d := fmt.Sprintf("Hello from %v\n", p.node)
@@ -299,7 +300,7 @@ func (s startup) pubREQHello(p process) {
 				FromNode:   Node(p.node),
 				Data:       []byte(d),
 				Method:     REQHello,
-				ACKTimeout: 10,
+				ACKTimeout: proc.configuration.DefaultMessageTimeout,
 				Retries:    1,
 			}
 
@@ -336,6 +337,7 @@ func (s startup) pubREQKeysRequestUpdate(p process) {
 	// Define the procFunc to be used for the process.
 	proc.procFunc = func(ctx context.Context, procFuncCh chan Message) error {
 		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.REQKeysRequestUpdateInterval))
+		defer ticker.Stop()
 		for {
 
 			// Send a message with the hash of the currently stored keys,
@@ -392,6 +394,7 @@ func (s startup) pubREQAclRequestUpdate(p process) {
 	// Define the procFunc to be used for the process.
 	proc.procFunc = func(ctx context.Context, procFuncCh chan Message) error {
 		ticker := time.NewTicker(time.Second * time.Duration(p.configuration.REQAclRequestUpdateInterval))
+		defer ticker.Stop()
 		for {
 
 			// Send a message with the hash of the currently stored acl's,
