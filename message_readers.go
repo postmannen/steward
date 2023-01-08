@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/fsnotify/fsnotify"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -199,6 +201,103 @@ func (s *server) readSocket() {
 			s.toRingBufferCh <- sams
 
 		}(conn)
+	}
+}
+
+// readFolder
+func (s *server) readFolder() {
+	// Check if the startup folder exist.
+	if _, err := os.Stat(s.configuration.ReadFolder); os.IsNotExist(err) {
+		err := os.MkdirAll(s.configuration.ReadFolder, 0700)
+		if err != nil {
+			er := fmt.Errorf("error: failed to create readfolder folder: %v", err)
+			log.Printf("%v\n", er)
+			os.Exit(1)
+		}
+	}
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Printf("main: failed to create new logWatcher: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Start listening for events.
+	go func() {
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+
+				if event.Op == fsnotify.Create || event.Op == fsnotify.Chmod {
+					fmt.Printf(" *** got *** : %v, op: %v\n", event.Name, event.Op)
+				}
+
+				func() {
+					fh, err := os.Open(event.Name)
+					if err != nil {
+						log.Printf("error: failed to open readFile from readFolder: %v\n", err)
+						return
+					}
+
+					b, err := io.ReadAll(fh)
+					if err != nil {
+						log.Printf("error: failed to readall from readFolder: %v\n", err)
+						fh.Close()
+						return
+					}
+					fh.Close()
+
+					b = bytes.Trim(b, "\x00")
+
+					// unmarshal the JSON into a struct
+					sams, err := s.convertBytesToSAMs(b)
+					if err != nil {
+						er := fmt.Errorf("error: malformed json received on socket: %s\n %v", b, err)
+						s.errorKernel.errSend(s.processInitial, Message{}, er)
+						return
+					}
+
+					for i := range sams {
+
+						// Fill in the value for the FromNode field, so the receiver
+						// can check this field to know where it came from.
+						sams[i].Message.FromNode = Node(s.nodeName)
+
+						// Send an info message to the central about the message picked
+						// for auditing.
+						er := fmt.Errorf("info: message read from socket on %v: %v", s.nodeName, sams[i].Message)
+						s.errorKernel.errSend(s.processInitial, Message{}, er)
+					}
+
+					// Send the SAM struct to be picked up by the ring buffer.
+					s.toRingBufferCh <- sams
+
+					// Delete the file.
+					err = os.Remove(event.Name)
+					if err != nil {
+						log.Printf("error: failed to remove readFile from readFolder: %v\n", err)
+						return
+					}
+
+				}()
+
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+				log.Println("error:", err)
+			}
+		}
+	}()
+
+	// Add a path.
+	err = watcher.Add(s.configuration.ReadFolder)
+	if err != nil {
+		log.Printf("startLogsWatcher: failed to add watcher: %v\n", err)
+		os.Exit(1)
 	}
 }
 

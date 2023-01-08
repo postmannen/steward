@@ -270,6 +270,11 @@ func (s *server) Start() {
 		go s.readSocket()
 	}
 
+	// Start the checking the readfolder for new messages from operator.
+	if s.configuration.EnableReadFolder {
+		go s.readFolder()
+	}
+
 	// Check if we should start the tcp listener for new messages from operator.
 	if s.configuration.TCPListener != "" {
 		go s.readTCPListener()
