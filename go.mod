@@ -3,7 +3,7 @@ module github.com/RaaLabs/steward
 go 1.18
 
 require (
-	github.com/fsnotify/fsnotify v1.4.9
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/fxamacker/cbor/v2 v2.4.0
 	github.com/gdamore/tcell/v2 v2.5.3
 	github.com/go-playground/validator/v10 v10.10.1

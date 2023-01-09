@@ -26,6 +26,10 @@ type Configuration struct {
 	ConfigFolder string `comment:"ConfigFolder, the location for the configuration folder on disk"`
 	// The folder where the socket file should live
 	SocketFolder string `comment:"The folder where the socket file should live"`
+	// The folder where the readfolder should live
+	ReadFolder string `comment:"The folder where the readfolder should live"`
+	// EnableReadFolder for enabling the read messages api from readfolder
+	EnableReadFolder bool `comment:"EnableReadFolder for enabling the read messages api from readfolder"`
 	// TCP Listener for sending messages to the system, <host>:<port>
 	TCPListener string `comment:"TCP Listener for sending messages to the system, <host>:<port>"`
 	// HTTP Listener for sending messages to the system, <host>:<port>
@@ -148,6 +152,8 @@ type ConfigurationFromFile struct {
 	RingBufferPersistStore       *bool
 	RingBufferSize               *int
 	SocketFolder                 *string
+	ReadFolder                   *string
+	EnableReadFolder             *bool
 	TCPListener                  *string
 	HTTPListener                 *string
 	DatabaseFolder               *string
@@ -215,6 +221,8 @@ func newConfigurationDefaults() Configuration {
 		RingBufferPersistStore:       true,
 		RingBufferSize:               1000,
 		SocketFolder:                 "./tmp",
+		ReadFolder:                   "./readfolder",
+		EnableReadFolder:             true,
 		TCPListener:                  "",
 		HTTPListener:                 "",
 		DatabaseFolder:               "./var/lib",
@@ -296,6 +304,16 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 		conf.SocketFolder = cd.SocketFolder
 	} else {
 		conf.SocketFolder = *cf.SocketFolder
+	}
+	if cf.ReadFolder == nil {
+		conf.ReadFolder = cd.ReadFolder
+	} else {
+		conf.ReadFolder = *cf.ReadFolder
+	}
+	if cf.EnableReadFolder == nil {
+		conf.EnableReadFolder = cd.EnableReadFolder
+	} else {
+		conf.EnableReadFolder = *cf.EnableReadFolder
 	}
 	if cf.TCPListener == nil {
 		conf.TCPListener = cd.TCPListener
@@ -593,6 +611,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.RingBufferPersistStore, "ringBufferPersistStore", fc.RingBufferPersistStore, "true/false for enabling the persisting of ringbuffer to disk")
 	flag.IntVar(&c.RingBufferSize, "ringBufferSize", fc.RingBufferSize, "size of the ringbuffer")
 	flag.StringVar(&c.SocketFolder, "socketFolder", fc.SocketFolder, "folder who contains the socket file. Defaults to ./tmp/. If other folder is used this flag must be specified at startup.")
+	flag.StringVar(&c.ReadFolder, "readfolder", fc.ReadFolder, "folder who contains the readfolder. Defaults to ./readfolder/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.TCPListener, "tcpListener", fc.TCPListener, "start up a TCP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")
 	flag.StringVar(&c.HTTPListener, "httpListener", fc.HTTPListener, "start up a HTTP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")
 	flag.StringVar(&c.DatabaseFolder, "databaseFolder", fc.DatabaseFolder, "folder who contains the database file. Defaults to ./var/lib/. If other folder is used this flag must be specified at startup.")
