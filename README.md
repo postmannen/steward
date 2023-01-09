@@ -225,7 +225,7 @@ TODO: Make a diagram here...
 
 ### Input methods
 
-Messages can be delivered by the user to the user in the following ways:
+New Request Messages can be delivered by the user to Steward in the following ways:
 
 - **Unix Socket**. Use for example netcat or another tool to deliver new messages to a socket like `nc -U tmp/steward.sock < msg.yaml`.
 - **Read Folder**. Write/Copy messages to be delivered to the `readfolder` of Steward.
