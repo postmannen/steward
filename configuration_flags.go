@@ -27,7 +27,7 @@ type Configuration struct {
 	// The folder where the socket file should live
 	SocketFolder string `comment:"The folder where the socket file should live"`
 	// The folder where the readfolder should live
-	ReadFolder string `comment:"The folder where the readfolder file should live"`
+	ReadFolder string `comment:"The folder where the readfolder should live"`
 	// EnableReadFolder for enabling the read messages api from readfolder
 	EnableReadFolder bool `comment:"EnableReadFolder for enabling the read messages api from readfolder"`
 	// TCP Listener for sending messages to the system, <host>:<port>
