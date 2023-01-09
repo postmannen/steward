@@ -232,18 +232,21 @@ func (s *server) readFolder() {
 				}
 
 				if event.Op == fsnotify.Create || event.Op == fsnotify.Chmod {
-					fmt.Printf(" *** got *** : %v, op: %v\n", event.Name, event.Op)
+					er := fmt.Errorf("readFolder: got file event, name: %v, op: %v", event.Name, event.Op)
+					s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
 
 					func() {
 						fh, err := os.Open(event.Name)
 						if err != nil {
-							log.Printf("error: failed to open readFile from readFolder: %v\n", err)
+							er := fmt.Errorf("error: readFolder: failed to open readFile from readFolder: %v", err)
+							s.errorKernel.errSend(s.processInitial, Message{}, er)
 							return
 						}
 
 						b, err := io.ReadAll(fh)
 						if err != nil {
-							log.Printf("error: failed to readall from readFolder: %v\n", err)
+							er := fmt.Errorf("error: readFolder: failed to readall from readFolder: %v", err)
+							s.errorKernel.errSend(s.processInitial, Message{}, er)
 							fh.Close()
 							return
 						}
@@ -254,7 +257,7 @@ func (s *server) readFolder() {
 						// unmarshal the JSON into a struct
 						sams, err := s.convertBytesToSAMs(b)
 						if err != nil {
-							er := fmt.Errorf("error: malformed json received on socket: %s\n %v", b, err)
+							er := fmt.Errorf("error: readFolder: malformed json received: %s\n %v", b, err)
 							s.errorKernel.errSend(s.processInitial, Message{}, er)
 							return
 						}
@@ -267,7 +270,7 @@ func (s *server) readFolder() {
 
 							// Send an info message to the central about the message picked
 							// for auditing.
-							er := fmt.Errorf("info: message read from socket on %v: %v", s.nodeName, sams[i].Message)
+							er := fmt.Errorf("info: readFolder: message read from readFolder on %v: %v", s.nodeName, sams[i].Message)
 							s.errorKernel.errSend(s.processInitial, Message{}, er)
 						}
 
@@ -277,7 +280,8 @@ func (s *server) readFolder() {
 						// Delete the file.
 						err = os.Remove(event.Name)
 						if err != nil {
-							log.Printf("error: failed to remove readFile from readFolder: %v\n", err)
+							er := fmt.Errorf("error: readFolder: failed to remove readFile from readFolder: %v", err)
+							s.errorKernel.errSend(s.processInitial, Message{}, er)
 							return
 						}
 
@@ -288,7 +292,8 @@ func (s *server) readFolder() {
 				if !ok {
 					return
 				}
-				log.Println("error:", err)
+				er := fmt.Errorf("error: readFolder: file watcher error: %v", err)
+				s.errorKernel.errSend(s.processInitial, Message{}, er)
 			}
 		}
 	}()

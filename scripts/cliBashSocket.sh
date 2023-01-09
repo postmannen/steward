@@ -5,13 +5,23 @@ if [ -z "$1" ]; then
     exit 1
 fi
 if [ -z "$2" ]; then
+    echo "No shell path supplied"
+    exit 1
+fi
+if [ -z "$3" ]; then
     echo "No cmd supplied"
     exit 1
 fi
 
-command=$2
+echo $1
+echo $2
+echo $3
 
-IFS=',' read -r -a array <<<"$1"
+nodes=$1
+shell=$2
+command=$3
+
+IFS=',' read -r -a array <<<"$nodes"
 
 function sendMessage() {
     cat >msg.yaml <<EOF
@@ -21,7 +31,7 @@ function sendMessage() {
         "method": "REQCliCommand",
         "methodArgs":
             [
-                "/bin/bash",
+                "${shell}",
                 "-c",
                 'echo "--------------------${element}----------------------" && ${command}',
             ],
