@@ -27,6 +27,7 @@ As long as you can do something as an operator on in a shell on a system you can
     - [Logical structure](#logical-structure)
   - [Terminology](#terminology)
   - [Features](#features)
+    - [Input methods](#input-methods)
     - [Error messages from nodes](#error-messages-from-nodes)
     - [Message handling and threads](#message-handling-and-threads)
     - [Timeouts and retries for requests](#timeouts-and-retries-for-requests)
@@ -194,7 +195,7 @@ If one process hangs on a long running message method it will not affect the res
 
 ### Publisher
 
-1. A message in valid format is appended to the in socket.
+1. A message in valid format is appended to one of the input methods. Available inputs are Unix Socket listener, TCP listener, and File Reader.
 1. The message is picked up by the system and put on a FIFO ringbuffer.
 1. The method type of the message is checked, a subject is created based on the content of the message,  and a publisher process to handle the message type for that specific receiving node is started if it does not exist.
 1. The message is then serialized to binary format, and sent to the subscriber on the receiving node.
@@ -221,6 +222,14 @@ TODO: Make a diagram here...
 - **Message**: A message sent from one Steward node to another.
 
 ## Features
+
+### Input methods
+
+Messages can be delivered by the user to the user in the following ways:
+
+- **Unix Socket**. Use for example netcat or another tool to deliver new messages to a socket like `nc -U tmp/steward.sock < msg.yaml`.
+- **Read Folder**. Write/Copy messages to be delivered to the `readfolder` of Steward.
+- **TCP Listener**, Use for example netcat or another tool to deliver new messages a TCP Listener like `nc localhost:8888 < msg.yaml`.
 
 ### Error messages from nodes
 
