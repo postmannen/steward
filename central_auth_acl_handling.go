@@ -293,7 +293,7 @@ func (c *centralAuth) aclDeleteSource(host Node, source Node) error {
 func (c *centralAuth) generateACLsForAllNodes() error {
 	// We first one to save the current main ACLMap.
 	func() {
-		fh, err := os.OpenFile(c.accessLists.schemaMain.ACLMapFilePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600)
+		fh, err := os.OpenFile(c.accessLists.schemaMain.ACLMapFilePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0660)
 		if err != nil {
 			er := fmt.Errorf("error: generateACLsForAllNodes: opening file for writing: %v, err: %v", c.accessLists.schemaMain.ACLMapFilePath, err)
 			log.Printf("%v\n", er)

@@ -688,7 +688,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 
 		// Open a tmp folder for where to write the received chunks
 		tmpFolder := filepath.Join(proc.configuration.SocketFolder, cia.DstFile+"-"+cia.UUID)
-		err = os.Mkdir(tmpFolder, 0700)
+		err = os.Mkdir(tmpFolder, 0770)
 		if err != nil {
 			er := fmt.Errorf("copyDstProcSubFunc: create tmp folder for copying failed: %v", err)
 			proc.errorKernel.errSend(proc, message, er)
@@ -732,7 +732,7 @@ func copyDstSubProcFunc(proc process, cia copyInitialData, message Message, canc
 				case copyData:
 					err := func() error {
 						filePath := filepath.Join(tmpFolder, strconv.Itoa(csa.ChunkNumber)+"."+cia.UUID)
-						fh, err := os.OpenFile(filePath, os.O_TRUNC|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
+						fh, err := os.OpenFile(filePath, os.O_TRUNC|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0660)
 						if err != nil {
 							er := fmt.Errorf("error: copyDstSubProcFunc: open destination chunk file for writing failed: %v", err)
 							return er

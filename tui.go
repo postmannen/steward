@@ -606,7 +606,7 @@ func (t *tui) messageSlide(app *tview.Application) tview.Primitive {
 			}
 
 			if _, err := os.Stat(messageFolder); os.IsNotExist(err) {
-				err := os.MkdirAll(messageFolder, 0700)
+				err := os.MkdirAll(messageFolder, 0770)
 				if err != nil {
 					fmt.Fprintf(p.logForm, "error: failed to create messages folder: %v\n", err)
 					return

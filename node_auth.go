@@ -110,7 +110,7 @@ func (n *nodeAcl) loadFromFile() error {
 		return nil
 	}
 
-	fh, err := os.OpenFile(n.filePath, os.O_RDONLY, 0600)
+	fh, err := os.OpenFile(n.filePath, os.O_RDONLY, 0660)
 	if err != nil {
 		return fmt.Errorf("error: failed to open acl file: %v", err)
 	}
@@ -136,7 +136,7 @@ func (n *nodeAcl) loadFromFile() error {
 // saveToFile will save the acl to file for persistent storage.
 // An error is returned if it fails.
 func (n *nodeAcl) saveToFile() error {
-	fh, err := os.OpenFile(n.filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	fh, err := os.OpenFile(n.filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0660)
 	if err != nil {
 		return fmt.Errorf("error: failed to acl file: %v", err)
 	}
@@ -209,7 +209,7 @@ func (p *publicKeys) loadFromFile() error {
 		return nil
 	}
 
-	fh, err := os.OpenFile(p.filePath, os.O_RDONLY, 0600)
+	fh, err := os.OpenFile(p.filePath, os.O_RDONLY, 0660)
 	if err != nil {
 		return fmt.Errorf("error: failed to open public keys file: %v", err)
 	}
@@ -235,7 +235,7 @@ func (p *publicKeys) loadFromFile() error {
 // saveToFile will save all the public kets to file for persistent storage.
 // An error is returned if it fails.
 func (p *publicKeys) saveToFile() error {
-	fh, err := os.OpenFile(p.filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	fh, err := os.OpenFile(p.filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0660)
 	if err != nil {
 		return fmt.Errorf("error: failed to open public keys file: %v", err)
 	}
@@ -261,7 +261,7 @@ func (p *publicKeys) saveToFile() error {
 func (n *nodeAuth) loadSigningKeys() error {
 	// Check if folder structure exist, if not create it.
 	if _, err := os.Stat(n.SignKeyFolder); os.IsNotExist(err) {
-		err := os.MkdirAll(n.SignKeyFolder, 0700)
+		err := os.MkdirAll(n.SignKeyFolder, 0770)
 		if err != nil {
 			er := fmt.Errorf("error: failed to create directory for signing keys : %v", err)
 			return er
@@ -333,7 +333,7 @@ func (n *nodeAuth) loadSigningKeys() error {
 
 // writeSigningKey will write the base64 encoded signing key to file.
 func (n *nodeAuth) writeSigningKey(realPath string, keyB64 string) error {
-	fh, err := os.OpenFile(realPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	fh, err := os.OpenFile(realPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0660)
 	if err != nil {
 		er := fmt.Errorf("error: failed to open key file for writing: %v", err)
 		return er

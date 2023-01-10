@@ -65,7 +65,7 @@ func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configu
 
 	// Check if socket folder exists, if not create it
 	if _, err := os.Stat(configuration.DatabaseFolder); os.IsNotExist(err) {
-		err := os.MkdirAll(configuration.DatabaseFolder, 0700)
+		err := os.MkdirAll(configuration.DatabaseFolder, 0770)
 		if err != nil {
 			log.Printf("error: failed to create database directory %v: %v\n", configuration.DatabaseFolder, err)
 			os.Exit(1)
@@ -78,7 +78,7 @@ func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configu
 	var db *bolt.DB
 	if configuration.RingBufferPersistStore {
 		var err error
-		db, err = bolt.Open(DatabaseFilepath, 0600, nil)
+		db, err = bolt.Open(DatabaseFilepath, 0660, nil)
 		if err != nil {
 			log.Printf("error: failed to open db: %v\n", err)
 			os.Exit(1)
@@ -538,7 +538,7 @@ func (r *ringBuffer) dbUpdate(db *bolt.DB, bucket string, key string, value []by
 func (r *ringBuffer) startPermanentStore(ctx context.Context) {
 
 	storeFile := filepath.Join(r.configuration.DatabaseFolder, "store.log")
-	f, err := os.OpenFile(storeFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0600)
+	f, err := os.OpenFile(storeFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0660)
 	if err != nil {
 		log.Printf("error: startPermanentStore: failed to open file: %v\n", err)
 	}

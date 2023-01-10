@@ -707,7 +707,7 @@ func (c *Configuration) ReadConfigFile(configFolder string) (Configuration, erro
 		return Configuration{}, fmt.Errorf("error: no config file found %v: %v", fPath, err)
 	}
 
-	f, err := os.OpenFile(fPath, os.O_RDONLY, 0600)
+	f, err := os.OpenFile(fPath, os.O_RDONLY, 0660)
 	if err != nil {
 		return Configuration{}, fmt.Errorf("error: ReadConfigFile: failed to open file: %v", err)
 	}
@@ -730,7 +730,7 @@ func (c *Configuration) ReadConfigFile(configFolder string) (Configuration, erro
 // directory for the config file does not exist it will be created.
 func (c *Configuration) WriteConfigFile() error {
 	if _, err := os.Stat(c.ConfigFolder); os.IsNotExist(err) {
-		err := os.MkdirAll(c.ConfigFolder, 0700)
+		err := os.MkdirAll(c.ConfigFolder, 0770)
 		if err != nil {
 			return fmt.Errorf("error: failed to create config directory %v: %v", c.ConfigFolder, err)
 		}
@@ -738,7 +738,7 @@ func (c *Configuration) WriteConfigFile() error {
 
 	fp := filepath.Join(c.ConfigFolder, "config.toml")
 
-	f, err := os.OpenFile(fp, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	f, err := os.OpenFile(fp, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0660)
 	if err != nil {
 		return fmt.Errorf("error: WriteConfigFile: failed to open file: %v", err)
 	}

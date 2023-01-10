@@ -119,7 +119,7 @@ func (s *server) getFilePaths(dirName string) ([]string, error) {
 
 	// Check if the startup folder exist.
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-		err := os.MkdirAll(dirPath, 0700)
+		err := os.MkdirAll(dirPath, 0770)
 		if err != nil {
 			er := fmt.Errorf("error: failed to create startup folder: %v", err)
 			return nil, er
@@ -208,7 +208,7 @@ func (s *server) readSocket() {
 func (s *server) readFolder() {
 	// Check if the startup folder exist.
 	if _, err := os.Stat(s.configuration.ReadFolder); os.IsNotExist(err) {
-		err := os.MkdirAll(s.configuration.ReadFolder, 0700)
+		err := os.MkdirAll(s.configuration.ReadFolder, 0770)
 		if err != nil {
 			er := fmt.Errorf("error: failed to create readfolder folder: %v", err)
 			log.Printf("%v\n", er)

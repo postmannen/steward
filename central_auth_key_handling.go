@@ -73,7 +73,7 @@ func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 	databaseFilepath := filepath.Join(configuration.DatabaseFolder, "auth.db")
 
 	// Open the database file for persistent storage of public keys.
-	db, err := bolt.Open(databaseFilepath, 0600, nil)
+	db, err := bolt.Open(databaseFilepath, 0660, nil)
 	if err != nil {
 		log.Printf("error: failed to open db: %v\n", err)
 		return &p

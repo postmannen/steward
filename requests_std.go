@@ -27,7 +27,7 @@ func (m methodREQHello) handler(proc process, message Message, node string) ([]b
 
 	// Check if folder structure exist, if not create it.
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
-		err := os.MkdirAll(folderTree, 0700)
+		err := os.MkdirAll(folderTree, 0770)
 		if err != nil {
 			return nil, fmt.Errorf("error: failed to create errorLog directory tree %v: %v", folderTree, err)
 		}
@@ -38,8 +38,8 @@ func (m methodREQHello) handler(proc process, message Message, node string) ([]b
 
 	// Open file and write data.
 	file := filepath.Join(folderTree, fileName)
-	//f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
-	f, err := os.OpenFile(file, os.O_TRUNC|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
+	//f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0660)
+	f, err := os.OpenFile(file, os.O_TRUNC|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0660)
 
 	if err != nil {
 		er := fmt.Errorf("error: methodREQHello.handler: failed to open file: %v", err)
@@ -84,7 +84,7 @@ func (m methodREQErrorLog) handler(proc process, message Message, node string) (
 
 	// Check if folder structure exist, if not create it.
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
-		err := os.MkdirAll(folderTree, 0700)
+		err := os.MkdirAll(folderTree, 0770)
 		if err != nil {
 			return nil, fmt.Errorf("error: failed to create errorLog directory tree %v: %v", folderTree, err)
 		}
@@ -95,7 +95,7 @@ func (m methodREQErrorLog) handler(proc process, message Message, node string) (
 
 	// Open file and write data.
 	file := filepath.Join(folderTree, fileName)
-	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
+	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0660)
 	if err != nil {
 		er := fmt.Errorf("error: methodREQErrorLog.handler: failed to open file: %v", err)
 		return nil, er
@@ -133,7 +133,7 @@ func (m methodREQPing) handler(proc process, message Message, node string) ([]by
 
 	// Check if folder structure exist, if not create it.
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
-		err := os.MkdirAll(folderTree, 0700)
+		err := os.MkdirAll(folderTree, 0770)
 		if err != nil {
 			er := fmt.Errorf("error: methodREQPing.handler: failed to create toFile directory tree: %v, %v", folderTree, err)
 			proc.errorKernel.errSend(proc, message, er)
@@ -196,7 +196,7 @@ func (m methodREQPong) handler(proc process, message Message, node string) ([]by
 
 	// Check if folder structure exist, if not create it.
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
-		err := os.MkdirAll(folderTree, 0700)
+		err := os.MkdirAll(folderTree, 0770)
 		if err != nil {
 			er := fmt.Errorf("error: methodREQPong.handler: failed to create toFile directory tree %v: %v", folderTree, err)
 			proc.errorKernel.errSend(proc, message, er)

@@ -25,7 +25,7 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 
 	// Check if folder structure exist, if not create it.
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
-		err := os.MkdirAll(folderTree, 0700)
+		err := os.MkdirAll(folderTree, 0770)
 		if err != nil {
 			er := fmt.Errorf("error: methodREQToFileAppend: failed to create toFileAppend directory tree:%v, subject: %v, %v", folderTree, proc.subject, err)
 			proc.errorKernel.errSend(proc, message, er)
@@ -37,7 +37,7 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 
 	// Open file and write data.
 	file := filepath.Join(folderTree, fileName)
-	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
+	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0660)
 	if err != nil {
 		er := fmt.Errorf("error: methodREQToFileAppend.handler: failed to open file: %v, %v", file, err)
 		proc.errorKernel.errSend(proc, message, er)
@@ -76,7 +76,7 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 
 	// Check if folder structure exist, if not create it.
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
-		err := os.MkdirAll(folderTree, 0700)
+		err := os.MkdirAll(folderTree, 0770)
 		if err != nil {
 			er := fmt.Errorf("error: methodREQToFile failed to create toFile directory tree: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
 			proc.errorKernel.errSend(proc, message, er)

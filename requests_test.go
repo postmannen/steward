@@ -343,7 +343,7 @@ func TestRequest(t *testing.T) {
 func checkREQTailFileTest(stewardServer *server, conf *Configuration, t *testing.T, tmpDir string) error {
 	// Create a file with some content.
 	fp := filepath.Join(tmpDir, "test.file")
-	fh, err := os.OpenFile(fp, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
+	fh, err := os.OpenFile(fp, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0660)
 	if err != nil {
 		return fmt.Errorf(" * failed: unable to open temporary file: %v", err)
 	}
@@ -424,7 +424,7 @@ func checkREQCopySrc(stewardServer *server, conf *Configuration, t *testing.T, t
 		// Create a file with some content.
 		srcFileName := fmt.Sprintf("copysrc%v.file", i)
 		srcfp := filepath.Join(tmpDir, srcFileName)
-		fh, err := os.OpenFile(srcfp, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0600)
+		fh, err := os.OpenFile(srcfp, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0660)
 		if err != nil {
 			t.Fatalf(" \U0001F631  [FAILED]	: checkREQCopySrc: unable to open temporary file: %v", err)
 		}
