@@ -174,9 +174,10 @@ const (
 // The mapping of all the method constants specified, what type
 // it references, and the kind if it is an Event or Command, and
 // if it is ACK or NACK.
-//  Allowed values for the Event field are:
-//   - EventACK
-//   - EventNack
+//
+//	Allowed values for the Event field are:
+//	 - EventACK
+//	 - EventNack
 //
 // The primary use of this table is that messages are not able to
 // pass the actual type of the request since it is sent as a string,
@@ -433,7 +434,7 @@ func (ma MethodsAvailable) CheckIfExists(m Method) (methodHandler, bool) {
 func newReplyMessage(proc process, message Message, outData []byte) {
 	// If REQNone is specified, we don't want to send a reply message
 	// so we silently just return without sending anything.
-	if message.ReplyMethod == "REQNone" {
+	if message.ReplyMethod == "REQNone" || message.IsReply {
 		return
 	}
 
