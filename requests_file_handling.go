@@ -28,7 +28,7 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 		err := os.MkdirAll(folderTree, 0770)
 		if err != nil {
 			er := fmt.Errorf("error: methodREQToFileAppend: failed to create toFileAppend directory tree:%v, subject: %v, %v", folderTree, proc.subject, err)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 		}
 
 		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
@@ -40,7 +40,7 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 	f, err := os.OpenFile(file, os.O_APPEND|os.O_RDWR|os.O_CREATE|os.O_SYNC, 0660)
 	if err != nil {
 		er := fmt.Errorf("error: methodREQToFileAppend.handler: failed to open file: %v, %v", file, err)
-		proc.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er, logWarning)
 		return nil, err
 	}
 	defer f.Close()
@@ -49,7 +49,7 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 	f.Sync()
 	if err != nil {
 		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file : %v, %v", file, err)
-		proc.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er, logWarning)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -79,7 +79,7 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 		err := os.MkdirAll(folderTree, 0770)
 		if err != nil {
 			er := fmt.Errorf("error: methodREQToFile failed to create toFile directory tree: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 
 			return nil, er
 		}
@@ -93,7 +93,7 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
 	if err != nil {
 		er := fmt.Errorf("error: methodREQToFile.handler: failed to open file, check that you've specified a value for fileName in the message: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
-		proc.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er, logWarning)
 
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 	f.Sync()
 	if err != nil {
 		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file: file: %v, %v", file, err)
-		proc.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er, logWarning)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -134,7 +134,7 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodREQTailFile: got <1 number methodArgs")
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 
 			return
 		}
@@ -161,7 +161,7 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 		}})
 		if err != nil {
 			er := fmt.Errorf("error: methodREQToTailFile: tailFile: %v", err)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 		}
 
 		proc.processes.wg.Add(1)

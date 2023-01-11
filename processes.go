@@ -307,7 +307,7 @@ func (s startup) pubREQHello(p process) {
 			sam, err := newSubjectAndMessage(m)
 			if err != nil {
 				// In theory the system should drop the message before it reaches here.
-				p.errorKernel.errSend(p, m, err)
+				p.errorKernel.errSend(p, m, err, logError)
 				log.Printf("error: ProcessesStart: %v\n", err)
 			}
 			proc.toRingbufferCh <- []subjectAndMessage{sam}
@@ -364,7 +364,7 @@ func (s startup) pubREQKeysRequestUpdate(p process) {
 			sam, err := newSubjectAndMessage(m)
 			if err != nil {
 				// In theory the system should drop the message before it reaches here.
-				p.errorKernel.errSend(p, m, err)
+				p.errorKernel.errSend(p, m, err, logError)
 				log.Printf("error: ProcessesStart: %v\n", err)
 			}
 			proc.toRingbufferCh <- []subjectAndMessage{sam}
@@ -421,7 +421,7 @@ func (s startup) pubREQAclRequestUpdate(p process) {
 			sam, err := newSubjectAndMessage(m)
 			if err != nil {
 				// In theory the system should drop the message before it reaches here.
-				p.errorKernel.errSend(p, m, err)
+				p.errorKernel.errSend(p, m, err, logError)
 				log.Printf("error: ProcessesStart: %v\n", err)
 			}
 			proc.toRingbufferCh <- []subjectAndMessage{sam}

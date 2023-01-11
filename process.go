@@ -218,7 +218,7 @@ func (p process) startPublisher() {
 			err := p.procFunc(p.ctx, p.procFuncCh)
 			if err != nil {
 				er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er, logError)
 			}
 		}()
 	}
@@ -239,7 +239,7 @@ func (p process) startSubscriber() {
 			err := p.procFunc(p.ctx, p.procFuncCh)
 			if err != nil {
 				er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er, logError)
 			}
 		}()
 	}
@@ -253,7 +253,7 @@ func (p process) startSubscriber() {
 		err := p.natsSubscription.Unsubscribe()
 		if err != nil {
 			er := fmt.Errorf("error: spawnWorker: got <-ctx.Done, but unable to unsubscribe natsSubscription failed: %v", err)
-			p.errorKernel.errSend(p, Message{}, er)
+			p.errorKernel.errSend(p, Message{}, er, logError)
 			p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 		}
 
@@ -475,13 +475,13 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			zr, err := zstd.NewReader(nil)
 			if err != nil {
 				er := fmt.Errorf("error: zstd NewReader failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er, logWarning)
 				return
 			}
 			msgData, err = zr.DecodeAll(msg.Data, nil)
 			if err != nil {
 				er := fmt.Errorf("error: zstd decoding failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er, logWarning)
 				zr.Close()
 				return
 			}
@@ -493,14 +493,14 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			gr, err := gzip.NewReader(r)
 			if err != nil {
 				er := fmt.Errorf("error: gzip NewReader failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er, logError)
 				return
 			}
 
 			b, err := io.ReadAll(gr)
 			if err != nil {
 				er := fmt.Errorf("error: gzip ReadAll failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er, logWarning)
 				return
 			}
 
@@ -521,7 +521,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			err := cbor.Unmarshal(msgData, &message)
 			if err != nil {
 				er := fmt.Errorf("error: cbor decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-				p.errorKernel.errSend(p, message, er)
+				p.errorKernel.errSend(p, message, er, logError)
 				return
 			}
 		default: // Deaults to gob if no match was found.
@@ -531,7 +531,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			err := gobDec.Decode(&message)
 			if err != nil {
 				er := fmt.Errorf("error: gob decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-				p.errorKernel.errSend(p, message, er)
+				p.errorKernel.errSend(p, message, er, logError)
 				return
 			}
 		}
@@ -544,7 +544,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		err := gobDec.Decode(&message)
 		if err != nil {
 			er := fmt.Errorf("error: gob decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-			p.errorKernel.errSend(p, message, er)
+			p.errorKernel.errSend(p, message, er, logError)
 			return
 		}
 	}
@@ -578,7 +578,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			p.handler = mh.handler
 			if !ok {
 				er := fmt.Errorf("error: subscriberHandler: no such method type: %v", p.subject.Event)
-				p.errorKernel.errSend(p, message, er)
+				p.errorKernel.errSend(p, message, er, logWarning)
 			}
 		}
 
@@ -603,7 +603,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			p.handler = mh.handler
 			if !ok {
 				er := fmt.Errorf("error: subscriberHandler: no such method type: %v", p.subject.Event)
-				p.errorKernel.errSend(p, message, er)
+				p.errorKernel.errSend(p, message, er, logWarning)
 			}
 		}
 
@@ -635,7 +635,7 @@ func (p process) callHandler(message Message, thisNode string) []byte {
 		case false:
 			// ACL/Signature checking failed.
 			er := fmt.Errorf("error: subscriberHandler: ACL were verified not-OK, doing nothing")
-			p.errorKernel.errSend(p, message, er)
+			p.errorKernel.errSend(p, message, er, logWarning)
 			log.Printf("%v\n", er)
 		}
 	}()
@@ -676,7 +676,7 @@ func executeHandler(p process, message Message, thisNode string) {
 			_, err = p.handler(p, message, thisNode)
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-				p.errorKernel.errSend(p, message, er)
+				p.errorKernel.errSend(p, message, er, logError)
 				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 			}
 		}()
@@ -700,7 +700,7 @@ func executeHandler(p process, message Message, thisNode string) {
 			_, err := p.handler(p, message, thisNode)
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-				p.errorKernel.errSend(p, message, er)
+				p.errorKernel.errSend(p, message, er, logError)
 				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 			}
 		}()
@@ -726,7 +726,7 @@ func executeHandler(p process, message Message, thisNode string) {
 					_, err := p.handler(p, message, thisNode)
 					if err != nil {
 						er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-						p.errorKernel.errSend(p, message, er)
+						p.errorKernel.errSend(p, message, er, logError)
 						p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 					}
 				}()

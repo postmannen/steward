@@ -203,14 +203,14 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 				js, err := json.Marshal(samV)
 				if err != nil {
 					er := fmt.Errorf("error:fillBuffer: json marshaling: %v", err)
-					r.errorKernel.errSend(r.processInitial, Message{}, er)
+					r.errorKernel.errSend(r.processInitial, Message{}, er, logError)
 				}
 
 				// Store the incomming message in key/value store
 				err = r.dbUpdate(r.db, r.samValueBucket, strconv.Itoa(dbID), js)
 				if err != nil {
 					er := fmt.Errorf("error: dbUpdate samValue failed: %v", err)
-					r.errorKernel.errSend(r.processInitial, Message{}, er)
+					r.errorKernel.errSend(r.processInitial, Message{}, er, logError)
 				}
 			}
 
@@ -328,7 +328,7 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 				js, err := json.Marshal(msgForPermStore)
 				if err != nil {
 					er := fmt.Errorf("error:fillBuffer: json marshaling: %v", err)
-					r.errorKernel.errSend(r.processInitial, Message{}, er)
+					r.errorKernel.errSend(r.processInitial, Message{}, er, logError)
 				}
 				r.permStore <- time.Now().Format("Mon Jan _2 15:04:05 2006") + ", " + string(js) + "\n"
 

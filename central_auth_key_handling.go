@@ -157,7 +157,7 @@ func (c *centralAuth) deletePublicKeys(proc process, msg Message, nodes []string
 
 	err := c.pki.dbDeletePublicKeys(c.pki.bucketNamePublicKeys, nodes)
 	if err != nil {
-		proc.errorKernel.errSend(proc, msg, err)
+		proc.errorKernel.errSend(proc, msg, err, logWarning)
 	}
 
 	er := fmt.Errorf("info: detected new public key for node: %v. This key will need to be authorized by operator to be allowed into the system", msg.FromNode)
@@ -287,7 +287,7 @@ func (c *centralAuth) updateHash(proc process, message Message) {
 	b, err := cbor.Marshal(sortedNodesAndKeys)
 	if err != nil {
 		er := fmt.Errorf("error: methodREQKeysAllow, failed to marshal slice, and will not update hash for public keys:  %v", err)
-		c.pki.errorKernel.errSend(proc, message, er)
+		c.pki.errorKernel.errSend(proc, message, er, logWarning)
 		log.Printf(" * DEBUG: %v\n", er)
 
 		return
@@ -301,7 +301,7 @@ func (c *centralAuth) updateHash(proc process, message Message) {
 	c.pki.dbUpdateHash(hash[:])
 	if err != nil {
 		er := fmt.Errorf("error: methodREQKeysAllow, failed to store the hash into the db:  %v", err)
-		c.pki.errorKernel.errSend(proc, message, er)
+		c.pki.errorKernel.errSend(proc, message, er, logWarning)
 		log.Printf(" * DEBUG: %v\n", er)
 
 		return

@@ -68,7 +68,7 @@ func (m methodREQOpProcessStart) handler(proc process, message Message, node str
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodREQOpProcessStart: got <1 number methodArgs")
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 			return
 		}
 
@@ -77,7 +77,7 @@ func (m methodREQOpProcessStart) handler(proc process, message Message, node str
 		tmpH := mt.getHandler(Method(method))
 		if tmpH == nil {
 			er := fmt.Errorf("error: OpProcessStart: no such request type defined: %v" + m)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 			return
 		}
 
@@ -88,7 +88,7 @@ func (m methodREQOpProcessStart) handler(proc process, message Message, node str
 
 		txt := fmt.Sprintf("info: OpProcessStart: started id: %v, subject: %v: node: %v", procNew.processID, sub, message.ToNode)
 		er := fmt.Errorf(txt)
-		proc.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er, logWarning)
 
 		out = []byte(txt + "\n")
 		newReplyMessage(proc, message, out)
@@ -133,7 +133,7 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 
 		if v := len(message.MethodArgs); v != 3 {
 			er := fmt.Errorf("error: methodREQOpProcessStop: got <4 number methodArgs, want: method,node,kind")
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 		}
 
 		methodString := message.MethodArgs[0]
@@ -144,7 +144,7 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 		tmpH := mt.getHandler(Method(method))
 		if tmpH == nil {
 			er := fmt.Errorf("error: OpProcessStop: no such request type defined: %v, check that the methodArgs are correct: " + methodString)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 			return
 		}
 
@@ -170,7 +170,7 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 			err := toStopProc.natsSubscription.Unsubscribe()
 			if err != nil {
 				er := fmt.Errorf("error: methodREQOpStopProcess failed to stop nats.Subscription: %v, methodArgs: %v", err, message.MethodArgs)
-				proc.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er, logWarning)
 			}
 
 			// Remove the prometheus label
@@ -178,7 +178,7 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 
 			txt := fmt.Sprintf("info: OpProcessStop: process stopped id: %v, method: %v on: %v", toStopProc.processID, sub, message.ToNode)
 			er := fmt.Errorf(txt)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 
 			out = []byte(txt + "\n")
 			newReplyMessage(proc, message, out)
@@ -186,7 +186,7 @@ func (m methodREQOpProcessStop) handler(proc process, message Message, node stri
 		} else {
 			txt := fmt.Sprintf("error: OpProcessStop: did not find process to stop: %v on %v", sub, message.ToNode)
 			er := fmt.Errorf(txt)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 
 			out = []byte(txt + "\n")
 			newReplyMessage(proc, message, out)

@@ -480,7 +480,7 @@ func newReplyMessage(proc process, message Message, outData []byte) {
 	if err != nil {
 		// In theory the system should drop the message before it reaches here.
 		er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
-		proc.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er, logError)
 	}
 
 	proc.toRingbufferCh <- []subjectAndMessage{sam}

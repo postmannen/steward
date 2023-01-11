@@ -52,6 +52,7 @@ func newErrorKernel(ctx context.Context, m *metrics, configuration *Configuratio
 
 type logLevel string
 
+const logError logLevel = "error"
 const logInfo logLevel = "info"
 const logWarning logLevel = "warning"
 const logDebug logLevel = "debug"
@@ -80,6 +81,11 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- []subjectAndMessage) error
 	}
 
 	switch {
+	case e.configuration.LogLevel == string(logError):
+		opts := slog.HandlerOptions{Level: slog.LevelError,
+			ReplaceAttr: replaceFunc}
+		slog.SetDefault(slog.New(opts.NewTextHandler(os.Stderr)))
+
 	case e.configuration.LogLevel == string(logInfo):
 		opts := slog.HandlerOptions{Level: slog.LevelInfo,
 			ReplaceAttr: replaceFunc}
@@ -133,9 +139,23 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- []subjectAndMessage) error
 			// Put the message on the channel to the ringbuffer.
 			ringBufferBulkInCh <- []subjectAndMessage{sam}
 
-			if errEvent.process.configuration.EnableDebug {
-				log.Printf("%v\n", er)
+			// if errEvent.process.configuration.EnableDebug {
+			// 	log.Printf("%v\n", er)
+			// }
+
+			switch errEvent.logLevel {
+			case logError:
+				slog.Error("%v\n", fmt.Errorf("%v", er), "error")
+			case logInfo:
+				slog.Info("%v\n", er)
+			case logWarning:
+				slog.Warn("%v\n", er)
+			case logDebug:
+				slog.Debug("%v\n", er)
+			case logNone:
+				// Do nothing for type logNone errors.
 			}
+
 		}
 
 		// Check the type of the error to decide what to do.
@@ -186,7 +206,7 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- []subjectAndMessage) error
 				}
 
 				// We also want to log the error.
-				e.errSend(errEvent.process, errEvent.message, errEvent.err)
+				e.errSend(errEvent.process, errEvent.message, errEvent.err, logWarning)
 			}()
 
 		default:
@@ -211,6 +231,8 @@ type errorEvent struct {
 	process process
 	// The message that where in progress when error occured
 	message Message
+	// Level, the log level of the severity
+	logLevel logLevel
 }
 
 func (e errorEvent) Error() string {
@@ -218,12 +240,13 @@ func (e errorEvent) Error() string {
 }
 
 // errSend will just send an error message to the errorCentral.
-func (e *errorKernel) errSend(proc process, msg Message, err error) {
+func (e *errorKernel) errSend(proc process, msg Message, err error, logLevel logLevel) {
 	ev := errorEvent{
 		err:       err,
 		errorType: errTypeSendError,
 		process:   proc,
 		message:   msg,
+		logLevel:  logLevel,
 		// We don't want to create any actions when just
 		// sending errors.
 		// errorActionCh: make(chan errorAction),

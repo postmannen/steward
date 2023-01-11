@@ -81,7 +81,7 @@ func (m methodREQAclRequestUpdate) handler(proc process, message Message, node s
 				js, err := json.Marshal(hdh)
 				if err != nil {
 					er := fmt.Errorf("error: REQAclRequestUpdate : json marshal failed: %v, message: %v", err, message)
-					proc.errorKernel.errSend(proc, message, er)
+					proc.errorKernel.errSend(proc, message, er, logWarning)
 				}
 
 				er = fmt.Errorf("----> subscriber methodREQAclRequestUpdate: SENDING ACL'S TO NODE=%v, serializedAndHash=%+v", message.FromNode, hdh)
@@ -145,7 +145,7 @@ func (m methodREQAclDeliverUpdate) handler(proc process, message Message, node s
 			err := json.Unmarshal(message.Data, &hdh)
 			if err != nil {
 				er := fmt.Errorf("error: subscriber REQAclDeliverUpdate : json unmarshal failed: %v, message: %v", err, message)
-				proc.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er, logWarning)
 			}
 
 			mapOfFromNodeCommands := make(map[Node]map[command]struct{})
@@ -154,7 +154,7 @@ func (m methodREQAclDeliverUpdate) handler(proc process, message Message, node s
 				err = cbor.Unmarshal(hdh.Data, &mapOfFromNodeCommands)
 				if err != nil {
 					er := fmt.Errorf("error: subscriber REQAclDeliverUpdate : cbor unmarshal failed: %v, message: %v", err, message)
-					proc.errorKernel.errSend(proc, message, er)
+					proc.errorKernel.errSend(proc, message, er, logError)
 				}
 			}
 
@@ -168,7 +168,7 @@ func (m methodREQAclDeliverUpdate) handler(proc process, message Message, node s
 			err = proc.nodeAuth.nodeAcl.saveToFile()
 			if err != nil {
 				er := fmt.Errorf("error: subscriber REQAclDeliverUpdate : save to file failed: %v, message: %v", err, message)
-				proc.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er, logError)
 			}
 
 			// Prepare and queue for sending a new message with the output
@@ -233,12 +233,12 @@ func (m methodREQAclAddCommand) handler(proc process, message Message, node stri
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err)
+			proc.errorKernel.errSend(proc, message, err, logError)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclAddAccessList: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -303,12 +303,12 @@ func (m methodREQAclDeleteCommand) handler(proc process, message Message, node s
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err)
+			proc.errorKernel.errSend(proc, message, err, logError)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclDeleteCommand: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -372,12 +372,12 @@ func (m methodREQAclDeleteSource) handler(proc process, message Message, node st
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err)
+			proc.errorKernel.errSend(proc, message, err, logError)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclDeleteSource: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -441,12 +441,12 @@ func (m methodREQAclGroupNodesAddNode) handler(proc process, message Message, no
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err)
+			proc.errorKernel.errSend(proc, message, err, logError)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclGroupNodesAddNode: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -510,12 +510,12 @@ func (m methodREQAclGroupNodesDeleteNode) handler(proc process, message Message,
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err)
+			proc.errorKernel.errSend(proc, message, err, logError)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclGroupNodesDeleteNode: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -578,12 +578,12 @@ func (m methodREQAclGroupNodesDeleteGroup) handler(proc process, message Message
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err)
+			proc.errorKernel.errSend(proc, message, err, logError)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclGroupNodesDeleteGroup: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -647,12 +647,12 @@ func (m methodREQAclGroupCommandsAddCommand) handler(proc process, message Messa
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err)
+			proc.errorKernel.errSend(proc, message, err, logError)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclGroupCommandsAddCommand: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -716,12 +716,12 @@ func (m methodREQAclGroupCommandsDeleteCommand) handler(proc process, message Me
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err)
+			proc.errorKernel.errSend(proc, message, err, logError)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclGroupCommandsDeleteCommand: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -784,12 +784,12 @@ func (m methodREQAclGroupCommandsDeleteGroup) handler(proc process, message Mess
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err)
+			proc.errorKernel.errSend(proc, message, err, logError)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclGroupCommandsDeleteGroup: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -848,12 +848,12 @@ func (m methodREQAclExport) handler(proc process, message Message, node string) 
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err)
+			proc.errorKernel.errSend(proc, message, err, logError)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclExport: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output
@@ -920,12 +920,12 @@ func (m methodREQAclImport) handler(proc process, message Message, node string) 
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err)
+			proc.errorKernel.errSend(proc, message, err, logError)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclImport: method timed out")
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logInfo)
 
 		case out := <-outCh:
 			// Prepare and queue for sending a new message with the output

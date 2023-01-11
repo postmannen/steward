@@ -34,7 +34,7 @@ func (s *server) readStartupFolder() {
 	filePaths, err := s.getFilePaths(startupFolder)
 	if err != nil {
 		er := fmt.Errorf("error: readStartupFolder: unable to get filenames: %v", err)
-		s.errorKernel.errSend(s.processInitial, Message{}, er)
+		s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 		return
 	}
 
@@ -64,7 +64,7 @@ func (s *server) readStartupFolder() {
 		}(filePath)
 
 		if err != nil {
-			s.errorKernel.errSend(s.processInitial, Message{}, err)
+			s.errorKernel.errSend(s.processInitial, Message{}, err, logWarning)
 			continue
 		}
 
@@ -74,7 +74,7 @@ func (s *server) readStartupFolder() {
 		sams, err := s.convertBytesToSAMs(readBytes)
 		if err != nil {
 			er := fmt.Errorf("error: startup folder: malformed json read: %v", err)
-			s.errorKernel.errSend(s.processInitial, Message{}, er)
+			s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 			continue
 		}
 
@@ -84,12 +84,12 @@ func (s *server) readStartupFolder() {
 			case sams[i].Message.FromNode == "":
 				sams = append(sams[:i], sams[i+1:]...)
 				er := fmt.Errorf(" error: missing value in fromNode field in startup message, discarding message")
-				s.errorKernel.errSend(s.processInitial, Message{}, er)
+				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 
 			case sams[i].Message.ToNode == "" && len(sams[i].Message.ToNodes) == 0:
 				sams = append(sams[:i], sams[i+1:]...)
 				er := fmt.Errorf(" error: missing value in both toNode and toNodes fields in startup message, discarding message")
-				s.errorKernel.errSend(s.processInitial, Message{}, er)
+				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 			}
 
 			// NB: REMOVED CODE!
@@ -151,7 +151,7 @@ func (s *server) readSocket() {
 		conn, err := s.StewardSocket.Accept()
 		if err != nil {
 			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
-			s.errorKernel.errSend(s.processInitial, Message{}, er)
+			s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
 		}
 
 		go func(conn net.Conn) {
@@ -164,7 +164,7 @@ func (s *server) readSocket() {
 				_, err = conn.Read(b)
 				if err != nil && err != io.EOF {
 					er := fmt.Errorf("error: failed to read data from socket: %v", err)
-					s.errorKernel.errSend(s.processInitial, Message{}, er)
+					s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 					return
 				}
 
@@ -181,7 +181,7 @@ func (s *server) readSocket() {
 			sams, err := s.convertBytesToSAMs(readBytes)
 			if err != nil {
 				er := fmt.Errorf("error: malformed json received on socket: %s\n %v", readBytes, err)
-				s.errorKernel.errSend(s.processInitial, Message{}, er)
+				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 				return
 			}
 
@@ -194,7 +194,7 @@ func (s *server) readSocket() {
 				// Send an info message to the central about the message picked
 				// for auditing.
 				er := fmt.Errorf("info: message read from socket on %v: %v", s.nodeName, sams[i].Message)
-				s.errorKernel.errSend(s.processInitial, Message{}, er)
+				s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
 			}
 
 			// Send the SAM struct to be picked up by the ring buffer.
@@ -239,14 +239,14 @@ func (s *server) readFolder() {
 						fh, err := os.Open(event.Name)
 						if err != nil {
 							er := fmt.Errorf("error: readFolder: failed to open readFile from readFolder: %v", err)
-							s.errorKernel.errSend(s.processInitial, Message{}, er)
+							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 							return
 						}
 
 						b, err := io.ReadAll(fh)
 						if err != nil {
 							er := fmt.Errorf("error: readFolder: failed to readall from readFolder: %v", err)
-							s.errorKernel.errSend(s.processInitial, Message{}, er)
+							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 							fh.Close()
 							return
 						}
@@ -258,7 +258,7 @@ func (s *server) readFolder() {
 						sams, err := s.convertBytesToSAMs(b)
 						if err != nil {
 							er := fmt.Errorf("error: readFolder: malformed json received: %s\n %v", b, err)
-							s.errorKernel.errSend(s.processInitial, Message{}, er)
+							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 							return
 						}
 
@@ -271,7 +271,7 @@ func (s *server) readFolder() {
 							// Send an info message to the central about the message picked
 							// for auditing.
 							er := fmt.Errorf("info: readFolder: message read from readFolder on %v: %v", s.nodeName, sams[i].Message)
-							s.errorKernel.errSend(s.processInitial, Message{}, er)
+							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 						}
 
 						// Send the SAM struct to be picked up by the ring buffer.
@@ -281,7 +281,7 @@ func (s *server) readFolder() {
 						err = os.Remove(event.Name)
 						if err != nil {
 							er := fmt.Errorf("error: readFolder: failed to remove readFile from readFolder: %v", err)
-							s.errorKernel.errSend(s.processInitial, Message{}, er)
+							s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 							return
 						}
 
@@ -293,7 +293,7 @@ func (s *server) readFolder() {
 					return
 				}
 				er := fmt.Errorf("error: readFolder: file watcher error: %v", err)
-				s.errorKernel.errSend(s.processInitial, Message{}, er)
+				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 			}
 		}
 	}()
@@ -322,7 +322,7 @@ func (s *server) readTCPListener() {
 		conn, err := ln.Accept()
 		if err != nil {
 			er := fmt.Errorf("error: failed to accept conn on socket: %v", err)
-			s.errorKernel.errSend(s.processInitial, Message{}, er)
+			s.errorKernel.errSend(s.processInitial, Message{}, er, logError)
 			continue
 		}
 
@@ -336,7 +336,7 @@ func (s *server) readTCPListener() {
 				_, err = conn.Read(b)
 				if err != nil && err != io.EOF {
 					er := fmt.Errorf("error: failed to read data from tcp listener: %v", err)
-					s.errorKernel.errSend(s.processInitial, Message{}, er)
+					s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 					return
 				}
 
@@ -353,7 +353,7 @@ func (s *server) readTCPListener() {
 			sam, err := s.convertBytesToSAMs(readBytes)
 			if err != nil {
 				er := fmt.Errorf("error: malformed json received on tcp listener: %v", err)
-				s.errorKernel.errSend(s.processInitial, Message{}, er)
+				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 				return
 			}
 
@@ -380,7 +380,7 @@ func (s *server) readHTTPlistenerHandler(w http.ResponseWriter, r *http.Request)
 		_, err := r.Body.Read(b)
 		if err != nil && err != io.EOF {
 			er := fmt.Errorf("error: failed to read data from tcp listener: %v", err)
-			s.errorKernel.errSend(s.processInitial, Message{}, er)
+			s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 			return
 		}
 
@@ -397,7 +397,7 @@ func (s *server) readHTTPlistenerHandler(w http.ResponseWriter, r *http.Request)
 	sam, err := s.convertBytesToSAMs(readBytes)
 	if err != nil {
 		er := fmt.Errorf("error: malformed json received on HTTPListener: %v", err)
-		s.errorKernel.errSend(s.processInitial, Message{}, er)
+		s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 		return
 	}
 
@@ -465,7 +465,7 @@ func (s *server) convertBytesToSAMs(b []byte) ([]subjectAndMessage, error) {
 		sm, err := newSubjectAndMessage(m)
 		if err != nil {
 			er := fmt.Errorf("error: newSubjectAndMessage: %v", err)
-			s.errorKernel.errSend(s.processInitial, m, er)
+			s.errorKernel.errSend(s.processInitial, m, er, logWarning)
 
 			continue
 		}
@@ -509,7 +509,7 @@ func (s *server) checkMessageToNodes(MsgSlice []Message) []Message {
 		// the slice since it is not valid.
 		default:
 			er := fmt.Errorf("error: no toNode or toNodes where specified in the message, dropping message: %v", v)
-			s.errorKernel.errSend(s.processInitial, v, er)
+			s.errorKernel.errSend(s.processInitial, v, er, logWarning)
 			continue
 		}
 	}

@@ -122,7 +122,7 @@ func (m methodREQKeysRequestUpdate) handler(proc process, message Message, node 
 
 				if err != nil {
 					er := fmt.Errorf("error: methodREQKeysRequestUpdate, failed to marshal keys map: %v", err)
-					proc.errorKernel.errSend(proc, message, er)
+					proc.errorKernel.errSend(proc, message, er, logWarning)
 				}
 				er = fmt.Errorf("----> methodREQKeysRequestUpdate: SENDING KEYS TO NODE=%v", message.FromNode)
 				proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
@@ -183,7 +183,7 @@ func (m methodREQKeysDeliverUpdate) handler(proc process, message Message, node 
 			err := json.Unmarshal(message.Data, &keysAndHash)
 			if err != nil {
 				er := fmt.Errorf("error: REQKeysDeliverUpdate : json unmarshal failed: %v, message: %v", err, message)
-				proc.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er, logWarning)
 			}
 
 			er := fmt.Errorf("<---- REQKeysDeliverUpdate: after unmarshal, nodeAuth keysAndhash contains: %+v", keysAndHash)
@@ -201,7 +201,7 @@ func (m methodREQKeysDeliverUpdate) handler(proc process, message Message, node 
 
 			if err != nil {
 				er := fmt.Errorf("error: REQKeysDeliverUpdate : json unmarshal failed: %v, message: %v", err, message)
-				proc.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er, logWarning)
 			}
 
 			// We need to also persist the hash on the receiving nodes. We can then load
@@ -210,7 +210,7 @@ func (m methodREQKeysDeliverUpdate) handler(proc process, message Message, node 
 			err = proc.nodeAuth.publicKeys.saveToFile()
 			if err != nil {
 				er := fmt.Errorf("error: REQKeysDeliverUpdate : save to file failed: %v, message: %v", err, message)
-				proc.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er, logWarning)
 			}
 
 			// Prepare and queue for sending a new message with the output
@@ -304,7 +304,7 @@ func (m methodREQKeysAllow) handler(proc process, message Message, node string) 
 			err := pushKeys(proc, message, []Node{})
 
 			if err != nil {
-				proc.errorKernel.errSend(proc, message, err)
+				proc.errorKernel.errSend(proc, message, err, logWarning)
 				return
 			}
 
@@ -363,7 +363,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 		if err != nil {
 			// In theory the system should drop the message before it reaches here.
 			er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 		}
 
 		proc.toRingbufferCh <- []subjectAndMessage{sam}
@@ -377,7 +377,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 
 	if err != nil {
 		er := fmt.Errorf("error: methodREQKeysAllow, failed to marshal keys map: %v", err)
-		proc.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er, logWarning)
 	}
 
 	proc.centralAuth.pki.nodesAcked.mu.Lock()
@@ -410,7 +410,7 @@ func pushKeys(proc process, message Message, nodes []Node) error {
 		if err != nil {
 			// In theory the system should drop the message before it reaches here.
 			er := fmt.Errorf("error: newSubjectAndMessage : %v, message: %v", err, message)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 		}
 
 		proc.toRingbufferCh <- []subjectAndMessage{sam}
@@ -480,7 +480,7 @@ func (m methodREQKeysDelete) handler(proc process, message Message, node string)
 			err := pushKeys(proc, message, nodes)
 
 			if err != nil {
-				proc.errorKernel.errSend(proc, message, err)
+				proc.errorKernel.errSend(proc, message, err, logWarning)
 				return
 			}
 
@@ -496,12 +496,12 @@ func (m methodREQKeysDelete) handler(proc process, message Message, node string)
 
 		select {
 		case err := <-errCh:
-			proc.errorKernel.errSend(proc, message, err)
+			proc.errorKernel.errSend(proc, message, err, logWarning)
 
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQAclGroupNodesDeleteNode: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 
 		case out := <-outCh:
 

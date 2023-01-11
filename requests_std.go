@@ -51,7 +51,7 @@ func (m methodREQHello) handler(proc process, message Message, node string) ([]b
 	f.Sync()
 	if err != nil {
 		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file: %v", err)
-		proc.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er, logWarning)
 	}
 
 	// --------------------------
@@ -106,7 +106,7 @@ func (m methodREQErrorLog) handler(proc process, message Message, node string) (
 	f.Sync()
 	if err != nil {
 		er := fmt.Errorf("error: methodEventTextLogging.handler: failed to write to file: %v", err)
-		proc.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er, logWarning)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -136,7 +136,7 @@ func (m methodREQPing) handler(proc process, message Message, node string) ([]by
 		err := os.MkdirAll(folderTree, 0770)
 		if err != nil {
 			er := fmt.Errorf("error: methodREQPing.handler: failed to create toFile directory tree: %v, %v", folderTree, err)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 
 			return nil, er
 		}
@@ -150,7 +150,7 @@ func (m methodREQPing) handler(proc process, message Message, node string) ([]by
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
 	if err != nil {
 		er := fmt.Errorf("error: methodREQPing.handler: failed to open file, check that you've specified a value for fileName in the message: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
-		proc.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er, logWarning)
 
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (m methodREQPing) handler(proc process, message Message, node string) ([]by
 	f.Sync()
 	if err != nil {
 		er := fmt.Errorf("error: methodREQPing.handler: failed to write to file: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
-		proc.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er, logWarning)
 	}
 
 	proc.processes.wg.Add(1)
@@ -199,7 +199,7 @@ func (m methodREQPong) handler(proc process, message Message, node string) ([]by
 		err := os.MkdirAll(folderTree, 0770)
 		if err != nil {
 			er := fmt.Errorf("error: methodREQPong.handler: failed to create toFile directory tree %v: %v", folderTree, err)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 
 			return nil, er
 		}
@@ -213,7 +213,7 @@ func (m methodREQPong) handler(proc process, message Message, node string) ([]by
 	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0755)
 	if err != nil {
 		er := fmt.Errorf("error: methodREQPong.handler: failed to open file, check that you've specified a value for fileName in the message: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
-		proc.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er, logWarning)
 
 		return nil, err
 	}
@@ -225,7 +225,7 @@ func (m methodREQPong) handler(proc process, message Message, node string) ([]by
 	f.Sync()
 	if err != nil {
 		er := fmt.Errorf("error: methodREQPong.handler: failed to write to file: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
-		proc.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er, logWarning)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
@@ -252,7 +252,7 @@ func (m methodREQToConsole) handler(proc process, message Message, node string) 
 			proc.processes.tui.toConsoleCh <- message.Data
 		} else {
 			er := fmt.Errorf("error: no tui client started")
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 		}
 	case len(message.MethodArgs) > 0 && message.MethodArgs[0] == "stderr":
 		log.Printf("* DEBUG: MethodArgs: got stderr \n")
@@ -285,7 +285,7 @@ func (m methodREQTuiToConsole) handler(proc process, message Message, node strin
 		proc.processes.tui.toConsoleCh <- message.Data
 	} else {
 		er := fmt.Errorf("error: no tui client started")
-		proc.errorKernel.errSend(proc, message, er)
+		proc.errorKernel.errSend(proc, message, er, logWarning)
 	}
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))

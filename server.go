@@ -352,7 +352,7 @@ func (s *server) directSAMSChRead() {
 					mh, ok := p.methodsAvailable.CheckIfExists(sams[i].Message.Method)
 					if !ok {
 						er := fmt.Errorf("error: subscriberHandler: method type not available: %v", p.subject.Event)
-						p.errorKernel.errSend(p, sams[i].Message, er)
+						p.errorKernel.errSend(p, sams[i].Message, er, logError)
 						continue
 					}
 
@@ -453,7 +453,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 				// Check if the format of the message is correct.
 				if _, ok := methodsAvailable.CheckIfExists(sam.Message.Method); !ok {
 					er := fmt.Errorf("error: routeMessagesToProcess: the method do not exist, message dropped: %v", sam.Message.Method)
-					s.errorKernel.errSend(s.processInitial, sam.Message, er)
+					s.errorKernel.errSend(s.processInitial, sam.Message, er, logError)
 					return
 				}
 
