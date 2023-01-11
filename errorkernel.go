@@ -11,7 +11,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
+
+	"golang.org/x/exp/slog"
 )
 
 // errorKernel is the structure that will hold all the error
@@ -27,23 +30,32 @@ type errorKernel struct {
 	// testCh is used within REQTest for receving data for tests.
 	testCh chan []byte
 
-	ctx     context.Context
-	cancel  context.CancelFunc
-	metrics *metrics
+	ctx           context.Context
+	cancel        context.CancelFunc
+	metrics       *metrics
+	configuration *Configuration
 }
 
 // newErrorKernel will initialize and return a new error kernel
-func newErrorKernel(ctx context.Context, m *metrics) *errorKernel {
+func newErrorKernel(ctx context.Context, m *metrics, configuration *Configuration) *errorKernel {
 	ctxC, cancel := context.WithCancel(ctx)
 
 	return &errorKernel{
-		errorCh: make(chan errorEvent, 2),
-		testCh:  make(chan []byte),
-		ctx:     ctxC,
-		cancel:  cancel,
-		metrics: m,
+		errorCh:       make(chan errorEvent, 2),
+		testCh:        make(chan []byte),
+		ctx:           ctxC,
+		cancel:        cancel,
+		metrics:       m,
+		configuration: configuration,
 	}
 }
+
+type logLevel string
+
+const logInfo logLevel = "info"
+const logWarning logLevel = "warning"
+const logDebug logLevel = "debug"
+const logNone logLevel = "none"
 
 // startErrorKernel will start the error kernel and check if there
 // have been reveived any errors from any of the processes, and
@@ -56,8 +68,39 @@ func newErrorKernel(ctx context.Context, m *metrics) *errorKernel {
 // the error where. This should be right after sending the error
 // sending in the process.
 func (e *errorKernel) start(ringBufferBulkInCh chan<- []subjectAndMessage) error {
-	// NOTE: For now it will just print the error messages to the
-	// console.
+	// Initiate the slog logger.
+	var replaceFunc func(groups []string, a slog.Attr) slog.Attr
+	if !e.configuration.LogConsoleTimestamps {
+		replaceFunc = func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.TimeKey {
+				return slog.Attr{}
+			}
+			return a
+		}
+	}
+
+	switch {
+	case e.configuration.LogLevel == string(logInfo):
+		opts := slog.HandlerOptions{Level: slog.LevelInfo,
+			ReplaceAttr: replaceFunc}
+		slog.SetDefault(slog.New(opts.NewTextHandler(os.Stderr)))
+
+	case e.configuration.LogLevel == string(logWarning):
+		opts := slog.HandlerOptions{Level: slog.LevelWarn,
+			ReplaceAttr: replaceFunc}
+		slog.SetDefault(slog.New(opts.NewTextHandler(os.Stderr)))
+
+	case e.configuration.LogLevel == string(logDebug):
+		opts := slog.HandlerOptions{Level: slog.LevelDebug,
+			ReplaceAttr: replaceFunc}
+		slog.SetDefault(slog.New(opts.NewTextHandler(os.Stderr)))
+
+	case e.configuration.LogLevel == string(logNone):
+		// TODO:
+	default:
+		log.Printf("error: not valid log level: %v\n", e.configuration.LogLevel)
+		os.Exit(1)
+	}
 
 	for {
 		var errEvent errorEvent
@@ -156,6 +199,24 @@ func (e *errorKernel) stop() {
 	e.cancel()
 }
 
+type errorEvent struct {
+	// The actual error
+	err error
+	// Channel for communicating the action to take back to
+	// to the process who triggered the error
+	errorActionCh chan errorAction
+	// Some informational text
+	errorType errorType
+	// The process structure that belongs to a given process
+	process process
+	// The message that where in progress when error occured
+	message Message
+}
+
+func (e errorEvent) Error() string {
+	return fmt.Sprintf("worker error: proc = %#v, message = %#v", e.process, e.message)
+}
+
 // errSend will just send an error message to the errorCentral.
 func (e *errorKernel) errSend(proc process, msg Message, err error) {
 	ev := errorEvent{
@@ -217,21 +278,3 @@ const (
 	errTypeSendInfo   errorType = iota
 	errTypeWithAction errorType = iota
 )
-
-type errorEvent struct {
-	// The actual error
-	err error
-	// Channel for communicating the action to take back to
-	// to the process who triggered the error
-	errorActionCh chan errorAction
-	// Some informational text
-	errorType errorType
-	// The process structure that belongs to a given process
-	process process
-	// The message that where in progress when error occured
-	message Message
-}
-
-func (e errorEvent) Error() string {
-	return fmt.Sprintf("worker error: proc = %#v, message = %#v", e.process, e.message)
-}

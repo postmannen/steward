@@ -81,7 +81,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 
 	// Start the error kernel that will do all the error handling
 	// that is not done within a process.
-	errorKernel := newErrorKernel(ctx, metrics)
+	errorKernel := newErrorKernel(ctx, metrics, configuration)
 
 	var opt nats.Option
 
