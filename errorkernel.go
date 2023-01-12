@@ -271,7 +271,7 @@ func (e *errorKernel) infoSend(proc process, msg Message, err error) {
 }
 
 func (e *errorKernel) logConsoleOnlyIfDebug(err error, c *Configuration) {
-	if c.EnableDebug {
+	if c.LogLevel == string(logDebug) {
 		slog.Debug(err.Error())
 	}
 }

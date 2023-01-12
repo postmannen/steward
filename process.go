@@ -261,7 +261,8 @@ func (p process) startSubscriber() {
 		delete(p.processes.active.procNames, p.processName)
 		p.processes.active.mu.Unlock()
 
-		log.Printf("Successfully stopped process: %v\n", p.processName)
+		er := fmt.Errorf("successfully stopped process: %v", p.processName)
+		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 	}()
 }
@@ -307,7 +308,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				err := natsConn.PublishMsg(msg)
 				if err != nil {
 					er := fmt.Errorf("error: nats publish for message with subject failed: %v", err)
-					log.Printf("%v\n", er)
+					p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 					return ErrACKSubscribeRetry
 				}
 				p.metrics.promNatsDeliveredTotal.Inc()
@@ -359,13 +360,15 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				defer func() {
 					err := subReply.Unsubscribe()
 					if err != nil {
-						log.Printf("error: nats SubscribeSync: failed when unsubscribing for ACK: %v\n", err)
+						er := fmt.Errorf("error: nats SubscribeSync: failed when unsubscribing for ACK: %v", err)
+						p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 					}
 				}()
 				if err != nil {
 					er := fmt.Errorf("error: nats SubscribeSync failed: failed to create reply message for subject: %v, error: %v", msg.Reply, err)
 					// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
-					log.Printf("%v, waiting equal to RetryWait %ds before retrying\n", er, message.RetryWait)
+					er = fmt.Errorf("%v, waiting equal to RetryWait %ds before retrying", er, message.RetryWait)
+					p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 					time.Sleep(time.Second * time.Duration(message.RetryWait))
 
@@ -375,9 +378,9 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				// Publish message
 				err = natsConn.PublishMsg(msg)
 				if err != nil {
-					er := fmt.Errorf("error: nats publish failed: %v", err)
+					er := fmt.Errorf("error: nats publish failed: %v, waiting equal to RetryWait of %ds before retrying", err, message.RetryWait)
 					// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
-					log.Printf("%v, waiting equal to RetryWait of %ds before retrying\n", er, message.RetryWait)
+					p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 					time.Sleep(time.Second * time.Duration(message.RetryWait))
 
 					return ErrACKSubscribeRetry
@@ -636,7 +639,7 @@ func (p process) callHandler(message Message, thisNode string) []byte {
 			// ACL/Signature checking failed.
 			er := fmt.Errorf("error: subscriberHandler: ACL were verified not-OK, doing nothing")
 			p.errorKernel.errSend(p, message, er, logWarning)
-			log.Printf("%v\n", er)
+			p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 		}
 	}()
 
@@ -754,7 +757,8 @@ func (p process) verifySigOrAclFlag(message Message) bool {
 	case p.nodeAuth.configuration.EnableSignatureCheck && !p.nodeAuth.configuration.EnableAclCheck:
 		sigOK := p.nodeAuth.verifySignature(message)
 
-		log.Printf(" * DEBUG: verify acl/sig: Only signature checking enabled, ALLOW the message if sigOK, sigOK=%v, method %v\n", sigOK, message.Method)
+		er := fmt.Errorf("verifySigOrAclFlag: verify acl/sig: Only signature checking enabled, ALLOW the message if sigOK, sigOK=%v, method %v", sigOK, message.Method)
+		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 		if sigOK {
 			doHandler = true
@@ -765,7 +769,8 @@ func (p process) verifySigOrAclFlag(message Message) bool {
 		sigOK := p.nodeAuth.verifySignature(message)
 		aclOK := p.nodeAuth.verifyAcl(message)
 
-		log.Printf(" * DEBUG: verify acl/sig:both signature and acl checking enabled, allow the message if sigOK and aclOK, or method is not REQCliCommand, sigOK=%v, aclOK=%v, method=%v\n", sigOK, aclOK, message.Method)
+		er := fmt.Errorf("verifySigOrAclFlag: verify acl/sig:both signature and acl checking enabled, allow the message if sigOK and aclOK, or method is not REQCliCommand, sigOK=%v, aclOK=%v, method=%v", sigOK, aclOK, message.Method)
+		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 		if sigOK && aclOK {
 			doHandler = true
@@ -774,7 +779,8 @@ func (p process) verifySigOrAclFlag(message Message) bool {
 		// none of the verification options matched, we should keep the default value
 		// of doHandler=false, so the handler is not done.
 	default:
-		log.Printf(" * DEBUG: verify acl/sig: None of the verify flags matched, not doing handler for message, method=%v\n", message.Method)
+		er := fmt.Errorf("verifySigOrAclFlag: verify acl/sig: None of the verify flags matched, not doing handler for message, method=%v", message.Method)
+		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 	}
 
 	return doHandler
@@ -793,7 +799,8 @@ func (p process) subscribeMessages() *nats.Subscription {
 		go p.messageSubscriberHandler(p.natsConn, p.configuration.NodeName, msg, subject)
 	})
 	if err != nil {
-		log.Printf("error: Subscribe failed: %v\n", err)
+		er := fmt.Errorf("error: Subscribe failed: %v", err)
+		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 		return nil
 	}
 
@@ -851,7 +858,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 
 			er := fmt.Errorf("info: canceled publisher: %v", p.processName)
 			//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
-			log.Printf("%v\n", er)
+			p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 			return
 			//}
@@ -866,7 +873,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		case <-p.ctx.Done():
 			er := fmt.Errorf("info: canceling publisher: %v", p.processName)
 			//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
-			log.Printf("%v\n", er)
+			p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 			return
 		}
 	}
@@ -896,7 +903,7 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 		b, err := cbor.Marshal(m)
 		if err != nil {
 			er := fmt.Errorf("error: messageDeliverNats: cbor encode message failed: %v", err)
-			log.Printf("%v\n", er)
+			p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 			return
 		}
 
@@ -909,7 +916,7 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 		err := gobEnc.Encode(m)
 		if err != nil {
 			er := fmt.Errorf("error: messageDeliverNats: gob encode message failed: %v", err)
-			log.Printf("%v\n", er)
+			p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 			return
 		}
 
@@ -952,7 +959,8 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 			defer gzipW.Flush()
 			_, err := gzipW.Write(natsMsgPayloadSerialized)
 			if err != nil {
-				log.Printf("error: failed to write gzip: %v\n", err)
+				er := fmt.Errorf("error: failed to write gzip: %v", err)
+				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 				return
 			}
 
@@ -968,11 +976,11 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 	default: // no compression
 		// Allways log the error to console.
 		er := fmt.Errorf("error: publishing: compression type not defined, setting default to no compression")
-		log.Printf("%v\n", er)
+		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 		// We only wan't to send the error message to errorCentral once.
 		once.Do(func() {
-			log.Printf("%v\n", er)
+			p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 		})
 
 		// No compression, so we just assign the value of the serialized
