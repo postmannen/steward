@@ -842,18 +842,19 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		select {
 		case <-ticker.C:
 			// We only want to remove subprocesses
-			if p.isSubProcess {
-				p.processes.active.mu.Lock()
-				p.ctxCancel()
-				delete(p.processes.active.procNames, p.processName)
-				p.processes.active.mu.Unlock()
+			// REMOVED 120123: Removed if so all publishers should be canceled if inactive.
+			//if p.isSubProcess {
+			p.processes.active.mu.Lock()
+			p.ctxCancel()
+			delete(p.processes.active.procNames, p.processName)
+			p.processes.active.mu.Unlock()
 
-				er := fmt.Errorf("info: canceled publisher: %v", p.processName)
-				//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
-				log.Printf("%v\n", er)
+			er := fmt.Errorf("info: canceled publisher: %v", p.processName)
+			//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
+			log.Printf("%v\n", er)
 
-				return
-			}
+			return
+			//}
 
 		case m := <-p.subject.messageCh:
 			ticker.Reset(time.Second * time.Duration(p.configuration.KeepPublishersAliveFor))

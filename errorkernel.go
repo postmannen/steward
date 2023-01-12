@@ -145,13 +145,13 @@ func (e *errorKernel) start(ringBufferBulkInCh chan<- []subjectAndMessage) error
 
 			switch errEvent.logLevel {
 			case logError:
-				slog.Error("%v\n", fmt.Errorf("%v", er), "error")
+				slog.Error("error", fmt.Errorf("%v", er))
 			case logInfo:
-				slog.Info("%v\n", er)
+				slog.Info(er)
 			case logWarning:
-				slog.Warn("%v\n", er)
+				slog.Warn(er)
 			case logDebug:
-				slog.Debug("%v\n", er)
+				slog.Debug(er)
 			case logNone:
 				// Do nothing for type logNone errors.
 			}
@@ -272,7 +272,7 @@ func (e *errorKernel) infoSend(proc process, msg Message, err error) {
 
 func (e *errorKernel) logConsoleOnlyIfDebug(err error, c *Configuration) {
 	if c.EnableDebug {
-		log.Printf("%v\n", err)
+		slog.Debug(err.Error())
 	}
 }
 
