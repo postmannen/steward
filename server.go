@@ -200,7 +200,7 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		}
 
 		er := fmt.Errorf("info: creating subscribers data folder at %v", configuration.SubscribersDataFolder)
-		s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+		s.errorKernel.logDebug(er, s.configuration)
 	}
 
 	return &s, nil
@@ -480,7 +480,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 					}
 					if ok && ctxCanceled {
 						er := fmt.Errorf(" ** routeMessagesToProcess: context is already ended for process %v, will not try to reuse existing publisher, deleting it, and creating a new publisher !!! ", proc.processName)
-						s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+						s.errorKernel.logDebug(er, s.configuration)
 						delete(proc.processes.active.procNames, proc.processName)
 						return false
 					}
@@ -491,10 +491,10 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 						select {
 						case proc.subject.messageCh <- m:
 							er := fmt.Errorf(" ** routeMessagesToProcess: passed message: %v to existing process: %v", m.ID, proc.processName)
-							s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+							s.errorKernel.logDebug(er, s.configuration)
 						case <-proc.ctx.Done():
 							er := fmt.Errorf(" ** routeMessagesToProcess: got ctx.done for process %v", proc.processName)
-							s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+							s.errorKernel.logDebug(er, s.configuration)
 						}
 
 						return true
@@ -510,7 +510,7 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 				}
 
 				er := fmt.Errorf("info: processNewMessages: did not find publisher process for subject %v, starting new", subjName)
-				s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+				s.errorKernel.logDebug(er, s.configuration)
 
 				sub := newSubject(sam.Subject.Method, sam.Subject.ToNode)
 				var proc process
@@ -523,17 +523,17 @@ func (s *server) routeMessagesToProcess(dbFileName string) {
 
 				proc.spawnWorker()
 				er = fmt.Errorf("info: processNewMessages: new process started, subject: %v, processID: %v", subjName, proc.processID)
-				s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+				s.errorKernel.logDebug(er, s.configuration)
 
 				// Now when the process is spawned we continue,
 				// and send the message to that new process.
 				select {
 				case proc.subject.messageCh <- m:
 					er := fmt.Errorf(" ** routeMessagesToProcess: passed message: %v to the new process: %v", m.ID, proc.processName)
-					s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+					s.errorKernel.logDebug(er, s.configuration)
 				case <-proc.ctx.Done():
 					er := fmt.Errorf(" ** routeMessagesToProcess: got ctx.done for process %v", proc.processName)
-					s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+					s.errorKernel.logDebug(er, s.configuration)
 				}
 
 			}(samDBVal)

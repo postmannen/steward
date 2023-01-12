@@ -33,7 +33,7 @@ func (m methodREQHello) handler(proc process, message Message, node string) ([]b
 		}
 
 		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+		proc.errorKernel.logDebug(er, proc.configuration)
 	}
 
 	// Open file and write data.
@@ -90,7 +90,7 @@ func (m methodREQErrorLog) handler(proc process, message Message, node string) (
 		}
 
 		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+		proc.errorKernel.logDebug(er, proc.configuration)
 	}
 
 	// Open file and write data.
@@ -142,7 +142,7 @@ func (m methodREQPing) handler(proc process, message Message, node string) ([]by
 		}
 
 		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+		proc.errorKernel.logDebug(er, proc.configuration)
 	}
 
 	// Open file.
@@ -205,7 +205,7 @@ func (m methodREQPong) handler(proc process, message Message, node string) ([]by
 		}
 
 		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+		proc.errorKernel.logDebug(er, proc.configuration)
 	}
 
 	// Open file.

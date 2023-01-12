@@ -235,7 +235,7 @@ func (s *server) readFolder() {
 
 				if event.Op == fsnotify.Create || event.Op == fsnotify.Chmod {
 					er := fmt.Errorf("readFolder: got file event, name: %v, op: %v", event.Name, event.Op)
-					s.errorKernel.logConsoleOnlyIfDebug(er, s.configuration)
+					s.errorKernel.logDebug(er, s.configuration)
 
 					func() {
 						fh, err := os.Open(event.Name)

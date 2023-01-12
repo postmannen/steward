@@ -288,7 +288,7 @@ func (e *errorKernel) logWarn(err error, c *Configuration) {
 	}
 }
 
-func (e *errorKernel) logConsoleOnlyIfDebug(err error, c *Configuration) {
+func (e *errorKernel) logDebug(err error, c *Configuration) {
 	if c.LogLevel == string(logDebug) {
 		slog.Debug(err.Error())
 	}

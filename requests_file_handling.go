@@ -32,7 +32,7 @@ func (m methodREQToFileAppend) handler(proc process, message Message, node strin
 		}
 
 		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+		proc.errorKernel.logDebug(er, proc.configuration)
 	}
 
 	// Open file and write data.
@@ -85,7 +85,7 @@ func (m methodREQToFile) handler(proc process, message Message, node string) ([]
 		}
 
 		er := fmt.Errorf("info: Creating subscribers data folder at %v", folderTree)
-		proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+		proc.errorKernel.logDebug(er, proc.configuration)
 	}
 
 	// Open file and write data.
@@ -125,7 +125,7 @@ func (m methodREQTailFile) getKind() Event {
 // as a new message.
 func (m methodREQTailFile) handler(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- TailFile REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+	proc.errorKernel.logDebug(inf, proc.configuration)
 
 	proc.processes.wg.Add(1)
 	go func() {

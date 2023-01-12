@@ -20,7 +20,7 @@ func (m methodREQHttpGet) getKind() Event {
 // handler to do a Http Get.
 func (m methodREQHttpGet) handler(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- REQHttpGet received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+	proc.errorKernel.logDebug(inf, proc.configuration)
 
 	msgForErrors := message
 	msgForErrors.FileName = msgForErrors.FileName + ".error"
@@ -129,7 +129,7 @@ func (m methodREQHttpGetScheduled) getKind() Event {
 // The second element of the MethodArgs slice holds the timer defined in seconds.
 func (m methodREQHttpGetScheduled) handler(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- REQHttpGetScheduled received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+	proc.errorKernel.logDebug(inf, proc.configuration)
 
 	proc.processes.wg.Add(1)
 	go func() {

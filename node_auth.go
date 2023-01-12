@@ -112,7 +112,7 @@ func (n *nodeAcl) loadFromFile() error {
 		// Just logging the error since it is not crucial that a key file is missing,
 		// since a new one will be created on the next update.
 		er := fmt.Errorf("acl: loadFromFile: no acl file found at %v", n.filePath)
-		n.errorKernel.logConsoleOnlyIfDebug(er, n.configuration)
+		n.errorKernel.logDebug(er, n.configuration)
 		return nil
 	}
 
@@ -135,7 +135,7 @@ func (n *nodeAcl) loadFromFile() error {
 	}
 
 	er := fmt.Errorf("nodeAcl: loadFromFile: Loaded existing acl's from file: %v", n.aclAndHash.Hash)
-	n.errorKernel.logConsoleOnlyIfDebug(er, n.configuration)
+	n.errorKernel.logDebug(er, n.configuration)
 
 	return nil
 }
@@ -241,7 +241,7 @@ func (p *publicKeys) loadFromFile() error {
 	}
 
 	er := fmt.Errorf("nodeAuth: loadFromFile: Loaded existing keys from file: %v", p.keysAndHash.Hash)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 
 	return nil
 }

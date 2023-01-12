@@ -97,7 +97,7 @@ func (p *processes) Start(proc process) {
 
 	{
 		er := fmt.Errorf("tarting REQOpProcessList subscriber: %#v", proc.node)
-		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+		p.errorKernel.logDebug(er, p.configuration)
 		sub := newSubject(REQOpProcessList, string(proc.node))
 		proc := newProcess(proc.ctx, p.server, sub, processKindSubscriber, nil)
 		go proc.spawnWorker()
@@ -105,7 +105,7 @@ func (p *processes) Start(proc process) {
 
 	{
 		er := fmt.Errorf("starting REQOpProcessStart subscriber: %#v", proc.node)
-		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+		p.errorKernel.logDebug(er, p.configuration)
 		sub := newSubject(REQOpProcessStart, string(proc.node))
 		proc := newProcess(proc.ctx, p.server, sub, processKindSubscriber, nil)
 		go proc.spawnWorker()
@@ -113,7 +113,7 @@ func (p *processes) Start(proc process) {
 
 	{
 		er := fmt.Errorf("starting REQOpProcessStop subscriber: %#v", proc.node)
-		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+		p.errorKernel.logDebug(er, p.configuration)
 		sub := newSubject(REQOpProcessStop, string(proc.node))
 		proc := newProcess(proc.ctx, p.server, sub, processKindSubscriber, nil)
 		go proc.spawnWorker()
@@ -121,7 +121,7 @@ func (p *processes) Start(proc process) {
 
 	{
 		er := fmt.Errorf("starting REQTest subscriber: %#v", proc.node)
-		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+		p.errorKernel.logDebug(er, p.configuration)
 		sub := newSubject(REQTest, string(proc.node))
 		proc := newProcess(proc.ctx, p.server, sub, processKindSubscriber, nil)
 		go proc.spawnWorker()
@@ -264,7 +264,7 @@ func newStartup(server *server) *startup {
 func (s startup) subREQHttpGet(p process) {
 
 	er := fmt.Errorf("starting Http Get subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQHttpGet, string(p.node))
 	proc := newProcess(p.ctx, p.processes.server, sub, processKindSubscriber, nil)
 
@@ -275,7 +275,7 @@ func (s startup) subREQHttpGet(p process) {
 func (s startup) subREQHttpGetScheduled(p process) {
 
 	er := fmt.Errorf("starting Http Get Scheduled subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 
 	sub := newSubject(REQHttpGetScheduled, string(p.node))
 	proc := newProcess(p.ctx, p.server, sub, processKindSubscriber, nil)
@@ -286,7 +286,7 @@ func (s startup) subREQHttpGetScheduled(p process) {
 
 func (s startup) pubREQHello(p process) {
 	er := fmt.Errorf("starting Hello Publisher: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 
 	sub := newSubject(REQHello, p.configuration.CentralNodeName)
 	proc := newProcess(p.ctx, s.server, sub, processKindPublisher, nil)
@@ -325,7 +325,7 @@ func (s startup) pubREQHello(p process) {
 			case <-ctx.Done():
 				er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
 				// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+				p.errorKernel.logDebug(er, p.configuration)
 				return nil
 			}
 		}
@@ -338,7 +338,7 @@ func (s startup) pubREQHello(p process) {
 // of type pubREQKeysDeliverUpdate.
 func (s startup) pubREQKeysRequestUpdate(p process) {
 	er := fmt.Errorf("starting PublicKeysGet Publisher: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 
 	sub := newSubject(REQKeysRequestUpdate, p.configuration.CentralNodeName)
 	proc := newProcess(p.ctx, s.server, sub, processKindPublisher, nil)
@@ -355,7 +355,7 @@ func (s startup) pubREQKeysRequestUpdate(p process) {
 
 			proc.nodeAuth.publicKeys.mu.Lock()
 			er := fmt.Errorf(" ----> publisher REQKeysRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.publicKeys.keysAndHash.Hash[:]))
-			p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+			p.errorKernel.logDebug(er, p.configuration)
 
 			m := Message{
 				FileName:    "publickeysget.log",
@@ -382,7 +382,7 @@ func (s startup) pubREQKeysRequestUpdate(p process) {
 			case <-ctx.Done():
 				er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
 				// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+				p.errorKernel.logDebug(er, p.configuration)
 				return nil
 			}
 		}
@@ -395,7 +395,7 @@ func (s startup) pubREQKeysRequestUpdate(p process) {
 // of type pubREQKeysDeliverUpdate.
 func (s startup) pubREQAclRequestUpdate(p process) {
 	er := fmt.Errorf("starting REQAclRequestUpdate Publisher: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 
 	sub := newSubject(REQAclRequestUpdate, p.configuration.CentralNodeName)
 	proc := newProcess(p.ctx, s.server, sub, processKindPublisher, nil)
@@ -412,7 +412,7 @@ func (s startup) pubREQAclRequestUpdate(p process) {
 
 			proc.nodeAuth.nodeAcl.mu.Lock()
 			er := fmt.Errorf(" ----> publisher REQAclRequestUpdate: sending our current hash: %v", []byte(proc.nodeAuth.nodeAcl.aclAndHash.Hash[:]))
-			p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+			p.errorKernel.logDebug(er, p.configuration)
 
 			m := Message{
 				FileName:    "aclRequestUpdate.log",
@@ -440,7 +440,7 @@ func (s startup) pubREQAclRequestUpdate(p process) {
 			case <-ctx.Done():
 				er := fmt.Errorf("info: stopped handleFunc for: publisher %v", proc.subject.name())
 				// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+				p.errorKernel.logDebug(er, p.configuration)
 				return nil
 			}
 		}
@@ -450,7 +450,7 @@ func (s startup) pubREQAclRequestUpdate(p process) {
 
 func (s startup) subREQKeysRequestUpdate(p process) {
 	er := fmt.Errorf("starting Public keys request update subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQKeysRequestUpdate, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -458,7 +458,7 @@ func (s startup) subREQKeysRequestUpdate(p process) {
 
 func (s startup) subREQKeysDeliverUpdate(p process) {
 	er := fmt.Errorf("starting Public keys to Node subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQKeysDeliverUpdate, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -466,7 +466,7 @@ func (s startup) subREQKeysDeliverUpdate(p process) {
 
 func (s startup) subREQKeysAllow(p process) {
 	er := fmt.Errorf("starting Public keys allow subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQKeysAllow, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -474,7 +474,7 @@ func (s startup) subREQKeysAllow(p process) {
 
 func (s startup) subREQKeysDelete(p process) {
 	er := fmt.Errorf("starting Public keys delete subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQKeysDelete, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -482,7 +482,7 @@ func (s startup) subREQKeysDelete(p process) {
 
 func (s startup) subREQAclRequestUpdate(p process) {
 	er := fmt.Errorf("starting Acl Request update subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQAclRequestUpdate, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -490,7 +490,7 @@ func (s startup) subREQAclRequestUpdate(p process) {
 
 func (s startup) subREQAclDeliverUpdate(p process) {
 	er := fmt.Errorf("starting Acl deliver update subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQAclDeliverUpdate, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -500,7 +500,7 @@ func (s startup) subREQAclDeliverUpdate(p process) {
 
 func (s startup) subREQAclAddCommand(p process) {
 	er := fmt.Errorf("starting Acl Add Command subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQAclAddCommand, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -508,7 +508,7 @@ func (s startup) subREQAclAddCommand(p process) {
 
 func (s startup) subREQAclDeleteCommand(p process) {
 	er := fmt.Errorf("starting Acl Delete Command subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQAclDeleteCommand, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -516,7 +516,7 @@ func (s startup) subREQAclDeleteCommand(p process) {
 
 func (s startup) subREQAclDeleteSource(p process) {
 	er := fmt.Errorf("starting Acl Delete Source subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQAclDeleteSource, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -524,7 +524,7 @@ func (s startup) subREQAclDeleteSource(p process) {
 
 func (s startup) subREQAclGroupNodesAddNode(p process) {
 	er := fmt.Errorf("starting Acl Add node to nodeGroup subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQAclGroupNodesAddNode, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -532,7 +532,7 @@ func (s startup) subREQAclGroupNodesAddNode(p process) {
 
 func (s startup) subREQAclGroupNodesDeleteNode(p process) {
 	er := fmt.Errorf("starting Acl Delete node from nodeGroup subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQAclGroupNodesDeleteNode, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -540,7 +540,7 @@ func (s startup) subREQAclGroupNodesDeleteNode(p process) {
 
 func (s startup) subREQAclGroupNodesDeleteGroup(p process) {
 	er := fmt.Errorf("starting Acl Delete nodeGroup subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQAclGroupNodesDeleteGroup, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -548,7 +548,7 @@ func (s startup) subREQAclGroupNodesDeleteGroup(p process) {
 
 func (s startup) subREQAclGroupCommandsAddCommand(p process) {
 	er := fmt.Errorf("starting Acl add command to command group subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQAclGroupCommandsAddCommand, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -556,7 +556,7 @@ func (s startup) subREQAclGroupCommandsAddCommand(p process) {
 
 func (s startup) subREQAclGroupCommandsDeleteCommand(p process) {
 	er := fmt.Errorf("starting Acl delete command from command group subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQAclGroupCommandsDeleteCommand, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -564,7 +564,7 @@ func (s startup) subREQAclGroupCommandsDeleteCommand(p process) {
 
 func (s startup) subREQAclGroupCommandsDeleteGroup(p process) {
 	er := fmt.Errorf("starting Acl delete command group subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQAclGroupCommandsDeleteGroup, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -572,7 +572,7 @@ func (s startup) subREQAclGroupCommandsDeleteGroup(p process) {
 
 func (s startup) subREQAclExport(p process) {
 	er := fmt.Errorf("starting Acl export subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQAclExport, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -580,7 +580,7 @@ func (s startup) subREQAclExport(p process) {
 
 func (s startup) subREQAclImport(p process) {
 	er := fmt.Errorf("starting Acl import subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQAclImport, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -588,7 +588,7 @@ func (s startup) subREQAclImport(p process) {
 
 func (s startup) subREQToConsole(p process) {
 	er := fmt.Errorf("starting Text To Console subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQToConsole, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -596,7 +596,7 @@ func (s startup) subREQToConsole(p process) {
 
 func (s startup) subREQTuiToConsole(p process) {
 	er := fmt.Errorf("starting Tui To Console subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQTuiToConsole, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -604,7 +604,7 @@ func (s startup) subREQTuiToConsole(p process) {
 
 func (s startup) subREQCliCommand(p process) {
 	er := fmt.Errorf("starting CLICommand Request subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQCliCommand, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -612,7 +612,7 @@ func (s startup) subREQCliCommand(p process) {
 
 func (s startup) subREQPong(p process) {
 	er := fmt.Errorf("starting Pong subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQPong, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -620,7 +620,7 @@ func (s startup) subREQPong(p process) {
 
 func (s startup) subREQPing(p process) {
 	er := fmt.Errorf("starting Ping Request subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQPing, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -628,7 +628,7 @@ func (s startup) subREQPing(p process) {
 
 func (s startup) subREQErrorLog(p process) {
 	er := fmt.Errorf("starting REQErrorLog subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQErrorLog, "errorCentral")
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 	go proc.spawnWorker()
@@ -643,7 +643,7 @@ func (s startup) subREQErrorLog(p process) {
 // the procFunc running.
 func (s startup) subREQHello(p process) {
 	er := fmt.Errorf("starting Hello subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQHello, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 
@@ -663,7 +663,7 @@ func (s startup) subREQHello(p process) {
 			case <-ctx.Done():
 				er := fmt.Errorf("info: stopped handleFunc for: subscriber %v", proc.subject.name())
 				// sendErrorLogMessage(proc.toRingbufferCh, proc.node, er)
-				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+				p.errorKernel.logDebug(er, p.configuration)
 				return nil
 			}
 
@@ -684,7 +684,7 @@ func (s startup) subREQHello(p process) {
 
 func (s startup) subREQToFile(p process) {
 	er := fmt.Errorf("starting text to file subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQToFile, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 
@@ -693,7 +693,7 @@ func (s startup) subREQToFile(p process) {
 
 func (s startup) subREQToFileNACK(p process) {
 	er := fmt.Errorf("starting text to file subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQToFileNACK, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 
@@ -702,7 +702,7 @@ func (s startup) subREQToFileNACK(p process) {
 
 func (s startup) subREQCopySrc(p process) {
 	er := fmt.Errorf("starting copy src subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQCopySrc, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 
@@ -711,7 +711,7 @@ func (s startup) subREQCopySrc(p process) {
 
 func (s startup) subREQCopyDst(p process) {
 	er := fmt.Errorf("starting copy dst subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQCopyDst, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 
@@ -720,7 +720,7 @@ func (s startup) subREQCopyDst(p process) {
 
 func (s startup) subREQToFileAppend(p process) {
 	er := fmt.Errorf("starting text logging subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQToFileAppend, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 
@@ -729,7 +729,7 @@ func (s startup) subREQToFileAppend(p process) {
 
 func (s startup) subREQTailFile(p process) {
 	er := fmt.Errorf("starting tail log files subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQTailFile, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 
@@ -738,7 +738,7 @@ func (s startup) subREQTailFile(p process) {
 
 func (s startup) subREQCliCommandCont(p process) {
 	er := fmt.Errorf("starting cli command with continous delivery: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQCliCommandCont, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 
@@ -747,7 +747,7 @@ func (s startup) subREQCliCommandCont(p process) {
 
 func (s startup) subREQPublicKey(p process) {
 	er := fmt.Errorf("starting get Public Key subscriber: %#v", p.node)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 	sub := newSubject(REQPublicKey, string(p.node))
 	proc := newProcess(p.ctx, s.server, sub, processKindSubscriber, nil)
 
@@ -759,14 +759,14 @@ func (s startup) subREQPublicKey(p process) {
 // Print the content of the processes map.
 func (p *processes) printProcessesMap() {
 	er := fmt.Errorf("output of processes map : ")
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
 
 	{
 		p.active.mu.Lock()
 
 		for pName, proc := range p.active.procNames {
 			er := fmt.Errorf("info: proc - pub/sub: %v, procName in map: %v , id: %v, subject: %v", proc.processKind, pName, proc.processID, proc.subject.name())
-			proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
+			proc.errorKernel.logDebug(er, proc.configuration)
 		}
 
 		p.metrics.promProcessesTotal.Set(float64(len(p.active.procNames)))

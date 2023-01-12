@@ -21,7 +21,7 @@ func (m methodREQCliCommand) getKind() Event {
 // as a new message.
 func (m methodREQCliCommand) handler(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- CLICommandREQUEST received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+	proc.errorKernel.logDebug(inf, proc.configuration)
 
 	msgForErrors := message
 	msgForErrors.FileName = msgForErrors.FileName + ".error"
@@ -146,7 +146,7 @@ func (m methodREQCliCommandCont) getKind() Event {
 // back as it is generated, and not just when the command is finished.
 func (m methodREQCliCommandCont) handler(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- CLInCommandCont REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+	proc.errorKernel.logDebug(inf, proc.configuration)
 
 	msgForErrors := message
 	msgForErrors.FileName = msgForErrors.FileName + ".error"

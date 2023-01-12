@@ -334,7 +334,7 @@ func (c *centralAuth) generateACLsForAllNodes() error {
 	}
 
 	inf := fmt.Errorf("generateACLsFor all nodes, ACLsToConvert contains: %#v", c.accessLists.schemaGenerated.ACLsToConvert)
-	c.accessLists.errorKernel.logConsoleOnlyIfDebug(inf, c.accessLists.configuration)
+	c.accessLists.errorKernel.logDebug(inf, c.accessLists.configuration)
 
 	// ACLsToConvert got the complete picture of what ACL's that
 	// are defined for each individual host node.
@@ -387,7 +387,7 @@ func (c *centralAuth) generateACLsForAllNodes() error {
 	}()
 
 	inf = fmt.Errorf("generateACLsFor all nodes, GeneratedACLsMap contains: %#v", c.accessLists.schemaGenerated.GeneratedACLsMap)
-	c.accessLists.errorKernel.logConsoleOnlyIfDebug(inf, c.accessLists.configuration)
+	c.accessLists.errorKernel.logDebug(inf, c.accessLists.configuration)
 
 	return nil
 }
