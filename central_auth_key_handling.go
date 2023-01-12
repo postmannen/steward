@@ -18,12 +18,17 @@ type centralAuth struct {
 	// acl and authorization level related data and methods.
 	accessLists *accessLists
 	// public key distribution related data and methods.
-	pki *pki
+	pki           *pki
+	configuration *Configuration
+	errorKernel   *errorKernel
 }
 
 // newCentralAuth will return a new and prepared *centralAuth
 func newCentralAuth(configuration *Configuration, errorKernel *errorKernel) *centralAuth {
-	c := centralAuth{}
+	c := centralAuth{
+		configuration: configuration,
+		errorKernel:   errorKernel,
+	}
 	c.pki = newPKI(configuration, errorKernel)
 	c.accessLists = newAccessLists(c.pki, errorKernel, configuration)
 
@@ -290,8 +295,7 @@ func (c *centralAuth) updateHash(proc process, message Message) {
 	b, err := cbor.Marshal(sortedNodesAndKeys)
 	if err != nil {
 		er := fmt.Errorf("error: methodREQKeysAllow, failed to marshal slice, and will not update hash for public keys:  %v", err)
-		c.pki.errorKernel.errSend(proc, message, er, logWarning)
-		log.Printf(" * DEBUG: %v\n", er)
+		c.pki.errorKernel.errSend(proc, message, er, logError)
 
 		return
 	}
@@ -304,8 +308,7 @@ func (c *centralAuth) updateHash(proc process, message Message) {
 	c.pki.dbUpdateHash(hash[:])
 	if err != nil {
 		er := fmt.Errorf("error: methodREQKeysAllow, failed to store the hash into the db:  %v", err)
-		c.pki.errorKernel.errSend(proc, message, er, logWarning)
-		log.Printf(" * DEBUG: %v\n", er)
+		c.pki.errorKernel.errSend(proc, message, er, logError)
 
 		return
 	}
@@ -320,13 +323,15 @@ func (p *pki) dbViewHash() ([]byte, error) {
 		//Open a bucket to get key's and values from.
 		bu := tx.Bucket([]byte("hash"))
 		if bu == nil {
-			log.Printf("info: no db hash bucket exist\n")
+			er := fmt.Errorf("info: no db hash bucket exist")
+			p.errorKernel.logWarn(er, p.configuration)
 			return nil
 		}
 
 		v := bu.Get([]byte("hash"))
 		if len(v) == 0 {
-			log.Printf("info: view: hash key not found\n")
+			er := fmt.Errorf("info: view: hash key not found")
+			p.errorKernel.logWarn(er, p.configuration)
 			return nil
 		}
 

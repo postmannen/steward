@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,7 +54,8 @@ func newNodeAuth(configuration *Configuration, errorKernel *errorKernel) *nodeAu
 
 	err := n.loadSigningKeys()
 	if err != nil {
-		log.Printf("%v\n", err)
+		er := fmt.Errorf("newNodeAuth: %v", err)
+		errorKernel.logError(er, configuration)
 		os.Exit(1)
 	}
 
@@ -96,7 +96,8 @@ func newNodeAcl(c *Configuration, errorKernel *errorKernel) *nodeAcl {
 
 	err := n.loadFromFile()
 	if err != nil {
-		log.Printf("error: loading acl's from file: %v\n", err)
+		er := fmt.Errorf("error: newNodeAcl: loading acl's from file: %v", err)
+		errorKernel.logError(er, c)
 		// os.Exit(1)
 	}
 
@@ -201,7 +202,8 @@ func newPublicKeys(c *Configuration, errorKernel *errorKernel) *publicKeys {
 
 	err := p.loadFromFile()
 	if err != nil {
-		log.Printf("error: loading public keys from file: %v\n", err)
+		er := fmt.Errorf("error: newPublicKeys: loading public keys from file: %v", err)
+		errorKernel.logError(er, c)
 		// os.Exit(1)
 	}
 
@@ -215,7 +217,8 @@ func (p *publicKeys) loadFromFile() error {
 	if _, err := os.Stat(p.filePath); os.IsNotExist(err) {
 		// Just logging the error since it is not crucial that a key file is missing,
 		// since a new one will be created on the next update.
-		log.Printf("no public keys file found at %v\n", p.filePath)
+		er := fmt.Errorf("no public keys file found at %v, new file will be created", p.filePath)
+		p.errorKernel.logInfo(er, p.configuration)
 		return nil
 	}
 
@@ -319,7 +322,7 @@ func (n *nodeAuth) loadSigningKeys() error {
 		n.SignPrivateKey = priv
 
 		er := fmt.Errorf("info: no signing keys found, generating new keys")
-		log.Printf("%v\n", er)
+		n.errorKernel.logInfo(er, n.configuration)
 
 		// We got the new generated keys now, so we can return.
 		return nil
@@ -390,7 +393,8 @@ func (n *nodeAuth) readKeyFile(keyFile string) (ed2519key []byte, b64Key []byte,
 func (n *nodeAuth) verifySignature(m Message) bool {
 	// NB: Only enable signature checking for REQCliCommand for now.
 	if m.Method != REQCliCommand {
-		log.Printf(" * DEBUG: verifySignature,not REQCliCommand and will not do signature check, method: %v\n", m.Method)
+		er := fmt.Errorf("verifySignature: not REQCliCommand and will not do signature check, method: %v", m.Method)
+		n.errorKernel.logInfo(er, n.configuration)
 		return true
 	}
 
@@ -402,7 +406,7 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 		n.publicKeys.mu.Lock()
 		pubKey := n.publicKeys.keysAndHash.Keys[m.FromNode]
 		if len(pubKey) != 32 {
-			err := fmt.Errorf("DEBUG: Length of publicKey: %v", len(pubKey))
+			err := fmt.Errorf("length of publicKey not equal to 32: %v", len(pubKey))
 			return err
 		}
 
@@ -413,10 +417,11 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 	}()
 
 	if err != nil {
-		log.Printf("%v\n", err)
+		n.errorKernel.logError(err, n.configuration)
 	}
 
-	log.Printf("info: verifySignature, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
+	er := fmt.Errorf("info: verifySignature, result: %v, fromNode: %v, method: %v", ok, m.FromNode, m.Method)
+	n.errorKernel.logInfo(er, n.configuration)
 
 	return ok
 }
@@ -425,7 +430,8 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 func (n *nodeAuth) verifyAcl(m Message) bool {
 	// NB: Only enable acl checking for REQCliCommand for now.
 	if m.Method != REQCliCommand {
-		log.Printf(" * DEBUG: verifyAcl: not REQCliCommand and will not do acl check, method: %v\n", m.Method)
+		er := fmt.Errorf("verifyAcl: not REQCliCommand and will not do acl check, method: %v", m.Method)
+		n.errorKernel.logInfo(er, n.configuration)
 		return true
 	}
 
@@ -437,23 +443,27 @@ func (n *nodeAuth) verifyAcl(m Message) bool {
 
 	cmdMap, ok := n.nodeAcl.aclAndHash.Acl[m.FromNode]
 	if !ok {
-		log.Printf(" * DEBUG: verifyAcl: The fromNode=%v was not found in the acl\n", m.FromNode)
+		er := fmt.Errorf("verifyAcl: The fromNode=%v was not found in the acl", m.FromNode)
+		n.errorKernel.logError(er, n.configuration)
 		return false
 	}
 
 	_, ok = cmdMap[command("*")]
 	if ok {
-		log.Printf(" * DEBUG: verifyAcl: The acl said \"*\", all commands allowed from node=%v\n", m.FromNode)
+		er := fmt.Errorf("verifyAcl: The acl said \"*\", all commands allowed from node=%v", m.FromNode)
+		n.errorKernel.logInfo(er, n.configuration)
 		return true
 	}
 
 	_, ok = cmdMap[command(argsStringified)]
 	if !ok {
-		log.Printf(" * DEBUG: verifyAcl: The command=%v was NOT FOUND in the acl\n", m.MethodArgs)
+		er := fmt.Errorf("verifyAcl: The command=%v was NOT FOUND in the acl", m.MethodArgs)
+		n.errorKernel.logInfo(er, n.configuration)
 		return false
 	}
 
-	log.Printf(" * DEBUG: The command was FOUND in the acl, verifyAcl, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
+	er := fmt.Errorf("verifyAcl: the command was FOUND in the acl, verifyAcl, result: %v, fromNode: %v, method: %v", ok, m.FromNode, m.Method)
+	n.errorKernel.logInfo(er, n.configuration)
 
 	return true
 }

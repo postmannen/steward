@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"sync"
 	"time"
@@ -822,7 +821,8 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		// enc, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
 		enc, err := zstd.NewWriter(nil, zstd.WithEncoderConcurrency(1))
 		if err != nil {
-			log.Printf("error: zstd new encoder failed: %v\n", err)
+			er := fmt.Errorf("error: zstd new encoder failed: %v", err)
+			p.errorKernel.logError(er, p.configuration)
 			os.Exit(1)
 		}
 		zEnc = enc

@@ -270,6 +270,24 @@ func (e *errorKernel) infoSend(proc process, msg Message, err error) {
 	e.errorCh <- ev
 }
 
+func (e *errorKernel) logError(err error, c *Configuration) {
+	if c.LogLevel == string(logError) {
+		slog.Error("error", err)
+	}
+}
+
+func (e *errorKernel) logInfo(err error, c *Configuration) {
+	if c.LogLevel == string(logInfo) {
+		slog.Info(err.Error())
+	}
+}
+
+func (e *errorKernel) logWarn(err error, c *Configuration) {
+	if c.LogLevel == string(logWarning) {
+		slog.Warn(err.Error())
+	}
+}
+
 func (e *errorKernel) logConsoleOnlyIfDebug(err error, c *Configuration) {
 	if c.LogLevel == string(logDebug) {
 		slog.Debug(err.Error())

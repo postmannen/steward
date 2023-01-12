@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -43,7 +42,7 @@ type accessLists struct {
 
 func newAccessLists(pki *pki, errorKernel *errorKernel, configuration *Configuration) *accessLists {
 	a := accessLists{
-		schemaMain:      newSchemaMain(configuration),
+		schemaMain:      newSchemaMain(configuration, errorKernel),
 		schemaGenerated: newSchemaGenerated(),
 		errorKernel:     errorKernel,
 		configuration:   configuration,
@@ -65,21 +64,25 @@ type schemaMain struct {
 	NodeGroupMap    map[nodeGroup]map[Node]struct{}
 	CommandGroupMap map[commandGroup]map[command]struct{}
 	mu              sync.Mutex
+	configuration   *Configuration
+	errorKernel     *errorKernel
 }
 
-func newSchemaMain(configuration *Configuration) *schemaMain {
+func newSchemaMain(configuration *Configuration, errorKernel *errorKernel) *schemaMain {
 	s := schemaMain{
 		ACLMap:          make(map[Node]map[Node]map[command]struct{}),
 		ACLMapFilePath:  filepath.Join(configuration.DatabaseFolder, "central_aclmap.txt"),
 		NodeGroupMap:    make(map[nodeGroup]map[Node]struct{}),
 		CommandGroupMap: make(map[commandGroup]map[command]struct{}),
+		configuration:   configuration,
+		errorKernel:     errorKernel,
 	}
 
 	// Load ACLMap from disk if present.
 	func() {
 		if _, err := os.Stat(s.ACLMapFilePath); os.IsNotExist(err) {
-			er := fmt.Errorf("error: newSchemaMain: no file for ACLMap found %v: %v", s.ACLMapFilePath, err)
-			log.Printf("%v\n", er)
+			er := fmt.Errorf("info: newSchemaMain: no file for ACLMap found, will create new one, %v: %v", s.ACLMapFilePath, err)
+			errorKernel.logInfo(er, configuration)
 
 			// If no aclmap is present on disk we just return from this
 			// function without loading any values.
@@ -89,20 +92,20 @@ func newSchemaMain(configuration *Configuration) *schemaMain {
 		fh, err := os.Open(s.ACLMapFilePath)
 		if err != nil {
 			er := fmt.Errorf("error: newSchemaMain: failed to open file for reading %v: %v", s.ACLMapFilePath, err)
-			log.Printf("%v\n", er)
+			errorKernel.logError(er, configuration)
 		}
 
 		b, err := io.ReadAll(fh)
 		if err != nil {
 			er := fmt.Errorf("error: newSchemaMain: failed to ReadAll file %v: %v", s.ACLMapFilePath, err)
-			log.Printf("%v\n", er)
+			errorKernel.logError(er, configuration)
 		}
 
 		// Unmarshal the data read from disk.
 		err = json.Unmarshal(b, &s.ACLMap)
 		if err != nil {
 			er := fmt.Errorf("error: newSchemaMain: failed to unmarshal content from file %v: %v", s.ACLMapFilePath, err)
-			log.Printf("%v\n", er)
+			errorKernel.logError(er, configuration)
 		}
 
 		// Generate the aclGenerated map happens in the function where this function is called.
@@ -222,7 +225,7 @@ func (c *centralAuth) aclAddCommand(host Node, source Node, cmd command) {
 	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: addCommandForFromNode: %v", err)
-		log.Printf("%v\n", er)
+		c.errorKernel.logError(er, c.configuration)
 	}
 
 	// fmt.Printf(" * DEBUG: aclNodeFromnodeCommandAdd: a.schemaMain.ACLMap=%v\n", a.schemaMain.ACLMap)
@@ -252,7 +255,7 @@ func (c *centralAuth) aclDeleteCommand(host Node, source Node, cmd command) erro
 	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: aclNodeFromNodeCommandDelete: %v", err)
-		log.Printf("%v\n", er)
+		c.errorKernel.logError(er, c.configuration)
 	}
 
 	return nil
@@ -277,7 +280,7 @@ func (c *centralAuth) aclDeleteSource(host Node, source Node) error {
 	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: aclNodeFromnodeDelete: %v", err)
-		log.Printf("%v\n", er)
+		c.errorKernel.logError(er, c.configuration)
 	}
 
 	return nil
@@ -296,7 +299,7 @@ func (c *centralAuth) generateACLsForAllNodes() error {
 		fh, err := os.OpenFile(c.accessLists.schemaMain.ACLMapFilePath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0660)
 		if err != nil {
 			er := fmt.Errorf("error: generateACLsForAllNodes: opening file for writing: %v, err: %v", c.accessLists.schemaMain.ACLMapFilePath, err)
-			log.Printf("%v\n", er)
+			c.errorKernel.logError(er, c.configuration)
 			return
 		}
 		defer fh.Close()
@@ -308,7 +311,7 @@ func (c *centralAuth) generateACLsForAllNodes() error {
 		enc.Encode(c.accessLists.schemaMain.ACLMap)
 		if err != nil {
 			er := fmt.Errorf("error: generateACLsForAllNodes: encoding json to file failed: %v, err: %v", c.accessLists.schemaMain.ACLMapFilePath, err)
-			log.Printf("%v\n", er)
+			c.errorKernel.logError(er, c.configuration)
 			return
 		}
 	}()
@@ -352,7 +355,7 @@ func (c *centralAuth) generateACLsForAllNodes() error {
 			cb, err := cbor.Marshal(m)
 			if err != nil {
 				er := fmt.Errorf("error: generateACLsForAllNodes: failed to generate cbor for host in schemaGenerated: %v", err)
-				log.Printf("%v\n", er)
+				c.errorKernel.logError(er, c.configuration)
 				os.Exit(1)
 			}
 
@@ -362,8 +365,8 @@ func (c *centralAuth) generateACLsForAllNodes() error {
 
 				b, err := cbor.Marshal(sns)
 				if err != nil {
-					err := fmt.Errorf("error: generateACLsForAllNodes: failed to generate cbor for hash:  %v", err)
-					log.Printf("%v\n", err)
+					er := fmt.Errorf("error: generateACLsForAllNodes: failed to generate cbor for hash:  %v", err)
+					c.errorKernel.logError(er, c.configuration)
 					return [32]byte{}
 				}
 
@@ -452,7 +455,8 @@ func (c *centralAuth) groupNodesAddNode(ng nodeGroup, n Node) {
 	//}
 
 	if !strings.HasPrefix(string(ng), "grp_nodes_") {
-		log.Printf("error: group name do not start with grp_nodes_\n")
+		er := fmt.Errorf("error: group name do not start with grp_nodes_")
+		c.errorKernel.logError(er, c.configuration)
 		return
 	}
 
@@ -469,7 +473,7 @@ func (c *centralAuth) groupNodesAddNode(ng nodeGroup, n Node) {
 	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: groupNodesAddNode: %v", err)
-		log.Printf("%v\n", er)
+		c.errorKernel.logError(er, c.configuration)
 	}
 
 }
@@ -479,7 +483,8 @@ func (c *centralAuth) groupNodesDeleteNode(ng nodeGroup, n Node) {
 	c.accessLists.schemaMain.mu.Lock()
 	defer c.accessLists.schemaMain.mu.Unlock()
 	if _, ok := c.accessLists.schemaMain.NodeGroupMap[ng][n]; !ok {
-		log.Printf("info: no such node with name=%v found in group=%v\n", ng, n)
+		er := fmt.Errorf("info: no such node with name=%v found in group=%v", ng, n)
+		c.errorKernel.logError(er, c.configuration)
 		return
 	}
 
@@ -490,7 +495,7 @@ func (c *centralAuth) groupNodesDeleteNode(ng nodeGroup, n Node) {
 	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: groupNodesDeleteNode: %v", err)
-		log.Printf("%v\n", er)
+		c.errorKernel.logError(er, c.configuration)
 	}
 
 }
@@ -500,7 +505,8 @@ func (c *centralAuth) groupNodesDeleteGroup(ng nodeGroup) {
 	c.accessLists.schemaMain.mu.Lock()
 	defer c.accessLists.schemaMain.mu.Unlock()
 	if _, ok := c.accessLists.schemaMain.NodeGroupMap[ng]; !ok {
-		log.Printf("info: no such group found: %v\n", ng)
+		er := fmt.Errorf("info: no such group found: %v", ng)
+		c.errorKernel.logError(er, c.configuration)
 		return
 	}
 
@@ -511,7 +517,7 @@ func (c *centralAuth) groupNodesDeleteGroup(ng nodeGroup) {
 	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: groupNodesDeleteGroup: %v", err)
-		log.Printf("%v\n", er)
+		c.errorKernel.logError(er, c.configuration)
 	}
 
 }
@@ -528,7 +534,8 @@ func (c *centralAuth) groupCommandsAddCommand(cg commandGroup, cmd command) {
 	// }
 
 	if !strings.HasPrefix(string(cg), "grp_commands_") {
-		log.Printf("error: group name do not start with grp_commands_\n")
+		er := fmt.Errorf("error: group name do not start with grp_commands_")
+		c.errorKernel.logError(er, c.configuration)
 		return
 	}
 
@@ -545,7 +552,7 @@ func (c *centralAuth) groupCommandsAddCommand(cg commandGroup, cmd command) {
 	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: groupCommandsAddCommand: %v", err)
-		log.Printf("%v\n", er)
+		c.errorKernel.logError(er, c.configuration)
 	}
 
 }
@@ -555,7 +562,8 @@ func (c *centralAuth) groupCommandsDeleteCommand(cg commandGroup, cmd command) {
 	c.accessLists.schemaMain.mu.Lock()
 	defer c.accessLists.schemaMain.mu.Unlock()
 	if _, ok := c.accessLists.schemaMain.CommandGroupMap[cg][cmd]; !ok {
-		log.Printf("info: no such command with name=%v found in group=%v\n", c, cg)
+		er := fmt.Errorf("info: no such command with name=%v found in group=%v", c, cg)
+		c.errorKernel.logError(er, c.configuration)
 		return
 	}
 
@@ -566,7 +574,7 @@ func (c *centralAuth) groupCommandsDeleteCommand(cg commandGroup, cmd command) {
 	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: groupCommandsDeleteCommand: %v", err)
-		log.Printf("%v\n", er)
+		c.errorKernel.logError(er, c.configuration)
 	}
 
 }
@@ -576,7 +584,8 @@ func (c *centralAuth) groupCommandDeleteGroup(cg commandGroup) {
 	c.accessLists.schemaMain.mu.Lock()
 	defer c.accessLists.schemaMain.mu.Unlock()
 	if _, ok := c.accessLists.schemaMain.CommandGroupMap[cg]; !ok {
-		log.Printf("info: no such group found: %v\n", cg)
+		er := fmt.Errorf("info: no such group found: %v", cg)
+		c.errorKernel.logError(er, c.configuration)
 		return
 	}
 
@@ -587,7 +596,7 @@ func (c *centralAuth) groupCommandDeleteGroup(cg commandGroup) {
 	err := c.generateACLsForAllNodes()
 	if err != nil {
 		er := fmt.Errorf("error: groupCommandDeleteGroup: %v", err)
-		log.Printf("%v\n", er)
+		c.errorKernel.logError(er, c.configuration)
 	}
 
 }

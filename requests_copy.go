@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -157,7 +156,8 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 			var err error
 			folderPermission, err = strconv.ParseUint(message.MethodArgs[5], 8, 32)
 			if err != nil {
-				log.Printf("%v\n", err)
+				er := fmt.Errorf("methodREQCopySrc: failed to parse uint, %v", err)
+				proc.errorKernel.logError(er, proc.configuration)
 			}
 
 			er := fmt.Errorf("info: FolderPermission defined in message for socket: %v, converted = %v", message.MethodArgs[5], folderPermission)
@@ -348,7 +348,8 @@ func (m methodREQCopyDst) handler(proc process, message Message, node string) ([
 		proc.processes.active.mu.Unlock()
 
 		if ok {
-			log.Printf(" * * * DEBUG: subprocesses already existed, will not start another subscriber for %v\n", pn)
+			er := fmt.Errorf("methodREQCopyDst: subprocesses already existed, will not start another subscriber for %v", pn)
+			proc.errorKernel.logConsoleOnlyIfDebug(er, proc.configuration)
 
 			// HERE!!!
 			// If the process name already existed we return here before any

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -39,11 +38,13 @@ func (s *server) readStartupFolder() {
 	}
 
 	for _, fp := range filePaths {
-		log.Printf("info: ranging filepaths, current filePath contains: %v\n", fp)
+		er := fmt.Errorf("info: ranging filepaths, current filePath contains: %v", fp)
+		s.errorKernel.logInfo(er, s.configuration)
 	}
 
 	for _, filePath := range filePaths {
-		log.Printf("info: reading and working on file from startup folder %v\n", filePath)
+		er := fmt.Errorf("info: reading and working on file from startup folder %v", filePath)
+		s.errorKernel.logInfo(er, s.configuration)
 
 		// Read the content of each file.
 		readBytes, err := func(filePath string) ([]byte, error) {
@@ -211,14 +212,15 @@ func (s *server) readFolder() {
 		err := os.MkdirAll(s.configuration.ReadFolder, 0770)
 		if err != nil {
 			er := fmt.Errorf("error: failed to create readfolder folder: %v", err)
-			log.Printf("%v\n", er)
+			s.errorKernel.logError(er, s.configuration)
 			os.Exit(1)
 		}
 	}
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Printf("main: failed to create new logWatcher: %v\n", err)
+		er := fmt.Errorf("main: failed to create new logWatcher: %v", err)
+		s.errorKernel.logError(er, s.configuration)
 		os.Exit(1)
 	}
 
@@ -301,7 +303,8 @@ func (s *server) readFolder() {
 	// Add a path.
 	err = watcher.Add(s.configuration.ReadFolder)
 	if err != nil {
-		log.Printf("startLogsWatcher: failed to add watcher: %v\n", err)
+		er := fmt.Errorf("startLogsWatcher: failed to add watcher: %v", err)
+		s.errorKernel.logError(er, s.configuration)
 		os.Exit(1)
 	}
 }
@@ -313,7 +316,8 @@ func (s *server) readFolder() {
 func (s *server) readTCPListener() {
 	ln, err := net.Listen("tcp", s.configuration.TCPListener)
 	if err != nil {
-		log.Printf("error: readTCPListener: failed to start tcp listener: %v\n", err)
+		er := fmt.Errorf("error: readTCPListener: failed to start tcp listener: %v", err)
+		s.errorKernel.logError(er, s.configuration)
 		os.Exit(1)
 	}
 	// Loop, and wait for new connections.
@@ -417,7 +421,8 @@ func (s *server) readHttpListener() {
 	go func() {
 		n, err := net.Listen("tcp", s.configuration.HTTPListener)
 		if err != nil {
-			log.Printf("error: startMetrics: failed to open prometheus listen port: %v\n", err)
+			er := fmt.Errorf("error: startMetrics: failed to open prometheus listen port: %v", err)
+			s.errorKernel.logError(er, s.configuration)
 			os.Exit(1)
 		}
 		mux := http.NewServeMux()
@@ -425,7 +430,8 @@ func (s *server) readHttpListener() {
 
 		err = http.Serve(n, mux)
 		if err != nil {
-			log.Printf("error: startMetrics: failed to start http.Serve: %v\n", err)
+			er := fmt.Errorf("error: startMetrics: failed to start http.Serve: %v", err)
+			s.errorKernel.logError(er, s.configuration)
 			os.Exit(1)
 		}
 	}()
