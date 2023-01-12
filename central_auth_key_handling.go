@@ -75,7 +75,8 @@ func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 	// Open the database file for persistent storage of public keys.
 	db, err := bolt.Open(databaseFilepath, 0660, nil)
 	if err != nil {
-		log.Printf("error: failed to open db: %v\n", err)
+		er := fmt.Errorf("newPKI: error: failed to open db: %v", err)
+		errorKernel.logConsoleOnlyIfDebug(er, configuration)
 		return &p
 	}
 
@@ -84,14 +85,16 @@ func newPKI(configuration *Configuration, errorKernel *errorKernel) *pki {
 	// Get public keys from db storage.
 	keys, err := p.dbDumpPublicKey()
 	if err != nil {
-		log.Printf("debug: dbPublicKeyDump failed, probably empty db: %v\n", err)
+		er := fmt.Errorf("newPKI: dbPublicKeyDump failed, probably empty db: %v", err)
+		errorKernel.logConsoleOnlyIfDebug(er, configuration)
 	}
 
 	// Only assign from storage to in memory map if the storage contained any values.
 	if keys != nil {
 		p.nodesAcked.keysAndHash.Keys = keys
 		for k, v := range keys {
-			log.Printf("info: public keys db contains: %v, %v\n", k, []byte(v))
+			er := fmt.Errorf("newPKI: public keys db contains: %v, %v", k, []byte(v))
+			errorKernel.logConsoleOnlyIfDebug(er, configuration)
 		}
 	}
 

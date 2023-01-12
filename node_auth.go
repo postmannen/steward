@@ -42,8 +42,8 @@ type nodeAuth struct {
 
 func newNodeAuth(configuration *Configuration, errorKernel *errorKernel) *nodeAuth {
 	n := nodeAuth{
-		nodeAcl:       newNodeAcl(configuration),
-		publicKeys:    newPublicKeys(configuration),
+		nodeAcl:       newNodeAcl(configuration, errorKernel),
+		publicKeys:    newPublicKeys(configuration, errorKernel),
 		configuration: configuration,
 		errorKernel:   errorKernel,
 	}
@@ -79,15 +79,19 @@ func newAclAndHash() aclAndHash {
 
 type nodeAcl struct {
 	// allowed is a map for holding all the allowed signatures.
-	aclAndHash aclAndHash
-	filePath   string
-	mu         sync.Mutex
+	aclAndHash    aclAndHash
+	filePath      string
+	mu            sync.Mutex
+	errorKernel   *errorKernel
+	configuration *Configuration
 }
 
-func newNodeAcl(c *Configuration) *nodeAcl {
+func newNodeAcl(c *Configuration, errorKernel *errorKernel) *nodeAcl {
 	n := nodeAcl{
-		aclAndHash: newAclAndHash(),
-		filePath:   filepath.Join(c.DatabaseFolder, "node_aclmap.txt"),
+		aclAndHash:    newAclAndHash(),
+		filePath:      filepath.Join(c.DatabaseFolder, "node_aclmap.txt"),
+		errorKernel:   errorKernel,
+		configuration: c,
 	}
 
 	err := n.loadFromFile()
@@ -106,7 +110,8 @@ func (n *nodeAcl) loadFromFile() error {
 	if _, err := os.Stat(n.filePath); os.IsNotExist(err) {
 		// Just logging the error since it is not crucial that a key file is missing,
 		// since a new one will be created on the next update.
-		log.Printf("no acl file found at %v\n", n.filePath)
+		er := fmt.Errorf("acl: loadFromFile: no acl file found at %v", n.filePath)
+		n.errorKernel.logConsoleOnlyIfDebug(er, n.configuration)
 		return nil
 	}
 
@@ -128,7 +133,8 @@ func (n *nodeAcl) loadFromFile() error {
 		return err
 	}
 
-	log.Printf("\n ***** DEBUG: Loaded existing acl's from file: %v\n\n", n.aclAndHash.Hash)
+	er := fmt.Errorf("nodeAcl: loadFromFile: Loaded existing acl's from file: %v", n.aclAndHash.Hash)
+	n.errorKernel.logConsoleOnlyIfDebug(er, n.configuration)
 
 	return nil
 }
@@ -178,15 +184,19 @@ func newKeysAndHash() *keysAndHash {
 }
 
 type publicKeys struct {
-	keysAndHash *keysAndHash
-	mu          sync.Mutex
-	filePath    string
+	keysAndHash   *keysAndHash
+	mu            sync.Mutex
+	filePath      string
+	errorKernel   *errorKernel
+	configuration *Configuration
 }
 
-func newPublicKeys(c *Configuration) *publicKeys {
+func newPublicKeys(c *Configuration, errorKernel *errorKernel) *publicKeys {
 	p := publicKeys{
-		keysAndHash: newKeysAndHash(),
-		filePath:    filepath.Join(c.DatabaseFolder, "publickeys.txt"),
+		keysAndHash:   newKeysAndHash(),
+		filePath:      filepath.Join(c.DatabaseFolder, "publickeys.txt"),
+		errorKernel:   errorKernel,
+		configuration: c,
 	}
 
 	err := p.loadFromFile()
@@ -227,7 +237,8 @@ func (p *publicKeys) loadFromFile() error {
 		return err
 	}
 
-	log.Printf("\n ***** DEBUG: Loaded existing keys from file: %v\n\n", p.keysAndHash.Hash)
+	er := fmt.Errorf("nodeAuth: loadFromFile: Loaded existing keys from file: %v", p.keysAndHash.Hash)
+	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
 
 	return nil
 }
