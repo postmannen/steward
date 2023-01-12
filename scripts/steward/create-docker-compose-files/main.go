@@ -51,7 +51,7 @@ func generateNkeys(fileDir string) error {
 }
 
 func writekey(fileName string, b []byte) error {
-	fh, err := os.OpenFile(fileName, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600)
+	fh, err := os.OpenFile(fileName, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0660)
 	if err != nil {
 		return fmt.Errorf("error: failed to open create/open file for writing: %v", err)
 	}

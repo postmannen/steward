@@ -18,6 +18,7 @@ require (
 	github.com/prometheus/client_golang v1.14.0
 	github.com/rivo/tview v0.0.0-20221221172820-02e38ea9604c
 	go.etcd.io/bbolt v1.3.6
+	golang.org/x/exp v0.0.0-20230108222341-4b8118a2686a
 	gopkg.in/yaml.v3 v3.0.1
 )
 

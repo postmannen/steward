@@ -21,7 +21,7 @@ func (m methodREQCliCommand) getKind() Event {
 // as a new message.
 func (m methodREQCliCommand) handler(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- CLICommandREQUEST received from: %v, containing: %v", message.FromNode, message.MethodArgs)
-	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+	proc.errorKernel.logDebug(inf, proc.configuration)
 
 	msgForErrors := message
 	msgForErrors.FileName = msgForErrors.FileName + ".error"
@@ -39,7 +39,7 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodREQCliCommand: got <1 number methodArgs")
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 
 			return
@@ -90,7 +90,7 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 			err := cmd.Run()
 			if err != nil {
 				er := fmt.Errorf("error: methodREQCliCommand: cmd.Run failed : %v, methodArgs: %v, error_output: %v", err, message.MethodArgs, stderr.String())
-				proc.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er, logWarning)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
 
@@ -105,7 +105,7 @@ func (m methodREQCliCommand) handler(proc process, message Message, node string)
 		case <-ctx.Done():
 			cancel()
 			er := fmt.Errorf("error: methodREQCliCommand: method timed out: %v", message.MethodArgs)
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 		case out := <-outCh:
 			cancel()
@@ -146,7 +146,7 @@ func (m methodREQCliCommandCont) getKind() Event {
 // back as it is generated, and not just when the command is finished.
 func (m methodREQCliCommandCont) handler(proc process, message Message, node string) ([]byte, error) {
 	inf := fmt.Errorf("<--- CLInCommandCont REQUEST received from: %v, containing: %v", message.FromNode, message.Data)
-	proc.errorKernel.logConsoleOnlyIfDebug(inf, proc.configuration)
+	proc.errorKernel.logDebug(inf, proc.configuration)
 
 	msgForErrors := message
 	msgForErrors.FileName = msgForErrors.FileName + ".error"
@@ -168,7 +168,7 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 		switch {
 		case len(message.MethodArgs) < 1:
 			er := fmt.Errorf("error: methodREQCliCommand: got <1 number methodArgs")
-			proc.errorKernel.errSend(proc, message, er)
+			proc.errorKernel.errSend(proc, message, er, logWarning)
 			newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 
 			return
@@ -197,20 +197,20 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 			outReader, err := cmd.StdoutPipe()
 			if err != nil {
 				er := fmt.Errorf("error: methodREQCliCommandCont: cmd.StdoutPipe failed : %v, methodArgs: %v", err, message.MethodArgs)
-				proc.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er, logWarning)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
 
 			ErrorReader, err := cmd.StderrPipe()
 			if err != nil {
 				er := fmt.Errorf("error: methodREQCliCommandCont: cmd.StderrPipe failed : %v, methodArgs: %v", err, message.MethodArgs)
-				proc.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er, logWarning)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
 
 			if err := cmd.Start(); err != nil {
 				er := fmt.Errorf("error: methodREQCliCommandCont: cmd.Start failed : %v, methodArgs: %v", err, message.MethodArgs)
-				proc.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er, logWarning)
 				newReplyMessage(proc, msgForErrors, []byte(er.Error()))
 			}
 
@@ -241,7 +241,7 @@ func (m methodREQCliCommandCont) handler(proc process, message Message, node str
 
 			if err := cmd.Wait(); err != nil {
 				er := fmt.Errorf("info: methodREQCliCommandCont: method timeout reached, canceled: methodArgs: %v, %v", message.MethodArgs, err)
-				proc.errorKernel.errSend(proc, message, er)
+				proc.errorKernel.errSend(proc, message, er, logWarning)
 			}
 
 		}()

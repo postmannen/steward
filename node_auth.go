@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,8 +41,8 @@ type nodeAuth struct {
 
 func newNodeAuth(configuration *Configuration, errorKernel *errorKernel) *nodeAuth {
 	n := nodeAuth{
-		nodeAcl:       newNodeAcl(configuration),
-		publicKeys:    newPublicKeys(configuration),
+		nodeAcl:       newNodeAcl(configuration, errorKernel),
+		publicKeys:    newPublicKeys(configuration, errorKernel),
 		configuration: configuration,
 		errorKernel:   errorKernel,
 	}
@@ -55,7 +54,8 @@ func newNodeAuth(configuration *Configuration, errorKernel *errorKernel) *nodeAu
 
 	err := n.loadSigningKeys()
 	if err != nil {
-		log.Printf("%v\n", err)
+		er := fmt.Errorf("newNodeAuth: %v", err)
+		errorKernel.logError(er, configuration)
 		os.Exit(1)
 	}
 
@@ -79,20 +79,25 @@ func newAclAndHash() aclAndHash {
 
 type nodeAcl struct {
 	// allowed is a map for holding all the allowed signatures.
-	aclAndHash aclAndHash
-	filePath   string
-	mu         sync.Mutex
+	aclAndHash    aclAndHash
+	filePath      string
+	mu            sync.Mutex
+	errorKernel   *errorKernel
+	configuration *Configuration
 }
 
-func newNodeAcl(c *Configuration) *nodeAcl {
+func newNodeAcl(c *Configuration, errorKernel *errorKernel) *nodeAcl {
 	n := nodeAcl{
-		aclAndHash: newAclAndHash(),
-		filePath:   filepath.Join(c.DatabaseFolder, "node_aclmap.txt"),
+		aclAndHash:    newAclAndHash(),
+		filePath:      filepath.Join(c.DatabaseFolder, "node_aclmap.txt"),
+		errorKernel:   errorKernel,
+		configuration: c,
 	}
 
 	err := n.loadFromFile()
 	if err != nil {
-		log.Printf("error: loading acl's from file: %v\n", err)
+		er := fmt.Errorf("error: newNodeAcl: loading acl's from file: %v", err)
+		errorKernel.logError(er, c)
 		// os.Exit(1)
 	}
 
@@ -106,11 +111,12 @@ func (n *nodeAcl) loadFromFile() error {
 	if _, err := os.Stat(n.filePath); os.IsNotExist(err) {
 		// Just logging the error since it is not crucial that a key file is missing,
 		// since a new one will be created on the next update.
-		log.Printf("no acl file found at %v\n", n.filePath)
+		er := fmt.Errorf("acl: loadFromFile: no acl file found at %v", n.filePath)
+		n.errorKernel.logDebug(er, n.configuration)
 		return nil
 	}
 
-	fh, err := os.OpenFile(n.filePath, os.O_RDONLY, 0600)
+	fh, err := os.OpenFile(n.filePath, os.O_RDONLY, 0660)
 	if err != nil {
 		return fmt.Errorf("error: failed to open acl file: %v", err)
 	}
@@ -128,7 +134,8 @@ func (n *nodeAcl) loadFromFile() error {
 		return err
 	}
 
-	log.Printf("\n ***** DEBUG: Loaded existing acl's from file: %v\n\n", n.aclAndHash.Hash)
+	er := fmt.Errorf("nodeAcl: loadFromFile: Loaded existing acl's from file: %v", n.aclAndHash.Hash)
+	n.errorKernel.logDebug(er, n.configuration)
 
 	return nil
 }
@@ -136,7 +143,7 @@ func (n *nodeAcl) loadFromFile() error {
 // saveToFile will save the acl to file for persistent storage.
 // An error is returned if it fails.
 func (n *nodeAcl) saveToFile() error {
-	fh, err := os.OpenFile(n.filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	fh, err := os.OpenFile(n.filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0660)
 	if err != nil {
 		return fmt.Errorf("error: failed to acl file: %v", err)
 	}
@@ -178,20 +185,25 @@ func newKeysAndHash() *keysAndHash {
 }
 
 type publicKeys struct {
-	keysAndHash *keysAndHash
-	mu          sync.Mutex
-	filePath    string
+	keysAndHash   *keysAndHash
+	mu            sync.Mutex
+	filePath      string
+	errorKernel   *errorKernel
+	configuration *Configuration
 }
 
-func newPublicKeys(c *Configuration) *publicKeys {
+func newPublicKeys(c *Configuration, errorKernel *errorKernel) *publicKeys {
 	p := publicKeys{
-		keysAndHash: newKeysAndHash(),
-		filePath:    filepath.Join(c.DatabaseFolder, "publickeys.txt"),
+		keysAndHash:   newKeysAndHash(),
+		filePath:      filepath.Join(c.DatabaseFolder, "publickeys.txt"),
+		errorKernel:   errorKernel,
+		configuration: c,
 	}
 
 	err := p.loadFromFile()
 	if err != nil {
-		log.Printf("error: loading public keys from file: %v\n", err)
+		er := fmt.Errorf("error: newPublicKeys: loading public keys from file: %v", err)
+		errorKernel.logError(er, c)
 		// os.Exit(1)
 	}
 
@@ -205,11 +217,12 @@ func (p *publicKeys) loadFromFile() error {
 	if _, err := os.Stat(p.filePath); os.IsNotExist(err) {
 		// Just logging the error since it is not crucial that a key file is missing,
 		// since a new one will be created on the next update.
-		log.Printf("no public keys file found at %v\n", p.filePath)
+		er := fmt.Errorf("no public keys file found at %v, new file will be created", p.filePath)
+		p.errorKernel.logInfo(er, p.configuration)
 		return nil
 	}
 
-	fh, err := os.OpenFile(p.filePath, os.O_RDONLY, 0600)
+	fh, err := os.OpenFile(p.filePath, os.O_RDONLY, 0660)
 	if err != nil {
 		return fmt.Errorf("error: failed to open public keys file: %v", err)
 	}
@@ -227,7 +240,8 @@ func (p *publicKeys) loadFromFile() error {
 		return err
 	}
 
-	log.Printf("\n ***** DEBUG: Loaded existing keys from file: %v\n\n", p.keysAndHash.Hash)
+	er := fmt.Errorf("nodeAuth: loadFromFile: Loaded existing keys from file: %v", p.keysAndHash.Hash)
+	p.errorKernel.logDebug(er, p.configuration)
 
 	return nil
 }
@@ -235,7 +249,7 @@ func (p *publicKeys) loadFromFile() error {
 // saveToFile will save all the public kets to file for persistent storage.
 // An error is returned if it fails.
 func (p *publicKeys) saveToFile() error {
-	fh, err := os.OpenFile(p.filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	fh, err := os.OpenFile(p.filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0660)
 	if err != nil {
 		return fmt.Errorf("error: failed to open public keys file: %v", err)
 	}
@@ -261,7 +275,7 @@ func (p *publicKeys) saveToFile() error {
 func (n *nodeAuth) loadSigningKeys() error {
 	// Check if folder structure exist, if not create it.
 	if _, err := os.Stat(n.SignKeyFolder); os.IsNotExist(err) {
-		err := os.MkdirAll(n.SignKeyFolder, 0700)
+		err := os.MkdirAll(n.SignKeyFolder, 0770)
 		if err != nil {
 			er := fmt.Errorf("error: failed to create directory for signing keys : %v", err)
 			return er
@@ -308,7 +322,7 @@ func (n *nodeAuth) loadSigningKeys() error {
 		n.SignPrivateKey = priv
 
 		er := fmt.Errorf("info: no signing keys found, generating new keys")
-		log.Printf("%v\n", er)
+		n.errorKernel.logInfo(er, n.configuration)
 
 		// We got the new generated keys now, so we can return.
 		return nil
@@ -333,7 +347,7 @@ func (n *nodeAuth) loadSigningKeys() error {
 
 // writeSigningKey will write the base64 encoded signing key to file.
 func (n *nodeAuth) writeSigningKey(realPath string, keyB64 string) error {
-	fh, err := os.OpenFile(realPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	fh, err := os.OpenFile(realPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0660)
 	if err != nil {
 		er := fmt.Errorf("error: failed to open key file for writing: %v", err)
 		return er
@@ -379,7 +393,8 @@ func (n *nodeAuth) readKeyFile(keyFile string) (ed2519key []byte, b64Key []byte,
 func (n *nodeAuth) verifySignature(m Message) bool {
 	// NB: Only enable signature checking for REQCliCommand for now.
 	if m.Method != REQCliCommand {
-		log.Printf(" * DEBUG: verifySignature,not REQCliCommand and will not do signature check, method: %v\n", m.Method)
+		er := fmt.Errorf("verifySignature: not REQCliCommand and will not do signature check, method: %v", m.Method)
+		n.errorKernel.logInfo(er, n.configuration)
 		return true
 	}
 
@@ -391,7 +406,7 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 		n.publicKeys.mu.Lock()
 		pubKey := n.publicKeys.keysAndHash.Keys[m.FromNode]
 		if len(pubKey) != 32 {
-			err := fmt.Errorf("DEBUG: Length of publicKey: %v", len(pubKey))
+			err := fmt.Errorf("length of publicKey not equal to 32: %v", len(pubKey))
 			return err
 		}
 
@@ -402,10 +417,11 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 	}()
 
 	if err != nil {
-		log.Printf("%v\n", err)
+		n.errorKernel.logError(err, n.configuration)
 	}
 
-	log.Printf("info: verifySignature, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
+	er := fmt.Errorf("info: verifySignature, result: %v, fromNode: %v, method: %v", ok, m.FromNode, m.Method)
+	n.errorKernel.logInfo(er, n.configuration)
 
 	return ok
 }
@@ -414,7 +430,8 @@ func (n *nodeAuth) verifySignature(m Message) bool {
 func (n *nodeAuth) verifyAcl(m Message) bool {
 	// NB: Only enable acl checking for REQCliCommand for now.
 	if m.Method != REQCliCommand {
-		log.Printf(" * DEBUG: verifyAcl: not REQCliCommand and will not do acl check, method: %v\n", m.Method)
+		er := fmt.Errorf("verifyAcl: not REQCliCommand and will not do acl check, method: %v", m.Method)
+		n.errorKernel.logInfo(er, n.configuration)
 		return true
 	}
 
@@ -426,23 +443,27 @@ func (n *nodeAuth) verifyAcl(m Message) bool {
 
 	cmdMap, ok := n.nodeAcl.aclAndHash.Acl[m.FromNode]
 	if !ok {
-		log.Printf(" * DEBUG: verifyAcl: The fromNode=%v was not found in the acl\n", m.FromNode)
+		er := fmt.Errorf("verifyAcl: The fromNode=%v was not found in the acl", m.FromNode)
+		n.errorKernel.logError(er, n.configuration)
 		return false
 	}
 
 	_, ok = cmdMap[command("*")]
 	if ok {
-		log.Printf(" * DEBUG: verifyAcl: The acl said \"*\", all commands allowed from node=%v\n", m.FromNode)
+		er := fmt.Errorf("verifyAcl: The acl said \"*\", all commands allowed from node=%v", m.FromNode)
+		n.errorKernel.logInfo(er, n.configuration)
 		return true
 	}
 
 	_, ok = cmdMap[command(argsStringified)]
 	if !ok {
-		log.Printf(" * DEBUG: verifyAcl: The command=%v was NOT FOUND in the acl\n", m.MethodArgs)
+		er := fmt.Errorf("verifyAcl: The command=%v was NOT FOUND in the acl", m.MethodArgs)
+		n.errorKernel.logInfo(er, n.configuration)
 		return false
 	}
 
-	log.Printf(" * DEBUG: The command was FOUND in the acl, verifyAcl, result: %v, fromNode: %v, method: %v\n", ok, m.FromNode, m.Method)
+	er := fmt.Errorf("verifyAcl: the command was FOUND in the acl, verifyAcl, result: %v, fromNode: %v, method: %v", ok, m.FromNode, m.Method)
+	n.errorKernel.logInfo(er, n.configuration)
 
 	return true
 }

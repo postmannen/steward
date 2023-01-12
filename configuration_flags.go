@@ -96,6 +96,9 @@ type Configuration struct {
 	IsCentralAuth bool `comment:"IsCentralAuth, enable to make this instance take the role as the central auth server"`
 	// EnableDebug will also enable printing all the messages received in the errorKernel to STDERR.
 	EnableDebug bool `comment:"EnableDebug will also enable printing all the messages received in the errorKernel to STDERR."`
+	// LogLevel
+	LogLevel             string `comment:"LogLevel error/info/warning/debug/none."`
+	LogConsoleTimestamps bool   `comment:"LogConsoleTimestamps true/false for enabling or disabling timestamps when printing errors and information to stderr"`
 	// KeepPublishersAliveFor number of seconds
 	// Timer that will be used for when to remove the sub process
 	// publisher. The timer is reset each time a message is published with
@@ -186,6 +189,8 @@ type ConfigurationFromFile struct {
 	EnableAclCheck               *bool
 	IsCentralAuth                *bool
 	EnableDebug                  *bool
+	LogLevel                     *string
+	LogConsoleTimestamps         *bool
 	KeepPublishersAliveFor       *int
 
 	StartPubREQHello            *int
@@ -255,6 +260,8 @@ func newConfigurationDefaults() Configuration {
 		EnableAclCheck:               false,
 		IsCentralAuth:                false,
 		EnableDebug:                  false,
+		LogLevel:                     "none",
+		LogConsoleTimestamps:         false,
 		KeepPublishersAliveFor:       10,
 
 		StartPubREQHello:            30,
@@ -475,6 +482,16 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 	} else {
 		conf.EnableDebug = *cf.EnableDebug
 	}
+	if cf.LogLevel == nil {
+		conf.LogLevel = cd.LogLevel
+	} else {
+		conf.LogLevel = *cf.LogLevel
+	}
+	if cf.LogConsoleTimestamps == nil {
+		conf.LogConsoleTimestamps = cd.LogConsoleTimestamps
+	} else {
+		conf.LogConsoleTimestamps = *cf.LogConsoleTimestamps
+	}
 	if cf.KeepPublishersAliveFor == nil {
 		conf.KeepPublishersAliveFor = cd.KeepPublishersAliveFor
 	} else {
@@ -611,7 +628,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.RingBufferPersistStore, "ringBufferPersistStore", fc.RingBufferPersistStore, "true/false for enabling the persisting of ringbuffer to disk")
 	flag.IntVar(&c.RingBufferSize, "ringBufferSize", fc.RingBufferSize, "size of the ringbuffer")
 	flag.StringVar(&c.SocketFolder, "socketFolder", fc.SocketFolder, "folder who contains the socket file. Defaults to ./tmp/. If other folder is used this flag must be specified at startup.")
-	flag.StringVar(&c.ReadFolder, "readfolder", fc.ReadFolder, "folder who contains the readfolder. Defaults to ./readfolder/. If other folder is used this flag must be specified at startup.")
+	flag.StringVar(&c.ReadFolder, "readFolder", fc.ReadFolder, "folder who contains the readfolder. Defaults to ./readfolder/. If other folder is used this flag must be specified at startup.")
 	flag.StringVar(&c.TCPListener, "tcpListener", fc.TCPListener, "start up a TCP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")
 	flag.StringVar(&c.HTTPListener, "httpListener", fc.HTTPListener, "start up a HTTP listener in addition to the Unix Socket, to give messages to the system. e.g. localhost:8888. No value means not to start the listener, which is default. NB: You probably don't want to start this on any other interface than localhost")
 	flag.StringVar(&c.DatabaseFolder, "databaseFolder", fc.DatabaseFolder, "folder who contains the database file. Defaults to ./var/lib/. If other folder is used this flag must be specified at startup.")
@@ -644,6 +661,8 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.EnableAclCheck, "enableAclCheck", fc.EnableAclCheck, "true/false *TESTING* enable Acl checking.")
 	flag.BoolVar(&c.IsCentralAuth, "isCentralAuth", fc.IsCentralAuth, "true/false, *TESTING* is this the central auth server")
 	flag.BoolVar(&c.EnableDebug, "enableDebug", fc.EnableDebug, "true/false, will enable debug logging so all messages sent to the errorKernel will also be printed to STDERR")
+	flag.StringVar(&c.LogLevel, "logLevel", fc.LogLevel, "error/info/warning/debug/none")
+	flag.BoolVar(&c.LogConsoleTimestamps, "LogConsoleTimestamps", fc.LogConsoleTimestamps, "true/false for enabling or disabling timestamps when printing errors and information to stderr")
 	flag.IntVar(&c.KeepPublishersAliveFor, "keepPublishersAliveFor", fc.KeepPublishersAliveFor, "The amount of time we allow a publisher to stay alive without receiving any messages to publish")
 
 	// Start of Request publishers/subscribers
@@ -707,7 +726,7 @@ func (c *Configuration) ReadConfigFile(configFolder string) (Configuration, erro
 		return Configuration{}, fmt.Errorf("error: no config file found %v: %v", fPath, err)
 	}
 
-	f, err := os.OpenFile(fPath, os.O_RDONLY, 0600)
+	f, err := os.OpenFile(fPath, os.O_RDONLY, 0660)
 	if err != nil {
 		return Configuration{}, fmt.Errorf("error: ReadConfigFile: failed to open file: %v", err)
 	}
@@ -730,7 +749,7 @@ func (c *Configuration) ReadConfigFile(configFolder string) (Configuration, erro
 // directory for the config file does not exist it will be created.
 func (c *Configuration) WriteConfigFile() error {
 	if _, err := os.Stat(c.ConfigFolder); os.IsNotExist(err) {
-		err := os.MkdirAll(c.ConfigFolder, 0700)
+		err := os.MkdirAll(c.ConfigFolder, 0770)
 		if err != nil {
 			return fmt.Errorf("error: failed to create config directory %v: %v", c.ConfigFolder, err)
 		}
@@ -738,7 +757,7 @@ func (c *Configuration) WriteConfigFile() error {
 
 	fp := filepath.Join(c.ConfigFolder, "config.toml")
 
-	f, err := os.OpenFile(fp, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	f, err := os.OpenFile(fp, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0660)
 	if err != nil {
 		return fmt.Errorf("error: WriteConfigFile: failed to open file: %v", err)
 	}

@@ -132,7 +132,7 @@ func newSubject(method Method, node string) Subject {
 	mh, ok := ma.CheckIfExists(method)
 	//mh, ok := ma.Methodhandlers[method]
 	if !ok {
-		log.Printf("error: no Event type specified for the method: %v\n", method)
+		log.Printf("error: newSubject: no Event type specified for the method: %v\n", method)
 		os.Exit(1)
 	}
 

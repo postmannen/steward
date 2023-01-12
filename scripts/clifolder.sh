@@ -13,10 +13,6 @@ if [ -z "$3" ]; then
     exit 1
 fi
 
-echo $1
-echo $2
-echo $3
-
 nodes=$1
 shell=$2
 command=$3
@@ -24,7 +20,7 @@ command=$3
 IFS=',' read -r -a array <<<"$nodes"
 
 function sendMessage() {
-    cat >msg.yaml <<EOF
+    cat >msg-"$element".yaml <<EOF
 [
     {
         "toNodes": ["${element}"],
@@ -53,5 +49,5 @@ EOF
 
 for element in "${array[@]}"; do
     sendMessage element "$command"
-    cp msg.yaml ./readfolder
+    cp msg-"$element".yaml ./readfolder
 done

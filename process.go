@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"sync"
 	"time"
@@ -187,67 +186,13 @@ func (p process) spawnWorker() {
 	// Start a publisher worker, which will start a go routine (process)
 	// That will take care of all the messages for the subject it owns.
 	if p.processKind == processKindPublisher {
-
-		// If there is a procFunc for the process, start it.
-		if p.procFunc != nil {
-			// Initialize the channel for communication between the proc and
-			// the procFunc.
-			p.procFuncCh = make(chan Message)
-
-			// Start the procFunc in it's own anonymous func so we are able
-			// to get the return error.
-			go func() {
-				err := p.procFunc(p.ctx, p.procFuncCh)
-				if err != nil {
-					er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
-					p.errorKernel.errSend(p, Message{}, er)
-				}
-			}()
-		}
-
-		go p.publishMessages(p.natsConn)
+		p.startPublisher()
 	}
 
 	// Start a subscriber worker, which will start a go routine (process)
 	// That will take care of all the messages for the subject it owns.
 	if p.processKind == processKindSubscriber {
-		// If there is a procFunc for the process, start it.
-		if p.procFunc != nil {
-			// Initialize the channel for communication between the proc and
-			// the procFunc.
-			p.procFuncCh = make(chan Message)
-
-			// Start the procFunc in it's own anonymous func so we are able
-			// to get the return error.
-			go func() {
-				err := p.procFunc(p.ctx, p.procFuncCh)
-				if err != nil {
-					er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
-					p.errorKernel.errSend(p, Message{}, er)
-				}
-			}()
-		}
-
-		p.natsSubscription = p.subscribeMessages()
-
-		// We also need to be able to remove all the information about this process
-		// when the process context is canceled.
-		go func() {
-			<-p.ctx.Done()
-			err := p.natsSubscription.Unsubscribe()
-			if err != nil {
-				er := fmt.Errorf("error: spawnWorker: got <-ctx.Done, but unable to unsubscribe natsSubscription failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er)
-				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
-			}
-
-			p.processes.active.mu.Lock()
-			delete(p.processes.active.procNames, p.processName)
-			p.processes.active.mu.Unlock()
-
-			log.Printf("Successfully stopped process: %v\n", p.processName)
-
-		}()
+		p.startSubscriber()
 	}
 
 	// Add information about the new process to the started processes map.
@@ -256,7 +201,69 @@ func (p process) spawnWorker() {
 	p.processes.active.mu.Unlock()
 
 	er := fmt.Errorf("successfully started process: %v", p.processName)
-	p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+	p.errorKernel.logDebug(er, p.configuration)
+}
+
+func (p process) startPublisher() {
+	// If there is a procFunc for the process, start it.
+	if p.procFunc != nil {
+		// Initialize the channel for communication between the proc and
+		// the procFunc.
+		p.procFuncCh = make(chan Message)
+
+		// Start the procFunc in it's own anonymous func so we are able
+		// to get the return error.
+		go func() {
+			err := p.procFunc(p.ctx, p.procFuncCh)
+			if err != nil {
+				er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
+				p.errorKernel.errSend(p, Message{}, er, logError)
+			}
+		}()
+	}
+
+	go p.publishMessages(p.natsConn)
+}
+
+func (p process) startSubscriber() {
+	// If there is a procFunc for the process, start it.
+	if p.procFunc != nil {
+		// Initialize the channel for communication between the proc and
+		// the procFunc.
+		p.procFuncCh = make(chan Message)
+
+		// Start the procFunc in it's own anonymous func so we are able
+		// to get the return error.
+		go func() {
+			err := p.procFunc(p.ctx, p.procFuncCh)
+			if err != nil {
+				er := fmt.Errorf("error: spawnWorker: start procFunc failed: %v", err)
+				p.errorKernel.errSend(p, Message{}, er, logError)
+			}
+		}()
+	}
+
+	p.natsSubscription = p.subscribeMessages()
+
+	// We also need to be able to remove all the information about this process
+	// when the process context is canceled.
+	go func() {
+		<-p.ctx.Done()
+		err := p.natsSubscription.Unsubscribe()
+		if err != nil {
+			er := fmt.Errorf("error: spawnWorker: got <-ctx.Done, but unable to unsubscribe natsSubscription failed: %v", err)
+			p.errorKernel.errSend(p, Message{}, er, logError)
+			p.errorKernel.logDebug(er, p.configuration)
+		}
+
+		p.processes.active.mu.Lock()
+		delete(p.processes.active.procNames, p.processName)
+		p.processes.active.mu.Unlock()
+
+		er := fmt.Errorf("successfully stopped process: %v", p.processName)
+		p.errorKernel.logDebug(er, p.configuration)
+
+	}()
 }
 
 var (
@@ -288,7 +295,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 		}
 
 		er := fmt.Errorf("info: preparing to send nats message with subject %v, id: %v", msg.Subject, message.ID)
-		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+		p.errorKernel.logDebug(er, p.configuration)
 
 		var err error
 
@@ -300,7 +307,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				err := natsConn.PublishMsg(msg)
 				if err != nil {
 					er := fmt.Errorf("error: nats publish for message with subject failed: %v", err)
-					log.Printf("%v\n", er)
+					p.errorKernel.logDebug(er, p.configuration)
 					return ErrACKSubscribeRetry
 				}
 				p.metrics.promNatsDeliveredTotal.Inc()
@@ -342,7 +349,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				}
 
 				er := fmt.Errorf("send attempt:%v, max retries: %v, ack timeout: %v, message.ID: %v, method: %v, toNode: %v", retryAttempts, message.Retries, message.ACKTimeout, message.ID, message.Method, message.ToNode)
-				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+				p.errorKernel.logDebug(er, p.configuration)
 
 				// The SubscribeSync used in the subscriber, will get messages that
 				// are sent after it started subscribing.
@@ -352,13 +359,15 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				defer func() {
 					err := subReply.Unsubscribe()
 					if err != nil {
-						log.Printf("error: nats SubscribeSync: failed when unsubscribing for ACK: %v\n", err)
+						er := fmt.Errorf("error: nats SubscribeSync: failed when unsubscribing for ACK: %v", err)
+						p.errorKernel.logDebug(er, p.configuration)
 					}
 				}()
 				if err != nil {
 					er := fmt.Errorf("error: nats SubscribeSync failed: failed to create reply message for subject: %v, error: %v", msg.Reply, err)
 					// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
-					log.Printf("%v, waiting equal to RetryWait %ds before retrying\n", er, message.RetryWait)
+					er = fmt.Errorf("%v, waiting equal to RetryWait %ds before retrying", er, message.RetryWait)
+					p.errorKernel.logDebug(er, p.configuration)
 
 					time.Sleep(time.Second * time.Duration(message.RetryWait))
 
@@ -368,9 +377,9 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 				// Publish message
 				err = natsConn.PublishMsg(msg)
 				if err != nil {
-					er := fmt.Errorf("error: nats publish failed: %v", err)
+					er := fmt.Errorf("error: nats publish failed: %v, waiting equal to RetryWait of %ds before retrying", err, message.RetryWait)
 					// sendErrorLogMessage(p.toRingbufferCh, node(p.node), er)
-					log.Printf("%v, waiting equal to RetryWait of %ds before retrying\n", er, message.RetryWait)
+					p.errorKernel.logDebug(er, p.configuration)
 					time.Sleep(time.Second * time.Duration(message.RetryWait))
 
 					return ErrACKSubscribeRetry
@@ -388,7 +397,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 					switch {
 					case err == nats.ErrNoResponders || err == nats.ErrTimeout:
 						er := fmt.Errorf("error: ack receive failed: waiting for %v seconds before retrying:   subject=%v: %v", message.RetryWait, p.subject.name(), err)
-						p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+						p.errorKernel.logDebug(er, p.configuration)
 
 						time.Sleep(time.Second * time.Duration(message.RetryWait))
 						p.metrics.promNatsMessagesMissedACKsTotal.Inc()
@@ -397,13 +406,13 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 
 					case err == nats.ErrBadSubscription || err == nats.ErrConnectionClosed:
 						er := fmt.Errorf("error: ack receive failed: conneciton closed or bad subscription, will not retry message:   subject=%v: %v", p.subject.name(), err)
-						p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+						p.errorKernel.logDebug(er, p.configuration)
 
 						return er
 
 					default:
 						er := fmt.Errorf("error: ack receive failed: the error was not defined, check if nats client have been updated with new error values, and update steward to handle the new error type:   subject=%v: %v", p.subject.name(), err)
-						p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+						p.errorKernel.logDebug(er, p.configuration)
 
 						return er
 					}
@@ -428,7 +437,7 @@ func (p process) messageDeliverNats(natsMsgPayload []byte, natsMsgHeader nats.He
 		p.metrics.promNatsDeliveredTotal.Inc()
 
 		er = fmt.Errorf("info: sent nats message with subject %v, id: %v", msg.Subject, message.ID)
-		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+		p.errorKernel.logDebug(er, p.configuration)
 
 		return
 	}
@@ -456,7 +465,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 	// If debugging is enabled, print the source node name of the nats messages received.
 	if val, ok := msg.Header["fromNode"]; ok {
 		er := fmt.Errorf("info: nats message received from %v, with subject %v ", val, subject)
-		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+		p.errorKernel.logDebug(er, p.configuration)
 	}
 
 	// If compression is used, decompress it to get the gob data. If
@@ -468,13 +477,13 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			zr, err := zstd.NewReader(nil)
 			if err != nil {
 				er := fmt.Errorf("error: zstd NewReader failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er, logWarning)
 				return
 			}
 			msgData, err = zr.DecodeAll(msg.Data, nil)
 			if err != nil {
 				er := fmt.Errorf("error: zstd decoding failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er, logWarning)
 				zr.Close()
 				return
 			}
@@ -486,14 +495,14 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			gr, err := gzip.NewReader(r)
 			if err != nil {
 				er := fmt.Errorf("error: gzip NewReader failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er, logError)
 				return
 			}
 
 			b, err := io.ReadAll(gr)
 			if err != nil {
 				er := fmt.Errorf("error: gzip ReadAll failed: %v", err)
-				p.errorKernel.errSend(p, Message{}, er)
+				p.errorKernel.errSend(p, Message{}, er, logWarning)
 				return
 			}
 
@@ -514,7 +523,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			err := cbor.Unmarshal(msgData, &message)
 			if err != nil {
 				er := fmt.Errorf("error: cbor decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-				p.errorKernel.errSend(p, message, er)
+				p.errorKernel.errSend(p, message, er, logError)
 				return
 			}
 		default: // Deaults to gob if no match was found.
@@ -524,7 +533,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			err := gobDec.Decode(&message)
 			if err != nil {
 				er := fmt.Errorf("error: gob decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-				p.errorKernel.errSend(p, message, er)
+				p.errorKernel.errSend(p, message, er, logError)
 				return
 			}
 		}
@@ -537,7 +546,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 		err := gobDec.Decode(&message)
 		if err != nil {
 			er := fmt.Errorf("error: gob decoding failed, subject: %v, header: %v, error: %v", subject, msg.Header, err)
-			p.errorKernel.errSend(p, message, er)
+			p.errorKernel.errSend(p, message, er, logError)
 			return
 		}
 	}
@@ -561,7 +570,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 	// Check for ACK type Event.
 	case message.ACKTimeout >= 1:
 		er := fmt.Errorf("subscriberHandler: received ACK message: %v, from: %v, id:%v", message.Method, message.FromNode, message.ID)
-		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+		p.errorKernel.logDebug(er, p.configuration)
 		// When spawning sub processes we can directly assign handlers to the process upon
 		// creation. We here check if a handler is already assigned, and if it is nil, we
 		// lookup and find the correct handler to use if available.
@@ -571,7 +580,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			p.handler = mh.handler
 			if !ok {
 				er := fmt.Errorf("error: subscriberHandler: no such method type: %v", p.subject.Event)
-				p.errorKernel.errSend(p, message, er)
+				p.errorKernel.errSend(p, message, er, logWarning)
 			}
 		}
 
@@ -586,7 +595,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 
 	case message.ACKTimeout < 1:
 		er := fmt.Errorf("subscriberHandler: received NACK message: %v, from: %v, id:%v", message.Method, message.FromNode, message.ID)
-		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+		p.errorKernel.logDebug(er, p.configuration)
 		// When spawning sub processes we can directly assign handlers to the process upon
 		// creation. We here check if a handler is already assigned, and if it is nil, we
 		// lookup and find the correct handler to use if available.
@@ -596,7 +605,7 @@ func (p process) messageSubscriberHandler(natsConn *nats.Conn, thisNode string, 
 			p.handler = mh.handler
 			if !ok {
 				er := fmt.Errorf("error: subscriberHandler: no such method type: %v", p.subject.Event)
-				p.errorKernel.errSend(p, message, er)
+				p.errorKernel.errSend(p, message, er, logWarning)
 			}
 		}
 
@@ -628,8 +637,8 @@ func (p process) callHandler(message Message, thisNode string) []byte {
 		case false:
 			// ACL/Signature checking failed.
 			er := fmt.Errorf("error: subscriberHandler: ACL were verified not-OK, doing nothing")
-			p.errorKernel.errSend(p, message, er)
-			log.Printf("%v\n", er)
+			p.errorKernel.errSend(p, message, er, logWarning)
+			p.errorKernel.logDebug(er, p.configuration)
 		}
 	}()
 
@@ -659,7 +668,7 @@ func executeHandler(p process, message Message, thisNode string) {
 	if p.configuration.EnableAclCheck {
 		// Either ACL were verified OK, or ACL/Signature check was not enabled, so we call the handler.
 		er := fmt.Errorf("info: subscriberHandler: Either ACL were verified OK, or ACL/Signature check was not enabled, so we call the handler: %v", true)
-		p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+		p.errorKernel.logDebug(er, p.configuration)
 	}
 
 	switch {
@@ -669,8 +678,8 @@ func executeHandler(p process, message Message, thisNode string) {
 			_, err = p.handler(p, message, thisNode)
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-				p.errorKernel.errSend(p, message, er)
-				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+				p.errorKernel.errSend(p, message, er, logError)
+				p.errorKernel.logDebug(er, p.configuration)
 			}
 		}()
 
@@ -693,8 +702,8 @@ func executeHandler(p process, message Message, thisNode string) {
 			_, err := p.handler(p, message, thisNode)
 			if err != nil {
 				er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-				p.errorKernel.errSend(p, message, er)
-				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+				p.errorKernel.errSend(p, message, er, logError)
+				p.errorKernel.logDebug(er, p.configuration)
 			}
 		}()
 
@@ -702,7 +711,7 @@ func executeHandler(p process, message Message, thisNode string) {
 			select {
 			case <-p.ctx.Done():
 				er := fmt.Errorf("info: subscriberHandler: proc ctx done: toNode=%v, fromNode=%v, method=%v, methodArgs=%v", message.ToNode, message.FromNode, message.Method, message.MethodArgs)
-				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+				p.errorKernel.logDebug(er, p.configuration)
 
 				//cancel()
 				return
@@ -710,7 +719,7 @@ func executeHandler(p process, message Message, thisNode string) {
 				// Total time reached. End the process.
 				//cancel()
 				er := fmt.Errorf("info: subscriberHandler: schedule totalTime done: toNode=%v, fromNode=%v, method=%v, methodArgs=%v", message.ToNode, message.FromNode, message.Method, message.MethodArgs)
-				p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+				p.errorKernel.logDebug(er, p.configuration)
 
 				return
 
@@ -719,8 +728,8 @@ func executeHandler(p process, message Message, thisNode string) {
 					_, err := p.handler(p, message, thisNode)
 					if err != nil {
 						er := fmt.Errorf("error: subscriberHandler: handler method failed: %v", err)
-						p.errorKernel.errSend(p, message, er)
-						p.errorKernel.logConsoleOnlyIfDebug(er, p.configuration)
+						p.errorKernel.errSend(p, message, er, logError)
+						p.errorKernel.logDebug(er, p.configuration)
 					}
 				}()
 			}
@@ -747,7 +756,8 @@ func (p process) verifySigOrAclFlag(message Message) bool {
 	case p.nodeAuth.configuration.EnableSignatureCheck && !p.nodeAuth.configuration.EnableAclCheck:
 		sigOK := p.nodeAuth.verifySignature(message)
 
-		log.Printf(" * DEBUG: verify acl/sig: Only signature checking enabled, ALLOW the message if sigOK, sigOK=%v, method %v\n", sigOK, message.Method)
+		er := fmt.Errorf("verifySigOrAclFlag: verify acl/sig: Only signature checking enabled, ALLOW the message if sigOK, sigOK=%v, method %v", sigOK, message.Method)
+		p.errorKernel.logDebug(er, p.configuration)
 
 		if sigOK {
 			doHandler = true
@@ -758,7 +768,8 @@ func (p process) verifySigOrAclFlag(message Message) bool {
 		sigOK := p.nodeAuth.verifySignature(message)
 		aclOK := p.nodeAuth.verifyAcl(message)
 
-		log.Printf(" * DEBUG: verify acl/sig:both signature and acl checking enabled, allow the message if sigOK and aclOK, or method is not REQCliCommand, sigOK=%v, aclOK=%v, method=%v\n", sigOK, aclOK, message.Method)
+		er := fmt.Errorf("verifySigOrAclFlag: verify acl/sig:both signature and acl checking enabled, allow the message if sigOK and aclOK, or method is not REQCliCommand, sigOK=%v, aclOK=%v, method=%v", sigOK, aclOK, message.Method)
+		p.errorKernel.logDebug(er, p.configuration)
 
 		if sigOK && aclOK {
 			doHandler = true
@@ -767,7 +778,8 @@ func (p process) verifySigOrAclFlag(message Message) bool {
 		// none of the verification options matched, we should keep the default value
 		// of doHandler=false, so the handler is not done.
 	default:
-		log.Printf(" * DEBUG: verify acl/sig: None of the verify flags matched, not doing handler for message, method=%v\n", message.Method)
+		er := fmt.Errorf("verifySigOrAclFlag: verify acl/sig: None of the verify flags matched, not doing handler for message, method=%v", message.Method)
+		p.errorKernel.logDebug(er, p.configuration)
 	}
 
 	return doHandler
@@ -786,7 +798,8 @@ func (p process) subscribeMessages() *nats.Subscription {
 		go p.messageSubscriberHandler(p.natsConn, p.configuration.NodeName, msg, subject)
 	})
 	if err != nil {
-		log.Printf("error: Subscribe failed: %v\n", err)
+		er := fmt.Errorf("error: Subscribe failed: %v", err)
+		p.errorKernel.logDebug(er, p.configuration)
 		return nil
 	}
 
@@ -808,7 +821,8 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		// enc, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
 		enc, err := zstd.NewWriter(nil, zstd.WithEncoderConcurrency(1))
 		if err != nil {
-			log.Printf("error: zstd new encoder failed: %v\n", err)
+			er := fmt.Errorf("error: zstd new encoder failed: %v", err)
+			p.errorKernel.logError(er, p.configuration)
 			os.Exit(1)
 		}
 		zEnc = enc
@@ -835,18 +849,19 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		select {
 		case <-ticker.C:
 			// We only want to remove subprocesses
-			if p.isSubProcess {
-				p.processes.active.mu.Lock()
-				p.ctxCancel()
-				delete(p.processes.active.procNames, p.processName)
-				p.processes.active.mu.Unlock()
+			// REMOVED 120123: Removed if so all publishers should be canceled if inactive.
+			//if p.isSubProcess {
+			p.processes.active.mu.Lock()
+			p.ctxCancel()
+			delete(p.processes.active.procNames, p.processName)
+			p.processes.active.mu.Unlock()
 
-				er := fmt.Errorf("info: canceled publisher: %v", p.processName)
-				//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
-				log.Printf("%v\n", er)
+			er := fmt.Errorf("info: canceled publisher: %v", p.processName)
+			//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
+			p.errorKernel.logDebug(er, p.configuration)
 
-				return
-			}
+			return
+			//}
 
 		case m := <-p.subject.messageCh:
 			ticker.Reset(time.Second * time.Duration(p.configuration.KeepPublishersAliveFor))
@@ -858,7 +873,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		case <-p.ctx.Done():
 			er := fmt.Errorf("info: canceling publisher: %v", p.processName)
 			//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
-			log.Printf("%v\n", er)
+			p.errorKernel.logDebug(er, p.configuration)
 			return
 		}
 	}
@@ -888,7 +903,7 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 		b, err := cbor.Marshal(m)
 		if err != nil {
 			er := fmt.Errorf("error: messageDeliverNats: cbor encode message failed: %v", err)
-			log.Printf("%v\n", er)
+			p.errorKernel.logDebug(er, p.configuration)
 			return
 		}
 
@@ -901,7 +916,7 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 		err := gobEnc.Encode(m)
 		if err != nil {
 			er := fmt.Errorf("error: messageDeliverNats: gob encode message failed: %v", err)
-			log.Printf("%v\n", er)
+			p.errorKernel.logDebug(er, p.configuration)
 			return
 		}
 
@@ -944,7 +959,8 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 			defer gzipW.Flush()
 			_, err := gzipW.Write(natsMsgPayloadSerialized)
 			if err != nil {
-				log.Printf("error: failed to write gzip: %v\n", err)
+				er := fmt.Errorf("error: failed to write gzip: %v", err)
+				p.errorKernel.logDebug(er, p.configuration)
 				return
 			}
 
@@ -960,11 +976,11 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 	default: // no compression
 		// Allways log the error to console.
 		er := fmt.Errorf("error: publishing: compression type not defined, setting default to no compression")
-		log.Printf("%v\n", er)
+		p.errorKernel.logDebug(er, p.configuration)
 
 		// We only wan't to send the error message to errorCentral once.
 		once.Do(func() {
-			log.Printf("%v\n", er)
+			p.errorKernel.logDebug(er, p.configuration)
 		})
 
 		// No compression, so we just assign the value of the serialized

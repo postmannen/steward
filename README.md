@@ -663,7 +663,7 @@ Copy a file from one node to another node.
         "fileName": "copy.log",
         "toNodes": ["central"],
         "method":"REQCopySrc",
-        "methodArgs": ["./testbinary","ship1","./testbinary-copied","500000","20","0700"],
+        "methodArgs": ["./testbinary","ship1","./testbinary-copied","500000","20","0770"],
         "methodTimeout": 10,
         "replyMethod":"REQToConsole"
     }
