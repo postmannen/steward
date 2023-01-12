@@ -260,7 +260,7 @@ func newConfigurationDefaults() Configuration {
 		EnableAclCheck:               false,
 		IsCentralAuth:                false,
 		EnableDebug:                  false,
-		LogLevel:                     "none",
+		LogLevel:                     "debug",
 		LogConsoleTimestamps:         false,
 		KeepPublishersAliveFor:       10,
 
