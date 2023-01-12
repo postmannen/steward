@@ -97,7 +97,7 @@ type Configuration struct {
 	// EnableDebug will also enable printing all the messages received in the errorKernel to STDERR.
 	EnableDebug bool `comment:"EnableDebug will also enable printing all the messages received in the errorKernel to STDERR."`
 	// LogLevel
-	LogLevel             string `comment:"LogLevel info/debug/none."`
+	LogLevel             string `comment:"LogLevel error/info/warning/debug/none."`
 	LogConsoleTimestamps bool   `comment:"LogConsoleTimestamps true/false for enabling or disabling timestamps when printing errors and information to stderr"`
 	// KeepPublishersAliveFor number of seconds
 	// Timer that will be used for when to remove the sub process
@@ -661,7 +661,7 @@ func (c *Configuration) CheckFlags() error {
 	flag.BoolVar(&c.EnableAclCheck, "enableAclCheck", fc.EnableAclCheck, "true/false *TESTING* enable Acl checking.")
 	flag.BoolVar(&c.IsCentralAuth, "isCentralAuth", fc.IsCentralAuth, "true/false, *TESTING* is this the central auth server")
 	flag.BoolVar(&c.EnableDebug, "enableDebug", fc.EnableDebug, "true/false, will enable debug logging so all messages sent to the errorKernel will also be printed to STDERR")
-	flag.StringVar(&c.LogLevel, "logLevel", fc.LogLevel, "info/debug")
+	flag.StringVar(&c.LogLevel, "logLevel", fc.LogLevel, "error/info/warning/debug/none")
 	flag.BoolVar(&c.LogConsoleTimestamps, "LogConsoleTimestamps", fc.LogConsoleTimestamps, "true/false for enabling or disabling timestamps when printing errors and information to stderr")
 	flag.IntVar(&c.KeepPublishersAliveFor, "keepPublishersAliveFor", fc.KeepPublishersAliveFor, "The amount of time we allow a publisher to stay alive without receiving any messages to publish")
 
