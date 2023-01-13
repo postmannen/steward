@@ -35,6 +35,10 @@ const (
 type process struct {
 	// isSubProcess is used to indentify subprocesses spawned by other processes.
 	isSubProcess bool
+	// isLongRunningPublisher is set to true for a publisher service that should not
+	// be auto terminated like a normal autospawned publisher would be when the the
+	// inactivity timeout have expired
+	isLongRunningPublisher bool
 	// server
 	server *server
 	// messageID
@@ -848,6 +852,14 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 		// exit this function if Cancel are received via ctx.
 		select {
 		case <-ticker.C:
+			if p.isLongRunningPublisher {
+				er := fmt.Errorf("info: isLongRunningPublisher, will not cancel publisher: %v", p.processName)
+				//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
+				p.errorKernel.logDebug(er, p.configuration)
+
+				continue
+			}
+
 			// We only want to remove subprocesses
 			// REMOVED 120123: Removed if so all publishers should be canceled if inactive.
 			//if p.isSubProcess {
