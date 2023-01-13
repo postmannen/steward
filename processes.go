@@ -290,6 +290,7 @@ func (s startup) pubREQHello(p process) {
 
 	sub := newSubject(REQHello, p.configuration.CentralNodeName)
 	proc := newProcess(p.ctx, s.server, sub, processKindPublisher, nil)
+	proc.isLongRunningPublisher = true
 
 	// Define the procFunc to be used for the process.
 	proc.procFunc = func(ctx context.Context, procFuncCh chan Message) error {
@@ -342,6 +343,7 @@ func (s startup) pubREQKeysRequestUpdate(p process) {
 
 	sub := newSubject(REQKeysRequestUpdate, p.configuration.CentralNodeName)
 	proc := newProcess(p.ctx, s.server, sub, processKindPublisher, nil)
+	proc.isLongRunningPublisher = true
 
 	// Define the procFunc to be used for the process.
 	proc.procFunc = func(ctx context.Context, procFuncCh chan Message) error {
@@ -399,6 +401,7 @@ func (s startup) pubREQAclRequestUpdate(p process) {
 
 	sub := newSubject(REQAclRequestUpdate, p.configuration.CentralNodeName)
 	proc := newProcess(p.ctx, s.server, sub, processKindPublisher, nil)
+	proc.isLongRunningPublisher = true
 
 	// Define the procFunc to be used for the process.
 	proc.procFunc = func(ctx context.Context, procFuncCh chan Message) error {
