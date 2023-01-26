@@ -20,7 +20,7 @@ command=$3
 IFS=',' read -r -a array <<<"$nodes"
 
 function sendMessage() {
-    cat >msg-"$element".yaml <<EOF
+    cat >msg-"$element".json <<EOF
 [
     {
         "toNodes": ["${element}"],
@@ -49,5 +49,5 @@ EOF
 
 for element in "${array[@]}"; do
     sendMessage element "$command"
-    cp msg-"$element".yaml ./readfolder
+    cp msg-"$element".json ./readfolder
 done
