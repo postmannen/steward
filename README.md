@@ -31,6 +31,7 @@ As long as you can do something as an operator on in a shell on a system you can
     - [Error messages from nodes](#error-messages-from-nodes)
     - [Message handling and threads](#message-handling-and-threads)
     - [Timeouts and retries for requests](#timeouts-and-retries-for-requests)
+      - [RetryWait](#retrywait)
     - [Flags and configuration file](#flags-and-configuration-file)
     - [Schema for the messages to send into Steward via the API's](#schema-for-the-messages-to-send-into-steward-via-the-apis)
     - [Nats messaging timeouts](#nats-messaging-timeouts)
@@ -295,6 +296,36 @@ In the above example, the values set meaning:
 - **methodTimeout** : Let the bash command `tail -f ./tmp.log` run for 60 seconds before it is terminated.
 
 If no timeout are specified in a message the defaults specified in the **etc/config.yaml** are used.
+
+#### RetryWait
+
+Instead of solely depending in the ack timeout the **RetryWait** can be used. RetryWait specifies the time in seconds to wait between retries.
+
+```json
+[
+    {
+        "directory":"/some/result/directory/",
+        "fileName":"my-syslog.log",
+        "toNode": "ship2",
+        "methodArgs": ["bash","-c","tail -f /var/log/syslog"],
+        "replyMethod":"REQToFileAppend",
+        "method":"REQCliCommandCont",
+        "ACKTimeout":3,
+        "RetryWait":10,
+        "retries":3,
+        "methodTimeout": 60
+    }
+]
+```
+
+This is the same as the previos example, but it will also wait another 10 seconds after it noticed that an ACK was not received before the message is retried.
+
+The flow will be like this:
+
+- Send message.
+- Wait 3 seconds for an Acknowledge from the destination node.
+- If an Acknowledge was not received, wait another 10 seconds before the message is retried.
+- Retry sending message.
 
 ### Flags and configuration file
 
