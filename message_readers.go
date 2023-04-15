@@ -2,8 +2,10 @@ package steward
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -81,25 +83,35 @@ func (s *server) readStartupFolder() {
 
 		// Check if fromNode field is specified, and remove the message if blank.
 		for i := range sams {
+			// We want to allow the use of nodeName local only in startup folder, and
+			// if used we substite it for the local node name.
+			if sams[i].Message.ToNode == "local" {
+				sams[i].Message.ToNode = Node(s.nodeName)
+				sams[i].Subject.ToNode = s.nodeName
+			}
+
 			switch {
 			case sams[i].Message.FromNode == "":
+				// Remove the first message from the slice.
 				sams = append(sams[:i], sams[i+1:]...)
 				er := fmt.Errorf(" error: missing value in fromNode field in startup message, discarding message")
 				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 
 			case sams[i].Message.ToNode == "" && len(sams[i].Message.ToNodes) == 0:
+				// Remove the first message from the slice.
 				sams = append(sams[:i], sams[i+1:]...)
 				er := fmt.Errorf(" error: missing value in both toNode and toNodes fields in startup message, discarding message")
 				s.errorKernel.errSend(s.processInitial, Message{}, er, logWarning)
 			}
 
-			// NB: REMOVED CODE!
-			// // Bounds check.
-			// if i == len(sams)-1 {
-			// 	fmt.Printf(" *** DEBUG: HIT BOUNDS CHECK, breaking out\n")
-			// 	break
-			// }
 		}
+
+		j, err := json.MarshalIndent(sams, "", "   ")
+		if err != nil {
+			log.Printf("test error: %v\n", err)
+		}
+		er = fmt.Errorf("%v", string(j))
+		s.errorKernel.errSend(s.processInitial, Message{}, er, logInfo)
 
 		s.directSAMSCh <- sams
 
