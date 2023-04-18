@@ -2,6 +2,7 @@ package steward
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -157,7 +158,7 @@ func (m methodREQTailFile) handler(proc process, message Message, node string) (
 		outCh := make(chan []byte)
 		t, err := tail.TailFile(fp, tail.Config{Follow: true, Location: &tail.SeekInfo{
 			Offset: 0,
-			Whence: os.SEEK_END,
+			Whence: io.SeekEnd,
 		}})
 		if err != nil {
 			er := fmt.Errorf("error: methodREQToTailFile: tailFile: %v", err)
