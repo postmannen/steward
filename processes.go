@@ -329,9 +329,7 @@ func (p *processes) Start(proc process) {
 		proc.startup.subscriber(proc, REQKeysRequestUpdate, nil)
 		proc.startup.subscriber(proc, REQKeysAllow, nil)
 		proc.startup.subscriber(proc, REQKeysDelete, nil)
-
 		proc.startup.subscriber(proc, REQAclRequestUpdate, nil)
-
 		proc.startup.subscriber(proc, REQAclAddCommand, nil)
 		proc.startup.subscriber(proc, REQAclDeleteCommand, nil)
 		proc.startup.subscriber(proc, REQAclDeleteSource, nil)
@@ -344,11 +342,6 @@ func (p *processes) Start(proc process) {
 		proc.startup.subscriber(proc, REQAclExport, nil)
 		proc.startup.subscriber(proc, REQAclImport, nil)
 	}
-
-	// Moved this together with proc.configuration.StartPubREQKeysRequestUpdate since they belong together.
-	// if proc.configuration.StartSubREQKeysDeliverUpdate {
-	// 	proc.startup.subREQKeysDeliverUpdate(proc)
-	// }
 
 	if proc.configuration.StartSubREQHttpGet {
 		proc.startup.subscriber(proc, REQHttpGet, nil)
@@ -397,6 +390,8 @@ func newStartup(server *server) *startup {
 	return &s
 }
 
+// subscriber will start a subscriber process. It takes the initial process, request method,
+// and a procFunc as it's input arguments. If a procFunc os not needed, use the value nil.
 func (s *startup) subscriber(p process, m Method, pf func(ctx context.Context, procFuncCh chan Message) error) {
 	er := fmt.Errorf("starting %v subscriber: %#v", m, p.node)
 	p.errorKernel.logDebug(er, p.configuration)

@@ -40,6 +40,7 @@ As long as you can do something as an operator on in a shell on a system you can
     - [startup folder](#startup-folder)
       - [General functionality](#general-functionality)
       - [How to send the reply to another node](#how-to-send-the-reply-to-another-node)
+      - [Use local as the toNode nodename](#use-local-as-the-tonode-nodename)
       - [method timeout](#method-timeout)
         - [Example](#example)
       - [Schedule a Method in a message to be run several times](#schedule-a-method-in-a-message-to-be-run-several-times)
@@ -433,9 +434,31 @@ Messages put in the startup folder will not be sent to the broker but handled lo
 
 #### How to send the reply to another node
 
-Normally the **fromNode** field is automatically filled in with the node name of the node where a message originated.
+Normally the **fromNode** field is automatically filled in with the node name of the node where a message originated. Since messages within the startup folder is not received from another node via the normal message path we need to specify the **fromNode** field within the message for where we want the reply delivered.
 
-Since messages within the startup folder is not received from another node via the normal message path we need to specify the **fromNode** field within the message for where we want the reply delivered.
+As an example. If You want to place a message on the startup folder of **node1** and send the result to **node2**. Specify **node2** as the **fromNode**, and **node1** as the **toNode**
+
+#### Use local as the toNode nodename
+
+Since messages used in startup folder are ment to be delivered locally we can simply things a bit by setting the **toNode** field value of the message to **local**.
+
+```json
+[
+    {
+        "toNode": "local",
+        "fromNode": "central",
+        "method": "REQCliCommand",
+        "methodArgs": [
+            "bash",
+            "-c",
+            "curl localhost:2111/metrics"
+        ],
+        "replyMethod": "REQToConsole",
+        "methodTimeout": 10
+    }
+]
+
+```
 
 #### method timeout
 
