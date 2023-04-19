@@ -1,7 +1,7 @@
 [
     {
         "toNodes": ["ship1"],
-        "method": "REQHttpGetScheduled",
+        "method": "REQHttpGet",
         "methodArgs": [
             "https://vg.no","10","1"
         ],
@@ -13,6 +13,7 @@
         "methodTimeout": 5,
         "replyMethodTimeout": 120,
         "directory": "test",
-        "fileName": "test.txt"
+        "fileName": "test.txt",
+        "schedule": [2,5]
     }
 ]
