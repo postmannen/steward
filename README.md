@@ -1,7 +1,5 @@
 # steward
 
-[![Go build](https://github.com/RaaLabs/steward/actions/workflows/go-build.yml/badge.svg)](https://github.com/RaaLabs/steward/actions/workflows/go-build.yml)
-
 Steward is a Command & Control backend system for Servers, IOT and Edge platforms where the network link for reaching them can be reliable like local networks, or totally unreliable like satellite links. An end node can even be offline when you give it a command, and Steward will make sure that the command is delivered when the node comes online.
 
 Example use cases:
