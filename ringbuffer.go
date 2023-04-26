@@ -177,8 +177,8 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 				sam.Subject.Event = EventNACK
 			}
 
-			// TODO: Make so 0 is an usable option for retries.
-			if sam.Message.Retries < 1 {
+			switch {
+			case sam.Message.Retries < 0:
 				sam.Message.Retries = r.configuration.DefaultMessageRetries
 			}
 			if sam.Message.MethodTimeout < 1 && sam.Message.MethodTimeout != -1 {
@@ -281,9 +281,6 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 					},
 				}
 
-				// ticker := time.NewTicker(time.Duration(v.SAM.ACKTimeout) * time.Duration(v.SAM.Retries) * 2 * time.Second)
-				// defer ticker.Stop()
-
 				outCh <- sd
 				// Just to confirm here that the message was picked up, to know if the
 				// the read process have stalled or not.
@@ -303,7 +300,7 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 				// message will be able to signal back here that the message have
 				// been processed, and that we then can delete it out of the K/V Store.
 
-				// The publisAMessage method should send a done back here, but in some situations
+				// The publishAMessage method should send a done back here, but in some situations
 				// it seems that that do not happen. Implementing a ticker that is twice the total
 				// amount of time a message should be allowed to be using for getting published so
 				// we don't get stuck go routines here.
