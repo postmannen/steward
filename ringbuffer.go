@@ -281,6 +281,12 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, ringBufferOutCh 
 					},
 				}
 
+				// Create a ticker that will kick in when a message have been in the
+				// system for it's maximum time. This will allow us to continue, and
+				// remove the message if it takes longer than it should to get delivered.
+				ticker := time.NewTicker(time.Duration(v.SAM.ACKTimeout) * time.Duration(v.SAM.Retries) * time.Second)
+				defer ticker.Stop()
+
 				ringBufferOutCh <- sd
 				// Just to confirm here that the message was picked up, to know if the
 				// the read process have stalled or not.
@@ -305,14 +311,16 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, ringBufferOutCh 
 				// amount of time a message should be allowed to be using for getting published so
 				// we don't get stuck go routines here.
 				//
-				// TODO: Figure out why what the reason for not receceving the done signals might be.
-				// select {
-				// case <-v.SAM.done:
-				// case <-ticker.C:
-				// 	log.Printf("----------------------------------------------\n")
-				// 	log.Printf("Error: ringBuffer message id: %v, subject: %v seems to be stuck, did not receive done signal from publishAMessage process, exited on ticker\n", v.SAM.ID, v.SAM.Subject)
-				// 	log.Printf("----------------------------------------------\n")
-				// }
+				if r.configuration.RingBufferPersistStore {
+					select {
+					case <-v.SAM.done:
+						fmt.Printf("---\n DONE with\n---\n")
+					case <-ticker.C:
+						log.Printf("----------------------------------------------\n")
+						log.Printf("Error: ringBuffer message id: %v, subject: %v seems to be stuck, did not receive done signal from publishAMessage process, exited on ticker\n", v.SAM.ID, v.SAM.Subject)
+						log.Printf("----------------------------------------------\n")
+					}
+				}
 				// log.Printf("info: processBufferMessages: done with message, deleting key from bucket, %v\n", v.ID)
 				r.metrics.promMessagesProcessedIDLast.Set(float64(v.ID))
 
