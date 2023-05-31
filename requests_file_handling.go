@@ -3,23 +3,52 @@ package steward
 import (
 	"fmt"
 	"io"
+	"io/fs"
+	"net"
 	"os"
 	"path/filepath"
 
 	"github.com/hpcloud/tail"
 )
 
-func reqWriteFile(isAppend bool, proc process, message Message) error {
+func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 	// If it was a request type message we want to check what the initial messages
 	// method, so we can use that in creating the file name to store the data.
 	fileName, folderTree := selectFileNaming(message, proc)
+	file := filepath.Join(folderTree, fileName)
 
+	// Check the file is a unix socket, and if it is we write the
+	// data to the socket instead of writing it to a normal file.
+	fi, err := os.Stat(file)
+	if err != nil {
+		er := fmt.Errorf("error: methodREQToFile/Append failed to stat filepath: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
+
+		return er
+	}
+
+	if fi.Mode().Type() == fs.ModeSocket {
+		// TODO: Write to socket
+		socket, err := net.Dial("unix", file)
+		if err != nil {
+			er := fmt.Errorf("error: methodREQToFile/Append could to open socket file for writing: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
+			return er
+		}
+		defer socket.Close()
+
+		_, err = socket.Write([]byte(message.Data))
+		if err != nil {
+			er := fmt.Errorf("error: methodREQToFile/Append could not write to socket: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
+			return er
+		}
+
+	}
+
+	// The file is a normal file and not a socket.
 	// Check if folder structure exist, if not create it.
 	if _, err := os.Stat(folderTree); os.IsNotExist(err) {
 		err := os.MkdirAll(folderTree, 0770)
 		if err != nil {
 			er := fmt.Errorf("error: methodREQToFile/Append failed to create toFile directory tree: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
-			proc.errorKernel.errSend(proc, message, er, logWarning)
 
 			return er
 		}
@@ -37,13 +66,11 @@ func reqWriteFile(isAppend bool, proc process, message Message) error {
 	}
 
 	// Open file and write data.
-	file := filepath.Join(folderTree, fileName)
 	f, err := os.OpenFile(file, fileFlag, 0755)
 	if err != nil {
 		er := fmt.Errorf("error: methodREQToFile/Append: failed to open file, check that you've specified a value for fileName in the message: directory: %v, fileName: %v, %v", message.Directory, message.FileName, err)
-		proc.errorKernel.errSend(proc, message, er, logWarning)
 
-		return err
+		return er
 	}
 	defer f.Close()
 
@@ -51,7 +78,8 @@ func reqWriteFile(isAppend bool, proc process, message Message) error {
 	f.Sync()
 	if err != nil {
 		er := fmt.Errorf("error: methodREQToFile/Append: failed to write to file: file: %v, %v", file, err)
-		proc.errorKernel.errSend(proc, message, er, logWarning)
+
+		return er
 	}
 
 	return nil
@@ -67,7 +95,8 @@ func (m methodREQToFileAppend) getKind() Event {
 
 // Handle appending data to file.
 func (m methodREQToFileAppend) handler(proc process, message Message, node string) ([]byte, error) {
-	reqWriteFile(true, proc, message)
+	err := reqWriteFileOrSocket(true, proc, message)
+	proc.errorKernel.errSend(proc, message, err, logWarning)
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
@@ -86,7 +115,8 @@ func (m methodREQToFile) getKind() Event {
 // Handle writing to a file. Will truncate any existing data if the file did already
 // exist.
 func (m methodREQToFile) handler(proc process, message Message, node string) ([]byte, error) {
-	reqWriteFile(false, proc, message)
+	err := reqWriteFileOrSocket(false, proc, message)
+	proc.errorKernel.errSend(proc, message, err, logWarning)
 
 	ackMsg := []byte("confirmed from: " + node + ": " + fmt.Sprint(message.ID))
 	return ackMsg, nil
