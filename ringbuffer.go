@@ -284,6 +284,13 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, ringBufferOutCh 
 				// Create a ticker that will kick in when a message have been in the
 				// system for it's maximum time. This will allow us to continue, and
 				// remove the message if it takes longer than it should to get delivered.
+				fmt.Printf("DEBUG:::%v\n", v.SAM.ACKTimeout)
+				if v.SAM.ACKTimeout <= 0 {
+					v.SAM.ACKTimeout = 1
+				}
+				if v.SAM.Retries <= 0 {
+					v.SAM.Retries = 1
+				}
 				ticker := time.NewTicker(time.Duration(v.SAM.ACKTimeout) * time.Duration(v.SAM.Retries) * time.Second)
 				defer ticker.Stop()
 

@@ -395,7 +395,16 @@ func newStartup(server *server) *startup {
 func (s *startup) subscriber(p process, m Method, pf func(ctx context.Context, procFuncCh chan Message) error) {
 	er := fmt.Errorf("starting %v subscriber: %#v", m, p.node)
 	p.errorKernel.logDebug(er, p.configuration)
-	sub := newSubject(m, string(p.node))
+
+	var sub Subject
+	switch {
+	case m == REQErrorLog:
+		sub = newSubject(m, "errorCentral")
+	default:
+		sub = newSubject(m, string(p.node))
+	}
+
+	fmt.Printf("DEBUG:::startup subscriber, subject: %v\n", sub)
 	proc := newProcess(p.ctx, p.processes.server, sub, processKindSubscriber, nil)
 	proc.procFunc = pf
 
