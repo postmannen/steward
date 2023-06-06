@@ -17,25 +17,30 @@ func reqWriteFileOrSocket(isAppend bool, proc process, message Message) error {
 	fileName, folderTree := selectFileNaming(message, proc)
 	file := filepath.Join(folderTree, fileName)
 
+	fmt.Printf("******************* DEBUG: CHECK IF SOCKET OR FILE: %v\n", file)
+
+	// log.Fatalf("EXITING\n")
+
 	// Check the file is a unix socket, and if it is we write the
 	// data to the socket instead of writing it to a normal file.
 	fi, err := os.Stat(file)
-	if err == nil {
-		if fi.Mode().Type() == fs.ModeSocket {
-			// TODO: Write to socket
-			socket, err := net.Dial("unix", file)
-			if err != nil {
-				er := fmt.Errorf("error: methodREQToFile/Append could to open socket file for writing: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
-				return er
-			}
-			defer socket.Close()
+	if err == nil && !os.IsNotExist(err) {
+		er := fmt.Errorf("info: reqWriteFileOrSocket: failed to stat file, but will continue: %v", folderTree)
+		proc.errorKernel.logDebug(er, proc.configuration)
+	}
 
-			_, err = socket.Write([]byte(message.Data))
-			if err != nil {
-				er := fmt.Errorf("error: methodREQToFile/Append could not write to socket: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
-				return er
-			}
+	if fi != nil && fi.Mode().Type() == fs.ModeSocket {
+		socket, err := net.Dial("unix", file)
+		if err != nil {
+			er := fmt.Errorf("error: methodREQToFile/Append could to open socket file for writing: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
+			return er
+		}
+		defer socket.Close()
 
+		_, err = socket.Write([]byte(message.Data))
+		if err != nil {
+			er := fmt.Errorf("error: methodREQToFile/Append could not write to socket: subject:%v, folderTree: %v, %v", proc.subject, folderTree, err)
+			return er
 		}
 
 	}

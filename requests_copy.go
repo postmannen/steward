@@ -442,6 +442,18 @@ type copySubData struct {
 func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.CancelFunc, initialMessage Message) func(context.Context, chan Message) error {
 	pf := func(ctx context.Context, procFuncCh chan Message) error {
 
+		// Check if the realpath of the directory and filename specified in the
+		// message are of type unix socket, and if it is we do not add the extra
+		// suffix to the filename.
+		file := filepath.Join(initialMessage.Directory, initialMessage.FileName)
+
+		// Check the file is a unix socket, and if it is we write the
+		// data to the socket instead of writing it to a normal file.
+		fi, err := os.Stat(file)
+		if err == nil {
+			fmt.Printf(" ** DEBUG: STAT ERROR: %v\n", err)
+		}
+
 		// We want to be able to send the reply message when the copying is done,
 		// and also for any eventual errors within the subProcFunc. We want to
 		// write these to the same place as the the reply message for the initial
@@ -449,8 +461,10 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 		// individual files.
 		msgForSubReplies := initialMessage
 		msgForSubErrors := initialMessage
-		msgForSubReplies.FileName = msgForSubReplies.FileName + ".copyreply"
-		msgForSubErrors.FileName = msgForSubErrors.FileName + ".copyerror"
+		if fi.Mode().Type() != fs.ModeSocket {
+			msgForSubReplies.FileName = msgForSubReplies.FileName + ".copyreply"
+			msgForSubErrors.FileName = msgForSubErrors.FileName + ".copyerror"
+		}
 
 		var chunkNumber = 0
 		var lastReadChunk []byte
