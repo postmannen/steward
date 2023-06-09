@@ -641,7 +641,7 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 					resendRetries++
 
 				case copyDstDone:
-					d := fmt.Sprintf("copyDstDone,%v,%v", cia.DstDir, cia.DstFile)
+					d := fmt.Sprintf("copyDstDone,%v,%v", cia.SrcFilePath, filepath.Join(cia.DstDir, cia.DstFile))
 					newReplyMessage(proc, msgForSubReplies, []byte(d))
 
 					cancel()
