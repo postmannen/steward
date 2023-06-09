@@ -105,6 +105,15 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 		return nil, fmt.Errorf("info: the copy message was forwarded to %v message, %v", message.ToNode, message)
 	}
 
+	// Check if the filepaths for the socket a realpaths.
+	file := filepath.Join(message.Directory, message.FileName)
+	if strings.HasPrefix(file, "./") || !strings.HasPrefix(file, "/") {
+		er := fmt.Errorf("error: copySrcSubHandler: path in message started with ./ or no directory at all, only full paths are allowed, path given was : %v", file)
+		proc.errorKernel.errSend(proc, message, er, logError)
+		newReplyMessage(proc, message, []byte(er.Error()))
+		return nil, er
+	}
+
 	var subProcessName string
 
 	proc.processes.wg.Add(1)
@@ -447,10 +456,11 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 		// suffix to the filename.
 		file := filepath.Join(initialMessage.Directory, initialMessage.FileName)
 
+		fmt.Printf(" ** DEBUG: BEFORE STAT FILE CONTAINS: %v\n", file)
 		// Check the file is a unix socket, and if it is we write the
 		// data to the socket instead of writing it to a normal file.
 		fi, err := os.Stat(file)
-		if err == nil {
+		if err != nil {
 			fmt.Printf(" ** DEBUG: STAT ERROR: %v\n", err)
 		}
 
