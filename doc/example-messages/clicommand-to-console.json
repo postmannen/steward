@@ -13,8 +13,6 @@
         "replyACKTimeout": 5,
         "replyRetries": 5,
         "methodTimeout": 5,
-        "replyMethodTimeout": 120,
-        "directory": "debug",
-        "fileName": "test.txt"
+        "replyMethodTimeout": 120
     }
 ]

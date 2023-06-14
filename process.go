@@ -881,7 +881,7 @@ func (p process) publishMessages(natsConn *nats.Conn) {
 			m.ArgSignature = p.addMethodArgSignature(m)
 			// fmt.Printf(" * DEBUG: add signature, fromNode: %v, method: %v,  len of signature: %v\n", m.FromNode, m.Method, len(m.ArgSignature))
 
-			go p.publishAMessage(m, zEnc, once, natsConn)
+			go p.publishAMessage(m, zEnc, &once, natsConn)
 		case <-p.ctx.Done():
 			er := fmt.Errorf("info: canceling publisher: %v", p.processName)
 			//sendErrorLogMessage(p.toRingbufferCh, Node(p.node), er)
@@ -898,7 +898,7 @@ func (p process) addMethodArgSignature(m Message) []byte {
 	return sign
 }
 
-func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, natsConn *nats.Conn) {
+func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once *sync.Once, natsConn *nats.Conn) {
 	// Create the initial header, and set values below depending on the
 	// various configuration options chosen.
 	natsMsgHeader := make(nats.Header)
@@ -1005,13 +1005,15 @@ func (p process) publishAMessage(m Message, zEnc *zstd.Encoder, once sync.Once, 
 	// sending of the message.
 	p.messageDeliverNats(natsMsgPayloadCompressed, natsMsgHeader, natsConn, m)
 
-	// select {
-	// case m.done <- struct{}{}:
-	// 	// Signaling back to the ringbuffer that we are done with the
-	// 	// current message, and it can remove it from the ringbuffer.
-	// case <-p.ctx.Done():
-	// 	return
-	// }
+	if p.configuration.RingBufferPersistStore {
+		select {
+		case m.done <- struct{}{}:
+			// Signaling back to the ringbuffer that we are done with the
+			// current message, and it can remove it from the ringbuffer.
+		case <-p.ctx.Done():
+			return
+		}
+	}
 
 	// Increment the counter for the next message to be sent.
 	p.messageID++

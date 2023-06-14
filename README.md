@@ -33,6 +33,7 @@ As long as you can do something as an operator on in a shell on a system you can
     - [Error messages from nodes](#error-messages-from-nodes)
     - [Message handling and threads](#message-handling-and-threads)
     - [Timeouts and retries for requests](#timeouts-and-retries-for-requests)
+      - [RetryWait](#retrywait)
     - [Flags and configuration file](#flags-and-configuration-file)
     - [Schema for the messages to send into Steward via the API's](#schema-for-the-messages-to-send-into-steward-via-the-apis)
     - [Nats messaging timeouts](#nats-messaging-timeouts)
@@ -41,6 +42,7 @@ As long as you can do something as an operator on in a shell on a system you can
     - [startup folder](#startup-folder)
       - [General functionality](#general-functionality)
       - [How to send the reply to another node](#how-to-send-the-reply-to-another-node)
+      - [Use local as the toNode nodename](#use-local-as-the-tonode-nodename)
       - [method timeout](#method-timeout)
         - [Example](#example)
       - [Schedule a Method in a message to be run several times](#schedule-a-method-in-a-message-to-be-run-several-times)
@@ -298,6 +300,36 @@ In the above example, the values set meaning:
 
 If no timeout are specified in a message the defaults specified in the **etc/config.yaml** are used.
 
+#### RetryWait
+
+Instead of solely depending in the ack timeout the **RetryWait** can be used. RetryWait specifies the time in seconds to wait between retries.
+
+```json
+[
+    {
+        "directory":"/some/result/directory/",
+        "fileName":"my-syslog.log",
+        "toNode": "ship2",
+        "methodArgs": ["bash","-c","tail -f /var/log/syslog"],
+        "replyMethod":"REQToFileAppend",
+        "method":"REQCliCommandCont",
+        "ACKTimeout":3,
+        "RetryWait":10,
+        "retries":3,
+        "methodTimeout": 60
+    }
+]
+```
+
+This is the same as the previos example, but it will also wait another 10 seconds after it noticed that an ACK was not received before the message is retried.
+
+The flow will be like this:
+
+- Send message.
+- Wait 3 seconds for an Acknowledge from the destination node.
+- If an Acknowledge was not received, wait another 10 seconds before the message is retried.
+- Retry sending message.
+
 ### Flags and configuration file
 
 Steward supports both the use of flags with values set at startup, and the use of a config file.
@@ -404,9 +436,31 @@ Messages put in the startup folder will not be sent to the broker but handled lo
 
 #### How to send the reply to another node
 
-Normally the **fromNode** field is automatically filled in with the node name of the node where a message originated.
+Normally the **fromNode** field is automatically filled in with the node name of the node where a message originated. Since messages within the startup folder is not received from another node via the normal message path we need to specify the **fromNode** field within the message for where we want the reply delivered.
 
-Since messages within the startup folder is not received from another node via the normal message path we need to specify the **fromNode** field within the message for where we want the reply delivered.
+As an example. If You want to place a message on the startup folder of **node1** and send the result to **node2**. Specify **node2** as the **fromNode**, and **node1** as the **toNode**
+
+#### Use local as the toNode nodename
+
+Since messages used in startup folder are ment to be delivered locally we can simply things a bit by setting the **toNode** field value of the message to **local**.
+
+```json
+[
+    {
+        "toNode": "local",
+        "fromNode": "central",
+        "method": "REQCliCommand",
+        "methodArgs": [
+            "bash",
+            "-c",
+            "curl localhost:2111/metrics"
+        ],
+        "replyMethod": "REQToConsole",
+        "methodTimeout": 10
+    }
+]
+
+```
 
 #### method timeout
 
@@ -738,6 +792,8 @@ If the value of the **directory** field is not prefixed with `./` or `/` the dir
 ]
 ```
 
+If there is already a file at the specified path with the specified name, and if that file is a socket, then the request method will automatically switch to socket communication and write to the socket instead of normal file writing.
+
 #### REQToFile
 
 Write the output of the reply message to a file specified with the `directory` and `fileName` fields, where the writing will write over any existing content of that file.
@@ -756,6 +812,8 @@ If the value of the **directory** field is not prefixed with `./` or `/` the dir
     }
 ]
 ```
+
+If there is already a file at the specified path with the specified name, and if that file is a socket, then the request method will automatically switch to socket communication and write to the socket instead of normal file writing.
 
 #### REQToFileNACK
 

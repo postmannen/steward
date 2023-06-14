@@ -57,9 +57,6 @@ func TestMain(m *testing.M) {
 }
 
 func newServerForTesting(addressAndPort string, testFolder string) (*server, *Configuration) {
-	if !*logging {
-		log.SetOutput(io.Discard)
-	}
 
 	// Start Steward instance
 	// ---------------------------------------
@@ -68,6 +65,9 @@ func newServerForTesting(addressAndPort string, testFolder string) (*server, *Co
 	// Create the config to run a steward instance.
 	//tempdir := "./tmp"
 	conf := newConfigurationDefaults()
+	if *logging {
+		conf.LogLevel = "warning"
+	}
 	conf.BrokerAddress = addressAndPort
 	conf.NodeName = "central"
 	conf.CentralNodeName = "central"
@@ -78,7 +78,8 @@ func newServerForTesting(addressAndPort string, testFolder string) (*server, *Co
 	conf.DatabaseFolder = testFolder
 	conf.IsCentralErrorLogger = true
 	conf.IsCentralAuth = true
-	conf.EnableDebug = true
+	conf.EnableDebug = false
+	conf.LogLevel = "none"
 
 	stewardServer, err := NewServer(&conf, "test")
 	if err != nil {

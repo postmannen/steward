@@ -27,7 +27,7 @@ func main() {
 	//defer profile.Start(profile.MemProfile, profile.MemProfileRate(1)).Stop()
 
 	c := steward.NewConfiguration()
-	err := c.CheckFlags()
+	err := c.CheckFlags(version)
 	if err != nil {
 		log.Printf("%v\n", err)
 		return

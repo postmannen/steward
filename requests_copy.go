@@ -105,6 +105,15 @@ func (m methodREQCopySrc) handler(proc process, message Message, node string) ([
 		return nil, fmt.Errorf("info: the copy message was forwarded to %v message, %v", message.ToNode, message)
 	}
 
+	// Check if the filepaths for the socket a realpaths.
+	file := filepath.Join(message.Directory, message.FileName)
+	if strings.HasPrefix(file, "./") || !strings.HasPrefix(file, "/") {
+		er := fmt.Errorf("error: copySrcSubHandler: path in message started with ./ or no directory at all, only full paths are allowed, path given was : %v", file)
+		proc.errorKernel.errSend(proc, message, er, logError)
+		newReplyMessage(proc, message, []byte(er.Error()))
+		return nil, er
+	}
+
 	var subProcessName string
 
 	proc.processes.wg.Add(1)
@@ -442,6 +451,19 @@ type copySubData struct {
 func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.CancelFunc, initialMessage Message) func(context.Context, chan Message) error {
 	pf := func(ctx context.Context, procFuncCh chan Message) error {
 
+		// Check if the realpath of the directory and filename specified in the
+		// message are of type unix socket, and if it is we do not add the extra
+		// suffix to the filename.
+		file := filepath.Join(initialMessage.Directory, initialMessage.FileName)
+
+		// Check the file is a unix socket, and if it is we write the
+		// data to the socket instead of writing it to a normal file.
+		// We don't care about the error.
+		fi, _ := os.Stat(file)
+		// if err != nil {
+		// 	fmt.Printf(" ** DEBUG: STAT ERROR: %v\n", err)
+		// }
+
 		// We want to be able to send the reply message when the copying is done,
 		// and also for any eventual errors within the subProcFunc. We want to
 		// write these to the same place as the the reply message for the initial
@@ -449,8 +471,10 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 		// individual files.
 		msgForSubReplies := initialMessage
 		msgForSubErrors := initialMessage
-		msgForSubReplies.FileName = msgForSubReplies.FileName + ".copyreply"
-		msgForSubErrors.FileName = msgForSubErrors.FileName + ".copyerror"
+		if fi.Mode().Type() != fs.ModeSocket {
+			msgForSubReplies.FileName = msgForSubReplies.FileName + ".copyreply"
+			msgForSubErrors.FileName = msgForSubErrors.FileName + ".copyerror"
+		}
 
 		var chunkNumber = 0
 		var lastReadChunk []byte
@@ -627,7 +651,8 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 					resendRetries++
 
 				case copyDstDone:
-					newReplyMessage(proc, msgForSubReplies, []byte("copyDstDone"))
+					d := fmt.Sprintf("copyDstDone,%v,%v", cia.SrcFilePath, filepath.Join(cia.DstDir, cia.DstFile))
+					newReplyMessage(proc, msgForSubReplies, []byte(d))
 
 					cancel()
 					return nil

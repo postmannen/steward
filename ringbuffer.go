@@ -102,7 +102,7 @@ func newringBuffer(ctx context.Context, metrics *metrics, configuration *Configu
 // start will process incomming messages through the inCh,
 // put the messages on a buffered channel
 // and deliver messages out when requested on the outCh.
-func (r *ringBuffer) start(ctx context.Context, inCh chan subjectAndMessage, outCh chan samDBValueAndDelivered) {
+func (r *ringBuffer) start(ctx context.Context, ringBufferInCh chan subjectAndMessage, ringBufferOutCh chan samDBValueAndDelivered) {
 
 	// Starting both writing and reading in separate go routines so we
 	// can write and read concurrently.
@@ -113,13 +113,13 @@ func (r *ringBuffer) start(ctx context.Context, inCh chan subjectAndMessage, out
 	}
 
 	// Fill the buffer when new data arrives into the system
-	go r.fillBuffer(ctx, inCh)
+	go r.fillBuffer(ctx, ringBufferInCh)
 
 	// Start the process to permanently store done messages.
 	go r.startPermanentStore(ctx)
 
 	// Start the process that will handle messages present in the ringbuffer.
-	go r.processBufferMessages(ctx, outCh)
+	go r.processBufferMessages(ctx, ringBufferOutCh)
 
 	go func() {
 		ticker := time.NewTicker(time.Second * 5)
@@ -140,7 +140,7 @@ func (r *ringBuffer) start(ctx context.Context, inCh chan subjectAndMessage, out
 
 // fillBuffer will fill the buffer in the ringbuffer  reading from the inchannel.
 // It will also store the messages in a K/V DB while being processed.
-func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage) {
+func (r *ringBuffer) fillBuffer(ctx context.Context, ringBufferInCh chan subjectAndMessage) {
 	// At startup get all the values that might be in the K/V store so we can
 	// put them into the buffer before we start to fill up with new incomming
 	// messages to the system.
@@ -166,7 +166,7 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 	// the go routine who reads the socket.
 	for {
 		select {
-		case sam := <-inCh:
+		case sam := <-ringBufferInCh:
 
 			// Check if default message values for timers are set, and if
 			// not then set default message values.
@@ -177,8 +177,8 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 				sam.Subject.Event = EventNACK
 			}
 
-			// TODO: Make so 0 is an usable option for retries.
-			if sam.Message.Retries < 1 {
+			switch {
+			case sam.Message.Retries < 0:
 				sam.Message.Retries = r.configuration.DefaultMessageRetries
 			}
 			if sam.Message.MethodTimeout < 1 && sam.Message.MethodTimeout != -1 {
@@ -237,7 +237,7 @@ func (r *ringBuffer) fillBuffer(ctx context.Context, inCh chan subjectAndMessage
 // one by one. The messages will be delivered on the outCh, and it will wait
 // until a signal is received on the done channel before it continues with the
 // next message.
-func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDBValueAndDelivered) {
+func (r *ringBuffer) processBufferMessages(ctx context.Context, ringBufferOutCh chan samDBValueAndDelivered) {
 	// Range over the buffer of messages to pass on to processes.
 	for {
 		select {
@@ -281,10 +281,20 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 					},
 				}
 
-				// ticker := time.NewTicker(time.Duration(v.SAM.ACKTimeout) * time.Duration(v.SAM.Retries) * 2 * time.Second)
-				// defer ticker.Stop()
+				// Create a ticker that will kick in when a message have been in the
+				// system for it's maximum time. This will allow us to continue, and
+				// remove the message if it takes longer than it should to get delivered.
+				fmt.Printf("DEBUG:::%v\n", v.SAM.ACKTimeout)
+				if v.SAM.ACKTimeout <= 0 {
+					v.SAM.ACKTimeout = 1
+				}
+				if v.SAM.Retries <= 0 {
+					v.SAM.Retries = 1
+				}
+				ticker := time.NewTicker(time.Duration(v.SAM.ACKTimeout) * time.Duration(v.SAM.Retries) * time.Second)
+				defer ticker.Stop()
 
-				outCh <- sd
+				ringBufferOutCh <- sd
 				// Just to confirm here that the message was picked up, to know if the
 				// the read process have stalled or not.
 				// For now it will not do anything,
@@ -303,19 +313,21 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 				// message will be able to signal back here that the message have
 				// been processed, and that we then can delete it out of the K/V Store.
 
-				// The publisAMessage method should send a done back here, but in some situations
+				// The publishAMessage method should send a done back here, but in some situations
 				// it seems that that do not happen. Implementing a ticker that is twice the total
 				// amount of time a message should be allowed to be using for getting published so
 				// we don't get stuck go routines here.
 				//
-				// TODO: Figure out why what the reason for not receceving the done signals might be.
-				// select {
-				// case <-v.SAM.done:
-				// case <-ticker.C:
-				// 	log.Printf("----------------------------------------------\n")
-				// 	log.Printf("Error: ringBuffer message id: %v, subject: %v seems to be stuck, did not receive done signal from publishAMessage process, exited on ticker\n", v.SAM.ID, v.SAM.Subject)
-				// 	log.Printf("----------------------------------------------\n")
-				// }
+				if r.configuration.RingBufferPersistStore {
+					select {
+					case <-v.SAM.done:
+						fmt.Printf("---\n DONE with\n---\n")
+					case <-ticker.C:
+						log.Printf("----------------------------------------------\n")
+						log.Printf("Error: ringBuffer message id: %v, subject: %v seems to be stuck, did not receive done signal from publishAMessage process, exited on ticker\n", v.SAM.ID, v.SAM.Subject)
+						log.Printf("----------------------------------------------\n")
+					}
+				}
 				// log.Printf("info: processBufferMessages: done with message, deleting key from bucket, %v\n", v.ID)
 				r.metrics.promMessagesProcessedIDLast.Set(float64(v.ID))
 
@@ -334,7 +346,6 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, outCh chan samDB
 
 			}(samDBv)
 		case <-ctx.Done():
-			//close(outCh)
 			return
 		}
 	}

@@ -20,7 +20,7 @@ command=$3
 IFS=',' read -r -a array <<<"$nodes"
 
 function sendMessage() {
-    cat >msg-"$element".yaml <<EOF
+    cat >msg-"$element".json <<EOF
 [
     {
         "toNodes": ["${element}"],
@@ -33,9 +33,9 @@ function sendMessage() {
             ],
         "replyMethod": "REQToFileAppend",
         "retryWait": 5,
-        "ACKTimeout": 10,
+        "ACKTimeout": 30,
         "retries": 1,
-        "replyACKTimeout": 10,
+        "replyACKTimeout": 30,
         "replyRetries": 1,
         "methodTimeout": 10,
         "replyMethodTimeout": 10,
@@ -49,5 +49,5 @@ EOF
 
 for element in "${array[@]}"; do
     sendMessage element "$command"
-    cp msg-"$element".yaml ./readfolder
+    cp msg-"$element".json ./readfolder
 done

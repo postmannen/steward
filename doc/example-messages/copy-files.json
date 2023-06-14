@@ -2,9 +2,12 @@
     {
         "directory": "copy",
         "fileName": "copy.log",
-        "toNodes": ["ship1"],
-        "method":"REQCopyFileFrom",
-        "methodArgs": ["./tmp2.txt","ship2","/tmp/tmp2.txt"],
-        "replyMethod":"REQToFileAppend"
+        "toNodes": ["central"],
+        "method":"REQCopySrc",
+        "methodArgs": ["./testbinary","ship1","./apekatt/testbinary-copied","900000","60","0700"],
+    	"methodTimeout": 10,
+	    "retryWait" : 5,
+	    "retries" : 3,
+        "replyMethod":"REQToConsole"
     }
 ]

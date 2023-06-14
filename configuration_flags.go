@@ -597,7 +597,7 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 }
 
 // CheckFlags will parse all flags
-func (c *Configuration) CheckFlags() error {
+func (c *Configuration) CheckFlags(version string) error {
 
 	// Create an empty default config
 	var fc Configuration
@@ -691,7 +691,14 @@ func (c *Configuration) CheckFlags() error {
 
 	purgeBufferDB := flag.Bool("purgeBufferDB", false, "true/false, purge the incoming buffer db and all it's state")
 
+	ver := flag.Bool("version", false, "print version and exit")
+
 	flag.Parse()
+
+	if *ver {
+		fmt.Printf("version %v\n", version)
+		os.Exit(0)
+	}
 
 	// Check that mandatory flag values have been set.
 	switch {
