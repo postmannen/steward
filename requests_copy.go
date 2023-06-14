@@ -456,13 +456,13 @@ func copySrcSubProcFunc(proc process, cia copyInitialData, cancel context.Cancel
 		// suffix to the filename.
 		file := filepath.Join(initialMessage.Directory, initialMessage.FileName)
 
-		fmt.Printf(" ** DEBUG: BEFORE STAT FILE CONTAINS: %v\n", file)
 		// Check the file is a unix socket, and if it is we write the
 		// data to the socket instead of writing it to a normal file.
-		fi, err := os.Stat(file)
-		if err != nil {
-			fmt.Printf(" ** DEBUG: STAT ERROR: %v\n", err)
-		}
+		// We don't care about the error.
+		fi, _ := os.Stat(file)
+		// if err != nil {
+		// 	fmt.Printf(" ** DEBUG: STAT ERROR: %v\n", err)
+		// }
 
 		// We want to be able to send the reply message when the copying is done,
 		// and also for any eventual errors within the subProcFunc. We want to
