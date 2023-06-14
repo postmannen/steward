@@ -790,6 +790,8 @@ If the value of the **directory** field is not prefixed with `./` or `/` the dir
 ]
 ```
 
+If there is already a file at the specified path with the specified name, and if that file is a socket, then the request method will automatically switch to socket communication and write to the socket instead of normal file writing.
+
 #### REQToFile
 
 Write the output of the reply message to a file specified with the `directory` and `fileName` fields, where the writing will write over any existing content of that file.
@@ -808,6 +810,8 @@ If the value of the **directory** field is not prefixed with `./` or `/` the dir
     }
 ]
 ```
+
+If there is already a file at the specified path with the specified name, and if that file is a socket, then the request method will automatically switch to socket communication and write to the socket instead of normal file writing.
 
 #### REQToFileNACK
 
