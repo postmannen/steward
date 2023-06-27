@@ -72,6 +72,8 @@ type Configuration struct {
 	NkeySeedFile string `comment:"Full path to the NKEY's seed file"`
 	// The full path to the NKEY user file
 	NkeyPublicKey string `toml:"-"`
+	//
+	NkeyFromED25519SSHKeyFile string `comment:"Full path to the ED25519 SSH private key. Will generate the NKEY Seed from an SSH ED25519 private key file. NB: This option will take precedence over NkeySeedFile if specified"`
 	// The host and port to expose the data folder, <host>:<port>
 	ExposeDataFolder string `comment:"The host and port to expose the data folder, <host>:<port>"`
 	// Timeout in seconds for error messages
@@ -177,6 +179,7 @@ type ConfigurationFromFile struct {
 	CentralNodeName              *string
 	RootCAPath                   *string
 	NkeySeedFile                 *string
+	NkeyFromED25519SSHKeyFile    *string
 	ExposeDataFolder             *string
 	ErrorMessageTimeout          *int
 	ErrorMessageRetries          *int
@@ -248,6 +251,7 @@ func newConfigurationDefaults() Configuration {
 		CentralNodeName:              "",
 		RootCAPath:                   "",
 		NkeySeedFile:                 "",
+		NkeyFromED25519SSHKeyFile:    "",
 		ExposeDataFolder:             "",
 		ErrorMessageTimeout:          60,
 		ErrorMessageRetries:          10,
@@ -421,6 +425,11 @@ func checkConfigValues(cf ConfigurationFromFile) Configuration {
 		conf.NkeySeedFile = cd.NkeySeedFile
 	} else {
 		conf.NkeySeedFile = *cf.NkeySeedFile
+	}
+	if cf.NkeyFromED25519SSHKeyFile == nil {
+		conf.NkeyFromED25519SSHKeyFile = cd.NkeyFromED25519SSHKeyFile
+	} else {
+		conf.NkeyFromED25519SSHKeyFile = *cf.NkeyFromED25519SSHKeyFile
 	}
 	if cf.ExposeDataFolder == nil {
 		conf.ExposeDataFolder = cd.ExposeDataFolder
@@ -648,7 +657,8 @@ func (c *Configuration) CheckFlags(version string) error {
 	flag.StringVar(&c.SubscribersDataFolder, "subscribersDataFolder", fc.SubscribersDataFolder, "The data folder where subscribers are allowed to write their data if needed")
 	flag.StringVar(&c.CentralNodeName, "centralNodeName", fc.CentralNodeName, "The name of the central node to receive messages published by this node")
 	flag.StringVar(&c.RootCAPath, "rootCAPath", fc.RootCAPath, "If TLS, enter the path for where to find the root CA certificate")
-	flag.StringVar(&c.NkeySeedFile, "nkeySeedFile", fc.NkeySeedFile, "The full path of the nkeys seed file")
+	flag.StringVar(&c.NkeyFromED25519SSHKeyFile, "nkeyFromED25519SSHKeyFile", fc.NkeyFromED25519SSHKeyFile, "The full path of the nkeys seed file")
+	flag.StringVar(&c.NkeySeedFile, "nkeySeedFile", fc.NkeySeedFile, "Full path to the ED25519 SSH private key. Will generate the NKEY Seed from an SSH ED25519 private key file. NB: This option will take precedence over NkeySeedFile if specified")
 	flag.StringVar(&c.ExposeDataFolder, "exposeDataFolder", fc.ExposeDataFolder, "If set the data folder will be exposed on the given host:port. Default value is not exposed at all")
 	flag.IntVar(&c.ErrorMessageTimeout, "errorMessageTimeout", fc.ErrorMessageTimeout, "The number of seconds to wait for an error message to time out")
 	flag.IntVar(&c.ErrorMessageRetries, "errorMessageRetries", fc.ErrorMessageRetries, "The number of if times to retry an error message before we drop it")

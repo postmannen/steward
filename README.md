@@ -101,6 +101,7 @@ As long as you can do something as an operator on in a shell on a system you can
       - [Nkey Authentication](#nkey-authentication)
       - [nats-server (the message broker)](#nats-server-the-message-broker)
         - [Nats-server config with nkey authentication example](#nats-server-config-with-nkey-authentication-example)
+        - [Nkey from ED25519 SSH key](#nkey-from-ed25519-ssh-key)
     - [Message fields explanation](#message-fields-explanation)
     - [How to send a Message](#how-to-send-a-message)
       - [Send to socket with netcat](#send-to-socket-with-netcat)
@@ -1196,6 +1197,10 @@ The official docs for nkeys can be found here <https://docs.nats.io/nats-server/
   - `nk -inkey seed.txt -pubout > user.txt`
 
 More example configurations for the nats-server are located in the [doc](https://github.com/RaaLabs/steward/tree/main/doc) folder in this repository.
+
+##### Nkey from ED25519 SSH key
+
+Steward can also use an existing SSH ED25519 private key for authentication with the flag **-nkeyFromED25519SSHKeyFile="full-path-to-ssh-private-key"**. The SSH key will be converted to an Nkey if the option is used. The Seed and the User file will be stored in the **socketFolder** which by default is at **./tmp**
 
 ### Message fields explanation
 

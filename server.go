@@ -89,10 +89,20 @@ func NewServer(configuration *Configuration, version string) (*server, error) {
 		opt = nats.RootCAs(configuration.RootCAPath)
 	}
 
-	if configuration.NkeySeedFile != "" {
+	if configuration.NkeySeedFile != "" && configuration.NkeyFromED25519SSHKeyFile == "" {
 		var err error
 
 		opt, err = nats.NkeyOptionFromSeed(configuration.NkeySeedFile)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("error: failed to read nkey seed file: %v", err)
+		}
+	}
+
+	if configuration.NkeyFromED25519SSHKeyFile != "" {
+		var err error
+
+		opt, err = configuration.nkeyOptFromSSHKey()
 		if err != nil {
 			cancel()
 			return nil, fmt.Errorf("error: failed to read nkey seed file: %v", err)

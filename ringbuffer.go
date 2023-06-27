@@ -321,7 +321,7 @@ func (r *ringBuffer) processBufferMessages(ctx context.Context, ringBufferOutCh 
 				if r.configuration.RingBufferPersistStore {
 					select {
 					case <-v.SAM.done:
-						fmt.Printf("---\n DONE with\n---\n")
+						// fmt.Printf("---\n DONE with\n---\n")
 					case <-ticker.C:
 						log.Printf("----------------------------------------------\n")
 						log.Printf("Error: ringBuffer message id: %v, subject: %v seems to be stuck, did not receive done signal from publishAMessage process, exited on ticker\n", v.SAM.ID, v.SAM.Subject)
