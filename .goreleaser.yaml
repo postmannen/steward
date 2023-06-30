@@ -39,7 +39,7 @@ nfpms:
     homepage: https://github.com/raalabs/steward
     maintainer: Bjørn Tore Svinningen <postmannen@gmail.com>
     description: |-
-      Infrastructure controller.
+      Infrastructure controller
     license: MIT
     formats:
       - rpm
