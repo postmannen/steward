@@ -441,7 +441,7 @@ As an example. If You want to place a message on the startup folder of **node1**
 
 #### Use local as the toNode nodename
 
-Since messages used in startup folder are ment to be delivered locally we can simply things a bit by setting the **toNode** field value of the message to **local**.
+Set the `toNode` field of your message to **local** in order to send the message to yourself, this can be helpful when using the startup folder, or if you have some other process interacting with your running steward instance.
 
 ```json
 [
