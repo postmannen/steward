@@ -83,7 +83,7 @@ func (s *server) readStartupFolder() {
 
 		// Check if fromNode field is specified, and remove the message if blank.
 		for i := range sams {
-			// We want to allow the use of nodeName local only in startup folder, and
+			// We want to allow the use of nodeName local, and
 			// if used we substite it for the local node name.
 			if sams[i].Message.ToNode == "local" {
 				sams[i].Message.ToNode = Node(s.nodeName)
@@ -199,7 +199,10 @@ func (s *server) readSocket() {
 			}
 
 			for i := range sams {
-
+				if sams[i].Message.ToNode == "local" {
+					sams[i].Message.ToNode = Node(s.nodeName)
+					sams[i].Subject.ToNode = s.nodeName
+				}
 				// Fill in the value for the FromNode field, so the receiver
 				// can check this field to know where it came from.
 				sams[i].Message.FromNode = Node(s.nodeName)
@@ -277,6 +280,10 @@ func (s *server) readFolder() {
 						}
 
 						for i := range sams {
+							if sams[i].Message.ToNode == "local" {
+								sams[i].Message.ToNode = Node(s.nodeName)
+								sams[i].Subject.ToNode = s.nodeName
+							}
 
 							// Fill in the value for the FromNode field, so the receiver
 							// can check this field to know where it came from.
