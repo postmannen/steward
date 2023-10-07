@@ -1,5 +1,11 @@
 # steward
 
+## Repo is archived
+
+This is a fork/clone of a service I wrote for RaaLabs. The main repo at <https://github.com/RaaLabs> was made private. This repo is just kept for historic reason at my last commit when the repo was still publicly available and had a MIT license.
+
+## Intro
+
 Steward is a Command & Control backend system for Servers, IOT and Edge platforms where the network link for reaching them can be reliable like local networks, or totally unreliable like satellite links. An end node can even be offline when you give it a command, and Steward will make sure that the command is delivered when the node comes online.
 
 Example use cases:
@@ -14,6 +20,8 @@ As long as you can do something as an operator on in a shell on a system you can
 **NB** Expect the main branch to have breaking changes. If stability is needed, use the released packages, and read the release notes where changes will be explained.
 
 - [steward](#steward)
+  - [Repo is archived](#repo-is-archived)
+  - [Intro](#intro)
   - [What is it ?](#what-is-it-)
   - [Disclaimer](#disclaimer)
   - [Overview](#overview)
